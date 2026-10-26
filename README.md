@@ -11,7 +11,7 @@ No game data is stored here: the launcher reads your own disc image.
 
 ## Install
 
-Download the Setup file (the `…-Setup.exe`) from the
+From 0.5.0, download the Setup file (the `…-Setup.exe`) from the
 [latest release](https://github.com/piconet-live/piconet-launcher/releases/latest) and run it. It installs the launcher for your Windows user (no administrator rights) and puts it on the Start menu
 and the desktop. The first start asks for your F-Zero GX (USA) disc image and prepares the game's files from it.
 
@@ -64,7 +64,13 @@ The two submodules are found through `ProtocolFolder` and `FzgxTools` in `net/Di
 
 ## Requirements
 
-- the .NET SDK 10.0.401 or a later 10.0 patch (`net/global.json`)
+- the .NET SDK 10.0.401 or a later 10.0 patch (`net/global.json`). Ubuntu's apt package (10.0.1xx) is
+  older, so install it with Microsoft's script, then put it on `PATH`:
+
+      curl -sSLO https://dot.net/v1/dotnet-install.sh && bash dotnet-install.sh --channel 10.0
+      export DOTNET_ROOT=$HOME/.dotnet PATH=$HOME/.dotnet:$PATH    # in ~/.bashrc too
+
+  In WSL, Windows' `dotnet.exe` can come first on `PATH`; `command -v dotnet` should name `~/.dotnet/dotnet`.
 - nuget.org (Avalonia 12.1.3, Huskui.Avalonia, CommunityToolkit.Mvvm, DiscordRichPresence, Velopack, xunit.v3; the versions are in `net/Directory.Packages.props`)
 - Windows 10 or later to run the launcher with the game; the build and the tests also run on Linux
 
@@ -75,9 +81,12 @@ The two submodules are found through `ProtocolFolder` and `FzgxTools` in `net/Di
     dotnet build net.slnx
     dotnet test --project tests/Launcher.Tests
 
-The disc tests (`RealDisc*`) need your own disc image, named in a piconet-runner checkout beside this repository
-(`DISC_DEFAULT` in `~/.config/piconet/pins.tsv`, read over the runner's `port/setup/pins.tsv`); without it they are
-skipped, never failed.
+The disc tests (`RealDisc*`) need your own disc image, named by the row `DISC_DEFAULT` of `~/.config/piconet/pins.tsv`
+(no runner checkout is needed for it); without it they are skipped, never failed. The file has three tab-separated
+columns under a header row:
+
+    name	value	note
+    DISC_DEFAULT	/path/to/F-Zero GX (USA).iso	your own disc
 
 A launcher built from this source names no server stack, so it has no official server: it shows "No server" until
 you enter one in Settings, Online (your own test server, for example). The releases get their server at packaging
