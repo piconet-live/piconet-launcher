@@ -15,22 +15,27 @@ public sealed class RealDiscStatsTests
     /// <summary>Your disc image as the runner names it for its own tools: the setting <c>DISC_DEFAULT</c>, a row of
     /// <c>~/.config/piconet/pins.tsv</c> over the runner's <c>port/setup/pins.tsv</c>, whose row is empty (no default;
     /// net/tools/DiscPinsWriter reads the same row), the file the build names
-    /// (<c>AssemblyMetadata</c> "RunnerPins", from <c>RunnerPins</c> in net/Directory.Build.props: this repository's
-    /// own today, the runner's checkout beside it after the split). A named table that is not there fails: a disc test
-    /// is never skipped because the runner's checkout is missing, only because this computer has no disc
-    /// (<c>-p:RunnerPins=</c>, named empty on purpose, skips them, and the reason says so). A PC's own row, in
-    /// <c>~/.config/piconet/pins.tsv</c> outside every checkout, is read over the table's as the runner's lib.sh reads
-    /// it. Null when neither names one.</summary>
+    /// (<c>AssemblyMetadata</c> "RunnerPins", from <c>RunnerPins</c> in net/Directory.Build.props:
+    /// the runner's checkout beside this one). A PC's own row, in <c>~/.config/piconet/pins.tsv</c> outside every
+    /// checkout, is read over the table's as the runner's lib.sh reads it. Without the runner's checkout (a clean
+    /// machine, CI) only the PC's own row is read, and without a disc the disc tests are skipped, never failed, and
+    /// the reason says which is missing (<c>-p:RunnerPins=</c>, named empty on purpose, looks for no disc at all).
+    /// Null when neither names one.</summary>
     internal static string? PlayersDisc()
     {
         var pins = typeof(RealDiscStatsTests).Assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyMetadataAttribute), false)
             .Cast<System.Reflection.AssemblyMetadataAttribute>().Single(a => a.Key == "RunnerPins").Value;
         Assert.SkipWhen(string.IsNullOrEmpty(pins), "the build names no runner checkout (RunnerPins is empty): no disc is looked for");
-        Assert.True(File.Exists(pins), $"the runner's pins table is not there ({pins}): RunnerPins in net/Directory.Build.props names its checkout");
-        static string? Row(string table) => File.ReadLines(table).Select(line => line.Split('\t'))
-            .FirstOrDefault(cells => cells.Length >= 2 && cells[0] == "DISC_DEFAULT" && cells[1].Length > 0)?[1];
+        static string? Row(string table) => File.Exists(table)
+            ? File.ReadLines(table).Select(line => line.Split('\t'))
+                .FirstOrDefault(cells => cells.Length >= 2 && cells[0] == "DISC_DEFAULT" && cells[1].Length > 0)?[1]
+            : null;
         var own = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "piconet", "pins.tsv");
-        return (File.Exists(own) ? Row(own) : null) ?? Row(pins!);
+        var disc = Row(own) ?? Row(pins!);
+        Assert.SkipWhen(disc is null && !File.Exists(pins),
+            $"no runner checkout beside this one (its pins table {pins} is not there) and no DISC_DEFAULT in {own}: " +
+            "the disc tests need your own F-Zero GX (USA) ISO");
+        return disc;
     }
 
     [Theory]

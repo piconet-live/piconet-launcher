@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    name: Build and test
+    # The submodules (piconet-protocol, piconet-tools) are private repos until the repos go public; then this job runs.
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: net/global.json
+      - name: Build
+        working-directory: net
+        run: dotnet build net.slnx
+      - name: Test
+        working-directory: net
+        run: dotnet test --project tests/Launcher.Tests
