@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Launcher.App/Launcher.App.csproj" />
+    <Project Path="src/Launcher.Core/Launcher.Core.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/DiscPinsWriter/DiscPinsWriter.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Launcher.Tests/Launcher.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,70 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:app="using:Launcher.App"
+             xmlns:husk="https://github.com/d3ara1n/Huskui.Avalonia"
+             x:Class="Launcher.App.App"
+             RequestedThemeVariant="Dark">
+  <Application.DataTemplates>
+    <app:ViewLocator />
+  </Application.DataTemplates>
+  <Application.Resources>
+    <!-- The hosts of menus, flyouts and tooltips, drawn at the interface scale of the control they open at
+         (Popup.InheritsTransform, below; Controls/ScaledRoot.cs): the transform once, as Avalonia's own theme does.
+         Huskui's PopupRoot applies it twice (a layout and a render transform) and the overlay host had none. The
+         PopupRoot's other setters are Huskui's. -->
+    <ControlTheme x:Key="{x:Type PopupRoot}" TargetType="PopupRoot">
+      <Setter Property="Cursor" Value="Arrow" />
+      <Setter Property="TransparencyBackgroundFallback" Value="{DynamicResource WindowBackgroundBrush}" />
+      <Setter Property="TransparencyLevelHint" Value="Transparent" />
+      <Setter Property="Background" Value="{DynamicResource TransparentBrush}" />
+      <Setter Property="Foreground" Value="{DynamicResource ControlForegroundBrush}" />
+      <Setter Property="FontSize" Value="{DynamicResource MediumFontSize}" />
+      <Setter Property="FontWeight" Value="{DynamicResource ControlFontWeight}" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <LayoutTransformControl LayoutTransform="{TemplateBinding Transform}">
+            <Panel>
+              <Border Name="PART_TransparencyFallback" IsHitTestVisible="False" />
+              <VisualLayerManager Name="PART_VisualLayerManager">
+                <ContentPresenter Name="PART_ContentPresenter" Padding="{TemplateBinding Padding}"
+                                  Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                  BorderThickness="{TemplateBinding BorderThickness}" ClipToBounds="{TemplateBinding ClipToBounds}"
+                                  Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                                  CornerRadius="{TemplateBinding CornerRadius}" />
+              </VisualLayerManager>
+            </Panel>
+          </LayoutTransformControl>
+        </ControlTemplate>
+      </Setter>
+    </ControlTheme>
+    <ControlTheme x:Key="{x:Type OverlayPopupHost}" TargetType="OverlayPopupHost">
+      <Setter Property="Foreground" Value="{DynamicResource ControlForegroundBrush}" />
+      <Setter Property="FontSize" Value="{DynamicResource MediumFontSize}" />
+      <Setter Property="FontWeight" Value="{DynamicResource ControlFontWeight}" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <LayoutTransformControl LayoutTransform="{TemplateBinding Transform}">
+            <VisualLayerManager>
+              <ContentPresenter Name="PART_ContentPresenter" Background="{TemplateBinding Background}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}" Content="{TemplateBinding Content}"
+                                Padding="{TemplateBinding Padding}" />
+            </VisualLayerManager>
+          </LayoutTransformControl>
+        </ControlTemplate>
+      </Setter>
+    </ControlTheme>
+  </Application.Resources>
+  <Application.Styles>
+    <!-- Huskui's controls under the launcher's own look (Theme.axaml: direction D). The launcher's accent is
+         Theme.axaml's AccentColor alone: every control that shows it has its own style there (the switch, the
+         segments, the slider, the boxes). Huskui's accent is a named scale of its own, set to its nearest green only
+         for what is left to it (a list's highlight). -->
+    <husk:HuskuiTheme Accent="Green" Gray="Slate" Corner="Normal" />
+    <StyleInclude Source="avares://Launcher.App/Theme/Theme.axaml" />
+    <!-- Menus, flyouts and tooltips are windows of their own: each takes the interface scale (Controls/ScaledRoot)
+         from the control it opens at. -->
+    <Style Selector="Popup">
+      <Setter Property="InheritsTransform" Value="True" />
+    </Style>
+  </Application.Styles>
+</Application>

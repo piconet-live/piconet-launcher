@@ -1,0 +1,286 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:c="using:Launcher.App.Controls"
+             x:Class="Launcher.App.Views.HomeView"
+             x:DataType="vm:HomeViewModel"
+             x:Name="Root">
+  <UserControl.Styles>
+    <!-- No news of the race: what was last known, dimmed. -->
+    <Style Selector=":is(Control).stale">
+      <Setter Property="Opacity" Value="0.4" />
+    </Style>
+    <!-- Table cells: fixed widths, 12 px apart; in a narrow window the columns marked "extra" go. -->
+    <Style Selector="Grid.cells > :is(Control)">
+      <Setter Property="Margin" Value="12,0,0,0" />
+    </Style>
+    <!-- the player's own vote, in green -->
+    <Style Selector="TextBlock.mine">
+      <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+    </Style>
+    <Style Selector="v|HomeView.narrow :is(Control).extra">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
+    <!-- a racer's paint in a list: a round dot -->
+    <Style Selector="Border.chip">
+      <Setter Property="Width" Value="8" />
+      <Setter Property="Height" Value="8" />
+      <Setter Property="CornerRadius" Value="{DynamicResource StaticFullCornerRadius}" />
+    </Style>
+    <!-- the course vote's rows: the drawn one framed in green, the others stepped back -->
+    <Style Selector="Border.voterow">
+      <Setter Property="Height" Value="26" />
+      <Setter Property="Margin" Value="-8,0" />
+      <Setter Property="Padding" Value="6,0" />
+      <Setter Property="BorderThickness" Value="2" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <DoubleTransition Property="Opacity" Duration="{StaticResource Emphasis}" Easing="{StaticResource EaseOut}" />
+          <BrushTransition Property="BorderBrush" Duration="0:0:0.09" Easing="{StaticResource EaseOut}" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Border.voterow.won">
+      <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    </Style>
+    <Style Selector="Border.voterow.lost">
+      <Setter Property="Opacity" Value="0.32" />
+    </Style>
+    <Style Selector="TextBlock.odds">
+      <Setter Property="Foreground" Value="{StaticResource OffBrush}" />
+    </Style>
+    <Style Selector="TextBlock.odds.voted">
+      <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+    </Style>
+    <Style Selector="TextBlock.odds.mine">
+      <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+    </Style>
+    <Style Selector="Ellipse.pip">
+      <Setter Property="Width" Value="8" />
+      <Setter Property="Height" Value="8" />
+      <Setter Property="Margin" Value="0,0,5,0" />
+      <Setter Property="Fill" Value="{StaticResource FaintBrush}" />
+    </Style>
+    <Style Selector="Ellipse.pip.mine">
+      <Setter Property="Fill" Value="{StaticResource AccentBrush}" />
+    </Style>
+    <Style Selector="TextBlock.detail">
+      <Setter Property="Foreground" Value="{StaticResource DimBrush}" />
+    </Style>
+    <Style Selector="TextBlock.ko">
+      <Setter Property="Foreground" Value="{StaticResource OfflineBrush}" />
+    </Style>
+  </UserControl.Styles>
+
+  <StackPanel Spacing="24">
+    <!-- Quick Play's action: RACE, or the lobby's box and the way out; "Play F-Zero GX" (PlayControlView, on the
+         window's PlayControlViewModel) -->
+    <v:PlayControlView DataContext="{Binding $parent[Window].((vm:MainViewModel)DataContext).Control}" />
+    <!-- The race, and what stands in its place: the same block at the same size in every state. -->
+    <Grid Name="Top" ColumnDefinitions="520,16,*" RowDefinitions="Auto,Auto">
+      <Border Name="MapPlace" Classes="well" Height="264" ClipToBounds="True">
+        <Panel>
+          <!-- A few words: nobody online, a lobby gathering, a race seen from outside, no answer. -->
+          <StackPanel IsVisible="{Binding IsWords}" VerticalAlignment="Center" Margin="24,20" Spacing="4">
+            <TextBlock Classes="dim" Text="{Binding Over}"
+                       IsVisible="{Binding Over, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+            <TextBlock Classes="name" Text="{Binding Big}" TextWrapping="Wrap" FontFeatures="tnum" />
+            <TextBlock Text="{Binding Under}" TextWrapping="Wrap"
+                       IsVisible="{Binding Under, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          </StackPanel>
+
+          <!-- The course vote of the player's lobby, with the votes as they stand. -->
+          <Grid IsVisible="{Binding IsVote}" RowDefinitions="Auto,Auto,Auto" VerticalAlignment="Center" Margin="24,16">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Classes="dim" Text="{Binding Over}" VerticalAlignment="Bottom" TextTrimming="CharacterEllipsis" />
+              <TextBlock Grid.Column="1" Classes="title" Text="{Binding VoteClock}" FontFeatures="tnum" />
+            </Grid>
+            <ItemsControl Grid.Row="1" ItemsSource="{Binding VoteRows}" Margin="0,6,0,0">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:VoteRow">
+                  <Border Classes="voterow" Classes.won="{Binding Won}" Classes.lost="{Binding Lost}">
+                    <Grid ColumnDefinitions="192,12,*,12,44">
+                      <TextBlock Text="{Binding Name}" Classes.strong="{Binding Won}" Classes.mine="{Binding Mine}"
+                                 VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                      <ItemsControl Grid.Column="2" ItemsSource="{Binding Pips}" VerticalAlignment="Center" Height="8" ClipToBounds="True">
+                        <ItemsControl.ItemsPanel>
+                          <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:VotePip">
+                            <Ellipse Classes="pip" Classes.mine="{Binding Mine}" />
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                      <TextBlock Grid.Column="4" Classes="figure odds" FontSize="{StaticResource Size15}" Text="{Binding Odds}"
+                                 TextAlignment="Right" VerticalAlignment="Center" IsVisible="{Binding Counted}"
+                                 Classes.voted="{Binding Voted}" Classes.mine="{Binding Mine}" />
+                    </Grid>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <TextBlock Grid.Row="2" Classes="dim" Text="{Binding Under}" Margin="0,6,0,0"
+                       IsVisible="{Binding Under, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          </Grid>
+
+          <!-- The race of the player's lobby: the launcher's 3D map of it. Pressing it opens the race's own page. -->
+          <Panel IsVisible="{Binding IsRace}">
+            <Panel IsVisible="{Binding !NoDisc}" Classes.stale="{Binding Stale}">
+              <c:CourseMap Model="{Binding Lobby.Race.Map}" Racers="{Binding Lobby.Race.MapRacers}" />
+              <TextBlock Classes="dim" Text="Race starting" HorizontalAlignment="Left"
+                         VerticalAlignment="Bottom" Margin="12,0,0,8" IsVisible="{Binding RaceWaiting}" />
+            </Panel>
+            <Button Classes="plain" Command="{Binding OpenRaceCommand}"
+                    AutomationProperties.Name="Open the race" IsVisible="{Binding !NoDisc}" />
+            <StackPanel IsVisible="{Binding NoDisc}" VerticalAlignment="Center" Margin="24,20" Spacing="4">
+              <TextBlock Classes="title" Text="No disc image" TextWrapping="Wrap" />
+              <Button Classes="secondary" Content="Choose your disc…" Command="{Binding ChooseDiscCommand}"
+                      HorizontalAlignment="Left" Margin="0,12,0,0" />
+            </StackPanel>
+            <Border IsVisible="{Binding Stale}" VerticalAlignment="Bottom" Height="36" Padding="12,0"
+                    Background="{StaticResource RowOnBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0">
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="{Binding StaleText}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="1" Classes="dim" Text="{Binding StaleAsOf}" VerticalAlignment="Center" Margin="12,0,0,0" />
+              </Grid>
+            </Border>
+          </Panel>
+        </Panel>
+      </Border>
+
+      <!-- Beside it: the same race's standings; or who is in the lobby; or what RACE would do. -->
+      <StackPanel Name="Side" Grid.Column="2">
+        <TextBlock Classes="dim" Text="{Binding SideOver}" TextTrimming="CharacterEllipsis" />
+        <TextBlock Classes="head" Text="{Binding SideTitle}" TextTrimming="CharacterEllipsis" Margin="0,0,0,6" />
+        <StackPanel IsVisible="{Binding IsRace}">
+          <ItemsControl ItemsSource="{Binding Standings}" Classes.stale="{Binding Stale}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:HomeStanding">
+                <Border Classes="row" Padding="0">
+                  <Grid ColumnDefinitions="26,18,*,Auto">
+                    <TextBlock Classes="figure" Text="{Binding Place}" />
+                    <Border Grid.Column="1" Classes="chip" HorizontalAlignment="Left"
+                            Background="{Binding ColorHex, Converter={x:Static v:HexToBrush.Instance}}" />
+                    <TextBlock Grid.Column="2" Text="{Binding Name}" Classes.strong="{Binding You}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Column="3" Classes="figure detail" Text="{Binding Detail}" Margin="8,0,0,0" FontSize="{StaticResource Size15}"
+                               Classes.ko="{Binding Out}" />
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <Border Classes="row" Padding="0">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Classes="dim" Text="{Binding StandingsFoot}" />
+              <Button Grid.Column="1" Classes="link" Command="{Binding OpenRaceCommand}" VerticalAlignment="Center">
+                <TextBlock Text="Open the race" />
+              </Button>
+            </Grid>
+          </Border>
+        </StackPanel>
+        <Border Classes="row" Padding="0,6,0,0" IsVisible="{Binding HasPeople}">
+          <ItemsControl ItemsSource="{Binding People}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:PersonRow">
+                <DockPanel Height="24" Margin="0,0,12,0">
+                  <Border DockPanel.Dock="Left" Classes="chip" Margin="0,0,8,0"
+                          Background="{Binding ColorHex, Converter={x:Static v:HexToBrush.Instance}}" />
+                  <c:NameTagText PlayerName="{Binding Name}" PlayerTag="{Binding Tag}" VerticalAlignment="Center" />
+                </DockPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </Border>
+        <Border Classes="row" Padding="0,8,0,0"
+                IsVisible="{Binding SideText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+          <TextBlock Text="{Binding SideText}" TextWrapping="Wrap" />
+        </Border>
+      </StackPanel>
+    </Grid>
+
+    <!-- The server's lobbies. Today these are its Quick Play lobbies; lobbies opened by players get the same rows. -->
+    <StackPanel>
+      <Border Classes="rowhead">
+        <Grid ColumnDefinitions="148,Auto,*,Auto">
+          <TextBlock Classes="colhead" Text="LOBBY" LetterSpacing="1" />
+          <TextBlock Grid.Column="1" Classes="colhead extra" Text="RULES" LetterSpacing="1" Width="170" Margin="12,0,0,0" />
+          <TextBlock Grid.Column="2" Classes="colhead" Text="NOW" LetterSpacing="1" Margin="12,0,0,0" />
+          <TextBlock Grid.Column="3" Classes="colhead" Text="" Width="100" Margin="12,0,0,0" />
+        </Grid>
+      </Border>
+      <ItemsControl ItemsSource="{Binding Lobbies}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:LobbyRow">
+            <v:LobbyRowView />
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <Border Classes="row" Padding="0"
+              IsVisible="{Binding LobbiesFoot, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+        <!-- a warning wraps at the table's width (Grid.warnline); a count stays dim -->
+        <Grid ColumnDefinitions="Auto,*" Classes.warnline="{Binding LobbiesFootWarns}">
+          <Path Classes="warnmark" IsVisible="{Binding LobbiesFootWarns}" />
+          <TextBlock Grid.Column="1" Classes.dim="{Binding !LobbiesFootWarns}" Text="{Binding LobbiesFoot}" TextWrapping="Wrap"
+                     VerticalAlignment="Center" />
+        </Grid>
+      </Border>
+    </StackPanel>
+
+    <!-- The player's last races, from their replays. -->
+    <StackPanel IsVisible="{Binding HasRecent}">
+      <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,4">
+        <TextBlock Classes="head" Text="Your recent races" />
+        <Button Grid.Column="1" Classes="link" Command="{Binding ShowReplaysCommand}" VerticalAlignment="Bottom">
+          <TextBlock Text="{Binding AllReplays}" />
+        </Button>
+      </Grid>
+      <Border Classes="rowhead">
+        <Grid Classes="cells" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto" Margin="-12,0,0,0">
+          <TextBlock Classes="colhead" Text="COURSE" LetterSpacing="1" />
+          <TextBlock Grid.Column="1" Classes="colhead" Text="PLACE" LetterSpacing="1" Width="84" />
+          <TextBlock Grid.Column="2" Classes="colhead" Text="RACE TIME" LetterSpacing="1" Width="76" TextAlignment="Right" />
+          <TextBlock Grid.Column="3" Classes="colhead extra" Text="BEST LAP" LetterSpacing="1" Width="70" TextAlignment="Right" />
+          <TextBlock Grid.Column="4" Classes="colhead extra" Text="MACHINE" LetterSpacing="1" Width="100" />
+          <TextBlock Grid.Column="5" Classes="colhead" Text="WHEN" LetterSpacing="1" Width="110" />
+          <TextBlock Grid.Column="6" Classes="colhead" Text="" Width="44" />
+        </Grid>
+      </Border>
+      <ItemsControl ItemsSource="{Binding Recent}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:RecentRace">
+            <Border Classes="row">
+              <Grid Classes="cells" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto" Margin="-12,0,0,0">
+                <TextBlock Classes="strong" Text="{Binding Course}" TextTrimming="CharacterEllipsis" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" Width="84">
+                  <TextBlock Classes="figure" Text="{Binding Place}" />
+                  <TextBlock Classes="note" Text="{Binding Of}" VerticalAlignment="Center" />
+                </StackPanel>
+                <TextBlock Grid.Column="2" Classes="figure" Text="{Binding Time}" Width="76" TextAlignment="Right" />
+                <TextBlock Grid.Column="3" Classes="figure dim extra" Text="{Binding Best}" Width="70" TextAlignment="Right" />
+                <TextBlock Grid.Column="4" Classes="dim extra" Text="{Binding Machine}" Width="100" TextTrimming="CharacterEllipsis" />
+                <TextBlock Grid.Column="5" Classes="dim" Text="{Binding When}" Width="110" TextTrimming="CharacterEllipsis" />
+                <Button Grid.Column="6" Classes="link" Width="44" HorizontalAlignment="Right" HorizontalContentAlignment="Right"
+                        VerticalAlignment="Center"
+                        Command="{Binding #Root.((vm:HomeViewModel)DataContext).WatchCommand}" CommandParameter="{Binding}">
+                  <TextBlock Text="Watch" />
+                </Button>
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+
+    <Grid Classes="warnline" ColumnDefinitions="Auto,*"
+          IsVisible="{Binding Notice, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+      <Path Classes="warnmark" />
+      <TextBlock Grid.Column="1" Text="{Binding Notice}" />
+    </Grid>
+  </StackPanel>
+</UserControl>

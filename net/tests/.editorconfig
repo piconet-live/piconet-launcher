@@ -1,0 +1,4 @@
+# The test projects (net/.editorconfig holds the rest). A scenario test drives a whole launcher, server or both, so
+# it touches many types by design: class coupling (CA1506) is no measure of a test. CA1502 stays on.
+[*.cs]
+dotnet_diagnostic.CA1506.severity = none

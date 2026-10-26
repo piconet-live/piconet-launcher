@@ -1,0 +1,166 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:c="using:Launcher.App.Controls"
+             x:Class="Launcher.App.Views.ControllerView"
+             x:DataType="vm:ControllerViewModel">
+  <!-- The Controller page in direction C (Theme.axaml): the four ports as one row of choices; the port's form (what
+       is plugged in, its device, its layout) beside the test, the GameCube controller as the game reads it, with
+       "Set up in the game" under it; and under both the mapping table. Every change is kept as it is made, as on Settings. It fits the smallest window
+       (1000 wide: 672 for the page). -->
+  <UserControl.Styles>
+    <!-- while the game runs the page stands back (it cannot be changed then) -->
+    <Style Selector="Grid#Page.running">
+      <Setter Property="Opacity" Value="0.5" />
+    </Style>
+    <!-- the mapping table's rows, 24 px as on the board -->
+    <Style Selector="Border.row">
+      <Setter Property="MinHeight" Value="24" />
+    </Style>
+    <!-- a control with nothing set, faint; the one listening, green, breathing -->
+    <Style Selector="TextBlock.unset">
+      <Setter Property="Foreground" Value="{StaticResource OffBrush}" />
+    </Style>
+    <Style Selector="TextBlock.listening, Ellipse.listening">
+      <Style.Animations>
+        <Animation Duration="0:0:1.4" IterationCount="Infinite" PlaybackDirection="Alternate" Easing="{StaticResource EaseOut}">
+          <KeyFrame Cue="0%"><Setter Property="Opacity" Value="1" /></KeyFrame>
+          <KeyFrame Cue="100%"><Setter Property="Opacity" Value="0.4" /></KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+    <Style Selector="TextBlock.listening">
+      <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+    </Style>
+    <!-- the test's picture, dimmed while the port is off or its controller is out -->
+    <Style Selector="Border.pad.dim > :is(Control)">
+      <Setter Property="Opacity" Value="0.25" />
+    </Style>
+    <!-- the adapter's dot -->
+    <Style Selector="Border.dot.problem">
+      <Setter Property="Background" Value="{StaticResource OfflineBrush}" />
+    </Style>
+  </UserControl.Styles>
+  <Grid Name="Page" Classes.running="{Binding !Enabled}" ColumnDefinitions="*,16,320" RowDefinitions="Auto,Auto,Auto"
+        MaxWidth="860" HorizontalAlignment="Left">
+    <ListBox Grid.ColumnSpan="3" Classes="seg tall" ItemsSource="{x:Static vm:ControllerViewModel.PortNames}"
+             SelectedIndex="{Binding PortIndex}" AutomationProperties.Name="Controller port" Margin="0,0,0,14" />
+
+    <Grid Grid.Row="1" Classes="form" ColumnDefinitions="84,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+          IsEnabled="{Binding Enabled}" VerticalAlignment="Top" MinWidth="336">
+        <TextBlock Classes="label" Text="Plugged in" />
+        <ListBox Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:ControllerViewModel.KindNames}"
+                 SelectedIndex="{Binding KindIndex}" AutomationProperties.Name="What is plugged into the port" />
+        <TextBlock Grid.Row="1" Grid.Column="1" Classes="note" IsVisible="{Binding OtherKind}" TextWrapping="Wrap"
+                   Text="Other device" />
+
+        <!-- a controller: its device, its layout, the sticks' dead zones -->
+        <TextBlock Grid.Row="2" Classes="label" Text="Device" IsVisible="{Binding IsController}" />
+        <ComboBox Grid.Row="2" Grid.Column="1" Classes="field" Classes.missing="{Binding DeviceMissing}"
+                  ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}"
+                  IsVisible="{Binding IsController}" HorizontalAlignment="Stretch" AutomationProperties.Name="Device" />
+        <Grid Grid.Row="3" Grid.Column="1" Classes="warnline" ColumnDefinitions="Auto,*" IsVisible="{Binding DeviceMissing}">
+          <Path Classes="warnmark" />
+          <TextBlock Grid.Column="1" Text="Not plugged in" />
+        </Grid>
+        <TextBlock Grid.Row="4" Classes="label" Text="Layout" IsVisible="{Binding IsController}" />
+        <StackPanel Grid.Row="4" Grid.Column="1" IsVisible="{Binding IsController}">
+          <Button Classes="secondary" Content="Use the standard layout" Command="{Binding UseStandardLayoutCommand}"
+                  IsEnabled="{Binding HasStandardLayout}" HorizontalAlignment="Left"
+                  AutomationProperties.Name="Use the standard layout" />
+          <TextBlock Classes="faint" Text="{Binding LayoutNote}" Margin="0,4,0,0" />
+        </StackPanel>
+        <TextBlock Grid.Row="5" Classes="label" Text="Dead zone" IsVisible="{Binding IsController}"
+                   />
+        <Grid Grid.Row="5" Grid.Column="1" ColumnDefinitions="56,Auto,8,Auto" RowDefinitions="Auto,4,Auto" IsVisible="{Binding IsController}">
+          <TextBlock Classes="dim" Text="Stick" VerticalAlignment="Center" />
+          <c:Stepper Grid.Column="1" Value="{Binding StickDeadZone}" Minimum="0" Maximum="50" Step="5" />
+          <TextBlock Grid.Column="3" Classes="dim" Text="%" VerticalAlignment="Center" />
+          <TextBlock Grid.Row="2" Classes="dim" Text="C-Stick" VerticalAlignment="Center" />
+          <c:Stepper Grid.Row="2" Grid.Column="1" Value="{Binding CStickDeadZone}" Minimum="0" Maximum="50" Step="5" />
+          <TextBlock Grid.Row="2" Grid.Column="3" Classes="dim" Text="%" VerticalAlignment="Center" />
+        </Grid>
+
+        <!-- the adapter: what the game says of it -->
+        <TextBlock Grid.Row="6" Classes="label" Text="Adapter" IsVisible="{Binding IsAdapter}" />
+        <StackPanel Grid.Row="6" Grid.Column="1" Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsAdapter}">
+          <Border Classes="dot" Classes.online="{Binding AdapterReady}" Classes.problem="{Binding AdapterProblem}"
+                  IsVisible="{Binding AdapterText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          <TextBlock Name="Adapter" Text="{Binding AdapterText}" VerticalAlignment="Center"
+                     Classes.dim="{Binding !AdapterReady}" Classes.warn="{Binding AdapterProblem}" />
+          <TextBlock Classes="faint" FontSize="{StaticResource Size14}" Text="{Binding AdapterValue}" VerticalAlignment="Center" />
+        </StackPanel>
+
+        <Grid Grid.Row="7" Grid.Column="1" Classes="warnline" ColumnDefinitions="Auto,*"
+              IsVisible="{Binding Notice, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+          <Path Classes="warnmark" />
+          <TextBlock Grid.Column="1" Text="{Binding Notice}" />
+        </Grid>
+    </Grid>
+
+    <!-- the mapping table, in two halves: a GameCube control, what it is set to, and "Set" to press another -->
+    <StackPanel Grid.Row="2" Grid.ColumnSpan="3" Margin="0,16,0,0" IsVisible="{Binding IsController}" IsEnabled="{Binding Enabled}">
+      <Panel MinHeight="24" Margin="0,0,0,6">
+        <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="{Binding Capturing}">
+          <Ellipse Classes.listening="{Binding Capturing}" Width="8" Height="8" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center" />
+          <TextBlock Classes="strong" Text="{Binding CaptureText}" VerticalAlignment="Center" />
+          <TextBlock Classes="dim" Text="{Binding CaptureDevice}" VerticalAlignment="Center" />
+          <Button Classes="link" Command="{Binding CancelCaptureCommand}" AutomationProperties.Name="Cancel"><TextBlock Text="Cancel" /></Button>
+        </StackPanel>
+      </Panel>
+      <Grid ColumnDefinitions="*,16,*">
+        <Grid.Resources>
+          <DataTemplate x:Key="Row" x:DataType="vm:MapRow">
+            <Border Classes="row">
+              <Grid ColumnDefinitions="92,*,Auto">
+                <TextBlock Classes="dim" Text="{Binding Label}" />
+                <TextBlock Grid.Column="1" Text="{Binding Shown}" Classes.unset="{Binding Unset}"
+                           Classes.listening="{Binding Listening}" TextTrimming="CharacterEllipsis" />
+                <Button Grid.Column="2" Classes="link"
+                        Command="{Binding $parent[UserControl].((vm:ControllerViewModel)DataContext).SetCommand}"
+                        CommandParameter="{Binding}" AutomationProperties.Name="{Binding SetName}">
+                  <TextBlock Text="Set" />
+                </Button>
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </Grid.Resources>
+        <StackPanel>
+          <Border Classes="rowhead">
+            <Grid ColumnDefinitions="92,*"><TextBlock Classes="colhead" Text="Control" /><TextBlock Grid.Column="1" Classes="colhead" Text="Set to" /></Grid>
+          </Border>
+          <ItemsControl ItemsSource="{Binding LeftRows}" ItemTemplate="{StaticResource Row}" />
+        </StackPanel>
+        <StackPanel Grid.Column="2">
+          <Border Classes="rowhead">
+            <Grid ColumnDefinitions="92,*"><TextBlock Classes="colhead" Text="Control" /><TextBlock Grid.Column="1" Classes="colhead" Text="Set to" /></Grid>
+          </Border>
+          <ItemsControl ItemsSource="{Binding RightRows}" ItemTemplate="{StaticResource Row}" />
+        </StackPanel>
+      </Grid>
+    </StackPanel>
+
+    <!-- the test: what the game reads from this port now -->
+    <StackPanel Grid.Row="1" Grid.Column="2">
+      <TextBlock Classes="head" Text="{Binding PortTitle}" />
+      <TextBlock Classes="note" Text="Test" Margin="0,2,0,10" />
+      <Border Classes="well pad" Classes.dim="{Binding PadDim}" Padding="0,10,0,8">
+        <c:PadPicture Pad="{Binding Pad}" HorizontalAlignment="Center" />
+      </Border>
+      <Grid Classes="warnline" ColumnDefinitions="Auto,*" Margin="0,8,0,0"
+            IsVisible="{Binding PadNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+        <Path Classes="warnmark" />
+        <TextBlock Grid.Column="1" Text="{Binding PadNote}" />
+      </Grid>
+      <Button Classes="secondary" Content="Test rumble" Command="{Binding RumbleCommand}" IsVisible="{Binding CanRumble}"
+              IsEnabled="{Binding Enabled}" HorizontalAlignment="Left" Margin="0,12,0,0" AutomationProperties.Name="Test rumble" />
+      <!-- what this page cannot set: the game's own controller options (calibration, button settings, rumble). The
+           game starts on them and closes when the player leaves them; off, with the reason, while it cannot start -->
+      <Button x:Name="SetUpInGameButton" Classes="secondary" Content="Set up in the game" Command="{Binding SetUpInGameCommand}"
+              IsEnabled="{Binding CanSetUpInGame}" HorizontalAlignment="Left" Margin="0,16,0,0"
+              AutomationProperties.Name="Set up in the game" />
+      <TextBlock x:Name="SetUpInGameNote" Classes="note" Text="{Binding SetUpInGameNote}" Margin="0,6,0,0"
+                 IsVisible="{Binding SetUpInGameNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+    </StackPanel>
+  </Grid>
+</UserControl>

@@ -1,0 +1,59 @@
+<Project>
+  <!-- Settings shared by every project under net/. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <Deterministic>true</Deterministic>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <!-- The code-metric rules' limits (CA1502, CA1506; .editorconfig turns them on), and CA1509, which checks the
+       limits' file (CodeMetrics.globalconfig: a finding in a file that is not C# takes no [*.cs] setting). -->
+  <ItemGroup>
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)CodeMetricsConfig.txt" Link="CodeMetricsConfig.txt" Visible="false" />
+    <GlobalAnalyzerConfigFiles Include="$(MSBuildThisFileDirectory)CodeMetrics.globalconfig" />
+  </ItemGroup>
+
+  <!-- Package metadata; the version is bumped deliberately, see CHANGELOG.md. -->
+  <PropertyGroup>
+    <VersionPrefix>0.5.0</VersionPrefix>
+    <!-- The product's name, never a person's: an assembly's company is in every program and library a player is
+         handed (their properties in Explorer, and their text). The launcher's AssemblyNamesTests holds it equal to
+         the name players see; port/build/package.py refuses a copy that names anybody. -->
+    <Authors>Piconet</Authors>
+    <Company>Piconet</Company>
+    <PackageLicenseExpression>GPL-3.0-or-later</PackageLicenseExpression>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!-- Where the protocol's parts are: the C# contracts'
+       project, and the protocol's checkout (ProtocolFolder: the folder that holds protocol/ and the protocol's
+       handbook pages), with the code generated from protocol/ and the stat packs kept there (ProtocolPacks: the
+       launcher's practice packs, the service's image). Every project names them through these properties, and
+       the protocol's repository is this repository's submodule external/protocol, with the paths it had in the
+       monorepo (net/src/Online.Protocol, protocol/). -->
+  <PropertyGroup>
+    <ProtocolFolder Condition="'$(ProtocolFolder)' == ''">$(MSBuildThisFileDirectory)../external/protocol/</ProtocolFolder>
+    <OnlineProtocolProject Condition="'$(OnlineProtocolProject)' == ''">$(ProtocolFolder)net/src/Online.Protocol/Online.Protocol.csproj</OnlineProtocolProject>
+    <ProtocolGenerated Condition="'$(ProtocolGenerated)' == ''">$(ProtocolFolder)protocol/generated/</ProtocolGenerated>
+    <ProtocolPacks Condition="'$(ProtocolPacks)' == ''">$(ProtocolFolder)protocol/packs/</ProtocolPacks>
+  </PropertyGroup>
+
+  <!-- The runner's table of pins (port/setup/pins.tsv), where the launcher's disc tests find your disc image
+       (DISC_DEFAULT; Launcher.Tests RealDiscStatsTests): the runner's checkout beside this one (piconet-runner).
+       Without it those tests are skipped; -p:RunnerPins= (empty) builds tests that look for no disc. -->
+  <PropertyGroup Condition="'$(RunnerPins)' == ''">
+    <RunnerPins>$(MSBuildThisFileDirectory)../../piconet-runner/port/setup/pins.tsv</RunnerPins>
+  </PropertyGroup>
+
+  <!-- piconet-tools, whose Fzgx.GameCube the launcher builds from source (Launcher.Core.csproj): this repository's
+       submodule external/tools. -p:FzgxTools=FOLDER/ names another checkout. -->
+  <PropertyGroup Condition="'$(FzgxTools)' == ''">
+    <FzgxTools>$(MSBuildThisFileDirectory)../external/tools/</FzgxTools>
+  </PropertyGroup>
+</Project>

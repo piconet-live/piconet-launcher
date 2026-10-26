@@ -1,0 +1,60 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:v="using:Launcher.App.Views"
+             x:Class="Launcher.App.Views.LobbyChat"
+             x:DataType="vm:LobbyViewModel">
+  <!-- The lobby's chat, the same in every state of the lobby: lines of the theme's text (the speaker's paint and name,
+       then what they said), the newest at the foot and kept in sight; under them the message and Send. Enter sends.
+       A line's text can be selected with the mouse and copied (Ctrl+C; a right click: Copy, the selection or the
+       whole line, and Copy all), for a player who takes the lines to a translator. A selection
+       stays within its line (each line is a block of its own beside its paint). A new line takes none away and
+       does not move the list while one is there. The speaker's tag shows while the pointer is over their line. -->
+  <UserControl.Resources>
+    <Flyout x:Key="LineMenu" Placement="Pointer">
+      <StackPanel Spacing="6" Margin="2" MinWidth="110">
+        <Button Classes="secondary" Content="Copy" HorizontalAlignment="Stretch" Click="OnCopy" />
+        <Button Classes="secondary" Content="Copy all" HorizontalAlignment="Stretch" Click="OnCopyAll" />
+      </StackPanel>
+    </Flyout>
+  </UserControl.Resources>
+  <DockPanel>
+    <!-- why the last line was not sent, or how long the player is muted still (the server's chat filter) -->
+    <Grid DockPanel.Dock="Bottom" Classes="warnline" ColumnDefinitions="Auto,*" Margin="0,6,0,0" IsVisible="{Binding ChatNoteShown}">
+      <Path Classes="warnmark" />
+      <TextBlock Grid.Column="1" Name="ChatNote" Text="{Binding ChatNote}" />
+    </Grid>
+    <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,8,Auto" Margin="0,8,0,0">
+      <TextBox Classes="field" Text="{Binding Message}" MaxLength="200"
+               KeyDown="OnMessageKey" AutomationProperties.Name="Message" />
+      <Button Grid.Column="2" Classes="secondary" Content="Send" Command="{Binding SendCommand}" />
+    </Grid>
+    <ScrollViewer Name="Lines" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                  VerticalContentAlignment="Bottom">
+      <ItemsControl Name="List" ItemsSource="{Binding Chat}" VerticalAlignment="Bottom">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:ChatLine">
+            <Panel>
+            <!-- a server's notice: its card, the chat's whole width, no name column (NoticeCard) -->
+            <Panel IsVisible="{Binding Server}" Margin="0,4">
+              <v:NoticeCard DataContext="{Binding Notice}" />
+            </Panel>
+            <Grid ColumnDefinitions="18,*" MinHeight="20" IsVisible="{Binding !Server}">
+              <Border Classes="chip" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,5,0,0"
+                      Background="{Binding ColorHex, Converter={x:Static v:HexToBrush.Instance}}" />
+              <SelectableTextBlock Grid.Column="1" TextWrapping="Wrap" SelectionBrush="{StaticResource SelectBrush}"
+                                   Background="Transparent" ContextFlyout="{StaticResource LineMenu}">
+                <Run Text="{Binding Name}" FontWeight="SemiBold" /><Run FontSize="{StaticResource Size12}"
+                     Foreground="{StaticResource DimBrush}"><Run.Text><MultiBinding Converter="{x:Static v:TagWhilePointed.Instance}"><Binding
+                     Path="TagText" /><Binding Path="$parent[SelectableTextBlock].IsPointerOver" /><Binding
+                     Path="$parent[SelectableTextBlock].SelectedText" /></MultiBinding></Run.Text></Run><Run
+                     Text="  " /><Run Text="{Binding Text}" Foreground="{StaticResource DimBrush}" />
+              </SelectableTextBlock>
+            </Grid>
+            </Panel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

@@ -1,0 +1,121 @@
+{
+ "version": 2,
+ "made_by": "net/tools/DiscPinsWriter from the disc image, recomp/manifest.toml and the hand-prepared game folder; not edited by hand",
+ "game": "GFZE01",
+ "disc": 0,
+ "revision": 0,
+ "name": "F-Zero GX (USA)",
+ "files": 4605,
+ "folders": 76,
+ "bytes": 1433628143,
+ "content_sha256": "61b1bb6f2afde522ba3490803ab347f22cf779ec6a2b087703c1b397d1fec4d2",
+ "named": {
+  "sys/boot.bin": {
+   "size": 1088,
+   "sha256": "c488d454e82a810db8d13b92f47827f6be9fe845e017f3ba8437f7fa86166264"
+  },
+  "sys/bi2.bin": {
+   "size": 8192,
+   "sha256": "4c2ae33f671957a74aac540a2c69118077cab89d832386a27af8bf001d966b6a"
+  },
+  "sys/apploader.img": {
+   "size": 116484,
+   "sha256": "fff1386be75156d3fed0056c2e426ca41ed4a90071adb5212891e05d058cf6bc"
+  },
+  "sys/main.dol": {
+   "size": 1414848,
+   "sha256": "46cae7e7ef551ccd628d2bb2fddb30fa9216b2dbb98a0fcf6e48618d8a92c9a8"
+  },
+  "sys/fst.bin": {
+   "size": 129405,
+   "sha256": "41cb0f2a9a9867d06fb99c871bc60ed639dc95369174ee2a1ba6d0df5027a534"
+  },
+  "files/enemy_line/line__.bin": {
+   "size": 1038355,
+   "sha256": "a4fed31737e71ec692c9e55ecca67c953c00274a650d838fb3440770889f6c73"
+  },
+  "files/fze.sample.rel": {
+   "size": 2232,
+   "sha256": "f0f308b5714888b0b9b2c05c9c1f2bec8e3f25c45bdc4a4bb7f375b0c1bcc0fe"
+  },
+  "files/fze.car_colchg.rel": {
+   "size": 12804,
+   "sha256": "4d8e351c06b111a6992affe48bf16101a6575d4f800efd2175f333b8afc31ff6"
+  },
+  "files/fze.customize.rel": {
+   "size": 277996,
+   "sha256": "98baeab7399af798ebdbb80b501d3b234c7dad193a879af0280bdeaf0db8bb05"
+  },
+  "files/fze.interview.rel": {
+   "size": 471336,
+   "sha256": "ba32d6b6289e2d940beced607a4c2b9cedd7470a0d9dfb2a43c85c4ff106301e"
+  },
+  "files/fze.movie.rel": {
+   "size": 30560,
+   "sha256": "28a505ba23e61ae6f07e60e9f51a4ee3d999c3fedef2673b498712bfa819731e"
+  },
+  "files/fze.movie_module.rel": {
+   "size": 298552,
+   "sha256": "2e6497b3f51d681f37cbe28ba55a272756b8ef370ba2d31071d0f99d00486850"
+  },
+  "files/fze.option.rel": {
+   "size": 101272,
+   "sha256": "8ba90d86106783ebf7ea8527b93a3b56ee8719fc376a6c492d068305e432f7a7"
+  },
+  "files/fze.pilotpoint.rel": {
+   "size": 95260,
+   "sha256": "14c40c0b7584abe760c1cc79a07917d702c96a89ce4f7c25e3d54820bff81e3d"
+  },
+  "files/fze.profile.rel": {
+   "size": 579524,
+   "sha256": "e2ff47036f67a9b07f1da096b3ea659ecebc62fd60d674dfe91a22a33cacfee4"
+  },
+  "files/fze.replay.rel": {
+   "size": 6688,
+   "sha256": "c2afa1bfc159ce82d02b92afe13369e10b98756a87490673813a3abac671b321"
+  },
+  "files/fze.sel.rel": {
+   "size": 261536,
+   "sha256": "3e8e1cfffffb144cbf0459037922f9e33a9370faf36da0b39d24e0ddd67fe68a"
+  },
+  "files/fze.story.rel": {
+   "size": 124108,
+   "sha256": "6daf433ffd809fccfc12bf4dd95fffa720936b135f80429e8c4e25cde336bb3b"
+  },
+  "files/fze.title.rel": {
+   "size": 150912,
+   "sha256": "ef0d93bbe38d83d7dcf328da1326c5f3e43bb89b9cc35225c5e526c1210d1851"
+  },
+  "files/fze.winning.rel": {
+   "size": 41176,
+   "sha256": "bcd7e463f15c7ab1d006887ad85ff4cc5b99ddc22e1c511dfcca456e6d5ff7e4"
+  }
+ },
+ "header_layout": [
+  "0001EC00",
+  "00178300",
+  "0001F97D",
+  "0001F97D",
+  "803E0680",
+  "00198000",
+  "56EC0000",
+  "00000000"
+ ],
+ "words": [
+  {
+   "file": "sys/main.dol",
+   "offset": 10560,
+   "original": "4800BAE5",
+   "new": "38600000",
+   "what": "sample-alloc-pad",
+   "address": "80005940"
+  },
+  {
+   "file": "files/fze.sample.rel",
+   "offset": 260,
+   "original": "7C051838",
+   "new": "38A00000",
+   "what": "mainrel-pad"
+  }
+ ]
+}

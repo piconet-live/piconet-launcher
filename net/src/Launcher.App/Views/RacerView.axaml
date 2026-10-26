@@ -1,0 +1,29 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:c="using:Launcher.App.Controls"
+             x:Class="Launcher.App.Views.RacerView"
+             x:DataType="vm:AccountViewModel" ClipToBounds="False">
+  <!-- You, at the top of the left column: the name as the game shows it with the tag after it ("KESTREL #4F2A"), and
+       the machine selected, by name only (no colour square beside the machine), under the gold
+       bar (direction D). The name opens its menu (NameMenu); the machine opens the Garage. -->
+  <StackPanel Spacing="8">
+    <!-- the mark over your own name: a short gold bar that leans (gold is the mark, never a control) -->
+    <c:Plate Shape="Lean" Width="32" Height="4" Cut="4" Background="{StaticResource GoldBrush}" HorizontalAlignment="Left" />
+    <!-- nothing between the leaning name and the column clips it (a button and a view clip to their boxes unless told;
+         the name's box holds its lean's reach, NameTagText.Overhang) -->
+    <Button Name="NameButton" Classes="plain" c:PadNav.Skip="True" HorizontalAlignment="Left" ClipToBounds="False"
+            AutomationProperties.Name="Your name">
+      <c:NameTagText Classes="racer" PlayerName="{Binding Name}" PlayerTag="{Binding Tag}" />
+      <Button.Flyout>
+        <Flyout Placement="BottomEdgeAlignedLeft" Opened="OnMenuOpened">
+          <v:NameMenu Name="Menu" Done="OnMenuDone" />
+        </Flyout>
+      </Button.Flyout>
+    </Button>
+    <Button Classes="plain" HorizontalAlignment="Left" Command="{Binding OpenGarageCommand}" AutomationProperties.Name="Your machine">
+      <TextBlock Classes="dim" Text="{Binding Machine}" FontSize="{StaticResource Size13}" />
+    </Button>
+  </StackPanel>
+</UserControl>

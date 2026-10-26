@@ -1,0 +1,72 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             x:Class="Launcher.App.Views.LanView"
+             x:DataType="vm:LanViewModel"
+             x:Name="Root">
+  <!-- The local network: the servers heard on the network, each with Join, and joining
+       one by its address. While none is heard, a dot that breathes while the network is listened to (grey when it
+       cannot be). The launcher hosts none: a server is its own program. -->
+  <UserControl.Styles>
+    <Style Selector="TextBlock.lanhead">
+      <Setter Property="FontFamily" Value="{StaticResource HeadingFont}" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="FontSize" Value="19" />
+    </Style>
+    <Style Selector="Border.listen">
+      <Setter Property="Width" Value="8" />
+      <Setter Property="Height" Value="8" />
+      <Setter Property="CornerRadius" Value="{DynamicResource StaticFullCornerRadius}" />
+      <Setter Property="Background" Value="{StaticResource OffBrush}" />
+    </Style>
+    <Style Selector="Border.listen.on">
+      <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+      <Style.Animations>
+        <Animation Duration="0:0:1.8" IterationCount="Infinite" Easing="SineEaseInOut">
+          <KeyFrame Cue="0%"><Setter Property="Opacity" Value="0.25" /></KeyFrame>
+          <KeyFrame Cue="50%"><Setter Property="Opacity" Value="1" /></KeyFrame>
+          <KeyFrame Cue="100%"><Setter Property="Opacity" Value="0.25" /></KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+  </UserControl.Styles>
+  <StackPanel Width="532" HorizontalAlignment="Left">
+    <TextBlock Classes="lanhead" Text="Servers on your network" Margin="0,0,0,6" />
+    <ItemsControl ItemsSource="{Binding Servers}">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:LanServerRow">
+          <Border Classes="row" Height="52" Padding="0">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel VerticalAlignment="Center">
+                <TextBlock Classes="strong" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                <TextBlock Classes="faint" Text="{Binding Detail}" FontFeatures="tnum" TextTrimming="CharacterEllipsis" />
+              </StackPanel>
+              <Button Grid.Column="1" Classes="secondary" Height="30" Padding="16,0" Content="Join" Margin="12,0,0,0"
+                      VerticalAlignment="Center"
+                      Command="{Binding #Root.((vm:LanViewModel)DataContext).JoinCommand}" CommandParameter="{Binding}" />
+            </Grid>
+          </Border>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+    <Border Classes="row" Height="44" Padding="0" BorderThickness="0,1" IsVisible="{Binding NoServers}">
+      <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+        <Border Classes="listen" Classes.on="{Binding ListeningShown}" VerticalAlignment="Center" />
+        <TextBlock Classes="dim" Text="None found yet" VerticalAlignment="Center" />
+      </StackPanel>
+    </Border>
+    <Border Classes="row" Padding="0" Height="1" IsVisible="{Binding !NoServers}" />
+
+    <TextBlock Classes="lanhead" Text="Join by address" Margin="0,24,0,6" />
+    <Grid ColumnDefinitions="*,8,Auto">
+      <TextBox Classes="field" Text="{Binding Address}" PlaceholderText="Address"
+               AutomationProperties.Name="Address" />
+      <Button Grid.Column="2" Classes="secondary" Content="Join" Command="{Binding JoinAddressCommand}" />
+    </Grid>
+    <Grid Classes="warnline" ColumnDefinitions="Auto,*" Margin="0,12,0,0" Background="Transparent" ToolTip.Tip="{Binding NoticeWhole}"
+          IsVisible="{Binding Notice, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+      <Path Classes="warnmark" />
+      <TextBlock Grid.Column="1" Name="Notice" Text="{Binding Notice}" />
+    </Grid>
+  </StackPanel>
+</UserControl>

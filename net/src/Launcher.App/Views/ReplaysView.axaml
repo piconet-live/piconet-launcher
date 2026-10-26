@@ -1,0 +1,214 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Launcher.App.Controls"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:core="using:Launcher.Core"
+             xmlns:v="using:Launcher.App.Views"
+             x:Class="Launcher.App.Views.ReplaysView"
+             x:DataType="vm:ReplaysViewModel"
+             x:Name="Root">
+  <!-- Replays in direction C (Theme.axaml): a table, a row a replay (like Slippi's rows): the course with its
+       picture from the disc, the racer it is seen from, their result, when; at the row's end its results, its file
+       ("•••": show it, delete it) and Play. A replay plays as the race. -->
+  <UserControl.Styles>
+    <Style Selector="Grid.cells > :is(Control)">
+      <Setter Property="Margin" Value="12,0,0,0" />
+    </Style>
+    <!-- in a narrow window the courses' pictures go, the laps beside the venue, and the results' machines -->
+    <Style Selector="v|ReplaysView.narrow :is(Control).extra">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
+    <Style Selector=":is(Control).narrowonly">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
+    <Style Selector="v|ReplaysView.narrow :is(Control).narrowonly">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+    <!-- a racer's paint: a round dot, as on the board -->
+    <Style Selector="Border.chip">
+      <Setter Property="Width" Value="8" />
+      <Setter Property="Height" Value="8" />
+      <Setter Property="CornerRadius" Value="{DynamicResource StaticFullCornerRadius}" />
+    </Style>
+    <Style Selector="Border.result">
+      <Setter Property="Height" Value="20" />
+    </Style>
+    <Style Selector="Border.result.focused">
+      <Setter Property="Background" Value="{StaticResource ChromeOverBrush}" />
+    </Style>
+    <!-- "•••" while its file's actions show -->
+    <Style Selector="Button.secondary.lit, Button.secondary.lit:pointerover">
+      <Setter Property="BorderBrush" Value="{StaticResource OutlineOverBrush}" />
+      <Setter Property="Background" Value="{StaticResource ChromeOverBrush}" />
+    </Style>
+    <!-- the answer that deletes: outlined in red over a faint red -->
+    <Style Selector="Button.secondary.danger, Button.secondary.danger:pointerover">
+      <Setter Property="BorderBrush" Value="{StaticResource OfflineBrush}" />
+      <Setter Property="Background" Value="#1FFF4D4D" />
+    </Style>
+    <!-- knocked out in red, disqualified in amber -->
+    <Style Selector="TextBlock.figure.out">
+      <Setter Property="Foreground" Value="{StaticResource OfflineBrush}" />
+    </Style>
+    <Style Selector="TextBlock.figure.accent">
+      <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+    </Style>
+    <Style Selector="TextBlock.figure.dq">
+      <Setter Property="Foreground" Value="{StaticResource NoticeBrush}" />
+    </Style>
+  </UserControl.Styles>
+
+  <UserControl.Resources>
+    <!-- a racer's line of the results: place, paint and name, machine, finish time, best lap -->
+    <DataTemplate x:Key="ResultLine" x:DataType="core:ReplayResultLine">
+      <Border Classes="result" Classes.focused="{Binding Focused}">
+        <Grid ColumnDefinitions="34,16,*,Auto,Auto,Auto">
+          <TextBlock Classes="figure" FontSize="{StaticResource Size14}" Text="{Binding Place}" VerticalAlignment="Center" />
+          <Border Grid.Column="1" Classes="chip" HorizontalAlignment="Left"
+                  Background="{Binding ColorHex, Converter={x:Static v:HexToBrush.Instance}}" />
+          <TextBlock Grid.Column="2" Text="{Binding Name}" Classes.strong="{Binding Focused}" VerticalAlignment="Center"
+                     TextTrimming="CharacterEllipsis" />
+          <TextBlock Grid.Column="3" Classes="note extra" Text="{Binding Machine}" Width="104" TextWrapping="NoWrap"
+                     TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="8,0,0,0" />
+          <TextBlock Grid.Column="4" Classes="figure" Classes.out="{Binding Out}" Classes.dq="{Binding Disqualified}"
+                     FontSize="{StaticResource Size14}" Text="{Binding Time}" MinWidth="62"
+                     TextAlignment="Right" VerticalAlignment="Center" />
+          <TextBlock Grid.Column="5" Classes="figure dim" FontSize="{StaticResource Size14}" Text="{Binding BestLap}" Width="62"
+                     TextAlignment="Right" VerticalAlignment="Center" />
+        </Grid>
+      </Border>
+    </DataTemplate>
+  </UserControl.Resources>
+
+  <StackPanel>
+    <Grid ColumnDefinitions="Auto,*,Auto" Height="32" Margin="0,0,0,4">
+      <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+        <Button Classes="secondary" Height="28" Content="Open a file…" Click="OnOpenFile" AutomationProperties.Name="Open a replay file" />
+        <Button Classes="secondary" Height="28" Content="Folder" Command="{Binding OpenFolderCommand}" AutomationProperties.Name="Open the replay folder" />
+      </StackPanel>
+    </Grid>
+    <!-- the tabs over the table: All, Races, Practice, each with its count -->
+    <Border BorderBrush="{StaticResource EdgeBrush}" BorderThickness="0,0,0,1" Margin="0,4,0,8">
+      <ItemsControl ItemsSource="{Binding Tabs}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="20" /></ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:ReplayTab">
+            <Button Classes="section" Classes.on="{Binding On}" AutomationProperties.Name="{Binding Label}"
+                    Command="{Binding #Root.((vm:ReplaysViewModel)DataContext).ShowTabCommand}" CommandParameter="{Binding}">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="{Binding Label}" />
+                <TextBlock Classes="dim" Text="{Binding Count}" FontFeatures="tnum" />
+              </StackPanel>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </Border>
+    <Grid Name="Notice" Classes="warnline" ColumnDefinitions="Auto,*" Margin="0,0,0,4"
+          IsVisible="{Binding Notice, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+      <Path Classes="warnmark" />
+      <TextBlock Grid.Column="1" Text="{Binding Notice}" />
+    </Grid>
+
+    <Border Classes="rowhead">
+      <Grid Classes="cells" ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" Margin="-12,0,0,0">
+        <Panel Classes="extra"><Border Width="64" IsVisible="{DynamicResource HasDiscArt}" /></Panel>
+        <TextBlock Grid.Column="1" Classes="colhead" Text="Course" />
+        <TextBlock Grid.Column="2" Classes="colhead" Text="Racer" Width="140" />
+        <TextBlock Grid.Column="3" Classes="colhead" Text="Result" Width="88" />
+        <TextBlock Grid.Column="4" Classes="colhead" Text="When" Width="112" />
+        <Border Grid.Column="5" Width="150" />
+      </Grid>
+    </Border>
+    <ItemsControl ItemsSource="{Binding Items}">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:ReplayItem">
+          <Border Classes="row tall hover" Classes.on="{Binding ShowingStats}">
+            <StackPanel>
+              <Grid Classes="cells" ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" Margin="-12,0,0,0" Height="44">
+                <Panel Classes="extra">
+                  <Border Classes="well" Width="64" Height="36" ClipToBounds="True" VerticalAlignment="Center"
+                          IsVisible="{DynamicResource HasDiscArt}">
+                    <Image Source="{Binding Course, Converter={x:Static v:GamePicture.Venue}}" Stretch="UniformToFill" />
+                  </Border>
+                </Panel>
+                <StackPanel Grid.Column="1">
+                  <TextBlock Classes="strong" Text="{Binding Track}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Classes="note extra" Text="{Binding Under}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Classes="note narrowonly" Text="{Binding Venue}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <StackPanel Grid.Column="2" Width="140">
+                  <DockPanel>
+                    <Border DockPanel.Dock="Left" Classes="chip" Margin="0,0,8,0"
+                            Background="{Binding RacerColorHex, Converter={x:Static v:HexToBrush.Instance}}" />
+                    <TextBlock Classes="strong" Text="{Binding RacerName}" TextTrimming="CharacterEllipsis" />
+                  </DockPanel>
+                  <TextBlock Classes="note" Text="{Binding RacerMachine}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Margin="18,0,0,0" />
+                </StackPanel>
+                <StackPanel Grid.Column="3" Width="88">
+                  <TextBlock Classes="figure accent" Height="20" Text="Practice" IsVisible="{Binding IsPractice}" />
+                  <StackPanel Orientation="Horizontal" Spacing="5" Height="20" IsVisible="{Binding IsRace}">
+                    <TextBlock Classes="figure" Classes.out="{Binding PlaceOut}" Text="{Binding Place}" />
+                    <TextBlock Classes="note" Text="{Binding Of}" VerticalAlignment="Center" />
+                  </StackPanel>
+                  <TextBlock Classes="note" Text="{Binding Time}" FontFeatures="tnum" />
+                </StackPanel>
+                <Panel Grid.Column="4" Width="112">
+                  <TextBlock Classes="dim" Text="{Binding When}" TextTrimming="CharacterEllipsis" IsVisible="{Binding Acting}" />
+                </Panel>
+
+                <!-- the row's end: its results, its file, Play -->
+                <Panel Grid.Column="5" Width="150" VerticalAlignment="Center">
+                  <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" IsVisible="{Binding Acting}">
+                    <Button Classes="link" VerticalAlignment="Center" IsEnabled="{Binding HasStats}" IsVisible="{Binding IsRace}"
+                            Command="{Binding #Root.((vm:ReplaysViewModel)DataContext).ToggleStatsCommand}" CommandParameter="{Binding}"
+                            AutomationProperties.Name="Results">
+                      <TextBlock Text="Results" />
+                    </Button>
+                    <Button Classes="secondary" Width="34" Padding="0" Content="•••"
+                            Command="{Binding #Root.((vm:ReplaysViewModel)DataContext).ToggleMoreCommand}" CommandParameter="{Binding}"
+                            AutomationProperties.Name="More" />
+                    <Button Classes="primary" c:PadNav.Main="True" Height="30" Content="Play" AutomationProperties.Name="Play"
+                            Command="{Binding #Root.((vm:ReplaysViewModel)DataContext).PlayCommand}" CommandParameter="{Binding Path}" />
+                  </StackPanel>
+                </Panel>
+                <!-- "•••" pressed: the file's own actions, in the place of the date and the row's end -->
+                <StackPanel Grid.Column="4" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right"
+                            VerticalAlignment="Center" IsVisible="{Binding More}">
+                  <Button Classes="secondary" Content="Show in folder"
+                          Command="{Binding #Root.((vm:ReplaysViewModel)DataContext).RevealCommand}" CommandParameter="{Binding}" />
+                  <Button Classes="secondary" Content="Delete"
+                          Command="{Binding #Root.((vm:ReplaysViewModel)DataContext).AskDeleteCommand}" CommandParameter="{Binding}" />
+                  <Button Classes="secondary lit" Width="34" Padding="0" Content="•••"
+                          Command="{Binding #Root.((vm:ReplaysViewModel)DataContext).ToggleMoreCommand}" CommandParameter="{Binding}"
+                          AutomationProperties.Name="Back" />
+                </StackPanel>
+                <StackPanel Grid.Column="4" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right"
+                            VerticalAlignment="Center" IsVisible="{Binding ConfirmingDelete}">
+                  <TextBlock Text="Delete this replay?" VerticalAlignment="Center" Margin="0,0,4,0" />
+                  <Button Classes="secondary danger" Content="Delete"
+                          Command="{Binding #Root.((vm:ReplaysViewModel)DataContext).DeleteCommand}" CommandParameter="{Binding}" />
+                  <Button Classes="secondary" Content="Keep"
+                          Command="{Binding #Root.((vm:ReplaysViewModel)DataContext).KeepReplayCommand}" CommandParameter="{Binding}" />
+                </StackPanel>
+              </Grid>
+
+              <!-- the race's results, every racer by place: 15 to a column -->
+              <Border Classes="well" Padding="10,6" Margin="64,2,0,10" IsVisible="{Binding ShowingStats}">
+                <Grid ColumnDefinitions="*,24,*">
+                  <ItemsControl ItemsSource="{Binding StatsLeft}" ItemTemplate="{StaticResource ResultLine}" />
+                  <ItemsControl Grid.Column="2" ItemsSource="{Binding StatsRight}" ItemTemplate="{StaticResource ResultLine}" />
+                </Grid>
+              </Border>
+            </StackPanel>
+          </Border>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+    <Border Classes="row last" IsVisible="{Binding Empty}">
+      <TextBlock Classes="dim" Text="No replays" />
+    </Border>
+  </StackPanel>
+</UserControl>

@@ -1,0 +1,64 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:c="using:Launcher.App.Controls"
+             x:Class="Launcher.App.Views.SortFilterPanel"
+             x:DataType="vm:GarageViewModel"
+             x:Name="Root">
+  <!-- The Garage's Sort & filter panel (GarageViewModel.SortFilter.cs), floating over SELECT's roster (GarageView):
+       SORT, every stat the Stats tab shows, one on, and its way round; FILTER, the letters of body, boost and grip,
+       any of them (none: all). In the raised tone, as what floats; round at the panel's corner (14). -->
+  <Border Width="456" Padding="16"
+          Background="{StaticResource RaisedBrush}" CornerRadius="{DynamicResource StaticExtraLargeCornerRadius}"
+          BoxShadow="{StaticResource FloatShadow}">
+    <StackPanel Spacing="8">
+      <DockPanel Height="32">
+        <TextBlock DockPanel.Dock="Left" Classes="caps" Foreground="{StaticResource FaintBrush}" Text="SORT" VerticalAlignment="Center" />
+        <Button DockPanel.Dock="Right" Name="SortWay" Classes="secondary" Command="{Binding FlipSortCommand}"
+                AutomationProperties.Name="{Binding SortOrderText}">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="{Binding SortOrderText}" VerticalAlignment="Center" />
+            <Path Classes="glyph" Data="M5 2V14M2 11L5 14L8 11M11 14V2M8 5L11 2L14 5" Stroke="{Binding $parent[Button].Foreground}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        <Panel />
+      </DockPanel>
+      <ItemsControl Name="SortChoices" ItemsSource="{Binding SortChoices}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate><UniformGrid Columns="2" /></ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:SortChoice">
+            <Button Classes="stat" Classes.on="{Binding On}" Height="26" Margin="0,0,4,0"
+                    Command="{Binding #Root.((vm:GarageViewModel)DataContext).ChooseSortCommand}" CommandParameter="{Binding}"
+                    AutomationProperties.Name="{Binding Label}">
+              <TextBlock Text="{Binding Label}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <TextBlock Classes="caps" Foreground="{StaticResource FaintBrush}" Text="FILTER" Margin="0,8,0,0" />
+      <ItemsControl Name="GradeRows" ItemsSource="{Binding Grades}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:GradeRow">
+            <DockPanel Height="40">
+              <TextBlock DockPanel.Dock="Left" Classes="dim" Text="{Binding Label}" Width="64" VerticalAlignment="Center" />
+              <ItemsControl ItemsSource="{Binding Letters}" VerticalAlignment="Center">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="8" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:LetterChip">
+                    <Button Classes="chip" Classes.on="{Binding On}" Width="40" Content="{Binding Letter}"
+                            Command="{Binding #Root.((vm:GarageViewModel)DataContext).ToggleLetterCommand}" CommandParameter="{Binding}"
+                            AutomationProperties.Name="{Binding Name}" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </DockPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+  </Border>
+</UserControl>

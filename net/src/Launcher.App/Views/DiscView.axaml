@@ -1,0 +1,114 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Launcher.App.Controls"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             x:Class="Launcher.App.Views.DiscView"
+             x:DataType="vm:DiscViewModel"
+             HorizontalAlignment="Center" VerticalAlignment="Center">
+  <!-- The first screen in direction C (Theme.axaml), until the player's disc image is set and the game's files are
+       prepared from it (the first thing the launcher asks for):
+       one panel in the middle of the window, with no left column and no tabs yet. The launcher's look comes from
+       the disc, so here it is plain. While the files are prepared, the stage, the size, the percentage, a bar and
+       Cancel stand where CONTINUE was; what a preparation says when it does not end ready is under them. -->
+  <UserControl.Styles>
+    <!-- The preparation's bar, a mark of the design language: a 4 px track, fully rounded, green up to the share done,
+         growing to each new value with the emphasis' easing. -->
+    <Style Selector="ProgressBar.prepare">
+      <Setter Property="Height" Value="4" />
+      <Setter Property="MinHeight" Value="4" />
+      <Setter Property="MinWidth" Value="0" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Border Background="#1FFFFFFF" CornerRadius="{DynamicResource StaticFullCornerRadius}" ClipToBounds="True">
+            <Panel>
+              <Border Name="PART_Indicator" Background="{StaticResource AccentBrush}" CornerRadius="{DynamicResource StaticFullCornerRadius}"
+                      HorizontalAlignment="Left">
+                <Border.Transitions>
+                  <Transitions>
+                    <DoubleTransition Property="Width" Duration="0:0:0.42" Easing="{StaticResource EaseOut}" />
+                  </Transitions>
+                </Border.Transitions>
+              </Border>
+            </Panel>
+          </Border>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <!-- the stage's word breathes while the work goes on (only then: no animation runs while it is hidden) -->
+    <Style Selector="TextBlock#Stage.breathing">
+      <Style.Animations>
+        <Animation Duration="0:0:1.4" IterationCount="Infinite" PlaybackDirection="Alternate" Easing="{StaticResource EaseOut}">
+          <KeyFrame Cue="0%"><Setter Property="Opacity" Value="1" /></KeyFrame>
+          <KeyFrame Cue="100%"><Setter Property="Opacity" Value="0.35" /></KeyFrame>
+        </Animation>
+      </Style.Animations>
+    </Style>
+    <!-- the path and its button stand back while the files are prepared -->
+    <Style Selector="Grid#PathRow.busy">
+      <Setter Property="Opacity" Value="0.45" />
+    </Style>
+  </UserControl.Styles>
+  <Border Width="520" Background="{StaticResource WellBrush}" Padding="24" CornerRadius="{DynamicResource StaticExtraLargeCornerRadius}">
+    <StackPanel>
+      <TextBlock Classes="head" Text="Your game disc" Margin="0,0,0,16" />
+      <Grid Name="PathRow" Classes.busy="{Binding Preparing}" ColumnDefinitions="*,8,Auto">
+        <TextBox Name="DiscPath" Classes="field" Height="34" Text="{Binding Path}" PlaceholderText="Disc image"
+                 IsEnabled="{Binding Idle}" AutomationProperties.Name="Disc image" />
+        <Button Grid.Column="2" Classes="secondary" Height="34" Content="Choose…" Click="OnChoose"
+                IsEnabled="{Binding Idle}" AutomationProperties.Name="Choose the disc image" />
+      </Grid>
+      <Panel MinHeight="20" Margin="0,6,0,0">
+        <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding Verified}">
+          <Path Classes="tick" />
+          <TextBlock Name="Status" Text="{Binding Status}" VerticalAlignment="Center" />
+        </StackPanel>
+        <Grid Classes="warnline" ColumnDefinitions="Auto,*" IsVisible="{Binding Wrong}">
+          <Path Classes="warnmark" />
+          <TextBlock Grid.Column="1" Text="{Binding Status}" />
+        </Grid>
+      </Panel>
+      <Button Name="Continue" Classes="go" c:PadNav.Main="True" Content="CONTINUE" Command="{Binding ContinueCommand}" IsEnabled="{Binding Verified}"
+              IsVisible="{Binding Idle}" Margin="0,14,0,0" />
+      <!-- an older copy's data (DataMoveViewModel): offered while nothing is being prepared, so its prepared game
+           files need not be made again -->
+      <StackPanel Spacing="4" Margin="0,12,0,0">
+        <StackPanel.IsVisible>
+          <MultiBinding Converter="{x:Static BoolConverters.And}">
+            <Binding Path="Idle" />
+            <Binding Path="Move.Offered" />
+          </MultiBinding>
+        </StackPanel.IsVisible>
+        <Button Name="BringOver" Classes="link" Click="OnBringOver" IsEnabled="{Binding Move.Idle}"
+                AutomationProperties.Name="Bring over an older copy">
+          <TextBlock Text="Bring over an older copy…" />
+        </Button>
+        <TextBlock Classes="dim" Text="{Binding Move.Text}" TextWrapping="Wrap"
+                   IsVisible="{Binding Move.Text, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+      </StackPanel>
+      <StackPanel Name="Preparing" IsVisible="{Binding Preparing}" Margin="0,14,0,0">
+        <Grid ColumnDefinitions="*,Auto,Auto">
+          <TextBlock Name="Stage" Classes="head" Classes.breathing="{Binding Preparing}" FontWeight="SemiBold" FontSize="19" LetterSpacing="1.1" Text="{Binding Stage}"
+                     VerticalAlignment="Bottom" />
+          <TextBlock Name="Size" Grid.Column="1" Classes="dim" Text="{Binding Size}" FontFeatures="tnum" VerticalAlignment="Bottom"
+                     Margin="0,0,14,0" />
+          <TextBlock Name="Percent" Grid.Column="2" Classes="head" FontWeight="SemiBold" FontSize="19" Text="{Binding Percent}"
+                     FontFeatures="tnum" VerticalAlignment="Bottom" />
+        </Grid>
+        <ProgressBar Name="Bar" Classes="prepare" Minimum="0" Maximum="1" Value="{Binding Fraction}" Margin="0,10,0,0"
+                     AutomationProperties.Name="Preparing the game's files" />
+        <Button Name="Cancel" Classes="secondary" Height="34" Content="Cancel" Command="{Binding CancelCommand}"
+                IsEnabled="{Binding CanStop}" HorizontalAlignment="Right" Margin="0,12,0,0" />
+      </StackPanel>
+      <Grid Name="SaidLine" Classes="warnline" ColumnDefinitions="Auto,*" Margin="0,14,0,0" Background="Transparent" ToolTip.Tip="{Binding Said}"
+            IsVisible="{Binding Said, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+        <Path Classes="warnmark" />
+        <TextBlock Grid.Column="1" Name="Said" Text="{Binding SaidLabel}" />
+      </Grid>
+      <Grid Classes="warnline" ColumnDefinitions="Auto,*" Margin="0,14,0,0"
+            IsVisible="{Binding Notice, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+        <Path Classes="warnmark" />
+        <TextBlock Grid.Column="1" Text="{Binding Notice}" />
+      </Grid>
+    </StackPanel>
+  </Border>
+</UserControl>

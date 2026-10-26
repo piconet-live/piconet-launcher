@@ -1,0 +1,66 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             x:Class="Launcher.App.Views.NoticeCard"
+             x:DataType="vm:NoticeItem">
+  <!-- A server notice: one look in the chat, the banner and the list (nothing a player writes
+       can look like it). A band the whole width, on a light tint of its tier's colour, with that colour's 2 px bar
+       down its left edge; no name column. First line: the tier's icon (drawn, so the tier does not rest on colour alone),
+       "SYSTEM · TIER" in small capitals and the time; then the text. The tier's class is set from the item
+       (NoticeCard.axaml.cs): info, notice, warning, urgent. -->
+  <UserControl.Styles>
+    <Style Selector="Border.card">
+      <Setter Property="BorderBrush" Value="{StaticResource TierInfoBrush}" />
+      <Setter Property="Background" Value="{StaticResource TierInfoTintBrush}" />
+    </Style>
+    <Style Selector="Border.card.notice">
+      <Setter Property="BorderBrush" Value="{StaticResource TierNoticeBrush}" />
+      <Setter Property="Background" Value="{StaticResource TierNoticeTintBrush}" />
+    </Style>
+    <Style Selector="Border.card.warning">
+      <Setter Property="BorderBrush" Value="{StaticResource TierWarningBrush}" />
+      <Setter Property="Background" Value="{StaticResource TierWarningTintBrush}" />
+    </Style>
+    <Style Selector="Border.card.urgent">
+      <Setter Property="BorderBrush" Value="{StaticResource TierUrgentBrush}" />
+      <Setter Property="Background" Value="{StaticResource TierUrgentTintBrush}" />
+    </Style>
+    <Style Selector="Border.card TextBlock.label">
+      <Setter Property="Foreground" Value="{Binding $parent[Border].BorderBrush}" />
+    </Style>
+    <Style Selector="Border.card Path.icon">
+      <Setter Property="Stroke" Value="{Binding $parent[Border].BorderBrush}" />
+      <Setter Property="StrokeThickness" Value="1.3" />
+      <Setter Property="StrokeLineCap" Value="Round" />
+      <Setter Property="StrokeJoin" Value="Round" />
+      <Setter Property="Width" Value="12" />
+      <Setter Property="Height" Value="12" />
+      <!-- info: a circle with an i -->
+      <Setter Property="Data" Value="M6 0.7A5.3 5.3 0 1 1 5.99 0.7Z M6 5.2V9 M6 3.1V3.3" />
+    </Style>
+    <Style Selector="Border.card.notice Path.icon">
+      <!-- notice: a bell -->
+      <Setter Property="Data" Value="M2.2 8.4V5.2C2.2 2.8 3.8 1 6 1C8.2 1 9.8 2.8 9.8 5.2V8.4L11 9.6H1Z M4.8 11.3H7.2" />
+    </Style>
+    <Style Selector="Border.card.warning Path.icon">
+      <!-- warning: a triangle with ! -->
+      <Setter Property="Data" Value="M6 0.8L11.4 10.9H0.6Z M6 4.4V7.2 M6 8.8V9" />
+    </Style>
+    <Style Selector="Border.card.urgent Path.icon">
+      <!-- urgent: an octagon with ! -->
+      <Setter Property="Data" Value="M3.8 0.6H8.2L11.4 3.8V8.2L8.2 11.4H3.8L0.6 8.2V3.8Z M6 3V6.8 M6 8.7V8.9" />
+    </Style>
+  </UserControl.Styles>
+  <Border Name="Card" Classes="card" BorderThickness="2,0,0,0" Padding="12,7,12,8">
+    <StackPanel Spacing="3">
+      <StackPanel Orientation="Horizontal" Spacing="8">
+        <Path Name="TierIcon" Classes="icon" VerticalAlignment="Center" />
+        <TextBlock Name="TierLabel" Classes="label caps" Text="{Binding Label}" VerticalAlignment="Center" />
+        <TextBlock Classes="faint" Text="{Binding When}" FontSize="{StaticResource Size12}" FontFeatures="tnum"
+                   VerticalAlignment="Center" />
+      </StackPanel>
+      <SelectableTextBlock Name="NoticeText" Text="{Binding Text}" TextWrapping="Wrap" Foreground="{StaticResource TextBrush}"
+                           SelectionBrush="{StaticResource SelectBrush}" />
+    </StackPanel>
+  </Border>
+</UserControl>

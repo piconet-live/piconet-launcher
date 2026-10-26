@@ -1,0 +1,452 @@
+<!-- The launcher's look (Theme.axaml, which takes this file in and holds its colours and sizes): what is pressed. -->
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="using:Launcher.App.Controls"
+        xmlns:v="using:Launcher.App.Views">
+  <!-- Buttons: one flat template for all of them. Every change of colour eases (Quick); a press settles. -->
+  <Style Selector="Button.go, Button.primary, Button.secondary, Button.quiet, Button.link, Button.tab, Button.section, Button.chrome, Button.icon, Button.plain, Button.stat, Button.heart, Button.chip, Button.shelf">
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="{StaticResource SquareCorner}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+    <Setter Property="FontFamily" Value="{StaticResource BodyFont}" />
+    <Setter Property="FontSize" Value="{StaticResource Size14}" />
+    <Setter Property="FontWeight" Value="Regular" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="RenderTransform" Value="none" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="{StaticResource Quick}" Easing="{StaticResource EaseOut}" />
+        <BrushTransition Property="BorderBrush" Duration="{StaticResource Quick}" Easing="{StaticResource EaseOut}" />
+        <BrushTransition Property="Foreground" Duration="{StaticResource Quick}" Easing="{StaticResource EaseOut}" />
+        <TransformOperationsTransition Property="RenderTransform" Duration="{StaticResource Quick}" Easing="{StaticResource EaseOut}" />
+      </Transitions>
+    </Setter>
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="Face" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}">
+          <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}"
+                            ContentTemplate="{TemplateBinding ContentTemplate}" Padding="{TemplateBinding Padding}"
+                            Foreground="{TemplateBinding Foreground}"
+                            HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                            VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
+  <Style Selector="Button.link:disabled, Button.tab:disabled, Button.section:disabled, Button.chrome:disabled, Button.icon:disabled, Button.plain:disabled">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Foreground" Value="{StaticResource OffBrush}" />
+  </Style>
+
+  <!-- The one primary of a screen (RACE, START PRACTICE): a green plate that leans, its word in the display face,
+       leaning with it, dark on the green. Under the pointer one step lighter; a press settles it. Flat: no glow. -->
+  <Style Selector="Button.go">
+    <Setter Property="Height" Value="{StaticResource GoHeight}" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource OnAccentBrush}" />
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontWeight" Value="ExtraBold" />
+    <Setter Property="FontSize" Value="{StaticResource Display20}" />
+    <Setter Property="RenderTransformOrigin" Value="50%,50%" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <c:Plate Name="Face" Shape="Lean" Background="{TemplateBinding Background}">
+          <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}"
+                            ContentTemplate="{TemplateBinding ContentTemplate}" Padding="{TemplateBinding Padding}"
+                            Foreground="{TemplateBinding Foreground}" RenderTransformOrigin="50%,50%"
+                            RenderTransform="skewX(-12deg)"
+                            HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                            VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+        </c:Plate>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="Button.go TextBlock, Button.go /template/ ContentPresenter > TextBlock">
+    <Setter Property="LetterSpacing" Value="{StaticResource GoSpacing}" />
+  </Style>
+  <Style Selector="Button.go:pressed">
+    <Setter Property="RenderTransform" Value="translateY(1px)" />
+  </Style>
+  <!-- soft corners (Theme.axaml, CORNERS): the surface buttons, chips, rows and icons 6; the left column's places, the
+       title bar's buttons, the plates and a plain button (its content is its look) square -->
+  <Style Selector="Button.primary, Button.secondary, Button.quiet, Button.chip, Button.shelf, Button.stat, Button.icon">
+    <Setter Property="CornerRadius" Value="{DynamicResource StaticMediumCornerRadius}" />
+  </Style>
+  <Style Selector="Button.primary">
+    <Setter Property="Height" Value="30" />
+    <Setter Property="Padding" Value="14,0" />
+    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource OnAccentBrush}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Button.go:pointerover, Button.primary:pointerover">
+    <Setter Property="Background" Value="{StaticResource AccentOverBrush}" />
+  </Style>
+  <Style Selector="Button.go:pressed, Button.primary:pressed">
+    <Setter Property="Background" Value="{StaticResource AccentDownBrush}" />
+  </Style>
+  <Style Selector="Button.go:disabled, Button.primary:disabled">
+    <Setter Property="Background" Value="{StaticResource RaisedBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource OffBrush}" />
+  </Style>
+
+  <!-- A surface button: the raised tone, one tone up under the pointer; no outline. -->
+  <Style Selector="Button.secondary">
+    <Setter Property="Height" Value="32" />
+    <Setter Property="Padding" Value="16,0" />
+    <Setter Property="Background" Value="{StaticResource RaisedBrush}" />
+  </Style>
+  <!-- A secondary button of the left column's width: "Play F-Zero GX", "Leave Lobby". -->
+  <Style Selector="Button.secondary.wide">
+    <Setter Property="CornerRadius" Value="{StaticResource SquareCorner}" />
+    <Setter Property="Height" Value="{StaticResource ButtonHeight}" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="FontSize" Value="{StaticResource Size15}" />
+  </Style>
+  <!-- The answer a question leans to. -->
+  <Style Selector="Button.secondary.filled">
+    <Setter Property="Background" Value="{StaticResource TextBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource TextBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource GroundBrush}" />
+    <Setter Property="FontWeight" Value="Medium" />
+  </Style>
+  <Style Selector="Button.secondary:pointerover">
+    <Setter Property="Background" Value="{StaticResource HoverBrush}" />
+  </Style>
+  <Style Selector="Button.secondary.filled:pointerover">
+    <Setter Property="Background" Value="{StaticResource TextBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource TextBrush}" />
+  </Style>
+  <!-- A surface button on the ground (the lobby's line: Watch, Garage, Leave Lobby): the surface tone, one tone up
+       under the pointer; no plate of its own. -->
+  <Style Selector="Button.secondary.surface">
+    <Setter Property="Background" Value="{StaticResource WellBrush}" />
+  </Style>
+  <Style Selector="Button.secondary.surface:pointerover">
+    <Setter Property="Background" Value="{StaticResource RaisedBrush}" />
+  </Style>
+  <Style Selector="Button.secondary:pressed, Button.quiet:pressed">
+    <Setter Property="RenderTransform" Value="translateY(1px)" />
+  </Style>
+  <Style Selector="Button.secondary.filled:pressed">
+    <Setter Property="Background" Value="{StaticResource DimBrush}" />
+  </Style>
+  <Style Selector="Button.secondary:disabled">
+    <Setter Property="Background" Value="{StaticResource WellBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource OffTextBrush}" />
+  </Style>
+
+  <!-- A quiet button of the column (Settings, and the places: class nav): an icon and a word in the dim colour on
+       no ground; one tone up under the pointer; lit (class on) while its page shows: the raised tone, the word in
+       full, the icon green. -->
+  <Style Selector="Button.quiet">
+    <Setter Property="Height" Value="{StaticResource ButtonHeight}" />
+    <Setter Property="Padding" Value="16,0" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="Foreground" Value="{StaticResource DimBrush}" />
+    <Setter Property="FontSize" Value="{StaticResource Size15}" />
+  </Style>
+  <Style Selector="Button.quiet:pointerover">
+    <Setter Property="Background" Value="{StaticResource WellBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+  </Style>
+  <Style Selector="Button.quiet.on, Button.quiet.on:pointerover">
+    <Setter Property="Background" Value="{StaticResource RaisedBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+  </Style>
+  <Style Selector="Button.quiet Path.glyph">
+    <Setter Property="Stroke" Value="{Binding $parent[Button].Foreground}" />
+  </Style>
+  <Style Selector="Button.quiet.on Path.glyph">
+    <Setter Property="Stroke" Value="{StaticResource AccentBrush}" />
+  </Style>
+
+  <!-- A line drawing on a 24 px grid (the Settings gear, the bell): round ends, a soft 1.6 px stroke. -->
+  <Style Selector="Path.glyph">
+    <Setter Property="StrokeThickness" Value="1.6" />
+    <Setter Property="StrokeLineCap" Value="Round" />
+    <Setter Property="StrokeJoin" Value="Round" />
+    <Setter Property="Stretch" Value="None" />
+  </Style>
+
+  <!-- A link: green words, lighter under the pointer. -->
+  <Style Selector="Button.link">
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+    <Setter Property="FontWeight" Value="Medium" />
+  </Style>
+  <Style Selector="Button.link:pointerover">
+    <Setter Property="Foreground" Value="{StaticResource AccentOverBrush}" />
+  </Style>
+  <!-- Anything else that is pressed, with no look of its own. -->
+  <Style Selector="Button.plain">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Stretch" />
+  </Style>
+
+  <!-- A heart: a machine marked as a favourite (filled), or to be marked (its outline). On a machine's cell it is a
+       mark only, shown when marked. In an outlined button it is the filter that shows the marked ones only. -->
+  <Style Selector="Path.heart">
+    <Setter Property="Data" Value="M6 11 L1 5.8 C-0.5 4.2 -0.2 1.7 1.6 0.6 C3.2 -0.3 5 0.3 6 1.8 C7 0.3 8.8 -0.3 10.4 0.6 C12.2 1.7 12.5 4.2 11 5.8 Z" />
+    <Setter Property="Width" Value="14" />
+    <Setter Property="Height" Value="13" />
+    <Setter Property="Stretch" Value="Uniform" />
+    <Setter Property="Stroke" Value="{StaticResource DimBrush}" />
+    <Setter Property="StrokeThickness" Value="1.4" />
+    <Setter Property="StrokeJoin" Value="Round" />
+    <Setter Property="Fill" Value="Transparent" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Button.heart:pointerover Path.heart, Button.heartbox:pointerover Path.heart">
+    <Setter Property="Stroke" Value="{StaticResource TextBrush}" />
+  </Style>
+  <Style Selector="Button.heart.on Path.heart, Button.heartbox.on Path.heart">
+    <Setter Property="Stroke" Value="{StaticResource TextBrush}" />
+    <Setter Property="Fill" Value="{StaticResource TextBrush}" />
+  </Style>
+  <!-- a machine's cell: the mark of a favourite, filled, small; it takes no click -->
+  <Style Selector="Path.heart.mark">
+    <Setter Property="Width" Value="10" />
+    <Setter Property="Height" Value="9" />
+    <Setter Property="StrokeThickness" Value="1.2" />
+    <Setter Property="Stroke" Value="{StaticResource TextBrush}" />
+    <Setter Property="Fill" Value="{StaticResource TextBrush}" />
+  </Style>
+  <Style Selector="Button.secondary.heartbox">
+    <Setter Property="Width" Value="34" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="Button.secondary.heartbox.on, Button.secondary.heartbox.on:pointerover">
+    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+  </Style>
+  <Style Selector="Button.secondary.heartbox:disabled Path.heart">
+    <Setter Property="Stroke" Value="{StaticResource OffTextBrush}" />
+  </Style>
+
+  <!-- The Garage's shelves: a word and its count, the shelf showing in full and underlined in green, the others
+       faint. -->
+  <Style Selector="Button.shelf">
+    <Setter Property="Foreground" Value="{StaticResource FaintBrush}" />
+    <Setter Property="FontSize" Value="{StaticResource Size16}" />
+    <Setter Property="BorderThickness" Value="0,0,0,2" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Padding" Value="0,0,0,8" />
+    <Setter Property="VerticalAlignment" Value="Bottom" />
+  </Style>
+  <Style Selector="Button.shelf:pointerover">
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+  </Style>
+  <Style Selector="Button.shelf.on">
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="Button.shelf TextBlock.count">
+    <Setter Property="Foreground" Value="{StaticResource HeadBrush}" />
+    <Setter Property="FontWeight" Value="Regular" />
+  </Style>
+  <Style Selector="Button.shelf.on TextBlock.count">
+    <Setter Property="Foreground" Value="{StaticResource FaintBrush}" />
+  </Style>
+
+  <!-- A filter's chip (the Garage's weight classes and letters, the lobby's "All 41", the cups): a word on no
+       ground, one tone up under the pointer; on, the raised tone in a 2 px green ring and the word in full. -->
+  <Style Selector="Button.chip">
+    <Setter Property="Height" Value="32" />
+    <Setter Property="Padding" Value="8,0" />
+    <Setter Property="FontSize" Value="{StaticResource Size13}" />
+    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{StaticResource FaintBrush}" />
+  </Style>
+  <Style Selector="Button.chip:pointerover">
+    <Setter Property="Background" Value="{StaticResource WellBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+  </Style>
+  <Style Selector="Button.chip.on, Button.chip.on:pointerover">
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Background" Value="{StaticResource RaisedBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+  </Style>
+  <!-- the switch drawn in a chip: a track and its knob, which slides across when on -->
+  <Style Selector="Button.chip Border.track">
+    <Setter Property="Width" Value="26" />
+    <Setter Property="Height" Value="14" />
+    <Setter Property="CornerRadius" Value="{DynamicResource StaticFullCornerRadius}" />
+    <Setter Property="Background" Value="{StaticResource HoverBrush}" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="{StaticResource Standard}" Easing="{StaticResource EaseOut}" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Button.chip Ellipse.knob">
+    <Setter Property="Width" Value="10" />
+    <Setter Property="Height" Value="10" />
+    <Setter Property="Fill" Value="{StaticResource DimBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="RenderTransform" Value="translateX(2px)" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <TransformOperationsTransition Property="RenderTransform" Duration="{StaticResource Standard}" Easing="{StaticResource EaseOut}" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Button.chip.on Border.track">
+    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+  </Style>
+  <Style Selector="Button.chip.on Ellipse.knob">
+    <Setter Property="Fill" Value="{StaticResource OnAccentBrush}" />
+    <Setter Property="RenderTransform" Value="translateX(14px)" />
+  </Style>
+
+  <!-- A row of a list that is pressed (the Garage's stats: press one to sort the machines by it): rows in the dim
+       colour, the row under the pointer and the one chosen lit, the chosen one's words in full. -->
+  <Style Selector="Button.stat">
+    <Setter Property="Height" Value="22" />
+    <Setter Property="Padding" Value="4,0" />
+    <Setter Property="FontSize" Value="{StaticResource Size14}" />
+    <Setter Property="Foreground" Value="{StaticResource DimBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="Button.stat:pointerover">
+    <Setter Property="Background" Value="{StaticResource HoverBrush}" />
+  </Style>
+  <Style Selector="Button.stat.on">
+    <Setter Property="Background" Value="{StaticResource HoverBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+  </Style>
+
+  <!-- The places, in the left column (Play, Garage, Replays): a line drawing (the button's Tag, a 24 px glyph) and
+       the word in the display face at 20, in capitals, dim; one tone up under the pointer; the place showing on the
+       raised tone, its word in full and its drawing green. -->
+  <Style Selector="Button.tab">
+    <Setter Property="Height" Value="40" />
+    <Setter Property="Padding" Value="16,0" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="Foreground" Value="{StaticResource DimBrush}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="Face" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+          <StackPanel Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+            <Viewbox Width="18" Height="18" VerticalAlignment="Center">
+              <Canvas Width="24" Height="24">
+                <Path Name="Glyph" Classes="glyph" StrokeThickness="1.8" Data="{TemplateBinding Tag}"
+                      Stroke="{TemplateBinding Foreground}" />
+              </Canvas>
+            </Viewbox>
+            <TextBlock Classes="display d20" Text="{TemplateBinding Content, Converter={x:Static v:UpperText.Instance}}"
+                       Foreground="{TemplateBinding Foreground}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="Button.tab:pointerover">
+    <Setter Property="Background" Value="{StaticResource WellBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+  </Style>
+  <Style Selector="Button.tab.on, Button.tab.on:pointerover">
+    <Setter Property="Background" Value="{StaticResource RaisedBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+  </Style>
+  <Style Selector="Button.tab.on /template/ Path#Glyph">
+    <Setter Property="Stroke" Value="{StaticResource AccentBrush}" />
+  </Style>
+
+  <!-- A mode tab (a tab's pages: Quick Play, Lobby, Local network, Practice; Settings' four): its word in the display
+       face, faint, in a bar of the surface tone; the one showing a green plate that leans, dark on it. -->
+  <Style Selector="Button.section">
+    <Setter Property="Foreground" Value="{StaticResource FaintBrush}" />
+    <Setter Property="Height" Value="32" />
+    <Setter Property="Padding" Value="16,0" />
+    <Setter Property="ClipToBounds" Value="False" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <c:Plate Name="Face" Shape="Lean" Background="{TemplateBinding Background}">
+          <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}"
+                            ContentTemplate="{TemplateBinding ContentTemplate}" Padding="{TemplateBinding Padding}"
+                            Foreground="{TemplateBinding Foreground}" ClipToBounds="False"
+                            HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
+        </c:Plate>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="Button.section:pointerover">
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+  </Style>
+  <Style Selector="Button.section.on, Button.section.on:pointerover">
+    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource OnAccentBrush}" />
+  </Style>
+  <!-- a dim figure in a tab that is on (the Replays tabs' counts): black on the accent, as its label -->
+  <Style Selector="Button.section.on TextBlock.dim">
+    <Setter Property="Foreground" Value="{StaticResource OnAccentBrush}" />
+  </Style>
+  <Style Selector="Button.section TextBlock.section">
+    <Setter Property="FontSize" Value="{StaticResource Display20}" />
+    <Setter Property="LineHeight" Value="24" />
+    <Setter Property="RenderTransformOrigin" Value="50%,50%" />
+  </Style>
+
+  <!-- The window's own buttons, as line drawings (the game window's strip uses the same). -->
+  <Style Selector="Button.chrome">
+    <Setter Property="Width" Value="46" />
+    <Setter Property="VerticalAlignment" Value="Stretch" />
+    <Setter Property="Foreground" Value="{StaticResource DimBrush}" />
+    <Setter Property="Cursor" Value="Arrow" />
+  </Style>
+  <Style Selector="Button.chrome Path">
+    <Setter Property="Stroke" Value="{Binding $parent[Button].Foreground}" />
+    <Setter Property="StrokeThickness" Value="1" />
+    <Setter Property="Width" Value="10" />
+    <Setter Property="Height" Value="10" />
+  </Style>
+  <Style Selector="Button.chrome:pointerover">
+    <Setter Property="Background" Value="{StaticResource ChromeOverBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+  </Style>
+  <Style Selector="Button.chrome.close:pointerover">
+    <Setter Property="Background" Value="{StaticResource CloseOverBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource OnCloseBrush}" />
+  </Style>
+
+  <!-- An icon beside the tabs (the bell): a 36 px square, its drawing dim, lit under the pointer and while what it
+       opens is open (class open). Its dot sits on a ring of the ground's colour. -->
+  <Style Selector="Button.icon">
+    <Setter Property="Width" Value="36" />
+    <Setter Property="Height" Value="36" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Foreground" Value="{StaticResource DimBrush}" />
+  </Style>
+  <Style Selector="Button.icon:pointerover, Button.icon.open">
+    <Setter Property="Background" Value="{StaticResource HoverBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+  </Style>
+  <Style Selector="Button.icon Path.glyph">
+    <Setter Property="Stroke" Value="{Binding $parent[Button].Foreground}" />
+  </Style>
+  <Style Selector="Ellipse.mark">
+    <Setter Property="Width" Value="11" />
+    <Setter Property="Height" Value="11" />
+    <Setter Property="StrokeThickness" Value="2" />
+    <Setter Property="Stroke" Value="{StaticResource DeepBrush}" />
+  </Style>
+</Styles>

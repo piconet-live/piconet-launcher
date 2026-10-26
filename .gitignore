@@ -1,0 +1,50 @@
+# Every Piconet repository takes this file; what only one
+# part writes is in that part's own .gitignore (port/, net/src/Launcher.App/).
+
+# --- Game data: never commit ---
+*.iso
+*.gcm
+*.rvz
+*.ciso
+*.nkit.*
+*.wbfs
+*.dol
+*.rel
+*.lz
+*.gma
+*.tpl
+*.gci
+*.raw
+*.sav
+*.dtm
+
+# --- Captures from the running game (RAM dumps, saved machine states, input tapes) ---
+*.state
+*.tape
+*-ram.bin
+*.bss
+
+# --- The build folder in a checkout: the port's default work folder, build/work (port/setup/work-folder.env) ---
+/build/
+
+# --- .NET build output (net/, and protocol/'s test projects) ---
+bin/
+obj/
+TestResults/
+
+# --- Local tooling and third-party trees ---
+.venv/
+decomp/
+scratch/
+__pycache__/
+*.pyc
+.env.local
+*.local.*
+.cache/
+
+# --- Editors / OS ---
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db

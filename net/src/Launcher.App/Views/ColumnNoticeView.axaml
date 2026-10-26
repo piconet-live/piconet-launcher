@@ -1,0 +1,22 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             x:Class="Launcher.App.Views.ColumnNoticeView"
+             x:DataType="vm:PlayControlViewModel">
+  <!-- The one notice of the left column, on every page (an error written to the log, a game that stopped
+       answering): its mark, its words in amber, a link to its folder or to end the game. -->
+  <Border Classes="columnnotice" IsVisible="{Binding Notice, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+    <Grid ColumnDefinitions="Auto,*">
+      <Path Classes="warnmark" Margin="0,4,8,0" VerticalAlignment="Top" />
+      <StackPanel Grid.Column="1" Spacing="2">
+        <TextBlock Classes="warn" Text="{Binding Notice}" />
+        <Button Classes="link" Command="{Binding OpenNoticeFolderCommand}" IsVisible="{Binding NoticeHasFolder}">
+          <TextBlock Text="Open folder" />
+        </Button>
+        <Button Classes="link" Command="{Binding EndGameCommand}" IsVisible="{Binding NoticeEndsGame}">
+          <TextBlock Text="End game" />
+        </Button>
+      </StackPanel>
+    </Grid>
+  </Border>
+</UserControl>

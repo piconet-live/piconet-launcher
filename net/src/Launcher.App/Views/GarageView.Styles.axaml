@@ -1,0 +1,59 @@
+<!-- The Garage page's own look (GarageView.axaml): its tabs, tiles, names, shelves' counts and step line. -->
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:v="using:Launcher.App.Views">
+  <!-- a tab that does not apply (a stock machine's parts) stays in its place, dim -->
+  <Style Selector="ItemsControl#Sections Button.section:disabled">
+    <Setter Property="Opacity" Value="0.4" />
+  </Style>
+  <!-- the part whose colour is shown, beside the wheel: three under each other, as low as the box under them -->
+  <Style Selector="ListBox.seg.part ListBoxItem">
+    <Setter Property="Height" Value="24" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+  </Style>
+  <!-- a tile's name: Saira Semi Condensed 600, centred under its still in a line of 24; on tiles too narrow for the
+       longest name two lines (44), or one line a size smaller where two would leave too small a still
+       (GarageView.axaml.cs: the view's classes twolines, smallnames) -->
+  <Style Selector="Panel.namebox">
+    <Setter Property="Height" Value="24" />
+  </Style>
+  <Style Selector="v|GarageView.twolines Panel.namebox">
+    <Setter Property="Height" Value="44" />
+  </Style>
+  <Style Selector="v|GarageView.smallnames TextBlock.cardname">
+    <Setter Property="FontSize" Value="12" />
+  </Style>
+  <Style Selector="TextBlock.cardname">
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="MaxLines" Value="2" />
+    <Setter Property="TextAlignment" Value="Center" />
+    <Setter Property="FontFamily" Value="{StaticResource BodyFont}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontSize" Value="{StaticResource Size13}" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Margin" Value="8,0" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+  <!-- the shelves at the strip's left: chips with their counts -->
+  <Style Selector="Button.chip TextBlock.count">
+    <Setter Property="Foreground" Value="{StaticResource FaintBrush}" />
+  </Style>
+  <!-- the step line, as the lobby's: the display role at 20, the phase on show in the accent, the other dim -->
+  <Style Selector="Button.step TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource DimBrush}" />
+  </Style>
+  <Style Selector="Button.step:pointerover TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+  </Style>
+  <Style Selector="Button.step.on TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+  </Style>
+  <!-- New machine, the Custom shelf's last tile: raised a tone, a + over its words -->
+  <Style Selector="Button.cell.raised">
+    <Setter Property="Background" Value="{StaticResource RaisedBrush}" />
+  </Style>
+  <Style Selector="Button.cell.raised:pointerover">
+    <Setter Property="Background" Value="{StaticResource HoverBrush}" />
+  </Style>
+</Styles>

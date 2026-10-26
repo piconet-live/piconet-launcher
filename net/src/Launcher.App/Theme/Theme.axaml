@@ -1,0 +1,396 @@
+<!--
+  The launcher's look, direction D (the refresh of the earlier look, direction C, with four rules changed: tones instead
+  of strokes, a loud display face, one green accent that may fill, leaning actives). This file is the one place for it,
+  with the two it takes in at its end: Buttons.axaml
+  (everything that is pressed) and Forms.axaml (tables, inputs, forms). A page uses these resources and classes; it
+  sets no colour, size or duration of its own. Every colour is here, the accent once (AccentColor): the controls drawn
+  in code (PadMark, PadPicture) read theirs from this dictionary.
+
+  GRID      8 px: gaps 8 · 16 · 24, padding 16 or 24, nothing else. Window: a 32 px title bar; under it a 240 px
+            left column (who you are, where you go, whether you are online) and the content. Table rows 32 px.
+  TYPE      Two roles. Display: Saira Condensed ExtraBold, leaning forward (TextBlock.display: a 12 degree skew, as
+            the font has no italic), in capitals, for the name, page titles, navigation, mode tabs, the course name
+            and the one primary button, at 64 · 40 · 20. Interface: Saira Semi Condensed for everything read or
+            operated, at 15 body · 14 controls · 13 secondary · 11 small labels. Figures that change or line up are
+            tabular (FontFeatures tnum). Times are written the series' way, 1'45"300.
+  COLOUR    Tones, not strokes: Ground (the window), Column (the left column), Well and Surface (a panel, a card, a
+            tile, an input's ground), Raised (a plate on a surface, a surface button), Hover (one tone up). Nothing
+            is outlined; hairlines (Edge, RowLine) only between rows inside a surface; a 2 px accent ring is what is
+            selected; a 1 px line (Outline) marks an input. White on black, as the site (piconet-site global.css): the
+            ground is black, the tones step clearly apart and stay neutral, text is white, display text pure white.
+            Accent (green) is what is yours or active; it may fill: the active tab, the chosen value, the one primary
+            button, with dark text on it (OnAccent). Gold is the mark only (the 06 plate, the bar over your name),
+            never a control. Amber warns, red is for danger and knock-outs. Racers' paints are theirs.
+            Focus (the pad's mark, PadMark): a 2 px ring in the text colour over a 1 px gap of the ground, so it
+            reads on a green fill as on every tone.
+  CORNERS   Soft, on the component library's own scale
+            (HuskuiTheme Corner="Normal" in App.axaml: one preset moves everything; its Static*CornerRadius keys,
+            asked as DynamicResource: its unprefixed keys are references to them): tiles and cards 9
+            (StaticLargeCornerRadius), the floating panel, flyouts and dialogs 14 (StaticExtraLargeCornerRadius),
+            chips, inputs, surface buttons, rows of choices and tooltips 6 (StaticMediumCornerRadius), dots, knobs and
+            tracks round (StaticFullCornerRadius). Square (SquareCorner): the left column and its places, the title bar. Leaning
+            (Controls/Plate, about 15 degrees): the active tab, the primary button and the hero's title plate only; the
+            rules panel has one chamfered corner. A ring (the selection's 2 px, the pad's mark) follows the shape.
+  MOTION    Quick 120 ms (hover tone, press, tooltip), Standard 200 ms (a control changing size or state), Emphasis
+            320 ms (a card lifting, bars growing). Easing: EaseOut, cubic-bezier(.2, .8, .2, 1): fast start, soft
+            landing; nothing snaps, nothing bounces. Flat fills: no glow; a shadow only for what floats (FloatShadow).
+  CONTROLS  Button.go (the one primary) · Button.primary · Button.secondary (a surface button) · Button.quiet ·
+            Button.nav (the column's places) · Button.link · Button.tab · Button.section (a mode tab) ·
+            Button.chrome (the window's own buttons) · Button.icon (the bell) · Border.row and Border.rowhead
+            (tables) · TextBox.field · ListBox.seg · CheckBox.box · ToggleSwitch · Stepper · Button.swatch ·
+            Button.cell · Button.stat · Grid.form · NameTagText (a name and its tag) · LobbyRowView.
+
+  Game art (venue pictures, name plates, 3D models) is content from the player's disc (GameSkin.cs), never decoration.
+-->
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Styles.Resources>
+    <!-- Colour: the tones, each a visible step and neutral, the site's own (ground, bar, surface, raised, hover). -->
+    <Color x:Key="GroundColor">#000000</Color>
+    <Color x:Key="DeepColor">#000000</Color>
+    <Color x:Key="ColumnColor">#0D0E0D</Color>
+    <Color x:Key="WellColor">#171917</Color>
+    <Color x:Key="RaisedColor">#232623</Color>
+    <Color x:Key="HoverColor">#2F332F</Color>
+    <SolidColorBrush x:Key="DeepBrush" Color="{StaticResource DeepColor}" />
+    <SolidColorBrush x:Key="GroundBrush" Color="{StaticResource GroundColor}" />
+    <SolidColorBrush x:Key="ColumnBrush" Color="{StaticResource ColumnColor}" />
+    <SolidColorBrush x:Key="WellBrush" Color="{StaticResource WellColor}" />
+    <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource WellColor}" />
+    <SolidColorBrush x:Key="RaisedBrush" Color="{StaticResource RaisedColor}" />
+    <!-- Colour: the few lines that mean something: hairlines between rows inside a surface, an input's line -->
+    <SolidColorBrush x:Key="EdgeBrush" Color="#232623" />
+    <SolidColorBrush x:Key="LineBrush" Color="#232623" />
+    <SolidColorBrush x:Key="RowLineBrush" Color="#2A2E2A" />
+    <SolidColorBrush x:Key="OutlineBrush" Color="#3C413C" />
+    <SolidColorBrush x:Key="OutlineOverBrush" Color="#4D534D" />
+    <SolidColorBrush x:Key="OutlineOffBrush" Color="#232623" />
+    <!-- Colour: one tone up under the pointer, and the row that is on -->
+    <SolidColorBrush x:Key="RowOnBrush" Color="#171917" />
+    <SolidColorBrush x:Key="HoverBrush" Color="{StaticResource HoverColor}" />
+    <SolidColorBrush x:Key="ChromeOverBrush" Color="#232623" />
+    <SolidColorBrush x:Key="SelectBrush" Color="#4D534D" />
+    <!-- Colour: text -->
+    <Color x:Key="TextColor">#FFFFFF</Color>
+    <Color x:Key="DimColor">#BCC2BC</Color>
+    <Color x:Key="FaintColor">#9BA29B</Color>
+    <Color x:Key="OffColor">#5C615C</Color>
+    <SolidColorBrush x:Key="TextBrush" Color="{StaticResource TextColor}" />
+    <SolidColorBrush x:Key="DimBrush" Color="{StaticResource DimColor}" />
+    <SolidColorBrush x:Key="FaintBrush" Color="{StaticResource FaintColor}" />
+    <SolidColorBrush x:Key="HeadBrush" Color="{StaticResource FaintColor}" />
+    <SolidColorBrush x:Key="OffBrush" Color="{StaticResource OffColor}" />
+    <SolidColorBrush x:Key="OffTextBrush" Color="#4B504B" />
+    <!-- Colour: the accent (the one place it is named), gold, and the states, at full strength as on the site; black
+         text on the accent and on gold. Every text colour passes 4.5:1 on every tone (HeadBrush is the faint text). -->
+    <Color x:Key="AccentColor">#3DFF6A</Color>
+    <Color x:Key="OnAccentColor">#000000</Color>
+    <Color x:Key="GoldColor">#FFD500</Color>
+    <Color x:Key="WarnColor">#FF9F1A</Color>
+    <Color x:Key="DangerColor">#FF4D4D</Color>
+    <!-- the pad's focus: the text colour, over a gap of the ground (PadMark) -->
+    <Color x:Key="FocusColor">#FFFFFF</Color>
+    <Color x:Key="FocusGapColor">#000000</Color>
+    <SolidColorBrush x:Key="AccentBrush" Color="{StaticResource AccentColor}" />
+    <SolidColorBrush x:Key="AccentOverBrush" Color="#7AFF96" />
+    <SolidColorBrush x:Key="AccentDownBrush" Color="#2BE356" />
+    <SolidColorBrush x:Key="AccentTintBrush" Color="{StaticResource AccentColor}" Opacity="0.1" />
+    <SolidColorBrush x:Key="OnAccentBrush" Color="{StaticResource OnAccentColor}" />
+    <SolidColorBrush x:Key="GoldBrush" Color="{StaticResource GoldColor}" />
+    <SolidColorBrush x:Key="OnGoldBrush" Color="#000000" />
+    <SolidColorBrush x:Key="OnlineBrush" Color="{StaticResource AccentColor}" />
+    <SolidColorBrush x:Key="NoticeBrush" Color="{StaticResource WarnColor}" />
+    <SolidColorBrush x:Key="OfflineBrush" Color="{StaticResource DangerColor}" />
+    <!-- A server notice's tier (NoticeCard): its bar, label and icon, and a light tint of it behind the card. Info is
+         the accent, notice a lighter green, warning amber, urgent red. -->
+    <SolidColorBrush x:Key="TierInfoBrush" Color="{StaticResource AccentColor}" />
+    <SolidColorBrush x:Key="TierNoticeBrush" Color="#7AFF96" />
+    <SolidColorBrush x:Key="TierWarningBrush" Color="{StaticResource WarnColor}" />
+    <SolidColorBrush x:Key="TierUrgentBrush" Color="{StaticResource DangerColor}" />
+    <SolidColorBrush x:Key="TierInfoTintBrush" Color="{StaticResource AccentColor}" Opacity="0.14" />
+    <SolidColorBrush x:Key="TierNoticeTintBrush" Color="#7AFF96" Opacity="0.16" />
+    <SolidColorBrush x:Key="TierWarningTintBrush" Color="{StaticResource WarnColor}" Opacity="0.16" />
+    <SolidColorBrush x:Key="TierUrgentTintBrush" Color="{StaticResource DangerColor}" Opacity="0.19" />
+    <SolidColorBrush x:Key="CloseOverBrush" Color="#C42B1C" />
+    <!-- Data colours: each cup's gem (a square beside its name, the hero's cup); AX amber, the story gold -->
+    <SolidColorBrush x:Key="GemRubyBrush" Color="#FF4D5E" />
+    <SolidColorBrush x:Key="GemSapphireBrush" Color="#4DA3FF" />
+    <SolidColorBrush x:Key="GemEmeraldBrush" Color="#4FD15F" />
+    <SolidColorBrush x:Key="GemDiamondBrush" Color="#E6EEF4" />
+    <SolidColorBrush x:Key="GemAXBrush" Color="#F2A33A" />
+    <SolidColorBrush x:Key="GemStoryBrush" Color="#F2D23A" />
+    <!-- The lobby's vote: a vote's pip (the player's own is the accent), the track under a share's bar (the race's
+         energy), and the course card the draw is framing or lands on: lifted to the hover tone, no shadow. -->
+    <SolidColorBrush x:Key="PipBrush" Color="{StaticResource FaintColor}" />
+    <SolidColorBrush x:Key="BarTrackBrush" Color="{StaticResource RaisedColor}" />
+    <SolidColorBrush x:Key="CardLitBrush" Color="{StaticResource HoverColor}" />
+    <!-- the hero's title plate over the venue's picture: the ground at 88% -->
+    <SolidColorBrush x:Key="PlateBrush" Color="{StaticResource GroundColor}" Opacity="0.88" />
+    <SolidColorBrush x:Key="OnCloseBrush" Color="#FFFFFF" />
+
+    <!-- Type -->
+    <!-- The families by the names the font files give them, to the letter: "Saira Semi Condensed" with its space. A
+         name that is not found does not fail, it gives the folder's first font: a wrong name such as "Saira SemiCondensed" sets all the
+         text in Saira Condensed Bold, with nothing to tell strong text from plain. -->
+    <FontFamily x:Key="BodyFont">avares://Launcher.App/Assets/Fonts#Saira Semi Condensed</FontFamily>
+    <FontFamily x:Key="HeadingFont">avares://Launcher.App/Assets/Fonts#Saira Condensed</FontFamily>
+    <!-- the display role: the same family at ExtraBold (TextBlock.display leans it) -->
+    <FontFamily x:Key="DisplayFont">avares://Launcher.App/Assets/Fonts#Saira Condensed</FontFamily>
+    <!-- D's scale, and nothing in between: display 64 · 40 · 20; interface 15 · 14 · 13 · 11. The older keys stand
+         for the step that took their place (Size12 is 13, Size16 15, Size17 and Size21 20, Size26 20, Size28 and
+         Size32 40), so a page not yet redrawn keeps to the scale. -->
+    <x:Double x:Key="Display64">64</x:Double>
+    <x:Double x:Key="Display40">40</x:Double>
+    <x:Double x:Key="Display20">20</x:Double>
+    <x:Double x:Key="Size11">11</x:Double>
+    <x:Double x:Key="Size12">13</x:Double>
+    <x:Double x:Key="Size13">13</x:Double>
+    <x:Double x:Key="Size14">14</x:Double>
+    <x:Double x:Key="Size15">15</x:Double>
+    <x:Double x:Key="Size16">15</x:Double>
+    <x:Double x:Key="Size17">20</x:Double>
+    <x:Double x:Key="Size20">20</x:Double>
+    <x:Double x:Key="Size21">20</x:Double>
+    <x:Double x:Key="Size26">20</x:Double>
+    <x:Double x:Key="Size28">40</x:Double>
+    <x:Double x:Key="Size32">40</x:Double>
+    <!-- Spaced capitals: em fractions at their sizes (.08em at 11 px, .06em at 20 px, .04em at 40 px). -->
+    <x:Double x:Key="LabelSpacing">0.9</x:Double>
+    <x:Double x:Key="WordSpacing">1.2</x:Double>
+    <x:Double x:Key="GoSpacing">1.6</x:Double>
+    <!-- A player's tag beside the name, as a share of the name's size (NameTagText). -->
+    <x:Double x:Key="TagScale">0.8</x:Double>
+
+    <!-- Grid and spacing: 8 px. -->
+    <x:Double x:Key="TitleBarHeight">32</x:Double>
+    <x:Double x:Key="ColumnWidth">240</x:Double>
+    <x:Double x:Key="TabsHeight">56</x:Double>
+    <x:Double x:Key="RowHeight">32</x:Double>
+    <x:Double x:Key="TallRowHeight">40</x:Double>
+    <x:Double x:Key="RowHeadHeight">24</x:Double>
+    <x:Double x:Key="ButtonHeight">40</x:Double>
+    <x:Double x:Key="GoHeight">56</x:Double>
+    <x:Double x:Key="Gap4">4</x:Double>
+    <x:Double x:Key="Gap8">8</x:Double>
+    <x:Double x:Key="Gap16">16</x:Double>
+    <x:Double x:Key="Gap24">24</x:Double>
+    <Thickness x:Key="PagePadding">24,0,24,24</Thickness>
+    <Thickness x:Key="ColumnPadding">16,16,16,16</Thickness>
+
+    <!-- The places' line drawings, on a 24 px grid (Button.tab's Tag) -->
+    <StreamGeometry x:Key="GlyphPlay">M6 4L20 12L6 20Z</StreamGeometry>
+    <StreamGeometry x:Key="GlyphGarage">M3 11L12 4L21 11V20H3Z M8 20V14H16V20</StreamGeometry>
+    <StreamGeometry x:Key="GlyphReplays">M21 12A9 9 0 1 1 3 12A9 9 0 1 1 21 12Z M12 7V12L15 14</StreamGeometry>
+
+    <!-- The display role's lean reaches past a line's box on the right (Type, below): each size's box holds it -->
+    <Thickness x:Key="DisplayReach64">0,0,18,0</Thickness>
+    <Thickness x:Key="DisplayReach40">0,0,11,0</Thickness>
+    <Thickness x:Key="DisplayReach20">0,0,6,0</Thickness>
+
+    <!-- Corners and depth -->
+    <CornerRadius x:Key="SquareCorner">0</CornerRadius>
+    <BoxShadows x:Key="FloatShadow">0 8 24 0 #73000000</BoxShadows>
+    <BoxShadows x:Key="NoShadow">0 0 0 0 #00000000</BoxShadows>
+
+    <!-- Motion -->
+    <x:TimeSpan x:Key="Quick">0:0:0.12</x:TimeSpan>
+    <x:TimeSpan x:Key="Standard">0:0:0.2</x:TimeSpan>
+    <x:TimeSpan x:Key="Emphasis">0:0:0.32</x:TimeSpan>
+    <SplineEasing x:Key="EaseOut" X1="0.2" Y1="0.8" X2="0.2" Y2="1" />
+
+    <!-- Whether the player's disc gives its pictures (GameSkin.Load sets them). -->
+    <x:Boolean x:Key="HasDiscArt">False</x:Boolean>
+    <x:Boolean x:Key="NoDiscArt">True</x:Boolean>
+  </Styles.Resources>
+
+  <!-- Type. The display role leans forward: Saira Condensed ExtraBold under a 12 degree skew about the line's foot
+       (the font has no italic, and the toolkit makes no oblique of a font file). The skew is drawn,
+       not laid out: a display line overhangs its box on the right by about a fifth of its line's height (its height ×
+       tan 12°, and the lift before the skew), so each size's box holds that reach as its right padding (DisplayReach64,
+       40, 20: NameTagText.Overhang of its line, pinned by ThemeTokensTests) and a parent that clips (a button, a
+       Viewbox fitting a long name) never cuts the last letter (PREVIEW's W). Saira's line is half as tall again as its capitals: the classes set the
+       line the grid wants and lift the capitals to its middle (the framework hangs them from the line's top by the
+       font's ascent, 1.135 em; capitals are 0.688 em). -->
+  <Style Selector="TextBlock.display, TextBlock.racer, TextBlock.section, TextBlock.word">
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontWeight" Value="ExtraBold" />
+    <Setter Property="ClipToBounds" Value="False" />
+    <Setter Property="RenderTransformOrigin" Value="0%,100%" />
+    <Setter Property="RenderTransform" Value="skewX(-12deg)" />
+  </Style>
+  <!-- the display role's three sizes: 64 (a hero's name), 40 (a page's title, your name), 20 (navigation, a mode
+       tab, the primary button's word, a state's word: GATHERING) -->
+  <Style Selector="TextBlock.display.d64">
+    <Setter Property="FontSize" Value="{StaticResource Display64}" />
+    <Setter Property="LineHeight" Value="64" />
+    <Setter Property="Padding" Value="{StaticResource DisplayReach64}" />
+    <Setter Property="RenderTransform" Value="translateY(-18px) skewX(-12deg)" />
+  </Style>
+  <Style Selector="TextBlock.display.d40, TextBlock.racer">
+    <Setter Property="FontSize" Value="{StaticResource Display40}" />
+    <Setter Property="LineHeight" Value="40" />
+    <Setter Property="LetterSpacing" Value="1.2" />
+    <Setter Property="RenderTransform" Value="translateY(-11px) skewX(-12deg)" />
+  </Style>
+  <!-- (the left column's name holds its reach itself: NameTagText) -->
+  <Style Selector="TextBlock.display.d40">
+    <Setter Property="Padding" Value="{StaticResource DisplayReach40}" />
+  </Style>
+  <Style Selector="TextBlock.display.d20, TextBlock.section, TextBlock.word">
+    <Setter Property="FontSize" Value="{StaticResource Display20}" />
+    <Setter Property="LineHeight" Value="24" />
+    <Setter Property="LetterSpacing" Value="{StaticResource WordSpacing}" />
+    <Setter Property="Padding" Value="{StaticResource DisplayReach20}" />
+    <Setter Property="RenderTransform" Value="translateY(-4px) skewX(-12deg)" />
+  </Style>
+  <!-- Upright headings and big figures in the heading face (a page's clock, your place, a section's name). -->
+  <Style Selector="TextBlock.name, TextBlock.title, TextBlock.head">
+    <Setter Property="FontFamily" Value="{StaticResource HeadingFont}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="ClipToBounds" Value="False" />
+  </Style>
+  <Style Selector="TextBlock.name">
+    <Setter Property="FontSize" Value="{StaticResource Display40}" />
+    <Setter Property="LineHeight" Value="40" />
+    <Setter Property="RenderTransform" Value="translateY(-11px)" />
+  </Style>
+  <Style Selector="TextBlock.title">
+    <Setter Property="FontSize" Value="{StaticResource Display40}" />
+    <Setter Property="LineHeight" Value="40" />
+    <Setter Property="RenderTransform" Value="translateY(-11px)" />
+  </Style>
+  <Style Selector="TextBlock.head">
+    <Setter Property="FontSize" Value="{StaticResource Display20}" />
+    <Setter Property="LineHeight" Value="24" />
+    <Setter Property="RenderTransform" Value="translateY(-4px)" />
+  </Style>
+  <!-- A small label in spaced capitals (a table's tag, TEST BUILD): 11, spaced .08em. -->
+  <Style Selector="TextBlock.caps">
+    <Setter Property="FontSize" Value="{StaticResource Size11}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="LetterSpacing" Value="{StaticResource LabelSpacing}" />
+  </Style>
+  <Style Selector="TextBlock.off">
+    <Setter Property="Foreground" Value="{StaticResource OffBrush}" />
+  </Style>
+  <Style Selector="TextBlock.faint">
+    <Setter Property="Foreground" Value="{StaticResource FaintBrush}" />
+    <Setter Property="FontSize" Value="{StaticResource Size13}" />
+  </Style>
+  <!-- Places, counts and times: figures of one width, so columns line up. -->
+  <Style Selector="TextBlock.figure">
+    <Setter Property="FontFamily" Value="{StaticResource HeadingFont}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontSize" Value="{StaticResource Size16}" />
+    <Setter Property="FontFeatures" Value="tnum" />
+  </Style>
+  <Style Selector="TextBlock.strong">
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="TextBlock.dim">
+    <Setter Property="Foreground" Value="{StaticResource DimBrush}" />
+  </Style>
+  <Style Selector="TextBlock.note">
+    <Setter Property="Foreground" Value="{StaticResource FaintBrush}" />
+    <Setter Property="FontSize" Value="{StaticResource Size13}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style Selector="TextBlock.colhead">
+    <Setter Property="Foreground" Value="{StaticResource FaintBrush}" />
+    <Setter Property="FontSize" Value="{StaticResource Size13}" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBlock.warn">
+    <Setter Property="Foreground" Value="{StaticResource NoticeBrush}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+
+  <!-- A cup's gem: a small square turned on its corner, in the cup's colour (CupGem), beside a cup's or a course's
+       name. -->
+  <Style Selector="Rectangle.gem">
+    <Setter Property="Width" Value="7" />
+    <Setter Property="Height" Value="7" />
+    <Setter Property="RenderTransform" Value="rotate(45deg)" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- A racer's paint beside their name. -->
+  <Style Selector="Border.chip">
+    <Setter Property="Width" Value="10" />
+    <Setter Property="Height" Value="10" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- The connection: amber while checking or slow, green online, red offline. -->
+  <Style Selector="Border.dot">
+    <Setter Property="Width" Value="8" />
+    <Setter Property="Height" Value="8" />
+    <Setter Property="CornerRadius" Value="{DynamicResource StaticFullCornerRadius}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Background" Value="{StaticResource NoticeBrush}" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="{StaticResource Standard}" Easing="{StaticResource EaseOut}" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Border.dot.online">
+    <Setter Property="Background" Value="{StaticResource OnlineBrush}" />
+  </Style>
+  <Style Selector="Border.dot.offline">
+    <Setter Property="Background" Value="{StaticResource OfflineBrush}" />
+  </Style>
+
+  <!-- The lobby box (in Quick Play): a surface; one tone up under the pointer. -->
+  <Style Selector="Button.lobbybox Border#Box">
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="{StaticResource Standard}" Easing="{StaticResource EaseOut}" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Button.lobbybox Border#Box">
+    <Setter Property="Background" Value="{StaticResource WellBrush}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource StaticLargeCornerRadius}" />
+  </Style>
+  <Style Selector="Button.lobbybox:pointerover Border#Box">
+    <Setter Property="Background" Value="{StaticResource RaisedBrush}" />
+  </Style>
+  <!-- A warning's mark: a triangle with "!", in amber, drawn (a state never rests on colour alone). -->
+  <Style Selector="Path.warnmark">
+    <Setter Property="Data" Value="M6 0.8L11.4 10.9H0.6Z M6 4.4V7.2 M6 8.8V9" />
+    <Setter Property="Width" Value="12" />
+    <Setter Property="Height" Value="12" />
+    <Setter Property="Stroke" Value="{StaticResource NoticeBrush}" />
+    <Setter Property="StrokeThickness" Value="1.3" />
+    <Setter Property="StrokeLineCap" Value="Round" />
+    <Setter Property="StrokeJoin" Value="Round" />
+  </Style>
+  <!-- The one notice of the left column: its mark, its words in amber, a link to its folder. -->
+  <Style Selector="Border.columnnotice">
+    <Setter Property="Padding" Value="16,8" />
+    <Setter Property="Background" Value="{StaticResource WellBrush}" />
+  </Style>
+
+  <!-- What floats (a menu, the name's flyout, a tooltip): rounded, in the raised tone, with a shadow; no outline. -->
+  <Style Selector="FlyoutPresenter">
+    <Setter Property="Background" Value="{StaticResource RaisedBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="{DynamicResource StaticExtraLargeCornerRadius}" />
+    <Setter Property="Padding" Value="16" />
+    <Setter Property="Margin" Value="0,4,0,0" />
+  </Style>
+  <Style Selector="ToolTip">
+    <Setter Property="Background" Value="{StaticResource RaisedBrush}" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="{DynamicResource StaticMediumCornerRadius}" />
+    <Setter Property="Padding" Value="16,8" />
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+    <Setter Property="FontFamily" Value="{StaticResource BodyFont}" />
+    <Setter Property="FontSize" Value="{StaticResource Size14}" />
+  </Style>
+
+  <!-- The rest of the look, in this order (a later style wins over an earlier one). -->
+  <StyleInclude Source="avares://Launcher.App/Theme/Buttons.axaml" />
+  <StyleInclude Source="avares://Launcher.App/Theme/Forms.axaml" />
+</Styles>

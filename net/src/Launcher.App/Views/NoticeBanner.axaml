@@ -1,0 +1,20 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:v="using:Launcher.App.Views"
+             x:Class="Launcher.App.Views.NoticeBanner"
+             x:DataType="vm:NoticesViewModel">
+  <!-- A server notice of the tiers notice, warning and urgent, across the window under its title bar: the notice's
+       card (NoticeCard, as in the chat and the list) and × that dismisses it. A notice's band goes by itself after
+       ten seconds, its time running out along its foot (Timer, NoticeBanner.axaml.cs); a warning's and an urgent
+       one's stay until dismissed (NoticesViewModel). -->
+  <Panel Name="Band" IsVisible="{Binding BannerShown}" Background="{StaticResource DeepBrush}">
+    <v:NoticeCard Name="BannerCard" DataContext="{Binding Banner}" />
+    <Button Name="DismissNotice" Classes="chrome" Command="{Binding DismissCommand}" HorizontalAlignment="Right"
+            VerticalAlignment="Stretch" AutomationProperties.Name="Dismiss">
+      <Path Data="M0.5 0.5L9.5 9.5M9.5 0.5L0.5 9.5" />
+    </Button>
+    <Border Name="Timer" Height="2" Margin="2,0,0,0" VerticalAlignment="Bottom" Opacity="0.7" IsVisible="False"
+            Background="{StaticResource TierNoticeBrush}" RenderTransformOrigin="0%,50%" IsHitTestVisible="False" />
+  </Panel>
+</UserControl>

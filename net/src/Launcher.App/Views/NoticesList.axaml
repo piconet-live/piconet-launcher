@@ -1,0 +1,36 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:v="using:Launcher.App.Views"
+             x:Class="Launcher.App.Views.NoticesList"
+             x:DataType="vm:NoticesViewModel">
+  <!-- The notices this PC received, newest first (the last 100, kept in the data folder), each its card
+       (NoticeCard, as in the chat and the banner), whose text can be selected and copied. Opened from the bell beside the tabs; the one place the list is drawn, so
+       that the chat sidebar can take it over as a tab of its own. -->
+  <Border Background="{StaticResource RaisedBrush}" BoxShadow="{StaticResource FloatShadow}" CornerRadius="{DynamicResource StaticExtraLargeCornerRadius}">
+    <DockPanel>
+      <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Height="40" Margin="16,0,0,0">
+        <TextBlock Text="Notices" FontFamily="{StaticResource HeadingFont}" FontWeight="SemiBold"
+                   FontSize="18" VerticalAlignment="Center" />
+        <Button Name="CloseNotices" Grid.Column="1" Classes="chrome" Width="40" Height="32" Command="{Binding ToggleListCommand}"
+                AutomationProperties.Name="Close">
+          <Path Data="M0.5 0.5L9.5 9.5M9.5 0.5L0.5 9.5" />
+        </Button>
+      </Grid>
+      <TextBlock DockPanel.Dock="Top" Classes="faint" FontSize="{StaticResource Size14}" Text="None" Margin="16,4,16,16"
+                 IsVisible="{Binding Empty}" />
+      <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <ItemsControl Name="NoticeRows" ItemsSource="{Binding List}" Margin="12,0,12,12">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><StackPanel Spacing="6" /></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:NoticeItem">
+              <v:NoticeCard />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </DockPanel>
+  </Border>
+</UserControl>

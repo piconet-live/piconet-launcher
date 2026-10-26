@@ -1,0 +1,451 @@
+<!-- The launcher's look (Theme.axaml, which takes this file in and holds its colours and sizes): tables, inputs,
+     choices and forms. -->
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- Tables: a header of column names, then rows with a line above each. -->
+  <Style Selector="Border.rowhead">
+    <Setter Property="Height" Value="{StaticResource RowHeadHeight}" />
+    <Setter Property="Padding" Value="10,0" />
+  </Style>
+  <Style Selector="Border.row">
+    <Setter Property="MinHeight" Value="{StaticResource RowHeight}" />
+    <Setter Property="Padding" Value="10,0" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+    <Setter Property="BorderBrush" Value="{StaticResource RowLineBrush}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="{StaticResource Quick}" Easing="{StaticResource EaseOut}" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <!-- only a row that is pressed as a whole lights under the pointer (class hover): rows of text on the ground (the
+       racers, the chat, the standings) never do -->
+  <Style Selector="Border.row.hover:pointerover">
+    <Setter Property="Background" Value="{StaticResource RowOnBrush}" />
+  </Style>
+  <Style Selector="Border.row.tall">
+    <Setter Property="MinHeight" Value="{StaticResource TallRowHeight}" />
+  </Style>
+  <Style Selector="Border.row.on">
+    <Setter Property="Background" Value="{StaticResource RowOnBrush}" />
+  </Style>
+  <Style Selector="Border.row.last">
+    <Setter Property="BorderThickness" Value="0,1,0,1" />
+  </Style>
+  <Style Selector="Border.row TextBlock, Border.row StackPanel">
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- A view set into the page (the race map and what stands in its place): a surface, no outline. -->
+  <Style Selector="Border.well">
+    <Setter Property="Background" Value="{StaticResource WellBrush}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource StaticLargeCornerRadius}" />
+  </Style>
+
+  <!-- An input. -->
+  <Style Selector="TextBox.field">
+    <Setter Property="Height" Value="32" />
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="Padding" Value="8,0" />
+    <Setter Property="CornerRadius" Value="{DynamicResource StaticMediumCornerRadius}" />
+    <Setter Property="Background" Value="{StaticResource WellBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource OutlineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+    <Setter Property="FontSize" Value="{StaticResource Size14}" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBox.field:pointerover">
+    <Setter Property="BorderBrush" Value="{StaticResource OutlineOverBrush}" />
+  </Style>
+  <Style Selector="TextBox.field:focus-within">
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+  </Style>
+  <!-- what it holds cannot be taken (a colour that is no #RRGGBB, an address that is none): an amber outline -->
+  <Style Selector="TextBox.field.bad, TextBox.field.bad:focus-within, TextBox.field.bad:pointerover">
+    <Setter Property="BorderBrush" Value="{StaticResource NoticeBrush}" />
+  </Style>
+  <!-- The component library's box draws a ring in its accent colour around a focused box (its PART_GlowBorder) and
+       changes the box's ground (PART_Border): the launcher's focus is the outline above and nothing else. -->
+  <Style Selector="TextBox.field:focus /template/ Border#PART_GlowBorder">
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+  <Style Selector="TextBox.field:focus /template/ Border#PART_Border">
+    <Setter Property="Background" Value="{StaticResource WellBrush}" />
+  </Style>
+
+  <!-- One of a few: segments side by side on the raised tone, the chosen one a green fill with dark words, the
+       others faint. Figures (class figures: the input delay) in the heading face, each
+       segment as wide as the next. -->
+  <Style Selector="ListBox.seg">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="2" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="ItemsPanel">
+      <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="2" /></ItemsPanelTemplate>
+    </Setter>
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{StaticResource RaisedBrush}" HorizontalAlignment="Left" CornerRadius="{DynamicResource StaticMediumCornerRadius}">
+          <ItemsPresenter Name="PART_ItemsPresenter" ItemsPanel="{TemplateBinding ItemsPanel}" Margin="{TemplateBinding Padding}" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="ListBox.seg ListBoxItem">
+    <Setter Property="Height" Value="28" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Margin" Value="0" />
+    <Setter Property="Padding" Value="14,0" />
+    <Setter Property="CornerRadius" Value="{DynamicResource StaticSmallCornerRadius}" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{StaticResource FaintBrush}" />
+    <Setter Property="FontWeight" Value="Regular" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="{StaticResource Quick}" Easing="{StaticResource EaseOut}" />
+        <BrushTransition Property="Foreground" Duration="{StaticResource Quick}" Easing="{StaticResource EaseOut}" />
+      </Transitions>
+    </Setter>
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" CornerRadius="{TemplateBinding CornerRadius}">
+          <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}"
+                            ContentTemplate="{TemplateBinding ContentTemplate}" Foreground="{TemplateBinding Foreground}"
+                            HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="ListBox.seg.tall ListBoxItem">
+    <Setter Property="Height" Value="30" />
+    <Setter Property="Padding" Value="16,0" />
+  </Style>
+  <Style Selector="ListBox.seg.figures ListBoxItem">
+    <Setter Property="Width" Value="44" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="FontFamily" Value="{StaticResource HeadingFont}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontSize" Value="{StaticResource Size16}" />
+  </Style>
+  <Style Selector="ListBox.seg.wide ListBoxItem">
+    <Setter Property="Padding" Value="0" />
+  </Style>
+  <Style Selector="ListBox.seg ListBoxItem:pointerover">
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+  </Style>
+  <Style Selector="ListBox.seg ListBoxItem:selected, ListBox.seg ListBoxItem:selected:pointerover">
+    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource OnAccentBrush}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+  </Style>
+  <Style Selector="ListBox.seg:disabled ListBoxItem:selected">
+    <Setter Property="Background" Value="{StaticResource HoverBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource OffBrush}" />
+  </Style>
+
+  <!-- A value on a line (the volumes, the interface scale, the machine's setting): a 4 px track, fully rounded, the
+       part up to the knob green; a white knob ringed in the ground's colour. -->
+  <Style Selector="Slider.bar">
+    <Setter Property="MinHeight" Value="24" />
+    <Setter Property="Height" Value="24" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Grid Background="Transparent">
+          <Border Name="Rail" Height="4" CornerRadius="{DynamicResource StaticFullCornerRadius}" Background="{StaticResource HoverBrush}" VerticalAlignment="Center" />
+          <Track Name="PART_Track" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
+                 Value="{TemplateBinding Value, Mode=TwoWay}" Orientation="Horizontal" IsDirectionReversed="False">
+            <Track.DecreaseButton>
+              <RepeatButton Name="PART_DecreaseButton" Focusable="False" Background="Transparent" Padding="0" MinHeight="0"
+                            VerticalAlignment="Stretch">
+                <RepeatButton.Template>
+                  <ControlTemplate>
+                    <Grid Background="Transparent">
+                      <Border Name="Fill" Height="4" CornerRadius="{DynamicResource StaticFullCornerRadius}"
+                              Background="{StaticResource AccentBrush}" VerticalAlignment="Center" />
+                    </Grid>
+                  </ControlTemplate>
+                </RepeatButton.Template>
+              </RepeatButton>
+            </Track.DecreaseButton>
+            <Track.IncreaseButton>
+              <RepeatButton Name="PART_IncreaseButton" Focusable="False" Background="Transparent" Padding="0" MinHeight="0"
+                            VerticalAlignment="Stretch">
+                <RepeatButton.Template>
+                  <ControlTemplate><Border Background="Transparent" /></ControlTemplate>
+                </RepeatButton.Template>
+              </RepeatButton>
+            </Track.IncreaseButton>
+            <Thumb Name="Knob" Width="20" Height="20" Background="Transparent">
+              <Thumb.Template>
+                <ControlTemplate>
+                  <Border Width="20" Height="20" CornerRadius="{DynamicResource StaticFullCornerRadius}" Background="{StaticResource DeepBrush}">
+                    <Border Name="Face" Width="14" Height="14" CornerRadius="{DynamicResource StaticFullCornerRadius}"
+                            Background="{StaticResource TextBrush}" />
+                  </Border>
+                </ControlTemplate>
+              </Thumb.Template>
+            </Thumb>
+          </Track>
+        </Grid>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="Slider.bar:disabled">
+    <Setter Property="Cursor" Value="Arrow" />
+  </Style>
+  <Style Selector="Slider.bar:disabled /template/ Border#Rail">
+    <Setter Property="Background" Value="{StaticResource RaisedBrush}" />
+  </Style>
+  <Style Selector="Slider.bar:disabled /template/ RepeatButton#PART_DecreaseButton /template/ Border#Fill">
+    <Setter Property="Background" Value="{StaticResource OutlineOverBrush}" />
+  </Style>
+  <Style Selector="Slider.bar:disabled /template/ Thumb#Knob /template/ Border#Face">
+    <Setter Property="Background" Value="{StaticResource OffBrush}" />
+  </Style>
+
+  <!-- A choice from a list (the Controller page's device): a box like an input, a chevron at its end; the list
+       floats under it, square, with a shadow. -->
+  <Style Selector="ComboBox.field">
+    <Setter Property="Height" Value="32" />
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="Padding" Value="8,0" />
+    <Setter Property="CornerRadius" Value="{DynamicResource StaticMediumCornerRadius}" />
+    <Setter Property="Background" Value="{StaticResource WellBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource OutlineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+    <Setter Property="FontSize" Value="{StaticResource Size14}" />
+  </Style>
+  <Style Selector="ComboBox.field.missing">
+    <Setter Property="BorderBrush" Value="{StaticResource NoticeBrush}" />
+  </Style>
+  <Style Selector="ComboBox.field ComboBoxItem">
+    <Setter Property="CornerRadius" Value="{DynamicResource StaticSmallCornerRadius}" />
+    <Setter Property="MinHeight" Value="28" />
+    <Setter Property="Padding" Value="10,0" />
+  </Style>
+
+  <!-- A warning or a state's words in a form or a table: the mark, then the words in amber (Path.warnmark).
+       A Grid with ColumnDefinitions="Auto,*", the words in column 1, so they wrap at the line's width; the mark
+       stays beside the first line. -->
+  <Style Selector="Grid.warnline > Path.warnmark">
+    <Setter Property="VerticalAlignment" Value="Top" />
+    <Setter Property="Margin" Value="0,3,8,0" />
+  </Style>
+  <Style Selector="Grid.warnline > TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource NoticeBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <!-- A tick in green before a value that checked out ("Verified: F-Zero GX (USA)"). -->
+  <Style Selector="Path.tick">
+    <Setter Property="Data" Value="M1.5 6.5L4.5 9.5L10.5 2.5" />
+    <Setter Property="Width" Value="12" />
+    <Setter Property="Height" Value="12" />
+    <Setter Property="Stroke" Value="{StaticResource AccentBrush}" />
+    <Setter Property="StrokeThickness" Value="1.6" />
+    <Setter Property="StrokeLineCap" Value="Round" />
+    <Setter Property="StrokeJoin" Value="Round" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- Yes or no: a square, green with a tick when it is yes. -->
+  <Style Selector="CheckBox.box">
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Height" Value="28" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+    <Setter Property="FontWeight" Value="Regular" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <StackPanel Orientation="Horizontal" Background="Transparent">
+          <Border Name="Box" Width="16" Height="16" BorderBrush="{StaticResource OutlineBrush}" BorderThickness="1"
+                  VerticalAlignment="Center" CornerRadius="{DynamicResource StaticSmallCornerRadius}">
+            <Border Name="Mark" Background="{StaticResource AccentBrush}" IsVisible="False" CornerRadius="{DynamicResource StaticSmallCornerRadius}">
+              <Path Data="M3 7.2L5.8 10L11 4.2" Stroke="{StaticResource OnAccentBrush}" StrokeThickness="2" />
+            </Border>
+          </Border>
+          <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" Margin="8,0,0,0"
+                            Foreground="{TemplateBinding Foreground}" VerticalAlignment="Center" />
+        </StackPanel>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="CheckBox.box:checked /template/ Border#Mark">
+    <Setter Property="IsVisible" Value="True" />
+  </Style>
+  <Style Selector="CheckBox.box:checked /template/ Border#Box">
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+  </Style>
+  <Style Selector="CheckBox.box:pointerover /template/ Border#Box">
+    <Setter Property="BorderBrush" Value="{StaticResource TextBrush}" />
+  </Style>
+
+  <!-- A colour to pick: the colour itself in a flat rectangle; the chosen one ringed in green, a hair of the ground
+       between the two; a colour not known (no disc) faint and not pressed. -->
+  <Style Selector="Button.swatch">
+    <Setter Property="Width" Value="52" />
+    <Setter Property="Height" Value="34" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="RenderTransform" Value="none" />
+    <Setter Property="Transitions"><Transitions /></Setter>
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="Edge" BorderBrush="Transparent" BorderThickness="2" Padding="2" CornerRadius="{DynamicResource StaticLargeCornerRadius}">
+          <Border.Transitions>
+            <Transitions>
+              <BrushTransition Property="BorderBrush" Duration="{StaticResource Standard}" Easing="{StaticResource EaseOut}" />
+            </Transitions>
+          </Border.Transitions>
+          <Border Background="{TemplateBinding Background}" CornerRadius="{DynamicResource StaticMediumCornerRadius}" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="Button.swatch:pointerover /template/ Border#Edge">
+    <Setter Property="BorderBrush" Value="{StaticResource OutlineOverBrush}" />
+  </Style>
+  <Style Selector="Button.swatch.on /template/ Border#Edge">
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+  </Style>
+  <Style Selector="Button.swatch:disabled">
+    <Setter Property="Opacity" Value="0.35" />
+  </Style>
+
+  <!-- One of many, each with a picture (the Garage's machines): a cell on a hairline, the chosen one outlined in
+       green; under the pointer it goes one tone up, as every control does (no lift: the ring of the chosen one
+       would be cut at the slot's edge). -->
+  <Style Selector="Button.cell">
+    <Setter Property="CornerRadius" Value="{DynamicResource StaticLargeCornerRadius}" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="Background" Value="{StaticResource WellBrush}" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="2" />
+    <Setter Property="RenderTransform" Value="none" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="BorderBrush" Duration="{StaticResource Quick}" Easing="{StaticResource EaseOut}" />
+        <BrushTransition Property="Background" Duration="{StaticResource Quick}" Easing="{StaticResource EaseOut}" />
+      </Transitions>
+    </Setter>
+    <Setter Property="Template">
+      <ControlTemplate>
+        <!-- the still root takes the pointer, so the lifted face never leaves it (no hover flicker at its foot) -->
+        <Panel Name="Root" Background="Transparent">
+          <Border Name="Face" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}"
+                  ClipToBounds="True" RenderTransform="translateY(0px)">
+            <Border.Transitions>
+              <Transitions>
+                <TransformOperationsTransition Property="RenderTransform" Duration="{StaticResource Standard}" Easing="{StaticResource EaseOut}" />
+              </Transitions>
+            </Border.Transitions>
+            <ContentPresenter Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                              HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+          </Border>
+        </Panel>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="Button.cell:pointerover">
+    <Setter Property="Background" Value="{StaticResource RaisedBrush}" />
+  </Style>
+  <Style Selector="Button.cell.on">
+    <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+  </Style>
+
+  <!-- a machine the lobby does not offer, shown with "All 41": greyed, and never pressed -->
+  <Style Selector="Button.cell:disabled">
+    <Setter Property="Opacity" Value="0.32" />
+    <Setter Property="Cursor" Value="Arrow" />
+  </Style>
+  <!-- a value a stat pack changes, seen through it: a green dot before it -->
+  <Style Selector="Ellipse.changed">
+    <Setter Property="Width" Value="6" />
+    <Setter Property="Height" Value="6" />
+    <Setter Property="Fill" Value="{StaticResource AccentBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+
+  <!-- On or off: a 36 x 20 track, fully rounded; off, the hover tone with a dim knob at the left; on, green with a
+       dark knob at the right, sliding across (Standard). The component library's own switch is not used: its colour
+       is its own accent, not this file's. -->
+  <Style Selector="ToggleSwitch">
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Background" Value="{StaticResource HoverBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource DimBrush}" />
+    <Setter Property="KnobTransitions">
+      <Transitions>
+        <DoubleTransition Property="Canvas.Left" Duration="{StaticResource Standard}" Easing="{StaticResource EaseOut}" />
+      </Transitions>
+    </Setter>
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="Track" Width="36" Height="20" CornerRadius="{DynamicResource StaticFullCornerRadius}" Background="{TemplateBinding Background}"
+                VerticalAlignment="Center">
+          <Border.Transitions>
+            <Transitions>
+              <BrushTransition Property="Background" Duration="{StaticResource Standard}" Easing="{StaticResource EaseOut}" />
+            </Transitions>
+          </Border.Transitions>
+          <Canvas Name="PART_SwitchKnob" Width="16" Height="16" Margin="2" HorizontalAlignment="Left">
+            <Panel Name="PART_MovingKnobs" Width="16" Height="16">
+              <Ellipse Name="Knob" Width="16" Height="16" Fill="{TemplateBinding Foreground}" />
+            </Panel>
+          </Canvas>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="ToggleSwitch:checked">
+    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource OnAccentBrush}" />
+  </Style>
+  <Style Selector="ToggleSwitch /template/ Panel#PART_MovingKnobs">
+    <Setter Property="Canvas.Left" Value="0" />
+  </Style>
+  <Style Selector="ToggleSwitch:checked /template/ Panel#PART_MovingKnobs">
+    <Setter Property="Canvas.Left" Value="16" />
+  </Style>
+  <Style Selector="ToggleSwitch:pointerover /template/ Border#Track">
+    <Setter Property="Opacity" Value="0.9" />
+  </Style>
+  <Style Selector="ToggleSwitch:disabled">
+    <Setter Property="Opacity" Value="0.4" />
+  </Style>
+
+  <!-- A form: the label, then its control, a row each. -->
+  <Style Selector="Grid.form > TextBlock.label">
+    <Setter Property="Foreground" Value="{StaticResource DimBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector="Grid.form > :is(Control)">
+    <Setter Property="Margin" Value="0,2" />
+  </Style>
+  <Style Selector="Grid.form > TextBlock.group">
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Margin" Value="0,10,0,2" />
+  </Style>
+  <!-- the form's first group, under a heading already -->
+  <Style Selector="Grid.form > TextBlock.group.first">
+    <Setter Property="Margin" Value="0,0,0,2" />
+  </Style>
+</Styles>

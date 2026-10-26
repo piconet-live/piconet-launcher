@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <IsTestProject>true</IsTestProject>
+    <!-- BoardTests: a made-up game writes the status board through the generated view's pointer -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <!-- for App/: the few tests of what only Launcher.App's own code does, run without a window -->
+    <PackageReference Include="Avalonia.Headless" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Launcher.Core/Launcher.Core.csproj" />
+    <ProjectReference Include="../../src/Launcher.App/Launcher.App.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <!-- A time limit for every test of the assembly. -->
+    <Compile Include="../TestTimeLimit.cs" />
+    <!-- The repository's folder, for the tests that read its files (RepositoryFolder.cs), whatever the build output. -->
+    <Compile Include="../RepositoryFolder.cs" />
+    <AssemblyMetadata Include="RepositoryFolder" Value="$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '..', '..', '..'))" />
+    <!-- The protocol's checkout (ProtocolFolder, net/Directory.Build.props), for the tests that read its files. -->
+    <AssemblyMetadata Include="RunnerPins" Value="$(RunnerPins)" />
+    <AssemblyMetadata Include="ProtocolFolder" Value="$([MSBuild]::NormalizeDirectory('$(ProtocolFolder)'))" />
+  </ItemGroup>
+
+  <!-- The launcher's own build folder, where InstallTests and LastResortTests start it from: asked of its project, so
+       it holds wherever the build output is (AssemblyMetadata "LauncherAppFolder"). -->
+  <Target Name="LauncherAppFolder" BeforeTargets="GetAssemblyAttributes">
+    <MSBuild Projects="../../src/Launcher.App/Launcher.App.csproj" Targets="GetTargetPath">
+      <Output TaskParameter="TargetOutputs" ItemName="_LauncherAppBuilt" />
+    </MSBuild>
+    <ItemGroup>
+      <AssemblyMetadata Include="LauncherAppFolder" Value="%(_LauncherAppBuilt.RootDir)%(_LauncherAppBuilt.Directory)" />
+    </ItemGroup>
+  </Target>
+
+</Project>

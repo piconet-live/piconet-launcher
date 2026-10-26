@@ -1,0 +1,30 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             x:Class="Launcher.App.Views.NameMenu"
+             x:DataType="vm:AccountViewModel">
+  <!-- The menu that changes the player's name: a box, the room left (or the characters the game cannot draw, "Not
+       shown"), the name as races show it, Cancel and Save. The left column's name opens it. Save and Enter are this
+       view's own steps (NameMenu.axaml.cs): a button's command is read after its Click handlers, and a menu closed in
+       one has no command left to run. -->
+  <StackPanel Width="242" Spacing="8">
+    <TextBlock Classes="strong" Text="Your name" />
+    <TextBox Name="NameBox" Classes="field" Text="{Binding Draft}" MaxLength="40" KeyDown="OnNameKey"
+             AutomationProperties.Name="Name" />
+    <TextBlock Classes="faint" Text="{Binding DraftLeft}" FontFeatures="tnum" IsVisible="{Binding !HasLost}" />
+    <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasLost}">
+      <TextBlock Classes="faint" Text="Not shown" />
+      <TextBlock Text="{Binding DraftLost}" Foreground="{StaticResource NoticeBrush}" FontSize="{StaticResource Size13}"
+                 LetterSpacing="2.6" />
+    </StackPanel>
+    <StackPanel Spacing="0">
+      <TextBlock Classes="faint" Text="In races" />
+      <TextBlock Text="{Binding DraftShown}" FontFamily="{StaticResource HeadingFont}" FontWeight="SemiBold"
+                 FontSize="{StaticResource Size20}" Classes.off="{Binding !CanSave}" />
+    </StackPanel>
+    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+      <Button Classes="secondary" Content="Cancel" Click="OnCancel" />
+      <Button Name="SaveButton" Classes="primary" Content="Save" IsEnabled="{Binding CanSave}" Click="OnSave" />
+    </StackPanel>
+  </StackPanel>
+</UserControl>

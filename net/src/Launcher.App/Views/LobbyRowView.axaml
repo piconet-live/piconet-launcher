@@ -1,0 +1,33 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:v="using:Launcher.App.Views"
+             x:Class="Launcher.App.Views.LobbyRowView"
+             x:DataType="vm:LobbyRow">
+  <!-- A lobby in a list: its name, its rules, what it is doing with how full it is as a
+       value ("Gathering · 14/30"), and its tag ("your lobby"): the player's own in green. Columns as
+       the table's header (LobbyRowView.Columns): in a narrow page the rules go (class extra). -->
+  <UserControl.Styles>
+    <Style Selector="TextBlock.tag">
+      <Setter Property="Foreground" Value="{StaticResource FaintBrush}" />
+      <Setter Property="FontSize" Value="{StaticResource Size12}" />
+      <Setter Property="LetterSpacing" Value="0.7" />
+    </Style>
+    <Style Selector="TextBlock.tag.mine">
+      <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+    </Style>
+  </UserControl.Styles>
+  <Border Classes="row hover" Classes.on="{Binding On}">
+    <Grid ColumnDefinitions="148,Auto,*,Auto">
+      <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" Classes.strong="{Binding Mine}" />
+      <TextBlock Grid.Column="1" Classes="dim extra" Text="{Binding Rules}" Width="170" Margin="12,0,0,0"
+                 TextTrimming="CharacterEllipsis" />
+      <TextBlock Grid.Column="2" Margin="12,0,0,0" TextTrimming="CharacterEllipsis" FontFeatures="tnum">
+        <Run Text="{Binding Now}" /><Run Text=" · " Foreground="{StaticResource FaintBrush}" /><Run
+             Text="{Binding Racers}" />
+      </TextBlock>
+      <TextBlock Grid.Column="3" Classes="tag" Classes.mine="{Binding Mine}" Width="100" Margin="12,0,0,0"
+                 TextAlignment="Right" Text="{Binding Tag, Converter={x:Static v:UpperText.Instance}}" />
+    </Grid>
+  </Border>
+</UserControl>

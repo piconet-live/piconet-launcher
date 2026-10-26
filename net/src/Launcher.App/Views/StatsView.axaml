@@ -1,0 +1,165 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             x:Class="Launcher.App.Views.StatsView"
+             x:DataType="vm:StatsViewModel"
+             x:Name="Root">
+  <!-- Stats, the Replays tab's second page (direction D: dark, green for what is won): the tabs as the
+       Replays page has them, the figures as tiles, the recent form, the best times and the courses raced most. -->
+  <UserControl.Styles>
+    <Style Selector="Grid.cells > :is(Control)">
+      <Setter Property="Margin" Value="12,0,0,0" />
+    </Style>
+    <Style Selector="Border.tile">
+      <Setter Property="Width" Value="132" />
+      <Setter Property="Padding" Value="14,10" />
+      <Setter Property="Margin" Value="0,0,8,8" />
+    </Style>
+    <Style Selector="TextBlock.figure.big">
+      <Setter Property="FontSize" Value="{StaticResource Size20}" />
+    </Style>
+    <Style Selector="TextBlock.figure.accent">
+      <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+    </Style>
+    <Style Selector="TextBlock.figure.out">
+      <Setter Property="Foreground" Value="{StaticResource OfflineBrush}" />
+    </Style>
+    <Style Selector="Border.mark">
+      <Setter Property="Width" Value="64" />
+      <Setter Property="Padding" Value="8,6" />
+      <Setter Property="Margin" Value="0,0,6,6" />
+    </Style>
+  </UserControl.Styles>
+
+  <StackPanel>
+    <!-- the tabs: the online races and the practice runs, each with its count -->
+    <Border BorderBrush="{StaticResource EdgeBrush}" BorderThickness="0,0,0,1" Margin="0,40,0,8">
+      <ItemsControl ItemsSource="{Binding Tabs}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="20" /></ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:ReplayTab">
+            <Button Classes="section" Classes.on="{Binding On}" AutomationProperties.Name="{Binding Label}"
+                    Command="{Binding #Root.((vm:StatsViewModel)DataContext).ShowTabCommand}" CommandParameter="{Binding}">
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="{Binding Label}" />
+                <TextBlock Classes="dim" Text="{Binding Count}" FontFeatures="tnum" />
+              </StackPanel>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </Border>
+
+    <Border Classes="row last" IsVisible="{Binding Reading}">
+      <TextBlock Classes="dim" Text="Reading replays…" />
+    </Border>
+    <Border Classes="row last" IsVisible="{Binding Empty}">
+      <TextBlock Classes="dim" Text="No replays" />
+    </Border>
+
+    <StackPanel IsVisible="{Binding !Empty}" Spacing="20">
+      <!-- the figures -->
+      <ItemsControl ItemsSource="{Binding Tiles}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:StatTile">
+            <Border Classes="well tile">
+              <StackPanel Spacing="2">
+                <TextBlock Classes="figure big" Text="{Binding Value}" />
+                <TextBlock Classes="note" Text="{Binding Label}" />
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <!-- the recent form, newest first -->
+      <StackPanel IsVisible="{Binding HasForm}" Spacing="8">
+        <TextBlock Classes="head" Text="Recent form" />
+        <ItemsControl ItemsSource="{Binding Form}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:FormMark">
+              <Border Classes="well mark">
+                <StackPanel>
+                  <TextBlock Classes="figure" Classes.accent="{Binding Win}" Classes.out="{Binding Out}" Text="{Binding Place}" />
+                  <TextBlock Classes="note" Text="{Binding Of}" />
+                </StackPanel>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+
+      <!-- the best times, by course or by machine -->
+      <StackPanel IsVisible="{Binding HasTimes}">
+        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,8">
+          <TextBlock Classes="head" Text="Best times" VerticalAlignment="Center" />
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+            <Button Classes="section" Classes.on="{Binding !ByMachine}" Command="{Binding ShowByCommand}" CommandParameter="course"
+                    AutomationProperties.Name="By course">
+              <TextBlock Text="By course" />
+            </Button>
+            <Button Classes="section" Classes.on="{Binding ByMachine}" Command="{Binding ShowByCommand}" CommandParameter="machine"
+                    AutomationProperties.Name="By machine">
+              <TextBlock Text="By machine" />
+            </Button>
+          </StackPanel>
+        </Grid>
+        <Border Classes="rowhead">
+          <Grid Classes="cells" ColumnDefinitions="*,Auto,Auto,Auto,Auto" Margin="-12,0,0,0">
+            <TextBlock Classes="colhead" Text="Course" />
+            <TextBlock Grid.Column="1" Classes="colhead" Text="Machine" Width="150" />
+            <TextBlock Grid.Column="2" Classes="colhead" Text="Time" Width="84" TextAlignment="Right" />
+            <TextBlock Grid.Column="3" Classes="colhead" Text="Races" Width="52" TextAlignment="Right" />
+            <TextBlock Grid.Column="4" Classes="colhead" Text="When" Width="112" />
+          </Grid>
+        </Border>
+        <ItemsControl ItemsSource="{Binding Best}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:BestTimeLine">
+              <Border Classes="row">
+                <Grid Classes="cells" ColumnDefinitions="*,Auto,Auto,Auto,Auto" Margin="-12,0,0,0" Height="40">
+                  <StackPanel VerticalAlignment="Center">
+                    <TextBlock Classes="strong" Text="{Binding Track}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Classes="note" Text="{Binding Under}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                  </StackPanel>
+                  <TextBlock Grid.Column="1" Text="{Binding Machine}" Width="150" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="2" Classes="figure" Text="{Binding Time}" Width="84" TextAlignment="Right" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="3" Classes="figure dim" Text="{Binding Raced}" Width="52" TextAlignment="Right" VerticalAlignment="Center" />
+                  <TextBlock Grid.Column="4" Classes="dim" Text="{Binding When}" Width="112" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+
+      <!-- the courses raced most -->
+      <StackPanel>
+        <TextBlock Classes="head" Text="Most raced" Margin="0,0,0,8" />
+        <ItemsControl ItemsSource="{Binding MostRaced}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:CourseLine">
+              <Border Classes="row">
+                <Grid Classes="cells" ColumnDefinitions="*,Auto" Margin="-12,0,0,0" Height="40">
+                  <StackPanel VerticalAlignment="Center">
+                    <TextBlock Classes="strong" Text="{Binding Track}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Classes="note" Text="{Binding Venue}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
+                  </StackPanel>
+                  <TextBlock Grid.Column="1" Classes="figure" Text="{Binding Count}" Width="52" TextAlignment="Right" VerticalAlignment="Center" />
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </StackPanel>
+  </StackPanel>
+</UserControl>

@@ -1,0 +1,2 @@
+name	kind	read at	for	purpose
+FZGX_TEST_TIME_LIMIT_SECONDS	environment	net/tests/TestTimeLimit.cs	test	A test's time limit in seconds instead of the built-in one, to see the limit at work.

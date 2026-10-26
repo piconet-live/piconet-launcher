@@ -1,0 +1,102 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:c="using:Launcher.App.Controls"
+             x:Class="Launcher.App.Controls.CoursePicker"
+             x:DataType="vm:CoursePickerModel">
+  <!-- The course picker (direction D, with every course one move away): the cups as chips, each with
+       its gem; then every course of the cup as a tile, six to a row, its still (the course's model on its venue's sky) under its name.
+       One course (a 2 px green ring, the picture in full) or, as a pool, many (a check on each; All, None and the
+       count beside the chips). A course with no model on the disc is the surface tone. -->
+  <UserControl.Styles>
+    <Style Selector="Button.chip Rectangle.gem">
+      <Setter Property="Width" Value="7" />
+      <Setter Property="Height" Value="7" />
+      <Setter Property="RenderTransform" Value="rotate(45deg)" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.tile">
+      <Setter Property="CornerRadius" Value="{DynamicResource StaticLargeCornerRadius}" />
+      <Setter Property="Height" Value="64" />
+      <Setter Property="Margin" Value="0,0,8,8" />
+      <Setter Property="Background" Value="{StaticResource WellBrush}" />
+    </Style>
+    <Style Selector="Button.tile c|CourseStill">
+      <Setter Property="Opacity" Value="0.6" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <DoubleTransition Property="Opacity" Duration="{StaticResource Standard}" Easing="{StaticResource EaseOut}" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Button.tile:pointerover c|CourseStill, Button.tile.picked c|CourseStill">
+      <Setter Property="Opacity" Value="1" />
+    </Style>
+    <Style Selector="Button.tile Border.ring">
+      <Setter Property="CornerRadius" Value="{DynamicResource StaticLargeCornerRadius}" />
+      <Setter Property="BorderThickness" Value="2" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.tile.picked Border.ring">
+      <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+    </Style>
+    <Style Selector="Border.check">
+      <Setter Property="Width" Value="16" />
+      <Setter Property="Height" Value="16" />
+      <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+    </Style>
+  </UserControl.Styles>
+  <StackPanel Spacing="8">
+    <DockPanel>
+      <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsPool}" VerticalAlignment="Center">
+        <TextBlock Classes="dim" Text="Pool" VerticalAlignment="Center" />
+        <TextBlock FontWeight="SemiBold" Text="{Binding PoolCount}" FontFeatures="tnum" VerticalAlignment="Center" Margin="0,0,8,0" />
+        <Button Classes="secondary" Content="All" Command="{Binding PickAllCommand}" AutomationProperties.Name="Every course" />
+        <Button Classes="secondary" Content="None" Command="{Binding PickNoneCommand}" AutomationProperties.Name="No course" />
+      </StackPanel>
+      <ItemsControl ItemsSource="{Binding Chips}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:CupChip">
+            <Button Classes="chip" Classes.on="{Binding On}" Margin="0,0,4,0"
+                    Command="{Binding $parent[ItemsControl].((vm:CoursePickerModel)DataContext).ShowCupCommand}"
+                    CommandParameter="{Binding}" AutomationProperties.Name="{Binding Label}">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Rectangle Classes="gem" Fill="{Binding Label, Converter={x:Static v:CupGem.Instance}}"
+                           IsVisible="{Binding HasGem}" />
+                <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </DockPanel>
+    <ItemsControl ItemsSource="{Binding Shown}" Name="Cards" Margin="0,0,-8,0">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate><UniformGrid Columns="6" /></ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:CourseCard">
+          <Button Classes="plain tile card" Classes.picked="{Binding Picked}"
+                  Command="{Binding #Cards.((vm:CoursePickerModel)DataContext).PickCommand}" CommandParameter="{Binding}"
+                  AutomationProperties.Name="{Binding Full}">
+            <Border ClipToBounds="True" Background="{StaticResource WellBrush}" CornerRadius="{DynamicResource StaticLargeCornerRadius}"><Panel>
+              <c:CourseStill Course="{Binding Course}" />
+              <Border Background="{StaticResource PlateBrush}" VerticalAlignment="Bottom" Padding="8,2,8,3">
+                <TextBlock Text="{Binding Track}" FontSize="{StaticResource Size13}" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
+              </Border>
+              <Border Classes="check" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="4" IsVisible="{Binding Checked}">
+                <Path Data="M1.5 5.2 L4 7.5 L8.5 2.5" Stroke="{StaticResource OnAccentBrush}" StrokeThickness="1.8"
+                      HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+              <Border Classes="ring" />
+            </Panel></Border>
+          </Button>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+  </StackPanel>
+</UserControl>

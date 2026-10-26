@@ -1,0 +1,134 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:c="using:Launcher.App.Controls"
+             x:Class="Launcher.App.Views.LobbyRoster"
+             x:DataType="vm:LobbyViewModel"
+             x:Name="Root">
+  <!-- The lobby's racers (LobbyView, under the state's part in all but the race and the Garage): its title with the
+       rules, the seats down the columns, the watchers beside them where the server takes spectators, and the chat
+       beside it all. The page's classes (LobbyView: gathering, noping) choose what a seat's row shows. -->
+  <UserControl.Styles>
+    <!-- a seat's row carries the racer's machine while gathering (two columns), in a column of its own: the name has a
+         fixed width, so every machine starts at the same place and has the rest of the row. 128 px holds 16 capitals
+         and figures in bold (121 to 126 px; "WWW..." is cut); at the least width a half then has 93 px for "Mighty
+         Hurricane" beside a ping. In the other states the name has the row. -->
+    <Style Selector="Grid.seat TextBlock.machine">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
+    <Style Selector="v|LobbyView.gathering Grid.seat TextBlock.machine">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+    <Style Selector="v|LobbyView.gathering Grid.seat TextBlock.seatname">
+      <Setter Property="Width" Value="128" />
+    </Style>
+    <!-- the vote's three columns on a narrow page: the names before the pings -->
+    <Style Selector="v|LobbyView.noping Grid.seat TextBlock.ping">
+      <Setter Property="IsVisible" Value="False" />
+    </Style>
+    <Style Selector="v|LobbyView.gathering.noping Grid.seat TextBlock.ping">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+    <!-- the custom lobby's host on their seat: HOST on a small green plate -->
+    <Style Selector="Border.seathost">
+      <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+      <Setter Property="Padding" Value="4,0" />
+      <Setter Property="CornerRadius" Value="2" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.seathost > TextBlock">
+      <Setter Property="Foreground" Value="{StaticResource OnAccentBrush}" />
+      <Setter Property="FontSize" Value="{StaticResource Size11}" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="LetterSpacing" Value="0.8" />
+    </Style>
+    <Style Selector="Button.kick">
+      <Setter Property="FontSize" Value="{StaticResource Size12}" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <!-- an empty seat (a CPU's, or nobody's) -->
+    <Style Selector="TextBlock.open">
+      <Setter Property="Foreground" Value="{StaticResource OffTextBrush}" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid ColumnDefinitions="*,16,268">
+    <StackPanel Name="Roster" VerticalAlignment="Top">
+      <Border Classes="row" Padding="0" BorderThickness="0,0,0,1" Margin="0,0,0,8">
+        <Grid ColumnDefinitions="Auto,*,Auto" Height="24">
+          <TextBlock Classes="strong" Text="{Binding RosterTitle}" VerticalAlignment="Center" />
+          <TextBlock Grid.Column="1" Classes="dim" Text="{Binding RulesText}" Margin="16,0" TextTrimming="CharacterEllipsis"
+                     VerticalAlignment="Center" />
+          <TextBlock Grid.Column="2" Classes="colhead" Text="{Binding RosterKey}" />
+        </Grid>
+      </Border>
+      <Grid ColumnDefinitions="*,Auto">
+      <ItemsControl ItemsSource="{Binding SeatColumns}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:SeatColumn">
+            <ItemsControl ItemsSource="{Binding Seats}" Margin="0,0,16,0">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:SeatRow">
+                  <!-- the number, the paint, the name with its tick right after it (has voted, is ready), the machine
+                       (while gathering), the ping -->
+                  <Grid Classes="seat" ColumnDefinitions="24,16,*,Auto"
+                        Height="{Binding #Root.((vm:LobbyViewModel)DataContext).SeatHeight}">
+                    <TextBlock Classes="colhead" Text="{Binding Number}" FontFeatures="tnum" VerticalAlignment="Center" />
+                    <Border Grid.Column="1" Classes="chip" HorizontalAlignment="Left"
+                            Background="{Binding ColorHex, Converter={x:Static v:HexToBrush.Instance}}" />
+                    <!-- the name in its column (its fixed width while gathering), the tick, then the machine's column -->
+                    <DockPanel Grid.Column="2">
+                      <c:NameTagText DockPanel.Dock="Left" Classes="seatname" PlayerName="{Binding Name}" PlayerTag="{Binding Tag}"
+                                     Classes.strong="{Binding You}" Classes.open="{Binding Open}" VerticalAlignment="Center" />
+                      <TextBlock DockPanel.Dock="Left" Name="Tick" Classes="accent" Text="✓" Margin="8,0,0,0" VerticalAlignment="Center"
+                                 IsVisible="{Binding Ticked}" />
+                      <Border DockPanel.Dock="Left" Classes="seathost" Margin="8,0,0,0" IsVisible="{Binding Host}">
+                        <TextBlock Text="HOST" />
+                      </Border>
+                      <!-- the host's own page: a player removed from the lobby -->
+                      <Button DockPanel.Dock="Right" Name="Kick" Classes="link kick" Content="Kick" Margin="8,0,0,0"
+                              IsVisible="{Binding Kickable}" AutomationProperties.Name="{Binding Name, StringFormat='Kick {0}'}"
+                              Command="{Binding #Root.((vm:LobbyViewModel)DataContext).KickCommand}" CommandParameter="{Binding}" />
+                      <TextBlock Classes="dim machine" Text="{Binding Machine}" VerticalAlignment="Center" Margin="8,0,0,0"
+                                 FontSize="{StaticResource Size13}" TextTrimming="CharacterEllipsis" />
+                    </DockPanel>
+                    <TextBlock Grid.Column="3" Classes="dim ping" Text="{Binding Ping}" FontFeatures="tnum" TextAlignment="Right"
+                               Margin="8,0,0,0" FontSize="{StaticResource Size13}" VerticalAlignment="Center" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <!-- The watchers (a server that takes spectators, someone watching): beside the seats, a name and its paint
+           each, no number and no tick (a watcher has no vote); the player's own row comes here while they watch. -->
+      <StackPanel Grid.Column="1" Name="WatchingList" Width="144" Margin="8,0,0,0" IsVisible="{Binding WatchingShown}">
+        <TextBlock Classes="caps" Foreground="{StaticResource FaintBrush}" Text="WATCHING" Height="20" Padding="0,4,0,0" />
+        <ItemsControl ItemsSource="{Binding WatchingRows}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:SeatRow">
+              <Grid ColumnDefinitions="16,*" Height="{Binding #Root.((vm:LobbyViewModel)DataContext).SeatHeight}">
+                <Border Classes="chip" HorizontalAlignment="Left"
+                        Background="{Binding ColorHex, Converter={x:Static v:HexToBrush.Instance}}" />
+                <c:NameTagText Grid.Column="1" PlayerName="{Binding Name}" PlayerTag="{Binding Tag}"
+                               Classes.strong="{Binding You}" VerticalAlignment="Center" />
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+      </Grid>
+    </StackPanel>
+    <!-- as tall as the racers' list beside it, whatever that holds: its message box stands at the list's foot
+         (it stood in the middle of an empty column while the list had 15 rows) -->
+    <Border Grid.Column="2" Classes="row" Padding="0,8,0,0" BorderThickness="0,1,0,0" VerticalAlignment="Top"
+            Height="{Binding #Roster.Bounds.Height}" MinHeight="226">
+      <v:LobbyChat Name="Chat" />
+    </Border>
+  </Grid>
+</UserControl>

@@ -1,0 +1,5 @@
+is_global = true
+
+# CA1509 checks CodeMetricsConfig.txt. Its finding is placed in that file, not in a .cs file, so .editorconfig's [*.cs]
+# section cannot reach it: its severity is set here, for the whole compilation (Directory.Build.props names the file).
+dotnet_diagnostic.CA1509.severity = warning

@@ -1,0 +1,173 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:c="using:Launcher.App.Controls"
+             xmlns:v="using:Launcher.App.Views"
+             x:Class="Launcher.App.Controls.RulesPanel"
+             x:Name="Panel">
+  <!-- A rules panel (direction D): groups of rows, a
+       label on the left and the row's value or control on the right (a line under it where the row has a note), a hairline between groups, no headings; at its
+       foot the one big action (none where the panel names none). A group may have a heading in capitals. The look of a
+       row is chosen by its type (ViewModels/RuleRows.cs). Practice's set-up and a custom lobby's rules, from the
+       same list of rules (ViewModels/HostRuleRows.cs). -->
+  <UserControl.Styles>
+    <Style Selector="Grid.rule">
+      <Setter Property="MinHeight" Value="40" />
+    </Style>
+    <!-- a row's line under it, across the panel: how a lobby's rules differ from Quick Play's -->
+    <Style Selector="TextBlock.note">
+      <Setter Property="Foreground" Value="{StaticResource DimBrush}" />
+      <Setter Property="FontSize" Value="{StaticResource Size13}" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="Margin" Value="0,2,0,6" />
+    </Style>
+    <Style Selector="Grid.rule > TextBlock.label">
+      <Setter Property="Foreground" Value="{StaticResource DimBrush}" />
+      <Setter Property="FontSize" Value="{StaticResource Size13}" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Margin" Value="0,0,8,0" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style Selector="Border.group">
+      <Setter Property="Padding" Value="0,8" />
+    </Style>
+    <Style Selector="TextBlock.marked">
+      <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+    </Style>
+    <Style Selector="TextBlock.grouphead">
+      <Setter Property="Foreground" Value="{StaticResource FaintBrush}" />
+      <Setter Property="Margin" Value="0,4,0,2" />
+    </Style>
+    <!-- a hairline between groups: inside the surface, never round it -->
+    <Style Selector="Border.group.later">
+      <Setter Property="BorderBrush" Value="{StaticResource EdgeBrush}" />
+      <Setter Property="BorderThickness" Value="0,1,0,0" />
+    </Style>
+  </UserControl.Styles>
+  <UserControl.DataTemplates>
+    <DataTemplate DataType="vm:ValueRule">
+      <TextBlock Text="{Binding Value}" FontWeight="Medium" VerticalAlignment="Center" FontFeatures="tnum"
+                 Classes.marked="{Binding Marked}" />
+    </DataTemplate>
+    <DataTemplate DataType="vm:MachineRule">
+      <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+        <TextBlock Text="{Binding Value}" FontWeight="SemiBold" VerticalAlignment="Center" />
+        <Button Classes="link" Content="Garage" Command="{Binding GarageCommand}" AutomationProperties.Name="Garage" />
+      </StackPanel>
+    </DataTemplate>
+    <DataTemplate DataType="vm:ChoiceRule">
+      <ComboBox Classes="field" MinWidth="150" ItemsSource="{Binding Options}" SelectedIndex="{Binding Selected}"
+                AutomationProperties.Name="{Binding Label}" />
+    </DataTemplate>
+    <!-- the preset, and beside it the toggle that shows every rule (Create) -->
+    <DataTemplate DataType="vm:PresetRule">
+      <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+        <ComboBox Classes="field" MinWidth="140" ItemsSource="{Binding Options}" SelectedIndex="{Binding Selected}"
+                  AutomationProperties.Name="{Binding Label}" />
+        <Button Name="RulesToggle" Classes="link" Content="{Binding ToggleText}" Command="{Binding ToggleCommand}"
+                IsVisible="{Binding Toggles}" VerticalAlignment="Center" AutomationProperties.Name="{Binding ToggleText}" />
+      </StackPanel>
+    </DataTemplate>
+    <!-- how the course is chosen; a fixed course's name under the choices, pressed to pick another -->
+    <DataTemplate DataType="vm:CourseRule">
+      <StackPanel Spacing="4" VerticalAlignment="Center">
+        <ListBox Classes="seg" ItemsSource="{Binding Options}" SelectedIndex="{Binding Selected}" HorizontalAlignment="Right"
+                 AutomationProperties.Name="{Binding Label}" />
+        <Button Name="FixedCourse" Classes="link" HorizontalAlignment="Right" Command="{Binding PickCourseCommand}"
+                IsVisible="{Binding IsFixed}" AutomationProperties.Name="Fixed course">
+          <TextBlock Text="{Binding CourseName}" TextTrimming="CharacterEllipsis" MaxWidth="220" />
+        </Button>
+      </StackPanel>
+    </DataTemplate>
+    <DataTemplate DataType="vm:SegmentedRule">
+      <ListBox Classes="seg" ItemsSource="{Binding Options}" SelectedIndex="{Binding Selected}"
+               AutomationProperties.Name="{Binding Label}" />
+    </DataTemplate>
+    <DataTemplate DataType="vm:StepperRule">
+      <c:Stepper Value="{Binding Value}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}"
+                 AutomationProperties.Name="{Binding Label}" />
+    </DataTemplate>
+    <!-- the stepper at the row's right edge, over the switches of the rows under it, so that the pad's down goes
+         to the next row (Boost from the start) and not past it; Unlimited's switch to its left -->
+    <DataTemplate DataType="vm:LapsRule">
+      <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+        <ToggleSwitch IsChecked="{Binding Unlimited}" OnContent="" OffContent="" AutomationProperties.Name="Unlimited" />
+        <TextBlock Classes="dim" Text="Unlimited" VerticalAlignment="Center" />
+        <c:Stepper Value="{Binding Value}" Minimum="1" Maximum="{Binding Maximum}" Typed="True"
+                   IsEnabled="{Binding Counted}" AutomationProperties.Name="{Binding Label}" />
+      </StackPanel>
+    </DataTemplate>
+    <!-- the switch first: the pad's right turns it on, then moves on to the delay; no "On" beside it (the row is
+         narrow): the delay greyed is Off -->
+    <DataTemplate DataType="vm:DelayRule">
+      <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+        <ToggleSwitch IsChecked="{Binding On}" OnContent="" OffContent="" AutomationProperties.Name="{Binding Label}" />
+        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" IsEnabled="{Binding On}">
+          <c:Stepper Value="{Binding Value}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Step="{Binding Step}"
+                     Typed="True" AutomationProperties.Name="Delay" />
+          <TextBlock Classes="dim" Text="ms" VerticalAlignment="Center" />
+        </StackPanel>
+      </StackPanel>
+    </DataTemplate>
+    <DataTemplate DataType="vm:SliderRule">
+      <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+        <Slider Classes="bar" Width="130" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Value="{Binding Value}"
+                IsSnapToTickEnabled="True" TickFrequency="1" AutomationProperties.Name="{Binding Label}" />
+        <TextBlock Classes="figure" MinWidth="30" TextAlignment="Right" Text="{Binding Whole}" VerticalAlignment="Center" />
+      </StackPanel>
+    </DataTemplate>
+    <DataTemplate DataType="vm:SwitchRule">
+      <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+        <ToggleSwitch IsChecked="{Binding On}" OnContent="" OffContent="" AutomationProperties.Name="{Binding Label}" />
+        <TextBlock Classes="dim" MinWidth="24" Text="{Binding State}" VerticalAlignment="Center" />
+      </StackPanel>
+    </DataTemplate>
+    <DataTemplate DataType="vm:TextRule">
+      <TextBox Classes="field" Width="180" PlaceholderText="{Binding Hint}" Text="{Binding Text}" MaxLength="{Binding Most}"
+               PasswordChar="{Binding Mask}"
+               AutomationProperties.Name="{Binding Label}" />
+    </DataTemplate>
+    <DataTemplate DataType="vm:RangeRule">
+      <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+        <c:Stepper Value="{Binding Low}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" AutomationProperties.Name="Lowest" />
+        <TextBlock Classes="dim" Text="–" VerticalAlignment="Center" />
+        <c:Stepper Value="{Binding High}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" AutomationProperties.Name="Highest" />
+      </StackPanel>
+    </DataTemplate>
+  </UserControl.DataTemplates>
+  <!-- the panel: the surface tone with one chamfered corner (direction D), no outline; the action at its foot -->
+  <c:Plate Shape="Chamfer" Background="{StaticResource WellBrush}" Padding="16,8,16,16">
+    <StackPanel Spacing="8">
+      <ItemsControl ItemsSource="{Binding #Panel.Groups}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:RuleGroup">
+            <Border Classes="group" Classes.later="{Binding Later}">
+              <StackPanel>
+              <TextBlock Classes="caps grouphead" Text="{Binding Heading, Converter={x:Static v:UpperText.Instance}}"
+                         IsVisible="{Binding HasHeading}" />
+              <ItemsControl ItemsSource="{Binding Rows}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:RuleRow">
+                    <StackPanel>
+                      <Grid Classes="rule" ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                        <TextBlock Classes="label" Text="{Binding Label}" />
+                        <ContentControl Grid.Row="{Binding ControlRow}" Grid.Column="{Binding ControlColumn}"
+                                        Grid.ColumnSpan="{Binding ControlSpan}" Content="{Binding}"
+                                        HorizontalAlignment="Right" VerticalAlignment="Center" />
+                      </Grid>
+                      <TextBlock Classes="note" Text="{Binding Note}" IsVisible="{Binding HasNote}" />
+                    </StackPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <Button Name="ActionButton" Classes="go" c:PadNav.Main="True" Content="{Binding #Panel.Action}" Command="{Binding #Panel.ActionCommand}"
+              AutomationProperties.Name="{Binding #Panel.Action}"
+              IsVisible="{Binding #Panel.Action, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+    </StackPanel>
+  </c:Plate>
+</UserControl>

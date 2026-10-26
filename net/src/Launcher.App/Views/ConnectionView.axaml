@@ -1,0 +1,27 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:v="using:Launcher.App.Views"
+             x:Class="Launcher.App.Views.ConnectionView"
+             x:DataType="vm:AccountViewModel">
+  <!-- The foot of the left column: whether the online server answers (green online, amber checking or slow, red
+       offline), which server, the launcher's version and build, and a test build's mark. Its tooltip: the server's
+       address, what it said, when. -->
+  <Border Padding="16,8" Background="Transparent"
+          ToolTip.Tip="{Binding ConnectionDetail}">
+    <StackPanel>
+      <DockPanel>
+        <Border DockPanel.Dock="Left" Classes="dot" Margin="0,0,8,0"
+                Classes.online="{Binding Connection, Converter={x:Static v:Equal.Instance}, ConverterParameter=online}"
+                Classes.offline="{Binding Connection, Converter={x:Static v:Equal.Instance}, ConverterParameter=offline}" />
+        <TextBlock DockPanel.Dock="Left" Text="{Binding ConnectionText}" Margin="0,0,8,0" />
+        <TextBlock Classes="dim" Text="{Binding ServerText}" FontSize="{StaticResource Size13}" VerticalAlignment="Center"
+                   TextTrimming="CharacterEllipsis" />
+      </DockPanel>
+      <TextBlock Classes="faint" Text="{x:Static vm:AccountViewModel.Version}" FontFeatures="tnum" Margin="0,2,0,0"
+                 TextTrimming="CharacterEllipsis" />
+      <TextBlock x:Name="BuildMark" Classes="caps" Foreground="{StaticResource NoticeBrush}" Text="{Binding BuildMark}"
+                 IsVisible="{Binding HasBuildMark}" />
+    </StackPanel>
+  </Border>
+</UserControl>

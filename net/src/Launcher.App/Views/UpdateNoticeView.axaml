@@ -1,0 +1,20 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             x:Class="Launcher.App.Views.UpdateNoticeView"
+             x:DataType="vm:UpdateViewModel">
+  <!-- The launcher's update at the left column's foot, only while there is something to do (UpdateViewModel): its
+       line, the one button that fits ("Restart to update", "Download update", "Try again"), and why the button waits
+       ("Close the game first"). -->
+  <Border Classes="columnnotice" IsVisible="{Binding Shown}">
+    <StackPanel Spacing="2">
+      <TextBlock Text="{Binding Line}" TextWrapping="Wrap" />
+      <Button Name="UpdateAction" Classes="link" Command="{Binding ActCommand}" AutomationProperties.Name="{Binding ActionText}"
+              IsVisible="{Binding ActionText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+        <TextBlock Text="{Binding ActionText}" />
+      </Button>
+      <TextBlock Classes="dim" Text="{Binding Reason}" FontSize="{StaticResource Size13}"
+                 IsVisible="{Binding Reason, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+    </StackPanel>
+  </Border>
+</UserControl>

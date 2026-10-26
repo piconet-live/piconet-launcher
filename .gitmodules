@@ -1,0 +1,6 @@
+[submodule "external/protocol"]
+	path = external/protocol
+	url = https://github.com/piconet-live/piconet-protocol.git
+[submodule "external/tools"]
+	path = external/tools
+	url = https://github.com/piconet-live/piconet-tools.git

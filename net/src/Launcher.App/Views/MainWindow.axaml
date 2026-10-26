@@ -1,0 +1,242 @@
+<husk:AppWindow xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:husk="https://github.com/d3ara1n/Huskui.Avalonia"
+        xmlns:vm="using:Launcher.App.ViewModels"
+        xmlns:v="using:Launcher.App.Views"
+        xmlns:c="using:Launcher.App.Controls"
+        x:Class="Launcher.App.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Title="{Binding Title}" Icon="/Assets/Icon/app.ico" Width="1280" Height="720" MinWidth="1280" MinHeight="720"
+        ExtendClientAreaToDecorationsHint="True" ExtendClientAreaTitleBarHeightHint="32"
+        WindowDecorationsTheme="{DynamicResource NoDrawnDecorations}"
+        Background="{StaticResource GroundBrush}" Foreground="{StaticResource TextBrush}"
+        FontFamily="{StaticResource BodyFont}" FontSize="{StaticResource Size14}" FontWeight="Regular">
+  <!-- The window in direction C (Theme.axaml): its own title bar over the whole width; under it the left column that
+       is on every page (the machine, the name, the play control, the connection) and the content under four tabs.
+       The window keeps Windows' frame: the client area is extended over the title bar (resizing, snapping and the
+       system menu stay the system's), and the bar's parts say what they are to it (WindowDecorationProperties). -->
+  <husk:AppWindow.Styles>
+    <!-- under a row of section headings the page starts at once: the row keeps the 10 px between them -->
+    <Style Selector="ContentControl.page">
+      <Setter Property="Padding" Value="{StaticResource PagePadding}" />
+    </Style>
+    <Style Selector="ContentControl.page.sectioned">
+      <Setter Property="Padding" Value="24,0,24,24" />
+    </Style>
+    <!-- the place's title and its page's head lean past their boxes (TextBlock.display) -->
+  </husk:AppWindow.Styles>
+  <husk:AppWindow.Resources>
+    <!-- The title bar is drawn here, in the window's content, so the framework's own drawn one is left empty. -->
+    <ControlTheme x:Key="NoDrawnDecorations" TargetType="WindowDrawnDecorations">
+      <Setter Property="DefaultTitleBarHeight" Value="32" />
+      <Setter Property="DefaultFrameThickness" Value="0" />
+      <Setter Property="DefaultShadowThickness" Value="0" />
+      <Setter Property="Template">
+        <WindowDrawnDecorationsTemplate>
+          <WindowDrawnDecorationsContent>
+            <WindowDrawnDecorationsContent.Underlay>
+              <Panel IsHitTestVisible="False" />
+            </WindowDrawnDecorationsContent.Underlay>
+            <WindowDrawnDecorationsContent.Overlay>
+              <Panel IsHitTestVisible="False" />
+            </WindowDrawnDecorationsContent.Overlay>
+            <WindowDrawnDecorationsContent.FullscreenPopover>
+              <Panel IsHitTestVisible="False" Height="0" VerticalAlignment="Top" />
+            </WindowDrawnDecorationsContent.FullscreenPopover>
+          </WindowDrawnDecorationsContent>
+        </WindowDrawnDecorationsTemplate>
+      </Setter>
+    </ControlTheme>
+  </husk:AppWindow.Resources>
+
+  <!-- The player's interface scale over the whole window (ScaledRoot); a window too small for it scrolls. -->
+  <Panel>
+  <ScrollViewer Name="ScaleScroll" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+  <c:ScaledRoot Name="ScaleRoot" Scale="{Binding Scale}">
+  <Grid RowDefinitions="32,Auto,*">
+    <!-- The title bar: no name; the left column's tone runs up through it,
+         a test build's mark there; the window's buttons as line drawings. Dragging it moves the window; a double
+         click maximises. -->
+    <Border Background="{StaticResource DeepBrush}" WindowDecorationProperties.ElementRole="TitleBar">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+          <Button Classes="chrome" WindowDecorationProperties.ElementRole="MinimizeButton" Click="OnMinimize"
+                  AutomationProperties.Name="Minimise">
+            <Path Data="M0 5.5H10" />
+          </Button>
+          <Button Classes="chrome" WindowDecorationProperties.ElementRole="MaximizeButton" Click="OnMaximize"
+                  AutomationProperties.Name="Maximise">
+            <Panel>
+              <Path Data="M0.5 0.5H9.5V9.5H0.5Z" IsVisible="{Binding !$parent[husk:AppWindow].IsMaximized}" />
+              <Path Data="M2.5 2.5V0.5H9.5V7.5H7.5M0.5 2.5H7.5V9.5H0.5Z" IsVisible="{Binding $parent[husk:AppWindow].IsMaximized}" />
+            </Panel>
+          </Button>
+          <Button Classes="chrome close" WindowDecorationProperties.ElementRole="CloseButton" Click="OnClose"
+                  AutomationProperties.Name="Close">
+            <Path Data="M0.5 0.5L9.5 9.5M9.5 0.5L0.5 9.5" />
+          </Button>
+        </StackPanel>
+        <Panel>
+        <Border Width="{StaticResource ColumnWidth}" HorizontalAlignment="Left" IsHitTestVisible="False"
+                Background="{StaticResource ColumnBrush}" IsVisible="{Binding Navigation}" />
+        <!-- a test build's mark, as in the window's title -->
+        <Border Margin="16,0,0,0" HorizontalAlignment="Left" VerticalAlignment="Center" IsHitTestVisible="False"
+                Background="{StaticResource TierWarningTintBrush}" Padding="8,0,8,1" IsVisible="{Binding Account.HasBuildMark}">
+          <TextBlock Classes="caps" Foreground="{StaticResource NoticeBrush}" Text="{Binding Account.BuildMark}" />
+        </Border>
+        </Panel>
+      </DockPanel>
+    </Border>
+
+    <!-- A server's notice, across the window under the title bar (NoticeBanner). -->
+    <v:NoticeBanner Grid.Row="1" DataContext="{Binding Notices}" />
+
+    <Grid Grid.Row="2" ColumnDefinitions="Auto,*">
+      <!-- The left column, on every page (direction D: "who you are, where you can go, whether you are online"): your
+           machine in 3D, the gold bar, your name and machine; the places (Play, Garage, Replays); the one notice;
+           at its foot Settings, lit while a Settings page shows, above the connection and the build. RACE, the lobby's
+           box and "Play F-Zero GX" are on Quick Play's page (PlayControlView); the lobby's state is the Lobby's. -->
+      <Border Width="{StaticResource ColumnWidth}" Background="{StaticResource ColumnBrush}" IsVisible="{Binding Navigation}">
+        <!-- Declared top to bottom, so Tab goes as the eye does (a dock declared first comes first). -->
+        <Grid RowDefinitions="Auto,*,Auto">
+          <!-- The machine in 3D, in its paint, on the game's turntable (nothing without the disc). It takes the height
+               the window can spare (MainWindow.axaml.cs). -->
+          <Panel Grid.Row="0" IsVisible="{DynamicResource HasDiscArt}">
+            <Border Name="MachineWell" Height="176" Background="{StaticResource ColumnBrush}" ClipToBounds="True">
+              <Panel>
+                <c:Unscaled>
+                  <c:MachinePreview Machine="{Binding ShownMachine}" StockColor="{Binding ShownStockColor}"
+                                    PaintColor="{Binding ShownPaint}" Custom="{Binding ShownCustom}"
+                                    PartColours="{Binding ShownPartColours}" IsVisible="{Binding MachineShown}"
+                                    AutomationProperties.Name="Your machine in 3D: drag to turn it" />
+                </c:Unscaled>
+                <TextBlock Classes="faint" Text="Game running" FontSize="{StaticResource Size14}" HorizontalAlignment="Center"
+                           VerticalAlignment="Center" IsVisible="{Binding !MachineShown}" />
+              </Panel>
+            </Border>
+          </Panel>
+          <ScrollViewer Grid.Row="1" Name="ColumnScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Name="ColumnParts" Margin="16,8,16,0" Spacing="24">
+              <v:RacerView DataContext="{Binding Account}" />
+              <!-- the places: L and R step through them, Settings last (MainViewModel.StepTab) -->
+              <StackPanel Spacing="2">
+                <Button Classes="tab" Content="Play" Tag="{StaticResource GlyphPlay}" Command="{Binding ShowTabCommand}" CommandParameter="play"
+                        Classes.on="{Binding Tab, Converter={x:Static v:Equal.Instance}, ConverterParameter=play}" />
+                <Button Classes="tab" Content="Garage" Tag="{StaticResource GlyphGarage}" Command="{Binding ShowTabCommand}" CommandParameter="garage"
+                        Classes.on="{Binding Tab, Converter={x:Static v:Equal.Instance}, ConverterParameter=garage}" />
+                <Button Classes="tab" Content="Replays" Tag="{StaticResource GlyphReplays}" Command="{Binding ShowTabCommand}" CommandParameter="replays"
+                        Classes.on="{Binding Tab, Converter={x:Static v:Equal.Instance}, ConverterParameter=replays}" />
+              </StackPanel>
+              <v:ColumnNoticeView DataContext="{Binding Control}" />
+              <!-- a lobby's stage with a decision the player was not brought to (a change not saved in the builder):
+                   its name, a link there (MainViewModel.Decision.cs) -->
+              <Button Name="Decision" Classes="secondary wide" IsVisible="{Binding DecisionShown}"
+                      Command="{Binding ShowDecisionCommand}" AutomationProperties.Name="{Binding DecisionText}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Ellipse Width="8" Height="8" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding DecisionText}" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
+            </StackPanel>
+          </ScrollViewer>
+          <StackPanel Grid.Row="2" Margin="16" Spacing="8">
+            <!-- the launcher's update, while there is something to do: "Restart to update" (UpdateViewModel) -->
+            <v:UpdateNoticeView DataContext="{Binding Update}" />
+            <Button Name="SettingsButton" Classes="quiet" Command="{Binding ShowTabCommand}" CommandParameter="settings"
+                    Classes.on="{Binding Tab, Converter={x:Static v:Equal.Instance}, ConverterParameter=settings}"
+                    AutomationProperties.Name="Settings">
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <Viewbox Width="16" Height="16" VerticalAlignment="Center">
+                  <Canvas Width="24" Height="24">
+                    <Path Classes="glyph" Data="M15 12A3 3 0 1 1 9 12A3 3 0 1 1 15 12Z M20 12A8 8 0 1 1 4 12A8 8 0 1 1 20 12Z M12 2V4M12 20V22M2 12H4M20 12H22M4.9 4.9L6.3 6.3M17.7 17.7L19.1 19.1M4.9 19.1L6.3 17.7M17.7 6.3L19.1 4.9" />
+                  </Canvas>
+                </Viewbox>
+                <TextBlock Text="Settings" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+            <v:ConnectionView DataContext="{Binding Account}" />
+          </StackPanel>
+        </Grid>
+      </Border>
+
+      <Grid Grid.Column="1" RowDefinitions="Auto,*">
+        <!-- The page's head: its place's title in the display face; a place with more than one
+             page, their names as a mode bar beside it (the one showing a green plate that leans); on Quick Play the
+             server's rules; the bell. The row is its own: the page scrolls under it, never into it. -->
+        <Grid ColumnDefinitions="Auto,Auto,*,Auto" Height="56" Margin="24,16,16,8" IsVisible="{Binding Navigation}">
+          <TextBlock Classes="display d40" Text="{Binding TabTitle}" VerticalAlignment="Center" Margin="0,0,24,0" />
+          <!-- the mode bar: the pages on the surface tone, the one showing a green plate that leans -->
+          <Border Grid.Column="1" Background="{StaticResource WellBrush}" Padding="4" VerticalAlignment="Center" CornerRadius="{DynamicResource StaticMediumCornerRadius}" IsVisible="{Binding HasSections}">
+            <ItemsControl ItemsSource="{Binding Sections}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="4" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:SectionLink">
+                  <Button Classes="section" Classes.on="{Binding Current}"
+                          Command="{Binding $parent[husk:AppWindow].((vm:MainViewModel)DataContext).ShowCommand}"
+                          CommandParameter="{Binding}" AutomationProperties.Name="{Binding Label}">
+                    <TextBlock Classes="section" Text="{Binding Label, Converter={x:Static v:UpperText.Instance}}" />
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </Border>
+          <TextBlock Grid.Column="2" Classes="dim" Text="{Binding Home.RulesLine}" IsVisible="{Binding OnQuickPlay}"
+                     HorizontalAlignment="Right" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="16,0" />
+          <!-- The bell: the server's notices this PC received (NoticesList); its dot, a notice not seen there yet. -->
+          <Button Name="NoticeBell" Grid.Column="3" Classes="icon" Classes.open="{Binding Notices.ListOpen}"
+                  Command="{Binding Notices.ToggleListCommand}" AutomationProperties.Name="Notices">
+            <Panel Width="36" Height="36">
+              <Viewbox Width="17" Height="17" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Canvas Width="24" Height="24">
+                  <Path Classes="glyph" Data="M6 16V10A6 6 0 0 1 18 10V16L20 18H4Z M10 21H14" />
+                </Canvas>
+              </Viewbox>
+              <Ellipse Name="NoticeDot" Classes="mark" Fill="{StaticResource NoticeBrush}" HorizontalAlignment="Right"
+                       VerticalAlignment="Top" Margin="0,6,6,0" IsVisible="{Binding Notices.HasDot}" />
+            </Panel>
+          </Button>
+        </Grid>
+
+        <ScrollViewer Grid.Row="1" ClipToBounds="True">
+          <ContentControl Name="PageHost" Classes="page" Content="{Binding Current}" Classes.sectioned="{Binding HasSections}" />
+        </ScrollViewer>
+
+        <!-- The bell's list, over the page under the bell. -->
+        <Panel Grid.Row="1" IsVisible="{Binding Notices.ListOpen}" HorizontalAlignment="Right" c:PadNav.Scope="True"
+               VerticalAlignment="Top" Width="380" MaxHeight="440" Margin="0,4,12,0">
+          <v:NoticesList Name="Notices" DataContext="{Binding Notices}" />
+        </Panel>
+      </Grid>
+
+      <!-- The question before leaving a lobby for the game, over the page. -->
+      <Panel Grid.ColumnSpan="2" IsVisible="{Binding Control.Asking}" c:PadNav.Scope="True">
+        <Panel.Styles>
+          <Style Selector="Button.leave">
+            <Setter Property="Background" Value="{StaticResource HoverBrush}" />
+          </Style>
+        </Panel.Styles>
+        <Border Background="{StaticResource GroundBrush}" Opacity="0.86" />
+        <!-- staying is the green one -->
+        <Border Width="440" Background="{StaticResource RaisedBrush}" Padding="24" CornerRadius="{DynamicResource StaticExtraLargeCornerRadius}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                BoxShadow="0 8 24 0 #80000000">
+          <StackPanel>
+            <TextBlock Classes="head" FontWeight="SemiBold" Text="{Binding Control.AskTitle}" TextWrapping="Wrap" />
+            <TextBlock Classes="dim" Text="{Binding Control.AskLine}" TextWrapping="Wrap" Margin="0,8,0,0" />
+            <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,18,0,0">
+              <Button Classes="secondary leave" Height="32" Content="Leave and play" Command="{Binding Control.LeaveAndPlayCommand}" />
+              <Button Classes="primary" Height="32" Content="{Binding Control.StayText}" Command="{Binding Control.StayCommand}" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+      </Panel>
+    </Grid>
+  </Grid>
+  </c:ScaledRoot>
+  </ScrollViewer>
+  <!-- The pad's focus, over everything (Views/PadNavigator.cs): shown from the pad's first press until the mouse
+       moves. -->
+  <c:PadMark Name="PadMark" />
+  </Panel>
+</husk:AppWindow>

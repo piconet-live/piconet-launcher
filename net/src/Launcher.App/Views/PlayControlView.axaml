@@ -1,0 +1,63 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Launcher.App.Controls"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:v="using:Launcher.App.Views"
+             x:Class="Launcher.App.Views.PlayControlView"
+             x:DataType="vm:PlayControlViewModel">
+  <!-- Quick Play's action row (direction D: the left column says who you are, where you go and whether you are
+       online; what you do is on the page). RACE, the screen's one primary, with what it would do beside it; in Quick
+       Play the box that says what the lobby is doing with its figure, and the way out; apart at the row's end, "Play
+       F-Zero GX" (and, while it cannot be pressed, why). The notice of the column is ColumnNoticeView. -->
+  <Grid ColumnDefinitions="280,24,*,Auto">
+    <Button Classes="go" c:PadNav.Main="True" Classes.long="{Binding GoText, Converter={x:Static v:LongWord.Instance}}"
+            Command="{Binding GoCommand}" AutomationProperties.Name="{Binding GoText}">
+      <Button.IsVisible>
+        <MultiBinding Converter="{x:Static BoolConverters.And}">
+          <Binding Path="!InQuickPlay" />
+          <Binding Path="!NoServer" />
+        </MultiBinding>
+      </Button.IsVisible>
+      <TextBlock Text="{Binding GoText}" />
+    </Button>
+    <!-- no server (cleared in Settings): one line and the way there, in place of the button -->
+    <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" IsVisible="{Binding NoServer}">
+      <TextBlock Text="No server" VerticalAlignment="Center" />
+      <Button Name="ServerSettings" Classes="link" Content="Settings" Command="{Binding GoCommand}" VerticalAlignment="Center"
+              AutomationProperties.Name="Server settings" />
+    </StackPanel>
+    <Button Classes="plain lobbybox" Command="{Binding OpenLobbyCommand}" IsVisible="{Binding InQuickPlay}"
+            AutomationProperties.Name="{Binding Word}">
+      <Border Name="Box" Height="{StaticResource GoHeight}" BorderBrush="{StaticResource AccentBrush}" BorderThickness="2"
+              Padding="16,0">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Classes="word" Text="{Binding Word}" VerticalAlignment="Center" />
+          <TextBlock Grid.Column="1" Classes="word" Text="{Binding Figure}" FontFeatures="tnum" LetterSpacing="0"
+                     VerticalAlignment="Center" />
+        </Grid>
+      </Border>
+    </Button>
+    <StackPanel Grid.Column="2" Spacing="0" VerticalAlignment="Center">
+      <StackPanel.IsVisible>
+        <MultiBinding Converter="{x:Static BoolConverters.And}">
+          <Binding Path="HasLines" />
+          <Binding Path="!NoServer" />
+        </MultiBinding>
+      </StackPanel.IsVisible>
+      <TextBlock Text="{Binding Line1}" TextWrapping="Wrap" Classes.warn="{Binding Line1Warns}"
+                 IsVisible="{Binding Line1, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+      <TextBlock Classes="dim" Text="{Binding Line2}" TextWrapping="Wrap" FontFeatures="tnum"
+                 IsVisible="{Binding Line2, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+    </StackPanel>
+    <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+      <Button Name="Leave" Classes="secondary wide" Width="160" Content="{Binding LeaveText}" Command="{Binding LeaveCommand}"
+              IsVisible="{Binding InQuickPlay}" VerticalAlignment="Top" AutomationProperties.Name="{Binding LeaveText}" />
+      <StackPanel Spacing="4" Width="200">
+        <Button Classes="secondary wide" Content="Play F-Zero GX" Command="{Binding PlayGameCommand}"
+                IsEnabled="{Binding GameEnabled}" />
+        <TextBlock Classes="faint" Text="{Binding GameNote}" TextWrapping="Wrap"
+                   IsVisible="{Binding GameNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+      </StackPanel>
+    </StackPanel>
+  </Grid>
+</UserControl>

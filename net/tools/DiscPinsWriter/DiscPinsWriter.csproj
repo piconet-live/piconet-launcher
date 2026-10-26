@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Writes net/src/Launcher.Core/DiscPins.json from the player's disc image, recomp/manifest.toml and the
+       hand-prepared game folder (Program.cs, which says how it is run). A developer's tool, not shipped. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The launcher's own disc reading (DiscImage), table (CanonicalTable) and digest (DiscPrep.ContentDigest). -->
+    <ProjectReference Include="../../src/Launcher.Core/Launcher.Core.csproj" />
+    <!-- recomp/manifest.toml: the modules and the pins -->
+    <PackageReference Include="Tomlyn" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The repository's folder, where the manifest, the resource and the settings tables are, whatever the build output. -->
+    <AssemblyMetadata Include="RepositoryFolder" Value="$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)', '..', '..', '..'))" />
+    <!-- The runner's settings table, whose DISC_DEFAULT row ~/.config/piconet/pins.tsv sets (net/Directory.Build.props). -->
+    <AssemblyMetadata Include="RunnerPins" Value="$(RunnerPins)" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,149 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:c="using:Launcher.App.Controls"
+             x:Class="Launcher.App.Views.CustomLobbiesView"
+             x:DataType="vm:CustomLobbiesViewModel"
+             x:Name="Root">
+  <!-- Play's Custom lobbies page (direction D), two faces. The browser: a table of the lobbies (a lock where one has
+       a password, its name, its host, the players of its room, its stage, the rules that differ from Quick Play's),
+       a row pressed to join; a locked row asks for the password first, in a strip over the table. Create beside the
+       table's head. Create: a line with its title and Back (where the lobby page has Leave); the name, the password
+       and the preset in a rules panel with CREATE at its foot, the rules that differ under the preset, and beside the
+       preset Edit rules, which opens every rule in its groups beside the panel (Hide rules closes them). A fixed
+       course opens the course picker in the rules' place. -->
+  <UserControl.Styles>
+    <Style Selector="Path.lock">
+      <Setter Property="Fill" Value="{StaticResource DimBrush}" />
+      <Setter Property="Width" Value="12" />
+      <Setter Property="Height" Value="14" />
+      <Setter Property="Stretch" Value="Uniform" />
+      <Setter Property="Data" Value="M2,7 L12,7 L12,15 L2,15 Z M3.6,7 L3.6,5 C3.6,1.6 10.4,1.6 10.4,5 L10.4,7 L8.8,7 L8.8,5 C8.8,3.4 5.2,3.4 5.2,5 L5.2,7 Z" />
+    </Style>
+    <Style Selector="TextBlock.racing">
+      <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+    </Style>
+    <Style Selector="Button.lobbyrow">
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="Padding" Value="0" />
+    </Style>
+  </UserControl.Styles>
+
+  <Panel>
+    <!-- The browser -->
+    <StackPanel Spacing="12" IsVisible="{Binding Browsing}">
+      <Grid ColumnDefinitions="*,Auto" Height="40">
+        <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+          <TextBlock Classes="dim" Text="{Binding Status}" VerticalAlignment="Center"
+                     IsVisible="{Binding Status, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          <Grid Classes="warnline" ColumnDefinitions="Auto,*" Name="Notice"
+                IsVisible="{Binding Notice, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <Path Classes="warnmark" />
+            <TextBlock Grid.Column="1" Text="{Binding Notice}" />
+          </Grid>
+        </StackPanel>
+        <Button Grid.Column="1" Name="CreateButton" Classes="primary" c:PadNav.Main="True" Content="Create"
+                Command="{Binding ShowCreateCommand}" IsVisible="{Binding !InQuickPlay}" />
+      </Grid>
+
+      <!-- In Quick Play: nothing to list until it is left -->
+      <Border Classes="row last" IsVisible="{Binding InQuickPlay}">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Text="In Quick Play" VerticalAlignment="Center" />
+          <Button Grid.Column="1" Classes="secondary" Content="Leave Quick Play" Command="{Binding LeaveQuickPlayCommand}" />
+        </Grid>
+      </Border>
+
+      <!-- A locked lobby's password -->
+      <c:Plate Name="PasswordStrip" Shape="Chamfer" Background="{StaticResource WellBrush}" Padding="16,12" IsVisible="{Binding Asking}">
+        <Grid ColumnDefinitions="Auto,*,Auto,8,Auto">
+          <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="0,0,16,0">
+            <Path Classes="lock" Fill="{StaticResource TextBrush}" />
+            <TextBlock Classes="strong" Text="{Binding AskingFor.Name}" VerticalAlignment="Center" />
+          </StackPanel>
+          <TextBox Grid.Column="1" Name="PasswordBox" Classes="field" Text="{Binding Password}" PasswordChar="•" MaxLength="64"
+                   PlaceholderText="Password" AutomationProperties.Name="Password" Margin="0,0,12,0" />
+          <Button Grid.Column="2" Name="JoinLocked" Classes="primary" Content="Join" Command="{Binding JoinLockedCommand}" IsDefault="True" />
+          <Button Grid.Column="4" Classes="secondary" Content="Cancel" Command="{Binding CancelPasswordCommand}" />
+        </Grid>
+      </c:Plate>
+
+      <StackPanel IsVisible="{Binding !InQuickPlay}">
+        <Border Classes="rowhead">
+          <Grid ColumnDefinitions="24,2*,120,80,80,3*">
+            <TextBlock Grid.Column="1" Classes="colhead" Text="LOBBY" LetterSpacing="1" />
+            <TextBlock Grid.Column="2" Classes="colhead" Text="HOST" LetterSpacing="1" Margin="12,0,0,0" />
+            <TextBlock Grid.Column="3" Classes="colhead" Text="PLAYERS" LetterSpacing="1" Margin="12,0,0,0" />
+            <TextBlock Grid.Column="4" Classes="colhead" Text="NOW" LetterSpacing="1" Margin="12,0,0,0" />
+            <TextBlock Grid.Column="5" Classes="colhead" Text="RULES" LetterSpacing="1" Margin="12,0,0,0" />
+          </Grid>
+        </Border>
+        <ItemsControl Name="LobbyList" ItemsSource="{Binding Rows}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:CustomLobbyRow">
+              <Button Classes="plain lobbyrow" AutomationProperties.Name="{Binding Name}"
+                      Command="{Binding #Root.((vm:CustomLobbiesViewModel)DataContext).OpenCommand}" CommandParameter="{Binding}">
+                <Border Classes="row hover">
+                  <Grid ColumnDefinitions="24,2*,120,80,80,3*">
+                    <Path Classes="lock" HorizontalAlignment="Left" IsVisible="{Binding Locked}" />
+                    <TextBlock Grid.Column="1" Classes="strong" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Column="2" Text="{Binding Host}" Margin="12,0,0,0" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Grid.Column="3" Text="{Binding Count}" Margin="12,0,0,0" FontFeatures="tnum" />
+                    <TextBlock Grid.Column="4" Text="{Binding Stage}" Margin="12,0,0,0" Classes.racing="{Binding Racing}" />
+                    <TextBlock Grid.Column="5" Classes="dim" Text="{Binding Rules}" Margin="12,0,0,0" TextTrimming="CharacterEllipsis" />
+                  </Grid>
+                </Border>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <Border Classes="row last" IsVisible="{Binding NoLobbies}">
+          <TextBlock Classes="dim" Text="No lobbies yet" />
+        </Border>
+      </StackPanel>
+    </StackPanel>
+
+    <!-- Create -->
+    <Grid RowDefinitions="Auto,*" IsVisible="{Binding Creating}">
+      <!-- the line: the face's title, and at its end the way back, where the lobby page has its Leave -->
+      <Grid Name="CreateLine" ColumnDefinitions="*,Auto" Height="32" Margin="0,0,0,16">
+        <TextBlock Classes="display d20" Text="NEW LOBBY" VerticalAlignment="Center" />
+        <Button Grid.Column="1" Name="Back" Classes="secondary surface" Content="Back" Command="{Binding BackCommand}" />
+      </Grid>
+      <Grid Grid.Row="1" ColumnDefinitions="344,16,*">
+        <StackPanel Spacing="12">
+          <c:RulesPanel Name="CreatePanel" Groups="{Binding Editor.LobbyGroups}" Action="CREATE" ActionCommand="{Binding CreateCommand}" />
+          <Grid Classes="warnline" ColumnDefinitions="Auto,*"
+                IsVisible="{Binding Notice, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <Path Classes="warnmark" />
+            <TextBlock Grid.Column="1" Text="{Binding Notice}" />
+          </Grid>
+        </StackPanel>
+        <Panel Grid.Column="2">
+          <ScrollViewer IsVisible="{Binding RulePanelsShown}" VerticalScrollBarVisibility="Auto">
+            <ItemsControl Name="RulePanels" ItemsSource="{Binding RulePanels}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:RulePanel">
+                  <c:RulesPanel Groups="{Binding Groups}" Margin="0,0,16,0" VerticalAlignment="Top" />
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+          <!-- a fixed course: the course picker in the rules' place, a course pressed is the lobby's -->
+          <StackPanel Name="CoursePane" Spacing="12" IsVisible="{Binding PickerShown}">
+            <Grid ColumnDefinitions="*,Auto" Height="32">
+              <TextBlock Classes="display d20" Text="CHOOSE THE COURSE" VerticalAlignment="Center" />
+              <Button Grid.Column="1" Classes="secondary surface" Content="Done" Command="{Binding Editor.CourseRow.ClosePickerCommand}" />
+            </Grid>
+            <c:CoursePicker DataContext="{Binding Editor.CourseRow.Picker}" />
+          </StackPanel>
+        </Panel>
+      </Grid>
+    </Grid>
+  </Panel>
+</UserControl>

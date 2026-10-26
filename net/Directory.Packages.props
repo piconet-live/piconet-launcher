@@ -1,0 +1,27 @@
+<Project>
+  <!-- Central package versions: every PackageReference omits its version. -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Tests run on Microsoft.Testing.Platform (see global.json), which xunit.v3 includes. -->
+    <PackageVersion Include="xunit.v3" Version="4.0.1" />
+    <!-- The launcher's UI. -->
+    <PackageVersion Include="Avalonia" Version="12.1.3" />
+    <PackageVersion Include="Avalonia.Desktop" Version="12.1.3" />
+    <!-- The launcher's tests of what only the window's own code does (its start with a disc image): no window. -->
+    <PackageVersion Include="Avalonia.Headless" Version="12.1.3" />
+    <!-- The launcher's controls and overlays (a look that can be swapped): Huskui, MIT, used by the Polymerium
+         launcher. -->
+    <PackageVersion Include="Huskui.Avalonia" Version="2.1.2" />
+    <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <!-- Discord's activity status (Launcher.Core DiscordPresence): Lachee's DiscordRichPresence, MIT, local IPC to
+         the player's own Discord only. It brings Newtonsoft.Json (MIT). -->
+    <PackageVersion Include="DiscordRichPresence" Version="1.6.1.70" />
+    <!-- The launcher's installer and its automatic updates (Launcher.App Updates.cs): Velopack,
+         MIT. Its command-line tool vpk, of the same version, packs the releases (the private release script). -->
+    <PackageVersion Include="Velopack" Version="1.2.161" />
+    <!-- recomp/manifest.toml read by the developer's tool tools/DiscPinsWriter (not shipped): Tomlyn, BSD-2-Clause. -->
+    <PackageVersion Include="Tomlyn" Version="2.10.1" />
+  </ItemGroup>
+</Project>

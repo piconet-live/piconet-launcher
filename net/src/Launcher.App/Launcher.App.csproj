@@ -1,0 +1,83 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The launcher's window. Only Views/ and Theme/ carry the look: replace them for a new design;
+       ViewModels/ (what each screen shows and does) and Launcher.Core (the logic) stay. -->
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- The app's icon (Assets/Icon): the program file's, in Explorer and on the taskbar. The window's is the same
+         file, named in Views/MainWindow.axaml. -->
+    <ApplicationIcon>Assets/Icon/app.ico</ApplicationIcon>
+    <!-- The 3D views call the OpenGL entry points Avalonia's GlInterface leaves out through function pointers (Gpu/Gl.cs). -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Huskui.Avalonia" />
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Velopack" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Saira (SIL OFL, Assets/Fonts/OFL.txt), the web editor's type.
+         What is carried is named: the fonts with their licence, and the icon. Nothing else that stands in Assets
+         goes into the launcher (the artwork the icon is made from, the script that makes it, what Python leaves
+         beside a script it ran). -->
+    <AvaloniaResource Include="Assets/Fonts/*.ttf;Assets/Fonts/OFL.txt;Assets/Icon/app.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Launcher.Core/Launcher.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The stat packs a practice can run on (Launcher.Core PracticePacks): the protocol's packs (ProtocolPacks,
+         net/Directory.Build.props), as the service's image has them, in the folder packs beside the program. -->
+    <None Include="$(ProtocolPacks)*.fzstats" Link="packs/%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <!-- The build players see in the sidebar (BuildInfo.cs): the commit's short hash, as a player copy's name has it,
+       stamped into the informational version ("0.1.0+3934d68"). It runs before the
+       SDK's own source control step, which would put the full hash there. Without git (or outside a repository)
+       nothing is stamped and the build goes on. -->
+  <Target Name="StampBuildCommit" Condition="'$(SourceRevisionId)' == ''"
+          BeforeTargets="InitializeSourceControlInformationFromSourceControlManager;AddSourceRevisionToInformationalVersion">
+    <Exec Command="git rev-parse --short HEAD" WorkingDirectory="$(MSBuildProjectDirectory)" ConsoleToMSBuild="true"
+          IgnoreExitCode="true" IgnoreStandardErrorWarningFormat="true" EchoOff="true"
+          StandardOutputImportance="low" StandardErrorImportance="low">
+      <Output TaskParameter="ConsoleOutput" PropertyName="_BuildCommit" />
+      <Output TaskParameter="ExitCode" PropertyName="_BuildCommitExit" />
+    </Exec>
+    <PropertyGroup Condition="'$(_BuildCommitExit)' == '0'">
+      <SourceRevisionId>$(_BuildCommit.Trim())</SourceRevisionId>
+    </PropertyGroup>
+  </Target>
+
+  <!-- A player copy's one program (port/build/package.sh publishes with -p:CopyProgram=FILE and
+       -p:CopyProgramFolder=NAME): the program a player starts, which stands at the copy's top by itself and runs
+       the launcher from the folder NAME beside it (Launcher.Core Install.ProgramFolder, which the script reads),
+       where everything this publish puts out goes. It is the SDK's own host file, written a second time with the
+       launcher's place in it as a path. Like the first it carries the launcher's manifest, version and icon
+       (ApplicationIcon; checked in a copy published from Linux: the program at the copy's top holds the
+       icon's nine pictures, byte for byte those of Assets/Icon/app.ico). The host finds the runtime where the
+       launcher's library is, so nothing but this one file needs to be at the top. Windows' separator is written as %5C: a publish from Linux turns a
+       plain backslash into a slash, and package.py takes only a program that names the folder with a backslash. -->
+  <Target Name="WriteCopyProgram" AfterTargets="Publish" DependsOnTargets="_GetAppHostPaths;_GetAppHostCreationConfiguration"
+          Condition="'$(CopyProgram)' != '' and '$(CopyProgramFolder)' != ''">
+    <PropertyGroup>
+      <_CopyFolderMark>/</_CopyFolderMark>
+      <_CopyFolderMark Condition="$(RuntimeIdentifier.StartsWith('win'))">%5C</_CopyFolderMark>
+    </PropertyGroup>
+    <CreateAppHost AppHostSourcePath="$(AppHostSourcePath)"
+                   AppHostDestinationPath="$(CopyProgram)"
+                   AppBinaryName="$(CopyProgramFolder)$(_CopyFolderMark)$(AssemblyName)$(TargetExt)"
+                   IntermediateAssembly="@(IntermediateAssembly->'%(FullPath)')"
+                   WindowsGraphicalUserInterface="$(_UseWindowsGraphicalUserInterface)" />
+  </Target>
+
+</Project>

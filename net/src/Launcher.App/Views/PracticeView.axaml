@@ -1,0 +1,84 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:c="using:Launcher.App.Controls"
+             x:Class="Launcher.App.Views.PracticeView"
+             x:DataType="vm:PracticeViewModel">
+  <!-- Play's Practice page (direction D): on the left the
+       course picked as the hero (its course-select model turning on its venue's sky; on a plate that leans, the venue, the cup in its
+       gem colour and the course's name at 64, with Pico's two stripes), and under it every course one move away
+       (CoursePicker); on the right the rules panel with START PRACTICE, and under it the start's problem. -->
+  <UserControl.Styles>
+    <Style Selector="TextBlock.over">
+      <Setter Property="FontSize" Value="{StaticResource Size13}" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="LetterSpacing" Value="1.6" />
+    </Style>
+    <!-- a narrow hero (PracticeView.axaml.cs: under CourseShot.NarrowHero) has a smaller plate: the name at 40, the
+         padding and Pico's stripes shortened with it, so that the plate keeps to its share of the width -->
+    <Style Selector="c|Plate#TitlePlate">
+      <Setter Property="Padding" Value="24,16,88,16" />
+    </Style>
+    <Style Selector="StackPanel#Stripes">
+      <Setter Property="Spacing" Value="8" />
+      <Setter Property="Margin" Value="0,-16,-64,-16" />
+    </Style>
+    <Style Selector="StackPanel#Stripes > c|Plate">
+      <Setter Property="Width" Value="14" />
+      <Setter Property="Cut" Value="8" />
+    </Style>
+    <Style Selector="Border#Hero.narrow c|Plate#TitlePlate">
+      <Setter Property="Padding" Value="16,12,64,12" />
+    </Style>
+    <Style Selector="Border#Hero.narrow StackPanel#Stripes">
+      <Setter Property="Spacing" Value="6" />
+      <Setter Property="Margin" Value="0,-12,-48,-12" />
+    </Style>
+    <Style Selector="Border#Hero.narrow StackPanel#Stripes > c|Plate">
+      <Setter Property="Width" Value="10" />
+      <Setter Property="Cut" Value="6" />
+    </Style>
+  </UserControl.Styles>
+  <Grid ColumnDefinitions="*,24,336">
+    <StackPanel Spacing="16">
+      <Border Name="Hero" Classes="well" Height="232" ClipToBounds="True" DataContext="{Binding Courses.PickedCard}">
+        <Panel x:DataType="vm:CourseCard">
+          <!-- the model framed right of the plate, so the plate never hides it -->
+          <c:CourseHero Course="{Binding Course}" Covered="{Binding #TitlePlate.Bounds.Right}" />
+          <c:Plate Name="TitlePlate" Shape="LeanRight" Cut="32" Background="{StaticResource PlateBrush}" HorizontalAlignment="Left"
+                   VerticalAlignment="Bottom" ClipToBounds="False">
+            <Panel>
+              <StackPanel Spacing="8">
+                <Viewbox Name="OverBox" StretchDirection="DownOnly" HorizontalAlignment="Left">
+                <TextBlock Classes="over">
+                  <Run Text="{Binding Venue, Converter={x:Static v:UpperText.Instance}}" Foreground="{StaticResource DimBrush}" />
+                  <Run Text=" · " Foreground="{StaticResource DimBrush}" />
+                  <Run Text="{Binding Cup, Converter={x:Static v:CupName.Instance}}" Foreground="{Binding Cup, Converter={x:Static v:CupGem.Instance}}" />
+                </TextBlock>
+                </Viewbox>
+                <Viewbox Name="NameBox" StretchDirection="DownOnly" MaxWidth="520" HorizontalAlignment="Left">
+                  <TextBlock Name="TrackName" Classes="display d64" Text="{Binding Track, Converter={x:Static v:UpperText.Instance}}" Margin="0,0,16,0" />
+                </Viewbox>
+              </StackPanel>
+              <!-- Pico's two stripes, leaning, at the plate's end: green, then gold -->
+              <StackPanel Name="Stripes" Orientation="Horizontal" HorizontalAlignment="Right">
+                <c:Plate Shape="Lean" Background="{StaticResource AccentBrush}" />
+                <c:Plate Shape="Lean" Background="{StaticResource GoldBrush}" />
+              </StackPanel>
+            </Panel>
+          </c:Plate>
+        </Panel>
+      </Border>
+      <c:CoursePicker DataContext="{Binding Courses}" VerticalAlignment="Top" />
+    </StackPanel>
+    <StackPanel Grid.Column="2" Spacing="8">
+      <c:RulesPanel Groups="{Binding Groups}" Action="START PRACTICE" ActionCommand="{Binding StartCommand}" />
+      <Grid Classes="warnline" ColumnDefinitions="Auto,*"
+            IsVisible="{Binding Notice, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+        <Path Classes="warnmark" />
+        <TextBlock Grid.Column="1" Text="{Binding Notice}" />
+      </Grid>
+    </StackPanel>
+  </Grid>
+</UserControl>
