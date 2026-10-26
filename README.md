@@ -76,7 +76,8 @@ The two submodules are found through `ProtocolFolder` and `FzgxTools` in `net/Di
 
 ## Build and test
 
-    git clone --recurse-submodules https://github.com/piconet-live/piconet-launcher.git
+    git clone https://github.com/piconet-live/piconet-launcher.git
+    git -C piconet-launcher submodule update --init    # protocol and tools
     cd piconet-launcher/net
     dotnet build net.slnx
     dotnet test --project tests/Launcher.Tests
