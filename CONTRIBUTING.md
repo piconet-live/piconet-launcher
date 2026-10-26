@@ -4,8 +4,8 @@ This repository holds the launcher, the program a player opens.
 
 ## Building
 
-The [README](README.md) lists the requirements, with versions, and how to build and check this repository. Clone it
-with `--recurse-submodules`. The game itself is built in
+The [README](README.md) lists the requirements, with versions, and how to build and check this repository. Clone it,
+then `git submodule update --init` (the protocol and the tools). The game itself is built in
 [piconet-runner](https://github.com/piconet-live/piconet-runner).
 
 ## Making a change
