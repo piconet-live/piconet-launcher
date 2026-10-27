@@ -436,6 +436,7 @@ public sealed partial class AppState(SettingsStore store, string dataFolder)
         {
             var window = WindowWithBoard();
             var racing = new RaceStart();
+            var disqualified = new DisqualifiedClose();
             var board = Board;
             if (board is not null)
             {
@@ -451,6 +452,14 @@ public sealed partial class AppState(SettingsStore store, string dataFolder)
                         _ = session?.ReportAsync(snapshot);
                     }
                     LiveReceived?.Invoke(snapshot);
+                    CloseIfDisqualified(board, snapshot, race, disqualified);
+                };
+                board.PhaseChanged += _ =>
+                {
+                    if (board.Latest is { } latest)
+                    {
+                        CloseIfDisqualified(board, latest, race, disqualified);
+                    }
                 };
             }
             var game = RecompLaunch.StartRace(paths, window, race.MatchFile, race.ReplayFile, s.Widescreen,
@@ -458,6 +467,7 @@ public sealed partial class AppState(SettingsStore store, string dataFolder)
             Fork = game;
             Running(race.Spectate ? GameRun.Watch : GameRun.Race);
             _raceGame = game;
+            disqualified.Game = game;
             Problem = null;
             game.EnableRaisingEvents = true;
             game.Exited += (_, _) =>
