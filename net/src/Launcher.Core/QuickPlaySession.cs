@@ -173,6 +173,10 @@ public sealed partial class QuickPlaySession(LauncherSettings settings, string w
     /// <summary>The machine choice before the race (null when there is none).</summary>
     public MachineChoiceState? Choice { get; private set; }
 
+    /// <summary>When the lobby's start countdown runs out, by this computer's clock (<see cref="LobbyState.StartsInMs"/>
+    /// counted from the state's arrival); null: none runs.</summary>
+    public DateTimeOffset? StartsAt { get; private set; }
+
     /// <summary>The course vote while the match forms (null when there is none).</summary>
     public CourseVoteState? CourseVote { get; private set; }
 
@@ -282,6 +286,7 @@ public sealed partial class QuickPlaySession(LauncherSettings settings, string w
             await (Custom ? _client.LeaveLobbyAsync() : _client.LeaveQuickPlayAsync()).ConfigureAwait(false);
         }
         Lobby = null;
+        StartsAt = null;
         StatPackProblem = null;
         Set("Left the queue");
     }

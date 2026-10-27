@@ -155,6 +155,7 @@ public sealed partial class QuickPlaySession
             StatPackProblem = null;
         }
         Lobby = l;
+        StartsAt = l.StartsInMs is { } ms ? DateTimeOffset.UtcNow.AddMilliseconds(ms) : null;
         if (l.Stage != LobbyState.Racing)
         {
             Live = null;
@@ -175,6 +176,7 @@ public sealed partial class QuickPlaySession
     {
         LeftReason = Custom ? left.Reason : null;
         Lobby = null;
+        StartsAt = null;
         StatPackProblem = null;
         Pings = NoPings;
         CourseVote = null;
@@ -252,6 +254,7 @@ public sealed partial class QuickPlaySession
     private void OnQuickPlayEnded(QuickPlayEnded r)
     {
         Lobby = null;
+        StartsAt = null;
         StatPackProblem = null;
         CourseVote = null;
         CourseChosen = null;
