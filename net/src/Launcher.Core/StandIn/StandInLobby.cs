@@ -24,6 +24,10 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
     /// <summary>How long the course vote and the machine stage last on the stand-in (a real server's are longer).</summary>
     private const int VoteMs = 12_000, ChooseMs = 15_000, DrawMs = 4_000;
 
+    /// <summary>Quick Play's start countdown on the stand-in (a real server's runs from its rule, longer with fewer
+    /// players: HostRules.StartCountdown).</summary>
+    private const int CountdownMs = 45_000;
+
     /// <summary>The stand-in racers.</summary>
     public static IReadOnlyList<PlayerInfo> Others { get; } =
     [
@@ -68,6 +72,8 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
     }
     private bool _votedStart, _votedCpu;
     private int _othersVotedStart, _match;
+    private DateTimeOffset? _startsAt;   // Quick Play's start countdown; null: none runs
+    private int _countdowns;             // counts countdowns begun, so a timer knows whether its own still runs
     private IReadOnlyList<int> _options = [];
     private int[] _votes = [];
     private readonly HashSet<string> _voted = [];
@@ -93,6 +99,7 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
         lock (_gate)
         {
             _me = new PlayerInfo(You, _name, machine, color, stockColor, Tag: YourTag);
+            CountDown();
             SendState();
             send(new LobbyPings(_id, [new PlayerPing(You, 12), .. _others.Select((p, i) => new PlayerPing(p.Id, 30 + (i * 17)))]));
         }
@@ -107,6 +114,7 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
         {
             _me = null;
             _stage = LobbyState.Forming;
+            _startsAt = null;
             if (room is not null && room.HostId == You && _others.Count > 0)
             {
                 (room.HostId, room.HostName) = (_others[0].Id, _others[0].Name);
@@ -245,6 +253,7 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
     {
         _match++;
         _stage = LobbyState.Starting;
+        _startsAt = null;
         _options = [.. Courses.Pool.OrderBy(_ => Random.Shared.Next()).Take(5), CourseVote.RandomCourse];
         _votes = new int[_options.Count];
         _voted.Clear();
@@ -387,12 +396,34 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
         _stage = LobbyState.Forming;
         (_votedStart, _othersVotedStart) = (false, 0);
         _chosen.Clear();
+        CountDown();
         SendState();
         send(new ErrorMessage("stand_in", StandInService.NoRacesText));
         Later(1_000, () => SayFirst(4, Lines[4]));
     }
 
     private int StartVotes => (_votedStart ? 1 : 0) + _othersVotedStart;
+
+    /// <summary>(Under the lock.) A Quick Play lobby forming with the player in it counts down to its match.</summary>
+    private void CountDown()
+    {
+        if (room is not null)
+        {
+            return;
+        }
+        var countdown = ++_countdowns;
+        _startsAt = DateTimeOffset.UtcNow.AddMilliseconds(CountdownMs);
+        Later(CountdownMs, () =>
+        {
+            lock (_gate)
+            {
+                if (countdown == _countdowns && _stage == LobbyState.Forming && _me is not null && _startsAt is not null)
+                {
+                    StartMatch();
+                }
+            }
+        });
+    }
 
     private List<PlayerInfo> Players => [.. _me is { } me ? [me] : Array.Empty<PlayerInfo>(), .. _others];
 
@@ -407,7 +438,8 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
         var players = Players.Select(p => p with { Chosen = choosing && _chosen.Contains(p.Id) }).ToList();
         send(new LobbyState(_id, players, room?.Capacity ?? Capacity, VotingMinimum: 2, VotingOpen: _stage == LobbyState.Forming,
             StartVotes, _votedCpu ? 1 : 0, _stage, Custom: room is not null, HostId: room?.HostId, Rules: room?.Rules,
-            Name: room?.Name, Locked: room?.Password is not null));
+            Name: room?.Name, Locked: room?.Password is not null,
+            StartsInMs: _startsAt is { } at ? (int)Math.Max(0, Math.Ceiling((at - DateTimeOffset.UtcNow).TotalMilliseconds)) : null));
     }
 
     /// <summary>A line from the stand-in at this place among the lobby's others (round the list), when there is one.</summary>
