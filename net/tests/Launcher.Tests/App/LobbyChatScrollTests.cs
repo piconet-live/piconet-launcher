@@ -34,14 +34,18 @@ public sealed class LobbyChatScrollTests : IDisposable
 
     private static bool AtFoot(ScrollViewer lines) => lines.Offset.Y >= lines.Extent.Height - lines.Viewport.Height - 2;
 
-    private static void Say(AppState state, LobbyViewModel lobby, int n)
+    private int _said;
+
+    /// <summary>Each line is waited for by its own text: past the 50 lines kept the count no longer grows, the lobby's
+    /// CPU players chat too, and a line that came late would move the list after the test looked.</summary>
+    private void Say(AppState state, LobbyViewModel lobby, int n)
     {
         for (var i = 0; i < n; i++)
         {
-            var before = lobby.Chat.Count;
-            lobby.Message = $"line {i} of a chat that runs on past the foot of its list";
+            var text = $"line {_said++} of a chat that runs on past the foot of its list";
+            lobby.Message = text;
             lobby.SendCommand.Execute(null);
-            PumpTelling(state, () => lobby.Chat.Count > before || lobby.Chat.Count >= 50, "a line was not shown");
+            PumpTelling(state, () => lobby.Chat.Any(c => c.Text == text), $"a line was not shown: {text}");
         }
         PumpFor(200, state);
     }
@@ -105,7 +109,9 @@ public sealed class LobbyChatScrollTests : IDisposable
                 // a selection holds the list where it is too (the player copies a line); the button takes it away
                 var line = Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(chat).OfType<SelectableTextBlock>().Last();
                 (line.SelectionStart, line.SelectionEnd) = (0, 3);
-                lines.Offset = new Avalonia.Vector(0, lines.Offset.Y - 40);
+                // well above the foot: the CPU players' lines come when they will, and a list that loses a long line
+                // at its top grows shorter and pulls an offset close to its foot back with it
+                lines.Offset = new Avalonia.Vector(0, 100);
                 PumpFor(100, state);
                 var held = lines.Offset.Y;
                 Say(state, lobby, 3);
