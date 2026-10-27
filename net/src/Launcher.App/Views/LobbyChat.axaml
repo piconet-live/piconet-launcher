@@ -5,7 +5,8 @@
              x:Class="Launcher.App.Views.LobbyChat"
              x:DataType="vm:LobbyViewModel">
   <!-- The lobby's chat, the same in every state of the lobby: lines of the theme's text (the speaker's paint and name,
-       then what they said), the newest at the foot and kept in sight; under them the message and Send. Enter sends.
+       then what they said), the newest at the foot, followed while the player is at the foot (scrolled up, the list
+       stays and offers More messages below); under them the message and Send. Enter sends.
        A line's text can be selected with the mouse and copied (Ctrl+C; a right click: Copy, the selection or the
        whole line, and Copy all), for a player who takes the lines to a translator. A selection
        stays within its line (each line is a block of its own beside its paint). A new line takes none away and
@@ -29,32 +30,38 @@
                KeyDown="OnMessageKey" AutomationProperties.Name="Message" />
       <Button Grid.Column="2" Classes="secondary" Content="Send" Command="{Binding SendCommand}" />
     </Grid>
-    <ScrollViewer Name="Lines" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                  VerticalContentAlignment="Bottom">
-      <ItemsControl Name="List" ItemsSource="{Binding Chat}" VerticalAlignment="Bottom">
-        <ItemsControl.ItemTemplate>
-          <DataTemplate x:DataType="vm:ChatLine">
-            <Panel>
-            <!-- a server's notice: its card, the chat's whole width, no name column (NoticeCard) -->
-            <Panel IsVisible="{Binding Server}" Margin="0,4">
-              <v:NoticeCard DataContext="{Binding Notice}" />
-            </Panel>
-            <Grid ColumnDefinitions="18,*" MinHeight="20" IsVisible="{Binding !Server}">
-              <Border Classes="chip" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,5,0,0"
-                      Background="{Binding ColorHex, Converter={x:Static v:HexToBrush.Instance}}" />
-              <SelectableTextBlock Grid.Column="1" TextWrapping="Wrap" SelectionBrush="{StaticResource SelectBrush}"
-                                   Background="Transparent" ContextFlyout="{StaticResource LineMenu}">
-                <Run Text="{Binding Name}" FontWeight="SemiBold" /><Run FontSize="{StaticResource Size12}"
-                     Foreground="{StaticResource DimBrush}"><Run.Text><MultiBinding Converter="{x:Static v:TagWhilePointed.Instance}"><Binding
-                     Path="TagText" /><Binding Path="$parent[SelectableTextBlock].IsPointerOver" /><Binding
-                     Path="$parent[SelectableTextBlock].SelectedText" /></MultiBinding></Run.Text></Run><Run
-                     Text="  " /><Run Text="{Binding Text}" Foreground="{StaticResource DimBrush}" />
-              </SelectableTextBlock>
-            </Grid>
-            </Panel>
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl>
-    </ScrollViewer>
+    <Panel>
+      <ScrollViewer Name="Lines" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                    VerticalContentAlignment="Bottom">
+        <ItemsControl Name="List" ItemsSource="{Binding Chat}" VerticalAlignment="Bottom">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:ChatLine">
+              <Panel>
+              <!-- a server's notice: its card, the chat's whole width, no name column (NoticeCard) -->
+              <Panel IsVisible="{Binding Server}" Margin="0,4">
+                <v:NoticeCard DataContext="{Binding Notice}" />
+              </Panel>
+              <Grid ColumnDefinitions="18,*" MinHeight="20" IsVisible="{Binding !Server}">
+                <Border Classes="chip" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,5,0,0"
+                        Background="{Binding ColorHex, Converter={x:Static v:HexToBrush.Instance}}" />
+                <SelectableTextBlock Grid.Column="1" TextWrapping="Wrap" SelectionBrush="{StaticResource SelectBrush}"
+                                     Background="Transparent" ContextFlyout="{StaticResource LineMenu}">
+                  <Run Text="{Binding Name}" FontWeight="SemiBold" /><Run FontSize="{StaticResource Size12}"
+                       Foreground="{StaticResource DimBrush}"><Run.Text><MultiBinding Converter="{x:Static v:TagWhilePointed.Instance}"><Binding
+                       Path="TagText" /><Binding Path="$parent[SelectableTextBlock].IsPointerOver" /><Binding
+                       Path="$parent[SelectableTextBlock].SelectedText" /></MultiBinding></Run.Text></Run><Run
+                       Text="  " /><Run Text="{Binding Text}" Foreground="{StaticResource DimBrush}" />
+                </SelectableTextBlock>
+              </Grid>
+              </Panel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+      <!-- scrolled up (or held by a selection) while lines came: the way back to the newest, over the list's foot -->
+      <Button Name="MoreBelow" Classes="secondary" Content="More messages below" IsVisible="False"
+              HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,4" Click="OnMoreBelow"
+              AutomationProperties.Name="More messages below" />
+    </Panel>
   </DockPanel>
 </UserControl>
