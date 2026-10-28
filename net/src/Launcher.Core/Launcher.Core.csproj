@@ -60,6 +60,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The compact replay file's xz header (ReplayFile.g.cs, version 8), read for the Replays list. -->
+    <PackageReference Include="SharpCompress" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Which disc the game's files are prepared from (DiscPrep.cs): hashes of named files, one digest, the pins.
          Written by net/tools/DiscPinsWriter from your disc; no game data. -->
     <EmbeddedResource Include="DiscPins.json" LogicalName="Launcher.Core.DiscPins.json" />
