@@ -8,7 +8,8 @@ namespace Launcher.Tests;
 /// <summary>The Replays list over the protocol's shared samples (a real recording of every version 2 to 7,
 /// protocol/tests/vectors/replays): each row, and why a file is not played, what recorded it and its mod image, as
 /// the hand-written reader of 0.4.0 read them (ReplaySamples.rows.tsv, written once by that reader). The generated
-/// reader (ReplayParts, protocol/replay.toml) must read the very same rows.</summary>
+/// reader (ReplayParts, protocol/replay.toml) must read the very same rows. The compact sample (version 8, the
+/// version 7 one made compact) reads version 7's row: the list shows a compact file as the recording it was made of.</summary>
 public sealed class ReplaySamplesTests : IDisposable
 {
     private readonly string _dir = Directory.CreateTempSubdirectory("launcher-tests").FullName;

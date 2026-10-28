@@ -45,7 +45,7 @@ public static class ReplayFile
         try
         {
             var (json, results) = (file.Header, file.Results);
-            var steps = file.StepBytes / file.StepSize;
+            var steps = file.Compact ? file.Steps : file.StepBytes / file.StepSize;
 
             using var doc = JsonDocument.Parse(json);
             var h = doc.RootElement;
@@ -75,7 +75,7 @@ public static class ReplayFile
                            DateTimeOffset.TryParse(r.GetString(), CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var t)
                 ? t
                 : new DateTimeOffset(File.GetLastWriteTimeUtc(path));
-            var (pack, packProblem) = PackOf(file.Version, setup);
+            var (pack, packProblem) = PackOf(file.RaceVersion, setup);
             return new ReplayInfo(path, recorded, setup.GetProperty("course").GetInt32(), setup.GetProperty("laps").GetInt32(),
                 players, you, TimeSpan.FromSeconds(steps / 60.0), racers.GetValueOrDefault(seat),
                 results is { } block ? Results(block, racers) : null, pack, packProblem,
@@ -119,6 +119,12 @@ public static class ReplayFile
 
     /// <summary>The replay format this game writes and plays.</summary>
     public const int FormatVersion = ReplayFormat.VersionPlain;
+
+    /// <summary>The compact file a recording becomes at its race's end (0.5.2 on): the recording of its own version
+    /// (<see cref="ReplayParts.RaceVersion"/>), its header, inputs and checksums compressed (xz). The list reads its
+    /// header (through SharpCompress), its steps' count and its results; only the game reads its steps. A launcher
+    /// from before 0.5.2 says it is a replay of another version of the game.</summary>
+    public const int CompactFormatVersion = ReplayFormat.CompactVersion;
 
     /// <summary>The format of a race that ran on a stat pack (its header's match holds the pack): the same file
     /// under another number, so that a game program from before stat packs refuses it and does not play the race
@@ -181,12 +187,19 @@ public static class ReplayFile
             return string.Create(CultureInfo.InvariantCulture,
                 $"Replay of another version of the game · format {file.Version}");
         }
+        if (file.Compact && file.RaceVersion == 0)
+        {
+            // a compact file of a recording whose version this game does not play
+            return string.Create(CultureInfo.InvariantCulture,
+                $"Replay of another version of the game · format {file.Version}");
+        }
         if (file.HeaderLength > ReplayFormat.MaxJson)
         {
             return NotAReplay;
         }
         if (file.Header is null || !file.Frames)
         {
+            // (a compact file whose header does not read, or cut inside its parts: damaged, or not one at all)
             return file.Failed ? NotAReplay : Incomplete;
         }
         if (!file.FramesMarked)
@@ -201,7 +214,7 @@ public static class ReplayFile
             {
                 return $"Replay of another version of F-Zero GX · {id}";
             }
-            if (file.Version is not (SeatsFormatVersion or GridFormatVersion) && (file.Version == MinesFormatVersion) != (MineRegenSteps(doc.RootElement) != 0))
+            if (file.RaceVersion is not (SeatsFormatVersion or GridFormatVersion) && (file.RaceVersion == MinesFormatVersion) != (MineRegenSteps(doc.RootElement) != 0))
             {
                 return MinesDisagree;
             }
