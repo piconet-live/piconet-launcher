@@ -17,7 +17,8 @@ namespace Launcher.Tests;
 /// <summary>
 /// The Replays page's tabs: All, Races and Practice with their
 /// counts, pressed with the headless window's mouse; a practice run's row says "Practice" with the time, and has no
-/// results to open. A practice run is a replay whose header says <c>"practice": true</c>.
+/// results to open. A practice run is a replay whose header says <c>"practice": true</c>. A row's "•••" actions
+/// are open on one row at a time, and a row deleted leaves the others as they were.
 /// </summary>
 [Collection(ControllerPageTests.Name)]
 public sealed class ReplayTabsTests : IDisposable
@@ -144,6 +145,46 @@ public sealed class ReplayTabsTests : IDisposable
                 {
                     window.Close();
                 }
+            }, TestContext.Current.CancellationToken);
+        }
+        finally
+        {
+            await ui.DisposeAsync();
+            state.Shutdown();
+        }
+    }
+
+    [Fact]
+    public async Task OneRowOffersItsFileActionsAtATimeAndADeleteLeavesTheOthers()
+    {
+        Write("a.fzrp", "2026-10-18T10:00:00+00:00", null);
+        Write("b.fzrp", "2026-10-18T09:00:00+00:00", null);
+        Write("c.fzrp", "2026-10-18T08:00:00+00:00", null);
+        var state = State();
+        var ui = HeadlessUnitTestSession.StartNew(typeof(GameSkinTests));
+        try
+        {
+            await ui.Dispatch(() =>
+            {
+                GameSkin.Load(null);
+                var page = new ReplaysViewModel(state);
+                var (a, b, c) = (page.Items[0], page.Items[1], page.Items[2]);
+
+                page.ToggleMoreCommand.Execute(a);
+                Assert.True(a.More);
+                page.ToggleMoreCommand.Execute(b);   // another row's "•••": the first goes back to its usual actions
+                Assert.Equal((true, true), (a.Acting, b.More));
+                page.ToggleMoreCommand.Execute(b);
+                Assert.True(b.Acting);
+
+                // c's results open; a deleted: c keeps its results open, the counts follow
+                page.ToggleStatsCommand.Execute(c);
+                page.AskDeleteCommand.Execute(a);
+                page.DeleteCommand.Execute(a);
+                Assert.Equal([b, c], page.Items);
+                Assert.True(c.ShowingStats);
+                Assert.False(File.Exists(Path.Combine(Replays, "a.fzrp")));
+                Assert.Equal(2, page.Tabs[0].Count);
             }, TestContext.Current.CancellationToken);
         }
         finally

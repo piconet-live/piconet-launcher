@@ -52,6 +52,7 @@ public sealed partial class LobbyViewModel
             : !session.Racing && lobby.Stage is LobbyState.Choosing or LobbyState.Racing && !ChoiceShown ? "Watching" : "";
         ClockText = step switch
         {
+            LobbyStep.Gathering when session.StartsAt is { } starts => Minutes(starts),
             LobbyStep.CourseVote when session is { CourseVote: { } vote, CourseChosen: null } => Minutes(vote.Ends),
             LobbyStep.Machines when session is { ChoiceOpen: true, Choice: { } choice } => Minutes(choice.Ends),
             _ => "",
@@ -61,10 +62,12 @@ public sealed partial class LobbyViewModel
     /// <summary>What is left, the series' way: 0'29".</summary>
     private static string Minutes(DateTimeOffset ends) => ReplayWords.Seconds(SecondsLeft(ends));
 
-    /// <summary>The countdown runs while the vote is open or the machines are being chosen.</summary>
+    /// <summary>The countdown runs while the lobby counts down to its start, the vote is open or the machines are
+    /// being chosen.</summary>
     private void Clock(QuickPlaySession session)
     {
-        var ticking = session is { CourseVote: not null, CourseChosen: null } || session.Choice is not null;
+        var ticking = session is { CourseVote: not null, CourseChosen: null } || session.Choice is not null ||
+            session.StartsAt is not null;
         if (ticking && !_clock.IsEnabled)
         {
             _clock.Start();

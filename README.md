@@ -5,7 +5,7 @@
 The Piconet launcher: the program a player opens to play F-Zero GX online or alone, to watch and keep replays and
 to prepare the game from their own disc. It starts the native game (the runner,
 [piconet-runner](https://github.com/piconet-live/piconet-runner)) and talks to Piconet's online service. Piconet is
-online multiplayer for F-Zero GX: see [piconet](https://github.com/piconet-live/piconet).
+online multiplayer for F-Zero GX: see [github.com/piconet-live](https://github.com/piconet-live).
 
 No game data is stored here: the launcher reads your own disc image.
 

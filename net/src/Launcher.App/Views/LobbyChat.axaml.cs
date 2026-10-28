@@ -13,7 +13,14 @@ namespace Launcher.App.Views;
 
 public sealed partial class LobbyChat : UserControl
 {
+    private readonly ScrollViewer _lines;
+
+    private readonly Button _moreBelow;
+
     private LobbyViewModel? _lobby;
+
+    /// <summary>The list follows its newest line: the player is at its foot (or was, when the last line came).</summary>
+    private bool _following = true;
 
     public LobbyChat()
     {
@@ -21,8 +28,53 @@ public sealed partial class LobbyChat : UserControl
         DataContextChanged += (_, _) => Watch();
         // a chat that comes onto the page opens at its newest line. Each stage of the lobby has a chat of its own,
         // and one would otherwise open at its oldest, until somebody writes
-        Loaded += (_, _) => Dispatcher.UIThread.Post(() => this.FindControl<ScrollViewer>("Lines")?.ScrollToEnd(),
-            DispatcherPriority.Loaded);
+        Loaded += (_, _) => Dispatcher.UIThread.Post(ToFoot, DispatcherPriority.Loaded);
+        _lines = this.FindControl<ScrollViewer>("Lines")!;
+        _moreBelow = this.FindControl<Button>("MoreBelow")!;
+        _lines.ScrollChanged += OnScrolled;
+    }
+
+    /// <summary>Within a few pixels of the list's foot.</summary>
+    private static bool AtFoot(ScrollViewer lines) => lines.Offset.Y >= lines.Extent.Height - lines.Viewport.Height - 4;
+
+    /// <summary>The list grew (a line came, a long one wrapped) or shrank: one that follows goes to its foot. The
+    /// player moved it: it follows from the foot on, and More messages below goes once they are there.</summary>
+    private void OnScrolled(object? sender, ScrollChangedEventArgs e)
+    {
+        if (sender is not ScrollViewer lines)
+        {
+            return;
+        }
+        if (e.ExtentDelta.Y != 0 || e.ViewportDelta.Y != 0)
+        {
+            if (_following && !Selecting)
+            {
+                lines.ScrollToEnd();
+            }
+            return;
+        }
+        _following = AtFoot(lines);
+        if (_following)
+        {
+            _moreBelow.IsVisible = false;
+        }
+    }
+
+    /// <summary>More messages below: to the newest line, following again; a selection that held the list goes.</summary>
+    private void OnMoreBelow(object? sender, RoutedEventArgs e)
+    {
+        foreach (var line in Blocks())
+        {
+            line.ClearSelection();
+        }
+        ToFoot();
+    }
+
+    private void ToFoot()
+    {
+        _following = true;
+        _lines.ScrollToEnd();
+        _moreBelow.IsVisible = false;
     }
 
     /// <summary>The line the menu is open on (the right button, the menu key). The menu is the line's own (its
@@ -53,21 +105,32 @@ public sealed partial class LobbyChat : UserControl
     /// <summary>A line has text selected: the player is reading or copying, and the list stays where it is.</summary>
     public bool Selecting => Blocks().Any(l => l.SelectionStart != l.SelectionEnd);
 
-    /// <summary>A new line: scrolled into sight once it is laid out. While a selection is there the list stays where
-    /// it is instead (a list that stands at its end follows its end by itself: it is put back).</summary>
+    /// <summary>A new line: a list that follows shows it once it is laid out (<see cref="OnScrolled"/>, and here for a
+    /// line that did not change the list's height). A list the player scrolled up, or one held by a selection, stays
+    /// where it is (one that stands at its end follows its end by itself: it is put back) and offers More messages
+    /// below, as a stream's chat does.</summary>
     private void OnChat(object? sender, NotifyCollectionChangedEventArgs e)
     {
-        var list = this.FindControl<ScrollViewer>("Lines");
-        var stood = list?.Offset;
+        if (e.Action is not (NotifyCollectionChangedAction.Add or NotifyCollectionChangedAction.Replace))
+        {
+            return;
+        }
+        var stood = _lines.Offset;
+        var holds = !_following || Selecting;
         Dispatcher.UIThread.Post(() =>
         {
-            if (!Selecting)
+            if (!holds)
             {
-                list?.ScrollToEnd();
+                _lines.ScrollToEnd();
+                return;
             }
-            else if (list is not null && stood is { } offset && list.Offset != offset)
+            if (_lines.Offset != stood)
             {
-                list.Offset = offset;
+                _lines.Offset = stood;
+            }
+            if (!AtFoot(_lines))
+            {
+                _moreBelow.IsVisible = true;
             }
         }, DispatcherPriority.Loaded);
     }

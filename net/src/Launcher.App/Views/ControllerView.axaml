@@ -57,21 +57,20 @@
         <!-- a controller: its device, its layout, the sticks' dead zones -->
         <TextBlock Grid.Row="2" Classes="label" Text="Device" IsVisible="{Binding IsController}" />
         <ComboBox Grid.Row="2" Grid.Column="1" Classes="field" Classes.missing="{Binding DeviceMissing}"
-                  ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}"
+                  ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}" PlaceholderText="Choose a controller"
                   IsVisible="{Binding IsController}" HorizontalAlignment="Stretch" AutomationProperties.Name="Device" />
         <Grid Grid.Row="3" Grid.Column="1" Classes="warnline" ColumnDefinitions="Auto,*" IsVisible="{Binding DeviceMissing}">
           <Path Classes="warnmark" />
           <TextBlock Grid.Column="1" Text="Not plugged in" />
         </Grid>
-        <TextBlock Grid.Row="4" Classes="label" Text="Layout" IsVisible="{Binding IsController}" />
+        <TextBlock Grid.Row="4" Classes="label top" Text="Layout" IsVisible="{Binding IsController}" />
         <StackPanel Grid.Row="4" Grid.Column="1" IsVisible="{Binding IsController}">
           <Button Classes="secondary" Content="Use the standard layout" Command="{Binding UseStandardLayoutCommand}"
                   IsEnabled="{Binding HasStandardLayout}" HorizontalAlignment="Left"
                   AutomationProperties.Name="Use the standard layout" />
           <TextBlock Classes="faint" Text="{Binding LayoutNote}" Margin="0,4,0,0" />
         </StackPanel>
-        <TextBlock Grid.Row="5" Classes="label" Text="Dead zone" IsVisible="{Binding IsController}"
-                   />
+        <TextBlock Grid.Row="5" Classes="label" Text="Dead zone" IsVisible="{Binding IsController}" />
         <Grid Grid.Row="5" Grid.Column="1" ColumnDefinitions="56,Auto,8,Auto" RowDefinitions="Auto,4,Auto" IsVisible="{Binding IsController}">
           <TextBlock Classes="dim" Text="Stick" VerticalAlignment="Center" />
           <c:Stepper Grid.Column="1" Value="{Binding StickDeadZone}" Minimum="0" Maximum="50" Step="5" />
@@ -127,13 +126,13 @@
         </Grid.Resources>
         <StackPanel>
           <Border Classes="rowhead">
-            <Grid ColumnDefinitions="92,*"><TextBlock Classes="colhead" Text="Control" /><TextBlock Grid.Column="1" Classes="colhead" Text="Set to" /></Grid>
+            <Grid ColumnDefinitions="92,*"><TextBlock Classes="colhead" Text="CONTROL" LetterSpacing="1" /><TextBlock Grid.Column="1" Classes="colhead" Text="SET TO" LetterSpacing="1" /></Grid>
           </Border>
           <ItemsControl ItemsSource="{Binding LeftRows}" ItemTemplate="{StaticResource Row}" />
         </StackPanel>
         <StackPanel Grid.Column="2">
           <Border Classes="rowhead">
-            <Grid ColumnDefinitions="92,*"><TextBlock Classes="colhead" Text="Control" /><TextBlock Grid.Column="1" Classes="colhead" Text="Set to" /></Grid>
+            <Grid ColumnDefinitions="92,*"><TextBlock Classes="colhead" Text="CONTROL" LetterSpacing="1" /><TextBlock Grid.Column="1" Classes="colhead" Text="SET TO" LetterSpacing="1" /></Grid>
           </Border>
           <ItemsControl ItemsSource="{Binding RightRows}" ItemTemplate="{StaticResource Row}" />
         </StackPanel>

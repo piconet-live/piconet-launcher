@@ -122,14 +122,15 @@ public sealed partial class QuickPlaySession
     }
 
     /// <summary>The racer as a create or a join carries it, as the queue's would: the machine the server allows, its
-    /// look, the setting brought into the server's range; and kept as what the server was told.</summary>
+    /// look, the player's own setting (the server brings it into the lobby's range, which a create or a join from the
+    /// browser does not know yet); and kept as what the server was told.</summary>
     private (int Machine, Rgb Color, int? Setting, int? StockColor, CustomMachine? Custom) RacerToSend()
     {
         var profile = Racer;
         Machine = QueueMachine(profile.Machine, Rules);
         var look = profile.LookOf(Machine.Value);
         Sent = new RacedMachine(Machine.Value, CustomMachine.Checked(profile.Custom));
-        return (Machine.Value, look.Color ?? profile.Color, Rules?.MachineSetting.Clamp(Math.Clamp(look.Setting, 0, 100)),
+        return (Machine.Value, look.Color ?? profile.Color, Math.Clamp(look.Setting, 0, 100),
             look.StockColor, profile.Custom);
     }
 }

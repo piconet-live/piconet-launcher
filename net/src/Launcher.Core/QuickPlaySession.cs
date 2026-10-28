@@ -166,12 +166,23 @@ public sealed partial class QuickPlaySession(LauncherSettings settings, string w
     /// <summary>The server's rules (from its welcome; null from a server that sends none).</summary>
     public ServerRules? Rules { get; private set; }
 
+    /// <summary>The machine-setting range this lobby races under: a custom lobby's own (its state names both ends),
+    /// else the server's (null from a server that sends none).</summary>
+    public SettingRange? MachineSetting =>
+        Lobby is { Custom: true, Rules: { } r } && r.Value(HostRules.MachineSetting) is { } low
+            && r.Value(LobbyRules.SettingHighKey) is { } high && new SettingRange(low, high) is { IsSound: true } range
+            ? range : Rules?.MachineSetting;
+
     /// <summary>The machine this session races: the one it queued with (the player's, or the server's first allowed one),
     /// then the one last chosen.</summary>
     public int? Machine { get; private set; }
 
     /// <summary>The machine choice before the race (null when there is none).</summary>
     public MachineChoiceState? Choice { get; private set; }
+
+    /// <summary>When the lobby's start countdown runs out, by this computer's clock (<see cref="LobbyState.StartsInMs"/>
+    /// counted from the state's arrival); null: none runs.</summary>
+    public DateTimeOffset? StartsAt { get; private set; }
 
     /// <summary>The course vote while the match forms (null when there is none).</summary>
     public CourseVoteState? CourseVote { get; private set; }
@@ -257,7 +268,7 @@ public sealed partial class QuickPlaySession(LauncherSettings settings, string w
         MachineChosen?.Invoke(machine);
         Changed?.Invoke();
         return Client.ChooseMachineAsync(c.Choose.MatchId, machine, look.Color ?? profile.Color,
-            Rules?.MachineSetting.Clamp(Math.Clamp(look.Setting, 0, 100)), look.StockColor, profile.Custom,
+            MachineSetting?.Clamp(Math.Clamp(look.Setting, 0, 100)), look.StockColor, profile.Custom,
             Lobby?.SeatPacks is not null ? SeatPack : null);
     }
 
@@ -282,6 +293,7 @@ public sealed partial class QuickPlaySession(LauncherSettings settings, string w
             await (Custom ? _client.LeaveLobbyAsync() : _client.LeaveQuickPlayAsync()).ConfigureAwait(false);
         }
         Lobby = null;
+        StartsAt = null;
         StatPackProblem = null;
         Set("Left the queue");
     }

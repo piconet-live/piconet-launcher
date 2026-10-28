@@ -370,10 +370,6 @@ public static partial class GameSkin
         return _stillsKey;
     }
 
-    /// <summary>The launcher's name in the game's lettering, as the title bar shows it (BrandLettering), for the game
-    /// window's strip; null without the disc's art (a start without the window has none).</summary>
-    public static Picture? BrandPicture => _art is { } art ? Quietly(() => art.Lettering(Branding.DisplayName)) : null;
-
     private static void Set(IResourceDictionary resources, string key, string name, Func<DiscArt, Picture?> picture)
     {
         if (Get(name, picture) is { } bitmap)

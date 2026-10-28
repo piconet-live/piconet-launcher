@@ -310,6 +310,12 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
 
     partial void OnCurrentChanged(ViewModelBase value)
     {
+        // the bell's list belongs to the page it opened over, and the lobby's whole list of rules to its visit
+        Notices.ListOpen = false;
+        if (value is not LobbyViewModel)
+        {
+            Lobby.AllRulesShown = false;
+        }
         if (value is HomeViewModel or LobbyViewModel or LanViewModel or PracticeViewModel or CustomLobbiesViewModel)
         {
             _play = value;

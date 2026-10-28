@@ -122,56 +122,59 @@
     <!-- SELECT: the roster, the shelf's every machine at once in tiles of one size (GarageView.axaml.cs); a shelf of a
          few at the left. In a lobby with "All 41" the machines it does not offer greyed. -->
     <Panel Name="RosterPlace" IsVisible="{Binding Selecting}">
-      <TextBlock Name="Empty" Classes="note" Text="{Binding EmptyText}" Margin="2,8" VerticalAlignment="Top"
-                 IsVisible="{Binding EmptyText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-      <ItemsControl Name="Roster" ItemsSource="{Binding Roster}" HorizontalAlignment="Left" VerticalAlignment="Top">
-        <ItemsControl.ItemsPanel>
-          <ItemsPanelTemplate>
-            <c:RosterTiles Columns="{Binding #Root.RosterColumns}" TileWidth="{Binding #Root.TileWidth}" TileHeight="{Binding #Root.TileHeight}" Gap="8" />
-          </ItemsPanelTemplate>
-        </ItemsControl.ItemsPanel>
-        <ItemsControl.DataTemplates>
-          <!-- a stock machine's tile: its still in its look on the surface tone, the heart when it is a favourite, its
-               name under it (so no tooltip); ringed in the accent when it is the one raced (Button.cell.on); pressed, its PREVIEW -->
-          <DataTemplate x:DataType="vm:GarageCard">
-            <Button Classes="cell" Classes.on="{Binding Selected}" IsEnabled="{Binding Offered}"
-                    Command="{Binding #Root.((vm:GarageViewModel)DataContext).PreviewMachineCommand}" CommandParameter="{Binding Id}"
-                    AutomationProperties.Name="{Binding Id, Converter={x:Static v:MachineNameText.Instance}}">
-              <Grid RowDefinitions="*,Auto">
-                <c:MachineStill Machine="{Binding Id}" StockColor="{Binding StockColor}" PaintColor="{Binding PaintColor}" Margin="4,4,4,0" />
-                <Path Classes="heart mark" IsVisible="{Binding Favourite}" IsHitTestVisible="False" Margin="8,0,0,2"
-                      HorizontalAlignment="Left" VerticalAlignment="Bottom" />
-                <Panel Grid.Row="1" Classes="namebox"><TextBlock Classes="cardname" Text="{Binding Id, Converter={x:Static v:MachineNameText.Instance}}" /></Panel>
-              </Grid>
-            </Button>
-          </DataTemplate>
-          <!-- a custom machine's tile: its still (its parts in their colours), the heart, its name under it -->
-          <DataTemplate x:DataType="vm:CustomCard">
-            <Button Classes="cell" Classes.on="{Binding Raced}"
-                    Command="{Binding #Root.((vm:GarageViewModel)DataContext).PreviewCustomCommand}" CommandParameter="{Binding}"
-                    AutomationProperties.Name="{Binding Name}">
-              <Grid RowDefinitions="*,Auto">
-                <c:MachineStill Custom="{Binding Build}" PartColours="{Binding Colours}" Margin="4,4,4,0" />
-                <Path Classes="heart mark" IsVisible="{Binding Favourite}" IsHitTestVisible="False" Margin="8,0,0,2"
-                      HorizontalAlignment="Left" VerticalAlignment="Bottom" />
-                <Panel Grid.Row="1" Classes="namebox"><TextBlock Classes="cardname" Text="{Binding Name}" /></Panel>
-              </Grid>
-            </Button>
-          </DataTemplate>
-          <!-- New machine, the Custom shelf's last tile: raised a tone, a + and its words; pressed, the builder on a
-               new machine -->
-          <DataTemplate x:DataType="vm:NewMachineTile">
-            <Button Name="NewMachineTile" Classes="cell raised"
-                    Command="{Binding #Root.((vm:GarageViewModel)DataContext).NewMachineCommand}" AutomationProperties.Name="New machine">
-              <Grid RowDefinitions="*,Auto">
-                <Path Data="M12 2V22M2 12H22" Stroke="{StaticResource TextBrush}" StrokeThickness="2" Width="24" Height="24"
-                      HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,4,0,0" />
-                <Panel Grid.Row="1" Classes="namebox"><TextBlock Classes="cardname" Text="New machine" /></Panel>
-              </Grid>
-            </Button>
-          </DataTemplate>
-        </ItemsControl.DataTemplates>
-      </ItemsControl>
+      <!-- the tiles, then the shelf's word under them: "No match" under the Custom shelf's New machine, never behind it -->
+      <StackPanel VerticalAlignment="Top">
+        <ItemsControl Name="Roster" ItemsSource="{Binding Roster}" HorizontalAlignment="Left" VerticalAlignment="Top">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <c:RosterTiles Columns="{Binding #Root.RosterColumns}" TileWidth="{Binding #Root.TileWidth}" TileHeight="{Binding #Root.TileHeight}" Gap="8" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.DataTemplates>
+            <!-- a stock machine's tile: its still in its look on the surface tone, the heart when it is a favourite, its
+                 name under it (so no tooltip); ringed in the accent when it is the one raced (Button.cell.on); pressed, its PREVIEW -->
+            <DataTemplate x:DataType="vm:GarageCard">
+              <Button Classes="cell" Classes.on="{Binding Selected}" IsEnabled="{Binding Offered}"
+                      Command="{Binding #Root.((vm:GarageViewModel)DataContext).PreviewMachineCommand}" CommandParameter="{Binding Id}"
+                      AutomationProperties.Name="{Binding Id, Converter={x:Static v:MachineNameText.Instance}}">
+                <Grid RowDefinitions="*,Auto">
+                  <c:MachineStill Machine="{Binding Id}" StockColor="{Binding StockColor}" PaintColor="{Binding PaintColor}" Margin="4,4,4,0" />
+                  <Path Classes="heart mark" IsVisible="{Binding Favourite}" IsHitTestVisible="False" Margin="8,0,0,2"
+                        HorizontalAlignment="Left" VerticalAlignment="Bottom" />
+                  <Panel Grid.Row="1" Classes="namebox"><TextBlock Classes="cardname" Text="{Binding Id, Converter={x:Static v:MachineNameText.Instance}}" /></Panel>
+                </Grid>
+              </Button>
+            </DataTemplate>
+            <!-- a custom machine's tile: its still (its parts in their colours), the heart, its name under it -->
+            <DataTemplate x:DataType="vm:CustomCard">
+              <Button Classes="cell" Classes.on="{Binding Raced}"
+                      Command="{Binding #Root.((vm:GarageViewModel)DataContext).PreviewCustomCommand}" CommandParameter="{Binding}"
+                      AutomationProperties.Name="{Binding Name}">
+                <Grid RowDefinitions="*,Auto">
+                  <c:MachineStill Custom="{Binding Build}" PartColours="{Binding Colours}" Margin="4,4,4,0" />
+                  <Path Classes="heart mark" IsVisible="{Binding Favourite}" IsHitTestVisible="False" Margin="8,0,0,2"
+                        HorizontalAlignment="Left" VerticalAlignment="Bottom" />
+                  <Panel Grid.Row="1" Classes="namebox"><TextBlock Classes="cardname" Text="{Binding Name}" /></Panel>
+                </Grid>
+              </Button>
+            </DataTemplate>
+            <!-- New machine, the Custom shelf's last tile: raised a tone, a + and its words; pressed, the builder on a
+                 new machine -->
+            <DataTemplate x:DataType="vm:NewMachineTile">
+              <Button Name="NewMachineTile" Classes="cell raised"
+                      Command="{Binding #Root.((vm:GarageViewModel)DataContext).NewMachineCommand}" AutomationProperties.Name="New machine">
+                <Grid RowDefinitions="*,Auto">
+                  <Path Data="M12 2V22M2 12H22" Stroke="{StaticResource TextBrush}" StrokeThickness="2" Width="24" Height="24"
+                        HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,4,0,0" />
+                  <Panel Grid.Row="1" Classes="namebox"><TextBlock Classes="cardname" Text="New machine" /></Panel>
+                </Grid>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.DataTemplates>
+        </ItemsControl>
+        <TextBlock Name="Empty" Classes="note" Text="{Binding EmptyText}" Margin="2,8" VerticalAlignment="Top"
+                   IsVisible="{Binding EmptyText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+      </StackPanel>
     </Panel>
 
     <!-- PREVIEW: the stage, the same on every shelf: plain black with a faint horizon, the machine in 3D on its

@@ -175,9 +175,18 @@ public sealed partial class ReplaysViewModel : ViewModelBase
     [RelayCommand]
     private static void ToggleStats(ReplayItem item) => item.ShowingStats = !item.ShowingStats;
 
-    /// <summary>"•••": the row offers its file's actions, or its usual ones again.</summary>
+    /// <summary>"•••": the row offers its file's actions, or its usual ones again; one row at a time, so a row
+    /// opened before goes back to its usual actions.</summary>
     [RelayCommand]
-    private static void ToggleMore(ReplayItem item) => item.Offer = item.Offer == "actions" ? "more" : "actions";
+    private void ToggleMore(ReplayItem item)
+    {
+        var opening = item.Offer == "actions";
+        foreach (var other in Items.Where(i => i != item && i.Offer != "actions"))
+        {
+            other.Offer = "actions";
+        }
+        item.Offer = opening ? "more" : "actions";
+    }
 
     [RelayCommand]
     private void Reveal(ReplayItem item)
@@ -197,8 +206,14 @@ public sealed partial class ReplaysViewModel : ViewModelBase
     {
         if (ReplayFile.Delete(item.Path))
         {
+            // the row goes; the others stay as they are (their results open, the page where it was)
             _all.Remove(item.Info);
-            Show();
+            Items.Remove(item);
+            foreach (var tab in Tabs)
+            {
+                tab.Count = tab.Kind.Count(_all);
+            }
+            Empty = Items.Count == 0;
         }
         else
         {

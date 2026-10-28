@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Avalonia.VisualTree;
 using Huskui.Avalonia.Controls;
 
 namespace Launcher.App.Views;
@@ -39,7 +40,47 @@ public sealed partial class MainWindow : AppWindow
         DataContextChanged += (_, _) => Hear();
         // the interface scale's keys, wherever the keyboard is in the window (a text box too)
         AddHandler(KeyDownEvent, OnScaleKey, RoutingStrategies.Tunnel);
+        AddHandler(KeyDownEvent, OnEscape, RoutingStrategies.Bubble);
+        // a press anywhere but the bell's list and the bell closes the list (the press still does its own work)
+        AddHandler(PointerPressedEvent, OnPressOutside, RoutingStrategies.Tunnel);
     }
+
+    /// <summary>Escape closes what is open over the page: the question before leaving a lobby (stay), else the
+    /// bell's list. A text box or a menu that takes Escape for itself keeps it.</summary>
+    private void OnEscape(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape || e.Handled || _heard is not { } main)
+        {
+            return;
+        }
+        if (main.Control.Asking)
+        {
+            main.Control.StayCommand.Execute(null);
+            e.Handled = true;
+        }
+        else if (main.Notices.ListOpen)
+        {
+            main.Notices.ListOpen = false;
+            e.Handled = true;
+        }
+    }
+
+    private void OnPressOutside(object? sender, PointerPressedEventArgs e)
+    {
+        if (_heard is not { Notices.ListOpen: true } main || e.Source is not Visual pressed)
+        {
+            return;
+        }
+        var list = this.FindControl<Control>("Notices");
+        var bell = this.FindControl<Control>("NoticeBell");
+        if (!Within(pressed, list) && !Within(pressed, bell))
+        {
+            main.Notices.ListOpen = false;
+        }
+    }
+
+    private static bool Within(Visual pressed, Control? control) =>
+        control is not null && (pressed == control || control.IsVisualAncestorOf(pressed));
 
     /// <summary>The window's least size at 100% (1280 x 720), and its
     /// title bar's height. Its size at the first start is the least (MainWindow.axaml): it fits a 1366 x 768 screen
