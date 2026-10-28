@@ -8,6 +8,10 @@ namespace Launcher.Core;
 /// whole folder at every update, so nothing the launcher writes is kept there: the data is the player's own folder
 /// under the local application data, as for a development copy. The game's files come only from that data folder
 /// (the prepared folder), as in a player copy (<see cref="PlayerCopy"/>).</para>
+/// <para>A **portable launcher** is Velopack's portable zip of the same package: the installed folder as Setup lays
+/// it out (Velopack's <c>Update.exe</c> and the package's files in <c>current</c>), unzipped anywhere, with Velopack's
+/// <see cref="VelopackPortableName"/> beside <c>current</c>. It updates itself as an installed launcher does, and
+/// keeps its data in itself: <see cref="DataName"/> beside <c>current</c>, which an update replaces whole.</para>
 /// <para>A **player copy** is a folder a player unzips anywhere, which keeps everything it writes inside itself
 /// (<c>port/build/package.py</c> makes one). It has one program at its top, started with a double-click and no
 /// command line, and everything that program is made of in the folder <see cref="ProgramFolder"/> beside it. So
@@ -35,6 +39,10 @@ public sealed record Install(string Folder, string? DataFolder, bool Installed =
     /// libraries, in place of <see cref="MarkerName"/>). As with that one, only whether it is there counts.</summary>
     public const string InstalledMarkerName = "installed-copy.txt";
 
+    /// <summary>The file Velopack's portable zip has at its top, beside <c>current</c> (the folder of the
+    /// libraries): a portable launcher's.</summary>
+    public const string VelopackPortableName = ".portable";
+
     /// <summary>The folder of a player copy that holds the launcher's libraries, and the marker.</summary>
     public const string ProgramFolder = "app";
 
@@ -45,7 +53,8 @@ public sealed record Install(string Folder, string? DataFolder, bool Installed =
     /// prepared folder's and no other (<see cref="RecompLaunch.Resolve(RecompSettings?, string, string, DiscPins?, bool)"/>).</summary>
     public bool PlayerCopy => DataFolder is not null || Installed;
 
-    /// <summary>A player copy that keeps its data in itself (a portable one, as every copy was before 0.5.0).</summary>
+    /// <summary>A launcher that keeps its data in itself: a player copy (as every copy was before 0.5.0), or Velopack's
+    /// portable zip.</summary>
     public bool Portable => DataFolder is not null;
 
     /// <summary>What a player is told once when an older copy's files stand in this copy.</summary>
@@ -77,7 +86,10 @@ public sealed record Install(string Folder, string? DataFolder, bool Installed =
         var here = Path.TrimEndingDirectorySeparator(Path.GetFullPath(libraries));
         if (File.Exists(Path.Combine(here, InstalledMarkerName)))
         {
-            return new Install(here, null, Installed: true);
+            // Velopack's portable zip: the package's files are the installed launcher's, its data beside them
+            return Path.GetDirectoryName(here) is { Length: > 0 } top && File.Exists(Path.Combine(top, VelopackPortableName))
+                ? new Install(here, Path.Combine(top, DataName))
+                : new Install(here, null, Installed: true);
         }
         return File.Exists(Path.Combine(here, MarkerName)) && Path.GetDirectoryName(here) is { Length: > 0 } copy
             ? new Install(copy, Path.Combine(copy, DataName))
