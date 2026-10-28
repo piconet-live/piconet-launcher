@@ -194,6 +194,10 @@
     <Style Selector="Border.standing.out TextBlock.detail, TextBlock.ko">
       <Setter Property="Foreground" Value="{StaticResource OfflineBrush}" />
     </Style>
+    <!-- "Game open": the lobby waits for this player's game to close -->
+    <Style Selector="Border.standing TextBlock.open">
+      <Setter Property="Foreground" Value="{StaticResource NoticeBrush}" />
+    </Style>
   </UserControl.Styles>
 
   <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto">
@@ -478,8 +482,14 @@
                             Background="{Binding ColorHex, Converter={x:Static v:HexToBrush.Instance}}" />
                     <TextBlock Grid.Column="2" Text="{Binding Name}" Classes.strong="{Binding You}" VerticalAlignment="Center"
                                TextTrimming="CharacterEllipsis" />
-                    <TextBlock Grid.Column="3" Classes="figure detail" FontSize="{StaticResource Size14}" Text="{Binding Detail}"
-                               Margin="8,0,0,0" VerticalAlignment="Center" />
+                    <!-- a player whose race is run: their game still open, or back in the lobby -->
+                    <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="8" Margin="8,0,0,0">
+                      <TextBlock Name="Phase" Classes="dim" Classes.open="{Binding GameOpen}"
+                                 FontSize="{StaticResource Size12}" Text="{Binding Phase}" VerticalAlignment="Center"
+                                 IsVisible="{Binding Phase, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                      <TextBlock Classes="figure detail" FontSize="{StaticResource Size14}" Text="{Binding Detail}"
+                                 VerticalAlignment="Center" />
+                    </StackPanel>
                   </Grid>
                 </Border>
               </DataTemplate>
