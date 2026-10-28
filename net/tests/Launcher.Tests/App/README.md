@@ -30,7 +30,8 @@ The few tests of what only `Launcher.App`'s own code does, run without a window 
   ranges; a course picker as a pool (None, a cup, cards in and out, All).
 - `ReplayTabsTests.cs`: the Replays page's tabs All, Races, Practice with their counts, pressed; a practice run's row
   ("Practice", the time, no Results); the header's word that makes a replay a practice run; "•••" open on one row
-  at a time, and a row deleted leaving the others as they were.
+  at a time, and a row deleted leaving the others as they were; the rows under their date headings (Today, then
+  each month), in the tab shown.
 - `Headless.cs`: what the newer tests share: a press with the headless window's mouse, a key, waiting for the page, a
   window with the toolkit's layer for menus.
 - `CustomLobbiesTests.cs`: custom lobbies pressed in the launcher's window: on the stand-in the browser, a locked

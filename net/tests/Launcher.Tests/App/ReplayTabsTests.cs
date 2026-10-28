@@ -77,6 +77,19 @@ public sealed class ReplayTabsTests : IDisposable
         return AppState.Load(data);
     }
 
+    /// <summary>The page's read of the folder done (it reads off the window's thread) and shown.</summary>
+    private static void Loaded(ReplaysViewModel page)
+    {
+        var until = DateTime.UtcNow.AddSeconds(10);
+        while (page.Loading && DateTime.UtcNow < until)
+        {
+            Dispatcher.UIThread.RunJobs();
+            Thread.Sleep(5);
+        }
+        Assert.False(page.Loading, "the replays were not read in 10 s");
+        Dispatcher.UIThread.RunJobs();
+    }
+
     [Fact]
     public void APracticeRunIsTheHeadersWord()
     {
@@ -87,6 +100,53 @@ public sealed class ReplayTabsTests : IDisposable
         var all = ReplayFile.List(Replays).ToList();
         Assert.Equal([true, false, false, false], all.Select(r => r.Practice));
         Assert.Equal((4, 3, 1), (ReplayKind.All.Count(all), ReplayKind.Races.Count(all), ReplayKind.Practice.Count(all)));
+    }
+
+    [Fact]
+    public async Task ReplaysAreListedUnderTheirDaysAndMonths()
+    {
+        var now = DateTimeOffset.Now;
+        Write("a.fzrp", now.AddSeconds(-2).ToString("o"), null);
+        Write("b.fzrp", now.AddSeconds(-3).ToString("o"), "true");
+        Write("c.fzrp", "2020-01-15T12:00:00+00:00", null);
+        var state = State();
+        var ui = HeadlessUnitTestSession.StartNew(typeof(GameSkinTests));
+        try
+        {
+            await ui.Dispatch(() =>
+            {
+                GameSkin.Load(null);
+                var page = new ReplaysViewModel(state, () => now);
+                var window = new Window { Content = new ReplaysView { DataContext = page }, Width = 1100, Height = 700 };
+                window.Show();
+                Loaded(page);
+                try
+                {
+                    Assert.Equal(["Today 2", "a.fzrp", "b.fzrp", "January 2020 1", "c.fzrp"],
+                        page.Rows.Select(r => r switch
+                        {
+                            ReplayGroup g => $"{g.Title} {g.Count}",
+                            ReplayItem i => i.FileName,
+                            _ => "?",
+                        }));
+                    var texts = window.GetVisualDescendants().OfType<TextBlock>().Where(t => t.IsEffectivelyVisible).Select(t => t.Text).ToList();
+                    Assert.Contains(texts, t => string.Equals(t, "Today", StringComparison.OrdinalIgnoreCase));   // the heading drawn
+
+                    Click(window, window.GetVisualDescendants().OfType<Button>()
+                        .Single(b => AutomationProperties.GetName(b) == "Races" && b.Classes.Contains("section")));
+                    Assert.Equal(["Today 1", "January 2020 1"], page.Rows.OfType<ReplayGroup>().Select(g => $"{g.Title} {g.Count}"));
+                }
+                finally
+                {
+                    window.Close();
+                }
+            }, TestContext.Current.CancellationToken);
+        }
+        finally
+        {
+            await ui.DisposeAsync();
+            state.Shutdown();
+        }
     }
 
     [Fact]
@@ -105,7 +165,7 @@ public sealed class ReplayTabsTests : IDisposable
                 var page = new ReplaysViewModel(state);
                 var window = new Window { Content = new ReplaysView { DataContext = page }, Width = 1100, Height = 700 };
                 window.Show();
-                Dispatcher.UIThread.RunJobs();
+                Loaded(page);
                 try
                 {
                     Button Tab(string label) => window.GetVisualDescendants().OfType<Button>()
@@ -137,7 +197,7 @@ public sealed class ReplayTabsTests : IDisposable
                     // a row deleted: the counts follow, the tab stays
                     File.Delete(Path.Combine(Replays, "b.fzrp"));
                     page.Refresh();
-                    Dispatcher.UIThread.RunJobs();
+                    Loaded(page);
                     Assert.Equal(("2", "1", "1"), (Count("All"), Count("Races"), Count("Practice")));
                     Assert.Single(page.Items);
                 }
@@ -168,6 +228,7 @@ public sealed class ReplayTabsTests : IDisposable
             {
                 GameSkin.Load(null);
                 var page = new ReplaysViewModel(state);
+                Loaded(page);
                 var (a, b, c) = (page.Items[0], page.Items[1], page.Items[2]);
 
                 page.ToggleMoreCommand.Execute(a);

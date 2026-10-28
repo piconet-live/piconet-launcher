@@ -6,62 +6,83 @@ using Launcher.Core;
 namespace Launcher.App.ViewModels;
 
 /// <summary>One replay as listed (like Slippi's rows): the racer it is seen from, the course, the result, when, and
-/// the race's results when the file has them. The words are <see cref="ReplayWords"/>'s: whatever the file says,
-/// a row can show it.</summary>
-public sealed partial class ReplayItem(ReplayInfo info) : ObservableObject
+/// the race's results when the file has them. From the replay index's listing (<see cref="ReplayListing"/>): the file
+/// is read only when the row's results open. The words are <see cref="ReplayWords"/>'s: whatever the file says, a
+/// row can show it.</summary>
+public sealed partial class ReplayItem : ObservableObject
 {
     private const int StatsColumn = 15;
 
-    public ReplayInfo Info { get; } = info;
+    private ReplayInfo? _info;
 
-    public string Path => Info.Path;
+    public ReplayItem(ReplayListing listing, DateTimeOffset? now = null)
+    {
+        ArgumentNullException.ThrowIfNull(listing);
+        Listing = listing;
+        var (venue, track) = ReplayWords.Course(listing.CourseName);
+        (Venue, Track) = (venue, track);
+        Under = string.Join(" · ", new[] { venue, ReplayWords.Laps(listing.Laps), listing.StatPackLabel }.Where(word => word.Length > 0));
+        RacerMachine = listing.Raced is { } raced ? Theme.GameSkin.NameOf(raced) : "";
+        When = ReplayDates.When(listing.Recorded, now ?? DateTimeOffset.Now);
+    }
 
-    public string FileName => Info.FileName;
+    /// <summary>A replay already read whole (a file opened from elsewhere, a test).</summary>
+    public ReplayItem(ReplayInfo info) : this(ReplayListing.From(info)) => _info = info;
+
+    public ReplayListing Listing { get; }
+
+    public string Path => Listing.Path;
+
+    public string FileName => Listing.FileName;
 
     /// <summary>The course's number, for its picture from the disc.</summary>
-    public int Course => Info.Course;
+    public int Course => Listing.Course;
 
-    public string Venue { get; } = ReplayWords.Course(info.CourseName).Venue;
+    public string Venue { get; }
 
-    public string Track { get; } = ReplayWords.Course(info.CourseName).Track;
+    public string Track { get; }
 
     /// <summary>Under the track: the venue, the laps, and the race's stat pack when it had one.</summary>
-    public string Under { get; } = string.Join(" · ", new[]
-    {
-        ReplayWords.Course(info.CourseName).Venue, ReplayWords.Laps(info.Laps), info.StatPackLabel,
-    }.Where(word => word.Length > 0));
+    public string Under { get; }
 
-    public string RacerName { get; } = ReplayWords.Racer(info);
+    public string RacerName => Listing.Racer;
 
-    public string RacerMachine { get; } = info.Recorder is { } recorder ? Theme.GameSkin.NameOf(recorder.Raced) : "";
+    public string RacerMachine { get; }
 
-    public string RacerColorHex { get; } = ReplayWords.Hex(info.Recorder?.Color);
+    public string RacerColorHex => ReplayWords.Hex(Listing.Color);
 
-    public string Place { get; } = ReplayWords.Place(info);
+    public string Place => Listing.Place;
 
     /// <summary>The racer was knocked out: the place, "KO", in red.</summary>
-    public bool PlaceOut => Place == ReplayWords.Out;
+    public bool PlaceOut => Listing.Out;
 
-    public string Of { get; } = ReplayWords.Of(info);
+    public string Of => Listing.Of;
 
-    public string Time { get; } = ReplayWords.Time(info);
+    public string Time => Listing.Time;
 
-    public string When { get; } = HomeViewModel.When(info.Recorded.ToLocalTime(), DateTimeOffset.Now);
+    public string When { get; }
 
     /// <summary>A practice run: its Result says "Practice" with the time, and it has no results to open.</summary>
-    public bool IsPractice => Info.Practice;
+    public bool IsPractice => Listing.Practice;
 
-    public bool IsRace => !Info.Practice;
+    public bool IsRace => !Listing.Practice;
 
-    public bool HasStats => !Info.Practice && Info.Results is { Count: > 0 };
+    public bool HasStats => Listing.HasResults;
 
-    /// <summary>The results in two columns, the first 15 places and the rest.</summary>
-    public IReadOnlyList<ReplayResultLine> StatsLeft => [.. ReplayWords.Results(Info).Take(StatsColumn)];
+    /// <summary>The results in two columns, the first 15 places and the rest (the file read the first time).</summary>
+    public IReadOnlyList<ReplayResultLine> StatsLeft => [.. Results().Take(StatsColumn)];
 
-    public IReadOnlyList<ReplayResultLine> StatsRight => [.. ReplayWords.Results(Info).Skip(StatsColumn)];
+    public IReadOnlyList<ReplayResultLine> StatsRight => [.. Results().Skip(StatsColumn)];
+
+    private IReadOnlyList<ReplayResultLine> Results()
+    {
+        _info ??= ReplayFile.Read(Path);
+        return _info is null ? [] : ReplayWords.Results(_info);
+    }
 
     /// <summary>The row's results are open under it.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StatsLeft), nameof(StatsRight))]
     public partial bool ShowingStats { get; set; }
 
     /// <summary>What the row's right end offers: "actions" (stats, more, play), "more" (show the file, delete) or
@@ -75,6 +96,18 @@ public sealed partial class ReplayItem(ReplayInfo info) : ObservableObject
     public bool More => Offer == "more";
 
     public bool ConfirmingDelete => Offer == "delete";
+}
+
+/// <summary>A group's heading in the Replays page's list: "Today", "Last week", "September", with how many replays it
+/// holds.</summary>
+public sealed partial class ReplayGroup(string title, long order) : ObservableObject
+{
+    public string Title { get; } = title;
+
+    public long Order { get; } = order;
+
+    [ObservableProperty]
+    public partial int Count { get; set; }
 }
 
 /// <summary>One of the Replays page's tabs over the table: All, Races, Practice, each with its count.</summary>
@@ -91,20 +124,31 @@ public sealed partial class ReplayTab(ReplayKind kind, string label) : Observabl
     public partial bool On { get; set; }
 }
 
-/// <summary>Replays: the player's recorded races, newest first, Slippi-style; play one (as the race), see its
-/// results, show it in the folder or delete it; open a shared file. The list is read again whenever the page
-/// shows.</summary>
+/// <summary>Replays: the player's recorded races, newest first in groups by date (Today, Yesterday, ... a month),
+/// Slippi-style; play one (as the race), see its results, show it in the folder or delete it; open a shared file.
+/// The list comes from the replay index (<see cref="ReplayIndex.Listings"/>), read off the window's thread whenever
+/// the page shows: only replays that are new or changed are opened, so thousands list as fast as a few. The view
+/// draws only the rows on the screen.</summary>
 public sealed partial class ReplaysViewModel : ViewModelBase
 {
     private readonly AppState _state;
+    private readonly Func<DateTimeOffset> _now;
+    private List<ReplayListing> _all = [];
+    private int _reads;   // the newest read asked for: an older read's answer is not shown over a newer one's
 
-    public ReplaysViewModel(AppState state)
+    public ReplaysViewModel(AppState state, Func<DateTimeOffset>? now = null)
     {
         _state = state;
+        _now = now ?? (() => DateTimeOffset.Now);
         Refresh();
     }
 
-    public ObservableCollection<ReplayItem> Items { get; } = [];
+    /// <summary>The list as the page draws it: each group's heading (<see cref="ReplayGroup"/>), then its replays
+    /// (<see cref="ReplayItem"/>).</summary>
+    public ObservableCollection<object> Rows { get; } = [];
+
+    /// <summary>The replays of the tab showing, in the list's order.</summary>
+    public IReadOnlyList<ReplayItem> Items => [.. Rows.OfType<ReplayItem>()];
 
     /// <summary>The tabs: every replay, the races, the practice runs.</summary>
     public IReadOnlyList<ReplayTab> Tabs { get; } =
@@ -113,8 +157,6 @@ public sealed partial class ReplaysViewModel : ViewModelBase
     /// <summary>The tab showing.</summary>
     [ObservableProperty]
     public partial ReplayKind Kind { get; set; } = ReplayKind.All;
-
-    private List<ReplayInfo> _all = [];
 
     partial void OnKindChanged(ReplayKind value)
     {
@@ -131,30 +173,82 @@ public sealed partial class ReplaysViewModel : ViewModelBase
     [ObservableProperty]
     public partial bool Empty { get; set; }
 
+    /// <summary>The folder is being read (the first time: the list says so in its place).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(FirstLoad))]
+    public partial bool Loading { get; set; }
+
+    /// <summary>The first read, with nothing listed yet.</summary>
+    public bool FirstLoad => Loading && _all.Count == 0;
+
     [ObservableProperty]
     public partial string Notice { get; set; } = "";
 
+    /// <summary>The folder read again, off the window's thread; the list follows when the read is done
+    /// (<see cref="Loading"/> until then). The rows shown stay as they are meanwhile.</summary>
     [RelayCommand]
     public void Refresh()
     {
-        _all = [.. ReplayFile.List(_state.Settings.ReplayFolder)];
-        Show();
+        var read = ++_reads;
+        Loading = true;
         Notice = "";
+        var (folder, index) = (_state.Settings.ReplayFolder, ReplayIndex.FileIn(_state.DataFolder));
+        _ = Task.Run(() => ReplayIndex.Listings(folder, index)).ContinueWith(done =>
+        {
+            var listings = done.IsCompletedSuccessfully ? done.Result : [];
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                if (read != _reads)
+                {
+                    return;   // a newer read is on its way
+                }
+                Take(listings);
+            });
+        }, TaskScheduler.Default);
     }
 
-    /// <summary>The rows of the tab showing, and every tab's count.</summary>
+    /// <summary>The listings of a read: rows already shown keep their state (results open, the file's actions), so a
+    /// read after a race only adds the new replay.</summary>
+    private void Take(IReadOnlyList<ReplayListing> listings)
+    {
+        _all = [.. listings];
+        Show();
+        Loading = false;
+    }
+
+    /// <summary>The rows of the tab showing in their groups, and every tab's count. A row already shown for the same
+    /// file is kept as it is.</summary>
     private void Show()
     {
-        Items.Clear();
+        var kept = Rows.OfType<ReplayItem>().ToDictionary(i => i.Path, StringComparer.Ordinal);
+        var now = _now();
+        var rows = new List<object>();
+        ReplayGroup? group = null;
         foreach (var r in _all.Where(r => Kind.Shows(r)))
         {
-            Items.Add(new ReplayItem(r));
+            var (order, title) = ReplayDates.Group(r.Recorded, now);
+            if (group is null || group.Order != order)
+            {
+                group = new ReplayGroup(title, order);
+                rows.Add(group);
+            }
+            group.Count++;
+            rows.Add(kept.TryGetValue(r.Path, out var item) && item.Listing == r ? item : new ReplayItem(r, now));
+        }
+        if (!rows.SequenceEqual(Rows))
+        {
+            Rows.Clear();
+            foreach (var row in rows)
+            {
+                Rows.Add(row);
+            }
         }
         foreach (var tab in Tabs)
         {
             tab.Count = tab.Kind.Count(_all);
         }
-        Empty = Items.Count == 0;
+        Empty = !Rows.OfType<ReplayItem>().Any();
+        OnPropertyChanged(nameof(Items));
     }
 
     [RelayCommand]
@@ -206,14 +300,21 @@ public sealed partial class ReplaysViewModel : ViewModelBase
     {
         if (ReplayFile.Delete(item.Path))
         {
-            // the row goes; the others stay as they are (their results open, the page where it was)
-            _all.Remove(item.Info);
-            Items.Remove(item);
+            // the row goes, and its group's heading with its last row; the others stay as they are (their results
+            // open, the page where it was)
+            _all.Remove(item.Listing);
+            var at = Rows.IndexOf(item);
+            Rows.Remove(item);
+            if (at > 0 && Rows[at - 1] is ReplayGroup group && --group.Count == 0)
+            {
+                Rows.RemoveAt(at - 1);
+            }
             foreach (var tab in Tabs)
             {
                 tab.Count = tab.Kind.Count(_all);
             }
-            Empty = Items.Count == 0;
+            Empty = !Rows.OfType<ReplayItem>().Any();
+            OnPropertyChanged(nameof(Items));
         }
         else
         {
