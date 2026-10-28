@@ -122,7 +122,7 @@ public sealed class SettingsTabsTests : IDisposable
         Click(window, Heading(window, "Launcher"));
         Assert.Same(main.Settings, main.Current);
         // (Updates shown since 0.5.0: NotYet; Older copy as this launcher is no portable copy: DataMoveViewModel.Offered)
-        Assert.Equal(["Disc image", "Sounds", "Interface scale", "Updates", "Recording", "Folder", "Older copy"], Rows(window));
+        Assert.Equal(["Disc image", "Sounds", "Menus", "Interface scale", "Updates", "Recording", "Folder", "Older copy"], Rows(window));
         Assert.Equal(["Launcher"], Headings(window).Where(b => b.Classes.Contains("on")).Select(b => ((SectionLink)b.DataContext!).Label));
 
         Click(window, Heading(window, "Game"));

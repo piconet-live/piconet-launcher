@@ -194,7 +194,7 @@ public sealed partial class LobbyViewModel
         }
         var offer = session.Choice?.Choose.Machines ?? session.Rules?.AllowedMachines;
         // (the stats shown are the lobby's: its stat pack's over the disc's, while its state names a pack)
-        Garage.InLobby(offer, session.Rules?.MachineSetting, session.LobbyStatPack, LobbyScreens.PackLabel(session.Lobby?.StatPack));
+        Garage.InLobby(offer, session.MachineSetting, session.LobbyStatPack, LobbyScreens.PackLabel(session.Lobby?.StatPack));
         if (_garageFor != session)
         {
             _garageFor = session;

@@ -115,10 +115,10 @@
     <Border Classes="rowhead">
       <Grid Classes="cells" ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" Margin="-12,0,0,0">
         <Panel Classes="extra"><Border Width="64" IsVisible="{DynamicResource HasDiscArt}" /></Panel>
-        <TextBlock Grid.Column="1" Classes="colhead" Text="Course" />
-        <TextBlock Grid.Column="2" Classes="colhead" Text="Racer" Width="140" />
-        <TextBlock Grid.Column="3" Classes="colhead" Text="Result" Width="88" />
-        <TextBlock Grid.Column="4" Classes="colhead" Text="When" Width="112" />
+        <TextBlock Grid.Column="1" Classes="colhead" Text="COURSE" LetterSpacing="1" />
+        <TextBlock Grid.Column="2" Classes="colhead" Text="RACER" LetterSpacing="1" Width="140" />
+        <TextBlock Grid.Column="3" Classes="colhead" Text="RESULT" LetterSpacing="1" Width="88" />
+        <TextBlock Grid.Column="4" Classes="colhead" Text="WHEN" LetterSpacing="1" Width="112" />
         <Border Grid.Column="5" Width="150" />
       </Grid>
     </Border>

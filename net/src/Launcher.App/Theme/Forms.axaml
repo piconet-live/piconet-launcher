@@ -215,6 +215,7 @@
     <Setter Property="Height" Value="32" />
     <Setter Property="MinHeight" Value="32" />
     <Setter Property="Padding" Value="8,0" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
     <Setter Property="CornerRadius" Value="{DynamicResource StaticMediumCornerRadius}" />
     <Setter Property="Background" Value="{StaticResource WellBrush}" />
     <Setter Property="BorderBrush" Value="{StaticResource OutlineBrush}" />
@@ -439,6 +440,16 @@
   </Style>
   <Style Selector="Grid.form > :is(Control)">
     <Setter Property="Margin" Value="0,2" />
+  </Style>
+  <!-- A label beside a control taller than a line (a button or a check box with a note under it): on the
+       control's first line, whatever the form's row spacing; the padding puts it level with a 32 px button's words,
+       .check with a check box's. -->
+  <Style Selector="Grid.form > TextBlock.label.top">
+    <Setter Property="VerticalAlignment" Value="Top" />
+    <Setter Property="Padding" Value="0,4,0,0" />
+  </Style>
+  <Style Selector="Grid.form > TextBlock.label.top.check">
+    <Setter Property="Padding" Value="0,3,0,0" />
   </Style>
   <Style Selector="Grid.form > TextBlock.group">
     <Setter Property="FontWeight" Value="SemiBold" />

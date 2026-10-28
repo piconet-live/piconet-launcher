@@ -29,14 +29,16 @@ The few tests of what only `Launcher.App`'s own code does, run without a window 
   START PRACTICE off, the Garage button and back; a rules panel with every kind of row, each pressed; the rows'
   ranges; a course picker as a pool (None, a cup, cards in and out, All).
 - `ReplayTabsTests.cs`: the Replays page's tabs All, Races, Practice with their counts, pressed; a practice run's row
-  ("Practice", the time, no Results); the header's word that makes a replay a practice run.
+  ("Practice", the time, no Results); the header's word that makes a replay a practice run; "•••" open on one row
+  at a time, and a row deleted leaving the others as they were.
 - `Headless.cs`: what the newer tests share: a press with the headless window's mouse, a key, waiting for the page, a
   window with the toolkit's layer for menus.
 - `CustomLobbiesTests.cs`: custom lobbies pressed in the launcher's window: on the stand-in the browser, a locked
   row's password (wrong, then right), the lobby as a joiner (the host's mark, the rules that differ, All rules), back
   to the browser, Create with Edit rules, the lobby as host (Edit rules, START RACE, Kick); on a led server the racer
   sent with the join, no queue, the host's controls the host's only, a new host shown, a kick back to the browser
-  with why. With `LOBBY_SHOTS` set to a folder, the pages are kept there as PNGs.
+  with why; a custom lobby's own machine setting (0 fixed, each player's own) in the Garage and the choice, and its
+  All rules closed on another page. With `LOBBY_SHOTS` set to a folder, the pages are kept there as PNGs.
 - `LobbyPackLineTests.cs`: the lobby's line and notice with a stat pack, on a led server: a label of a forty-character
   name and author cut to the room that is left, and a refused pack's sentence whole in the notice until its cause is gone
 - `LedServer.cs`, `LobbyStageRulesTests.cs`: a server the test leads message by message and that keeps what the
@@ -78,13 +80,15 @@ The few tests of what only `Launcher.App`'s own code does, run without a window 
   the server's ping answered at once, also while a silent relay is measured; a list of pings checked as any message.
 - `NoticeTierTests.cs`: a server notice in the window by tier: info in the list with the bell's dot; notice's
   banner gone after 10 s (the test's clock); warning's kept until × is pressed, and the flash; urgent's tone at the
-  launcher's volume and none when muted; the last hour's sent again neither flash nor sound; the bell's list.
+  launcher's volume and none when muted; the last hour's sent again neither flash nor sound; the bell's list, closed by a press outside it, Escape or
+  another page.
 
 The pages against a real server (`DebugRefusalTests`, `LobbyChoiceOrderTests`, `LobbyVoteTests`, `LobbyChatTests`,
 `LeaveLobbyTests`) are in the service's `Integration.Tests` (in the monorepo `../../Integration.Tests`).
 - `PadNavigationTests.cs`: the pad working the launcher's window, its intents given to the window's navigator: the
   first press only shows where the pad is; the D-pad by position; L, R, Z and B through the tabs and pages; A on a
   row of choices; a slider stepped and held at its end; Start on RACE; the question over the page keeps the pad;
-  no text box, no name, no window button is ever stopped on; the mouse hides the mark.
+  no text box, no name, no window button is ever stopped on; the mouse hides the mark; the pad's readings work the
+  pages only with Settings' "Controller navigation" on (off by default).
 - `UpdateTimesTests.cs`: when the open launcher looks for an update again: two hours and up to five minutes after
   the last look, and at a game's end or leaving Quick Play only when the last look is over half an hour old.

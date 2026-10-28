@@ -45,6 +45,6 @@ public sealed record LobbyRow(string Name, string Racers, string Rules, string N
     public const string YourLobby = "your lobby";
 }
 
-/// <summary>One of the player's last races, from its replay.</summary>
+/// <summary>One of the player's last races, from its replay; a practice run's place reads "Practice".</summary>
 public sealed record RecentRace(string Course, string Place, string Of, string Time, string Best, string Machine, string When,
-    string Path);
+    string Path, bool Practice = false);

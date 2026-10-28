@@ -258,7 +258,7 @@
               <Grid Classes="cells" ColumnDefinitions="*,Auto,Auto,Auto,Auto,Auto,Auto" Margin="-12,0,0,0">
                 <TextBlock Classes="strong" Text="{Binding Course}" TextTrimming="CharacterEllipsis" />
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="5" Width="84">
-                  <TextBlock Classes="figure" Text="{Binding Place}" />
+                  <TextBlock Classes="figure" Classes.mine="{Binding Practice}" Text="{Binding Place}" />
                   <TextBlock Classes="note" Text="{Binding Of}" VerticalAlignment="Center" />
                 </StackPanel>
                 <TextBlock Grid.Column="2" Classes="figure" Text="{Binding Time}" Width="76" TextAlignment="Right" />

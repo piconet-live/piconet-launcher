@@ -266,6 +266,10 @@ public sealed record LauncherSettings
     /// minimal sounds). Muted and at the volume as the launcher's other sounds.</summary>
     public bool NavigationSounds { get; init; }
 
+    /// <summary>The pad works the launcher's pages (the Settings page's "Controller navigation", Launcher; off by default: a
+    /// controller left in the window does nothing to it). Setting a control on the Controller page reads the pad either way.</summary>
+    public bool PadNavigation { get; init; }
+
     /// <summary>The server's notices come without their tone and the taskbar's flash (the Settings page's "Notices":
     /// Silent: players can mute notifications). They still show in the chat, the banner and
     /// the bell's list.</summary>

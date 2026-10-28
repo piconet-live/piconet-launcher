@@ -146,9 +146,13 @@
       <CheckBox Grid.Row="3" Grid.Column="1" Name="NavigationSounds" Classes="box" Content="Navigation sounds"
                 IsChecked="{Binding NavigationSounds}" IsEnabled="{Binding !SoundMuted}"
                 AutomationProperties.Name="Navigation sounds" />
+      <!-- the pad works the launcher's pages (D-pad, A, B, L and R); off by default: the controller is the game's -->
+      <TextBlock Grid.Row="4" Classes="label" Text="Menus" />
+      <CheckBox Grid.Row="4" Grid.Column="1" Name="PadNavigation" Classes="box" Content="Controller navigation"
+                IsChecked="{Binding PadNavigation}" AutomationProperties.Name="Controller menu navigation" />
       <!-- the launcher's size on top of the system's scaling: set by Apply; Ctrl+0, Ctrl+plus, Ctrl+minus at once -->
-      <TextBlock Grid.Row="4" Classes="label" Text="Interface scale" />
-      <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Spacing="12">
+      <TextBlock Grid.Row="5" Classes="label" Text="Interface scale" />
+      <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal" Spacing="12">
         <Slider Name="InterfaceScale" Classes="bar" Width="220" Minimum="{x:Static vm:SettingsViewModel.LeastScale}"
                 Maximum="{x:Static vm:SettingsViewModel.MostScale}" Value="{Binding PendingScale}"
                 TickFrequency="{x:Static vm:SettingsViewModel.ScaleStep}" IsSnapToTickEnabled="True"
@@ -160,8 +164,8 @@
       </StackPanel>
       <!-- the launcher's own updates (UpdateViewModel): the setting, where the update stands, and the one action
            that fits; an older copy's data brought over (DataMoveViewModel) -->
-      <TextBlock Grid.Row="5" Classes="label" Text="Updates" IsVisible="{x:Static app:NotYet.Updates}" />
-      <StackPanel Grid.Row="5" Grid.Column="1" Spacing="6" IsVisible="{x:Static app:NotYet.Updates}">
+      <TextBlock Grid.Row="6" Classes="label top check" Text="Updates" IsVisible="{x:Static app:NotYet.Updates}" />
+      <StackPanel Grid.Row="6" Grid.Column="1" Spacing="6" IsVisible="{x:Static app:NotYet.Updates}">
         <CheckBox Name="AutoUpdate" Classes="box" Content="Update automatically" IsChecked="{Binding AutoUpdate}"
                   IsEnabled="{Binding Update.Installed, FallbackValue=False}" />
         <StackPanel Orientation="Horizontal" Spacing="10">
@@ -176,27 +180,27 @@
                    IsVisible="{Binding Update.Reason, Converter={x:Static StringConverters.IsNotNullOrEmpty}, FallbackValue=False}" />
       </StackPanel>
 
-      <Border Grid.Row="6" Grid.ColumnSpan="2" Classes="group">
+      <Border Grid.Row="7" Grid.ColumnSpan="2" Classes="group">
         <TextBlock Classes="section" FontSize="18" Text="Replays" />
       </Border>
-      <TextBlock Grid.Row="7" Classes="label" Text="Recording" />
-      <StackPanel Grid.Row="7" Grid.Column="1" Orientation="Horizontal" Spacing="24">
+      <TextBlock Grid.Row="8" Classes="label" Text="Recording" />
+      <StackPanel Grid.Row="8" Grid.Column="1" Orientation="Horizontal" Spacing="24">
         <CheckBox Classes="box" Content="Record my races" IsChecked="{Binding RecordReplays}" />
         <CheckBox Classes="box" Content="Record practice" IsChecked="{Binding RecordPractice}" />
       </StackPanel>
-      <TextBlock Grid.Row="8" Classes="label" Text="Folder" />
-      <Grid Grid.Row="8" Grid.Column="1" ColumnDefinitions="*,8,Auto">
+      <TextBlock Grid.Row="9" Classes="label" Text="Folder" />
+      <Grid Grid.Row="9" Grid.Column="1" ColumnDefinitions="*,8,Auto">
         <TextBox Classes="field" Text="{Binding ReplayFolder}" AutomationProperties.Name="Replay folder" />
         <Button Grid.Column="2" Classes="secondary" Content="Open" Command="{Binding OpenReplayFolderCommand}"
                 AutomationProperties.Name="Open the replay folder" />
       </Grid>
-      <Grid Grid.Row="9" Grid.Column="1" Classes="warnline" ColumnDefinitions="Auto,*"
+      <Grid Grid.Row="10" Grid.Column="1" Classes="warnline" ColumnDefinitions="Auto,*"
             IsVisible="{Binding FolderNotice, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
         <Path Classes="warnmark" />
         <TextBlock Grid.Column="1" Text="{Binding FolderNotice}" />
       </Grid>
-      <TextBlock Grid.Row="10" Classes="label" Text="Older copy" IsVisible="{Binding Move.Offered}" />
-      <StackPanel Grid.Row="10" Grid.Column="1" Spacing="6" IsVisible="{Binding Move.Offered}">
+      <TextBlock Grid.Row="11" Classes="label top" Text="Older copy" IsVisible="{Binding Move.Offered}" />
+      <StackPanel Grid.Row="11" Grid.Column="1" Spacing="6" IsVisible="{Binding Move.Offered}">
         <Button Name="BringOver" Classes="secondary" Content="Bring over an older copy…" Click="OnBringOver"
                 IsEnabled="{Binding Move.Idle}" HorizontalAlignment="Left" AutomationProperties.Name="Bring over an older copy" />
         <TextBlock Classes="faint" Text="Settings, replays and game files of a copy you unzipped before" TextWrapping="Wrap"

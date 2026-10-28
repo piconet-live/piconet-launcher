@@ -86,7 +86,7 @@
             <Border ClipToBounds="True" Background="{StaticResource WellBrush}" CornerRadius="{DynamicResource StaticLargeCornerRadius}"><Panel>
               <c:CourseStill Course="{Binding Course}" />
               <Border Background="{StaticResource PlateBrush}" VerticalAlignment="Bottom" Padding="8,2,8,3">
-                <TextBlock Text="{Binding Track}" FontSize="{StaticResource Size13}" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding Track}" FontSize="{StaticResource Size13}" FontWeight="Medium" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis" />
               </Border>
               <Border Classes="check" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="4" IsVisible="{Binding Checked}">
                 <Path Data="M1.5 5.2 L4 7.5 L8.5 2.5" Stroke="{StaticResource OnAccentBrush}" StrokeThickness="1.8"

@@ -84,6 +84,37 @@ public sealed class PadNavigationTests : IDisposable
 
     private static PadPressed Press(PadButton button) => new(button);
 
+    /// <summary>Settings' "Controller navigation" (Launcher; off by default): off, a press of the pad does nothing to the
+    /// window; on, it works the pages, and turning it off again stops it at once.</summary>
+    [Fact]
+    public Task ThePadWorksThePagesOnlyWithControllerNavigationOn() => OnAWindow((window, main, pad) =>
+    {
+        static HelperPad Reading(string[]? buttons = null) =>
+            new(0, 6, true, new HashSet<string>(buttons ?? []), 128, 128, 128, 128, 0, 0);
+        void Read(string button)
+        {
+            pad.Read(Reading([button]));
+            pad.Read(Reading());
+            Dispatcher.UIThread.RunJobs();
+        }
+
+        Assert.False(main.Settings.PadNavigation);
+        Read("Down");
+        Read("R");
+        Assert.False(pad.Showing);
+        Assert.Same(main.Home, main.Current);
+
+        main.Settings.PadNavigation = true;
+        Read("Down");
+        Assert.True(pad.Showing);
+        Read("R");
+        Assert.Same(main.Garage, main.Current);
+
+        main.Settings.PadNavigation = false;
+        Read("L");
+        Assert.Same(main.Garage, main.Current);
+    });
+
     [Fact]
     public Task TheFirstPressShowsThePadAndTheShouldersGoThroughTheTabs() => OnAWindow((window, main, pad) =>
     {

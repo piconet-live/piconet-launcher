@@ -131,7 +131,7 @@
       <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
         <c:Stepper Value="{Binding Low}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Typed="True"
                    AutomationProperties.Name="Lowest" />
-        <TextBlock Classes="dim" Text="–" VerticalAlignment="Center" />
+        <TextBlock Classes="dim" Text="to" VerticalAlignment="Center" Margin="2,0" />
         <c:Stepper Value="{Binding High}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Typed="True"
                    AutomationProperties.Name="Highest" />
       </StackPanel>

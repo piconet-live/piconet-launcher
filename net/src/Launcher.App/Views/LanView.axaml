@@ -60,7 +60,11 @@
     <TextBlock Classes="lanhead" Text="Join by address" Margin="0,24,0,6" />
     <Grid ColumnDefinitions="*,8,Auto">
       <TextBox Classes="field" Text="{Binding Address}" PlaceholderText="Address"
-               AutomationProperties.Name="Address" />
+               AutomationProperties.Name="Address">
+        <TextBox.KeyBindings>
+          <KeyBinding Gesture="Enter" Command="{Binding JoinAddressCommand}" />
+        </TextBox.KeyBindings>
+      </TextBox>
       <Button Grid.Column="2" Classes="secondary" Content="Join" Command="{Binding JoinAddressCommand}" />
     </Grid>
     <Grid Classes="warnline" ColumnDefinitions="Auto,*" Margin="0,12,0,0" Background="Transparent" ToolTip.Tip="{Binding NoticeWhole}"
