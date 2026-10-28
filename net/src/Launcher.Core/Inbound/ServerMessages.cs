@@ -230,7 +230,8 @@ public static class ServerMessages
         Race = l.Race is { MatchId: not null, Seats: not null } race ? race with { Seats = Seats(race.Seats) } : null,
         // the counts are added up for the lobby's notice: one no service has (none, less than none, more than
         // MaxPlayers) is left out
-        OtherBuilds = l.OtherBuilds is null ? null : [.. l.OtherBuilds.Where(o => o is { Players: >= 1 and <= MaxPlayers }).Take(MaxSeats)],
+        OtherBuilds = l.OtherBuilds is null ? null : [.. l.OtherBuilds.Where(o => o is { Players: >= 1 and <= MaxPlayers }).Take(MaxSeats)
+            .Select(o => VersionLine.IsLine(o.Line) ? o : o with { Line = null })],   // (a line is shown: only one that is a line)
         // a label shows the name: only one a pack can have, with a fingerprint that is one; and the author only
         // when it is a text a pack's author can be
         StatPack = l.StatPack is { } pack && Online.Protocol.StatPack.IsName(pack.Name)
