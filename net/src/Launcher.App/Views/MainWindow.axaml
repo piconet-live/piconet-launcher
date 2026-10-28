@@ -205,7 +205,7 @@
 
         <!-- The bell's list, over the page under the bell. -->
         <Panel Grid.Row="1" IsVisible="{Binding Notices.ListOpen}" HorizontalAlignment="Right" c:PadNav.Scope="True"
-               VerticalAlignment="Top" Width="380" MaxHeight="440" Margin="0,4,12,0">
+               VerticalAlignment="Top" Width="380" MaxHeight="440" Margin="0,4,16,0">
           <v:NoticesList Name="Notices" DataContext="{Binding Notices}" />
         </Panel>
       </Grid>

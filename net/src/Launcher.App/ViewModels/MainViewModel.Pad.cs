@@ -7,6 +7,9 @@ public sealed partial class MainViewModel
     /// <summary>The pad that works the window (read while the window is in front and no game runs).</summary>
     public Launcher.Core.Pads.PadReader PadReader => _state.Pads;
 
+    /// <summary>The pad works the pages (Settings, Launcher: "Controller navigation"; off by default).</summary>
+    public bool PadNavigation => _state.Settings.PadNavigation;
+
     /// <summary>The window came to the front (true) or was left: the pads are read only while it is in front.</summary>
     public void WindowFocus(bool active) => _state.WindowFocus(active);
 

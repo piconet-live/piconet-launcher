@@ -51,6 +51,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         SoundVolume = s.SoundVolume;
         SoundMuted = s.SoundMuted;
         NavigationSounds = s.NavigationSounds;
+        PadNavigation = s.PadNavigation;
         PendingScale = _scale = s.ShownInterfaceScale;
         _loading = false;
         // the first screen can set the disc after this page was made
@@ -232,6 +233,10 @@ public sealed partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     public partial bool NavigationSounds { get; set; }
 
+    /// <summary>The pad works the launcher's pages (<see cref="LauncherSettings.PadNavigation"/>).</summary>
+    [ObservableProperty]
+    public partial bool PadNavigation { get; set; }
+
     /// <summary>The settings as they are, for the launcher's own sounds.</summary>
     public LauncherSettings Sounds => _state.Settings;
 
@@ -344,6 +349,8 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
     partial void OnNavigationSoundsChanged(bool value) => Save();
 
+    partial void OnPadNavigationChanged(bool value) => Save();
+
     private async Task HearSoonAsync(int change)
     {
         if (_loading)
@@ -407,6 +414,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
             SoundVolume = Math.Clamp(SoundVolume, 0, 100),
             SoundMuted = SoundMuted,
             NavigationSounds = NavigationSounds,
+            PadNavigation = PadNavigation,
         });
     }
 

@@ -87,14 +87,15 @@ public sealed partial class HomeViewModel
         var result = info.RecorderResult;
         var place = result switch
         {
+            _ when info.Practice => "Practice",
             null => "",
             { Out: true } => "KO",
             _ => ReplayWords.Ordinal(result.Place),
         };
         var machine = info.Recorder is { } recorder ? Theme.GameSkin.NameOf(recorder.Raced) : "";
-        return new RecentRace(info.CourseName, place, info.Results is { Count: > 0 } all && place.Length > 0 ? $"of {all.Count}" : "",
+        return new RecentRace(info.CourseName, place, info.Results is { Count: > 0 } all && place.Length > 0 && !info.Practice ? $"of {all.Count}" : "",
             ReplayWords.Time(info), result?.BestLap is { } b ? ReplayWords.Clock(b) : "",
-            info.Recorder is null ? "" : machine, When(info.Recorded.ToLocalTime(), DateTimeOffset.Now), info.Path);
+            info.Recorder is null ? "" : machine, When(info.Recorded.ToLocalTime(), DateTimeOffset.Now), info.Path, info.Practice);
     }
 
     /// <summary>"Today 7:42 PM", "Yesterday 7:42 PM", then the date.</summary>

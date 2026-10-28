@@ -114,18 +114,18 @@
         </Grid>
         <Border Classes="rowhead">
           <Grid Classes="cells" ColumnDefinitions="*,Auto,Auto,Auto,Auto" Margin="-12,0,0,0">
-            <TextBlock Classes="colhead" Text="Course" />
-            <TextBlock Grid.Column="1" Classes="colhead" Text="Machine" Width="150" />
-            <TextBlock Grid.Column="2" Classes="colhead" Text="Time" Width="84" TextAlignment="Right" />
-            <TextBlock Grid.Column="3" Classes="colhead" Text="Races" Width="52" TextAlignment="Right" />
-            <TextBlock Grid.Column="4" Classes="colhead" Text="When" Width="112" />
+            <TextBlock Classes="colhead" Text="COURSE" LetterSpacing="1" />
+            <TextBlock Grid.Column="1" Classes="colhead" Text="MACHINE" LetterSpacing="1" Width="150" />
+            <TextBlock Grid.Column="2" Classes="colhead" Text="TIME" LetterSpacing="1" Width="84" TextAlignment="Right" />
+            <TextBlock Grid.Column="3" Classes="colhead" Text="RACES" LetterSpacing="1" Width="52" TextAlignment="Right" />
+            <TextBlock Grid.Column="4" Classes="colhead" Text="WHEN" LetterSpacing="1" Width="112" />
           </Grid>
         </Border>
         <ItemsControl ItemsSource="{Binding Best}">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:BestTimeLine">
               <Border Classes="row">
-                <Grid Classes="cells" ColumnDefinitions="*,Auto,Auto,Auto,Auto" Margin="-12,0,0,0" Height="40">
+                <Grid Classes="cells" ColumnDefinitions="*,Auto,Auto,Auto,Auto" Margin="-12,0,0,0" Height="48">
                   <StackPanel VerticalAlignment="Center">
                     <TextBlock Classes="strong" Text="{Binding Track}" TextTrimming="CharacterEllipsis" />
                     <TextBlock Classes="note" Text="{Binding Under}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
@@ -148,7 +148,7 @@
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:CourseLine">
               <Border Classes="row">
-                <Grid Classes="cells" ColumnDefinitions="*,Auto" Margin="-12,0,0,0" Height="40">
+                <Grid Classes="cells" ColumnDefinitions="*,Auto" Margin="-12,0,0,0" Height="48">
                   <StackPanel VerticalAlignment="Center">
                     <TextBlock Classes="strong" Text="{Binding Track}" TextTrimming="CharacterEllipsis" />
                     <TextBlock Classes="note" Text="{Binding Venue}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />

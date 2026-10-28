@@ -16,7 +16,8 @@ namespace Launcher.Tests;
 /// bell's dot), no banner; notice a banner that goes after ten seconds (the test's own clock); warning a banner that
 /// stays until × is pressed, and the taskbar's flash; urgent also its tone, at the launcher's volume, and none when
 /// its sounds are muted. The last hour's notices sent again neither flash nor sound; the newest urgent one is the
-/// banner. The bell opens the list and its dot goes. No sound is made: <see cref="Attention.Played"/> and
+/// banner. The bell opens the list and its dot goes; a press on the page, Escape or another page closes it, a press
+/// inside it does not. No sound is made: <see cref="Attention.Played"/> and
 /// <see cref="Attention.Flashed"/> are counted, and nothing plays on Linux.
 /// </summary>
 [Collection(HeadlessApp.Name)]
@@ -279,6 +280,30 @@ public sealed class NoticeTierTests : IDisposable
         Assert.Equal(["warning", "info"], list.GetVisualDescendants().OfType<NoticeCard>().Select(c => c.Tier));   // newest first
         Assert.False(s.Main.Notices.HasDot);
         Click(s.Window, Named<Button>(s.Window, "CloseNotices"));
+        Assert.False(list.IsEffectivelyVisible);
+    });
+
+    [Fact]
+    public Task TheListClosesOnAPressOutsideEscapeOrAnotherPage() => Run(muted: false, s =>
+    {
+        s.Main.Notices.Receive(Notice(NoticeLevel.Info, "i-1"));
+        Dispatcher.UIThread.RunJobs();
+        var bell = Named<Button>(s.Window, "NoticeBell");
+        var list = Named<NoticesList>(s.Window, "Notices");
+        Click(s.Window, bell);
+        Click(s.Window, list.GetVisualDescendants().OfType<NoticeCard>().First());   // inside: it stays
+        Assert.True(list.IsEffectivelyVisible);
+        var page = new Avalonia.Point(200, s.Window.Bounds.Height - 40);             // the left column, away from the list
+        s.Window.MouseDown(page, Avalonia.Input.MouseButton.Left);
+        s.Window.MouseUp(page, Avalonia.Input.MouseButton.Left);
+        Dispatcher.UIThread.RunJobs();
+        Assert.False(s.Main.Notices.ListOpen);
+        Click(s.Window, bell);
+        Press(s.Window, Avalonia.Input.Key.Escape, Avalonia.Input.PhysicalKey.Escape);
+        Assert.False(s.Main.Notices.ListOpen);
+        Click(s.Window, bell);
+        s.Main.ShowTabCommand.Execute("garage");
+        Dispatcher.UIThread.RunJobs();
         Assert.False(list.IsEffectivelyVisible);
     });
 }

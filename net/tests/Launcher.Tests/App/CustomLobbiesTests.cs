@@ -293,4 +293,53 @@ public sealed class CustomLobbiesTests : IDisposable
             PumpTelling(state, () => main.Lobbies.Notice == "Removed from the lobby by the host");
         });
     }
+
+    /// <summary>A custom lobby's own machine setting rules the Garage and the choice, not the server's Quick Play one
+    /// (100 for everyone): a 0 lobby fixes the slider at 0, a lobby of each player's own frees it; the join and the
+    /// choice carry the player's own setting, which the server brings into the lobby's range. The lobby's whole list
+    /// of rules closes on another page.</summary>
+    [Fact]
+    public async Task ACustomLobbysOwnMachineSettingRulesTheGarageAndTheChoice()
+    {
+        var state = State(standIn: false);
+        state.Update(s => s with { Racer = s.Racer with { Setting = 50 } });
+        await using var server = new LedServer();
+        await InTheWindow(state, (window, main) =>
+        {
+            var joining = state.JoinAsync(server.Address, custom: true);
+            Pump(() => server.Of<Hello>().Count == 1, "the launcher did not connect");
+            server.SendAsync(LedServer.Welcome(setting: SettingRange.QuickPlay)).GetAwaiter().GetResult();
+            PumpTelling(state, () => joining.IsCompleted && state.Session?.PlayerId is not null);
+            var session = state.Session!;
+            session.JoinLobbyAsync("l1", null).GetAwaiter().GetResult();
+            Pump(() => server.Of<JoinLobby>().Count == 1, "the join was not sent");
+            Assert.Equal(50, server.Of<JoinLobby>()[0].Setting);
+
+            static LobbyRules Setting(int low, int high) =>
+                new(new Dictionary<string, int> { ["machine-setting"] = low, [LobbyRules.SettingHighKey] = high });
+            var garage = main.Garage;
+            server.SendAsync(LedServer.Lobby(LobbyState.Forming) with { Custom = true, HostId = "p2", Rules = Setting(0, 0), Name = "Zero" })
+                .GetAwaiter().GetResult();
+            PumpTelling(state, () => garage.SettingFixed && garage.SettingMost == 0, "the Garage kept Quick Play's setting");
+            Assert.Equal(0, garage.ShownSetting);
+
+            server.SendAsync(LedServer.Lobby(LobbyState.Forming) with { Custom = true, HostId = "p2", Rules = Setting(0, 100), Name = "Own" })
+                .GetAwaiter().GetResult();
+            PumpTelling(state, () => !garage.SettingLimited, "the lobby of each player's own setting kept a limit");
+            Assert.Equal(50, garage.ShownSetting);
+
+            // the lobby's whole list of rules closes when the player goes to another page
+            main.Current = main.Lobby;
+            main.Lobby.ToggleAllRulesCommand.Execute(null);
+            Assert.True(main.Lobby.AllRulesShown);
+            main.Current = main.Garage;
+            Assert.False(main.Lobby.AllRulesShown);
+
+            server.SendAsync(new ChooseMachine("m1", 1, [.. Enumerable.Range(0, GameMachines.Count)], 40_000)).GetAwaiter().GetResult();
+            PumpTelling(state, () => session.Choice is not null, "no choice came");
+            session.ChooseMachineAsync(6).GetAwaiter().GetResult();
+            Pump(() => server.Of<MachineChoice>().Count == 1, "the choice was not sent");
+            Assert.Equal(50, server.Of<MachineChoice>()[0].Setting);
+        });
+    }
 }
