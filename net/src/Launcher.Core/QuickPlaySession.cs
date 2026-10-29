@@ -406,6 +406,7 @@ public sealed partial class QuickPlaySession(LauncherSettings settings, string w
             BuildGap.OlderLauncher => ["an older launcher that does not name its game"],
             BuildGap.NewerLauncher => ["a newer launcher than yours"],
             BuildGap.NamedDifferently => ["a game named differently by its launcher"],
+            BuildGap.Line => [$"version {d.Line}"],
             _ => d.Parts.Select(p => $"{BuildParts[p.Part]} differs (yours {p.Mine}, theirs {p.Theirs})"),
         });
         return OnAnotherVersion(others) + ", not matched with you: " + string.Join("; ", differences.Distinct());
@@ -428,6 +429,7 @@ public sealed partial class QuickPlaySession(LauncherSettings settings, string w
             BuildGap.OlderLauncher => [("theirs", "older launcher")],
             BuildGap.NewerLauncher => [("theirs", "newer launcher")],
             BuildGap.NamedDifferently => [("theirs", "named differently")],
+            BuildGap.Line => [("theirs", $"version {d.Line}")],
             _ => d.Parts.SelectMany<(int Part, string Mine, string Theirs), (string, string)>(p =>
                 [($"{BuildPartKeys[p.Part]} · yours", p.Mine), ("theirs", p.Theirs)]),
         });
@@ -448,21 +450,26 @@ public sealed partial class QuickPlaySession(LauncherSettings settings, string w
 
         /// <summary>The same parts, some of them other hashes (<see cref="Differing"/>).</summary>
         Parts,
+
+        /// <summary>Another release line (<see cref="OtherBuild.Line"/>): the server keys their lobbies to it, so their
+        /// version is what tells them apart, not a build's parts.</summary>
+        Line,
     }
 
     /// <summary>The one walk over the other builds that both the sentence and the values say: for each, how it is
     /// not this player's (<paramref name="mine"/>), and for <see cref="BuildGap.Parts"/> the parts that differ.</summary>
-    private static IEnumerable<(BuildGap Gap, IReadOnlyList<(int Part, string Mine, string Theirs)> Parts)> Differences(string? mine,
+    private static IEnumerable<(BuildGap Gap, IReadOnlyList<(int Part, string Mine, string Theirs)> Parts, string? Line)> Differences(string? mine,
         IReadOnlyList<OtherBuild> others)
     {
         var ours = mine?.Split('/') ?? [];
         foreach (var other in others)
         {
             var theirs = other.Build?.Split('/') ?? [];
-            yield return other.Build is null ? (BuildGap.OlderLauncher, [])
-                : mine is null ? (BuildGap.NewerLauncher, [])
-                : theirs.Length != ours.Length || ours.Length > BuildParts.Length ? (BuildGap.NamedDifferently, [])
-                : (BuildGap.Parts, [.. Differing(ours, theirs)]);
+            yield return other.Line is { } line ? (BuildGap.Line, [], line)
+                : other.Build is null ? (BuildGap.OlderLauncher, [], null)
+                : mine is null ? (BuildGap.NewerLauncher, [], null)
+                : theirs.Length != ours.Length || ours.Length > BuildParts.Length ? (BuildGap.NamedDifferently, [], null)
+                : (BuildGap.Parts, [.. Differing(ours, theirs)], null);
         }
     }
 

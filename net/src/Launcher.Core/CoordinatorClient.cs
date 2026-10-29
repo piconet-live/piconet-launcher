@@ -75,7 +75,7 @@ public sealed partial class CoordinatorClient : ICoordinatorConnection
         try
         {
             await client._socket.ConnectAsync(server, cancel).ConfigureAwait(false);
-            await client.SendNowAsync(new Hello(name, ControlProtocol.Version, build, VoteCounts: true, Debug: debug, StatPacks: true, Pings: true, Notices: true, Key: key), cancel).ConfigureAwait(false);
+            await client.SendNowAsync(new Hello(name, ControlProtocol.Version, build, VoteCounts: true, Debug: debug, StatPacks: true, Pings: true, Notices: true, Key: key, Line: LauncherLine.Own), cancel).ConfigureAwait(false);
         }
         catch
         {

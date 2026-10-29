@@ -126,11 +126,13 @@ public sealed class ReplayReadersTests : IDisposable
     [Fact]
     public void AnotherFormatVersionIsSaidAndOnlyWhatRecordedItIsStillRead()
     {
-        const string said = "Replay of another version of the game · format 8";
-        Assert.Equal((null, said, Native, null), Read(Replay(version: 8)));
-        Assert.Equal((null, said, Nobody, null), Read(Replay(version: 8, named: (1 << 20) + 1)));   // the version first
-        Assert.Equal((null, said, Nobody, null), Read(Replay(version: 8, cut: HeaderEnd - 5)));
-        Assert.Equal((null, said.Replace("format 8", "format 1", StringComparison.Ordinal), Native, null), Read(Replay(version: 1)));
+        const string said = "Replay of another version of the game · format 9";
+        Assert.Equal((null, said, Native, null), Read(Replay(version: 9)));
+        Assert.Equal((null, said, Nobody, null), Read(Replay(version: 9, named: (1 << 20) + 1)));   // the version first
+        Assert.Equal((null, said, Nobody, null), Read(Replay(version: 9, cut: HeaderEnd - 5)));
+        Assert.Equal((null, said.Replace("format 9", "format 1", StringComparison.Ordinal), Native, null), Read(Replay(version: 1)));
+        // a recording's layout under the compact file's number (8) is no compact file: its header is not read
+        Assert.Equal((null, "Replay of another version of the game · format 8", Nobody, null), Read(Replay(version: 8)));
     }
 
     /// <summary>The header of a race with this mine rule in its set-up (milliseconds, as the server sends it).</summary>
@@ -156,7 +158,7 @@ public sealed class ReplayReadersTests : IDisposable
     [Fact]
     public void AReplayOfARaceWhoseMinesCameBackIsFormat5AndOneThatDisagreesSaysSo()
     {
-        Assert.True(ReplayFormat.Plays(5) && ReplayFormat.Plays(6) && ReplayFormat.Plays(7) && !ReplayFormat.Plays(8));
+        Assert.True(ReplayFormat.Plays(5) && ReplayFormat.Plays(6) && ReplayFormat.Plays(7) && ReplayFormat.Plays(8) && !ReplayFormat.Plays(9));
         foreach (var ms in new[] { "200", "50", "5000", "100000" })
         {
             Assert.Equal((("BEN", 60), null, Native, Image), Read(Replay(WithMines(ms), version: 5)));
@@ -193,7 +195,7 @@ public sealed class ReplayReadersTests : IDisposable
     public void AReplayOfARaceWithAStatPackIsListedWithItsNameAndOneTheGameWouldRefuseSaysSo()
     {
         var pack = Online.Protocol.StatPack.Of("GX Made Up 1.0", [Online.Protocol.StatEntry.Of(6, 4, 2520)]).Pack!.ToWire();
-        Assert.True(ReplayFormat.Plays(2) && ReplayFormat.Plays(3) && !ReplayFormat.Plays(1) && ReplayFormat.Plays(4) && ReplayFormat.Plays(6) && ReplayFormat.Plays(7) && !ReplayFormat.Plays(8));
+        Assert.True(ReplayFormat.Plays(2) && ReplayFormat.Plays(3) && !ReplayFormat.Plays(1) && ReplayFormat.Plays(4) && ReplayFormat.Plays(6) && ReplayFormat.Plays(7) && ReplayFormat.Plays(8) && !ReplayFormat.Plays(9));
 
         var good = Replay(WithPack(pack), version: 3);
         Assert.Null(ReplayFile.Problem(good));

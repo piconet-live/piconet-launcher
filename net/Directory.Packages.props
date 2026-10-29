@@ -23,5 +23,9 @@
     <PackageVersion Include="Velopack" Version="1.2.161" />
     <!-- recomp/manifest.toml read by the developer's tool tools/DiscPinsWriter (not shipped): Tomlyn, BSD-2-Clause. -->
     <PackageVersion Include="Tomlyn" Version="2.10.1" />
+    <!-- The compact replay file's header (version 8: xz) read for the Replays list (Launcher.Core ReplayParts,
+         generated from the protocol's replay.toml): SharpCompress's managed XZ reader, MIT. Managed, so no native
+         library for each platform; .NET has no xz of its own. -->
+    <PackageVersion Include="SharpCompress" Version="0.50.5" />
   </ItemGroup>
 </Project>

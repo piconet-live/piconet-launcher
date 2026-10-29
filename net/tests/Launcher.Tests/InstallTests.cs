@@ -71,6 +71,32 @@ public sealed class InstallTests : IDisposable
         Assert.True(Install.Of(folder).Installed);
     }
 
+    /// <summary>Velopack's portable zip of the installed package, unzipped anywhere: Velopack's marker beside
+    /// <c>current</c>, the installed marker in it. The game beside the libraries, the data beside <c>current</c> (an
+    /// update replaces <c>current</c> whole), and a missing part said as a copy's.</summary>
+    [Fact]
+    public void AVelopackPortableZipKeepsItsDataBesideTheFolderAnUpdateReplaces()
+    {
+        var top = Path.Combine(_dir, "Piconet");
+        var folder = Path.Combine(top, "current");
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(Path.Combine(folder, Install.InstalledMarkerName), "installed");
+        File.WriteAllText(Path.Combine(top, Install.VelopackPortableName), "");
+        var install = Install.Of(folder);
+        Assert.Equal((folder, Path.Combine(top, "data"), false, true, true),
+            (install.Folder, install.DataFolder, install.Installed, install.PlayerCopy, install.Portable));
+        Assert.Equal(Path.Combine(top, "data"), AppState.DataFolderOf(null, install));
+        var paths = RecompLaunch.Resolve(null, install, AppState.DataFolderOf(null, install));
+        Assert.Equal(Path.Combine(folder, "recomp", RecompLaunch.RunnerFileName), paths.Runner);
+        Assert.Equal(Path.Combine(top, "data", "recomp-user"), paths.UserFolder);
+        Assert.Equal(RecompLaunch.NoProgramInACopy, RecompLaunch.Problem(paths, processorRunsTheGame: true));
+        Assert.False(Directory.Exists(Path.Combine(top, "data")));             // asking makes nothing
+
+        // Velopack's marker alone (no installed marker): not the release's package, nothing changes
+        File.Delete(Path.Combine(folder, Install.InstalledMarkerName));
+        Assert.Equal((folder, (string?)null, false), (Install.Of(folder).Folder, Install.Of(folder).DataFolder, Install.Of(folder).Installed));
+    }
+
     [Fact]
     public void TheDataOptionWinsOverTheMarker()
     {

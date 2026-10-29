@@ -291,6 +291,7 @@ public sealed partial class RaceViewModel : ViewModelBase
 
         // standings: finished by time, racing by distance, then the knocked out (furthest first)
         // only the lines that changed, not every line rebuilt 10 times a second
+        var open = GamesOpen();
         var place = 0;
         for (var i = 0; i < ordered.Count; i++)
         {
@@ -306,7 +307,7 @@ public sealed partial class RaceViewModel : ViewModelBase
             var row = new StandingRow(r.Seat, r.State == RacerLive.Out ? "-" : (++place).ToString(CultureInfo.InvariantCulture),
                 RacerName(s, r.Seat), Machines.Names[Math.Clamp(machine, 0, Machines.Names.Count - 1)],
                 Rgb.Hex(SeatColor(s)), detail, r.BestLapMs is { } b ? Time(b) : "", r.Seat == mySeat, r.State == RacerLive.Out,
-                r.Seat == Followed);
+                r.Seat == Followed, Phase(r, s, open));
             if (i == Standings.Count)
             {
                 Standings.Add(row);
@@ -323,6 +324,17 @@ public sealed partial class RaceViewModel : ViewModelBase
     }
 
     private static string RacerName(SeatSetup? s, int seat) => s?.Name ?? $"Racer {seat + 1}";
+
+    /// <summary>The players of the lobby whose game is still open (the server's Racing: set at the race's start,
+    /// cleared when their launcher says the game closed); null: no lobby to tell.</summary>
+    private HashSet<string>? GamesOpen() =>
+        _session?.Lobby?.Players is { } players ? [.. players.Where(p => p.Racing).Select(p => p.Id)] : null;
+
+    /// <summary>Where a player is once their race is run (finished or out): "Game open" while their game still shows
+    /// the race or its results, "In lobby" once it closed; nothing for a racer still racing, a CPU, or no lobby.</summary>
+    public static string Phase(RacerLive r, SeatSetup? s, HashSet<string>? open) =>
+        r.State == RacerLive.Racing || s?.PlayerId is not { } id || open is null ? ""
+        : open.Contains(id) ? "Game open" : "In lobby";
 
     /// <summary>A seat's colour: its stock colour's swatch, its painted colour, or (a CPU) its machine's own.</summary>
     private static Rgb SeatColor(SeatSetup? s)
@@ -344,4 +356,8 @@ public sealed partial class RaceViewModel : ViewModelBase
 /// <summary>A line of the standings: its racer's seat (which line is which across refreshes), and whether the map
 /// follows them.</summary>
 public sealed record StandingRow(int Seat, string Rank, string Name, string Machine, string ColorHex, string Detail,
-    string Best, bool You, bool Out, bool Followed);
+    string Best, bool You, bool Out, bool Followed, string Phase = "")
+{
+    /// <summary>The player's race is run and their game is still open: the lobby waits for it.</summary>
+    public bool GameOpen => Phase == "Game open";
+}
