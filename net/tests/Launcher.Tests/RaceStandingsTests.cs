@@ -42,4 +42,17 @@ public sealed class RaceStandingsTests
         Assert.Equal("", RaceViewModel.Phase(Racer(0, RacerLive.Finished, 1), Seat(0, "p1"), null));
         Assert.True(new StandingRow(0, "1", "X", "", "#000000", "", "", false, false, false, "Game open").GameOpen);
     }
+
+    /// <summary>A standings row's machine: the custom machine a seat races (whatever the disc's naming tables give it,
+    /// never the stock machine under it), else the seat's stock machine.</summary>
+    [Fact]
+    public void ASeatsCustomMachineIsItsMachineInTheStandings()
+    {
+        var stock = new SeatSetup(0, "p1", "ANA", 2, null);
+        Assert.Equal(Machines.Names[2], RaceViewModel.MachineName(stock));
+        var custom = RaceViewModel.MachineName(stock with { Custom = new CustomMachine(15, 44, 58, 2) });
+        Assert.NotEqual(Machines.Names[2], custom);
+        Assert.NotEmpty(custom);
+        Assert.Equal(Machines.Names[0], RaceViewModel.MachineName(null));
+    }
 }

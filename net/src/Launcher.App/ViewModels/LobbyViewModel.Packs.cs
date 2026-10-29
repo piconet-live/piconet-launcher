@@ -62,9 +62,9 @@ public sealed partial class LobbyViewModel
         Theme.GameSkin.NameOf(RacedOf(p, session), () => OnUi(Refresh)) + (p.Pack is { Length: > 0 } pack ? " · " + pack : "");
 
     /// <summary>The machine a racer races. The player's own row: the custom machine the server was told of
-    /// (<see cref="QuickPlaySession.Sent"/>) on the stock id it has. Another racer's: the stock machine only, as a
-    /// lobby's state names no custom machine (<see cref="PlayerInfo"/> carries none).</summary>
+    /// (<see cref="QuickPlaySession.Sent"/>) on the stock id it has. Another racer's: their custom machine as the
+    /// lobby's state names it (<see cref="PlayerInfo.Custom"/>; a server from before names none: the stock machine).</summary>
     internal static RacedMachine RacedOf(PlayerInfo p, QuickPlaySession session) =>
         new(Math.Clamp(p.Machine, 0, Machines.Names.Count - 1),
-            p.Id == session.PlayerId && session.Sent is { Custom: { } custom } ? custom : null);
+            p.Id == session.PlayerId ? session.Sent?.Custom : p.Custom);
 }
