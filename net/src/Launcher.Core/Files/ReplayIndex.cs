@@ -3,7 +3,8 @@ using System.Text.Json;
 namespace Launcher.Core;
 
 /// <summary>
-/// The replay index: what the Stats page counts of each replay (<see cref="ReplayRow"/>), kept in
+/// The replay index: what the Stats page counts of each replay (<see cref="ReplayRow"/>) and what the Replays page
+/// lists of it (<see cref="ReplayListing"/>), kept in
 /// <c>cache/replay-index.json</c> in the data folder, so that a start reads only the replays that are new or changed
 /// since the last (a file is known by its path, length and last write; one that is not a replay is kept as none, and
 /// not read again until it changes). A replay gone from the folder leaves the index. The index is the launcher's own
@@ -12,7 +13,7 @@ namespace Launcher.Core;
 public static class ReplayIndex
 {
     /// <summary>The index's format: raised whenever <see cref="ReplayRow"/> changes, and the index is made again.</summary>
-    public const int Format = 1;
+    public const int Format = 2;   // 2: the Replays page's listing
 
     /// <summary>The largest index read back (one row is a few hundred bytes: this is tens of thousands of replays).</summary>
     private const long Largest = 32L << 20;
@@ -23,20 +24,39 @@ public static class ReplayIndex
     public static string FileIn(string dataFolder) => Path.Combine(dataFolder, "cache", "replay-index.json");
 
     /// <summary>One file as indexed: its row, or null when it is not a replay this launcher lists.</summary>
-    private sealed record Entry(string Path, long Length, long Written, ReplayRow? Row);
+    private sealed record Entry(string Path, long Length, long Written, ReplayRow? Row, ReplayListing? Listing);
+
+    // one reader or writer of an index file at a time (the Stats page and the Replays page read it on their own threads)
+    private static readonly Lock Gate = new();
 
     private sealed record Kept(int Format, IReadOnlyList<Entry> Entries);
 
     /// <summary>The rows of the replays in <paramref name="replayFolder"/>, newest first, reading only the files
     /// the index does not know as they are; the index written again when anything changed. A folder that is none
     /// or cannot be listed has no rows (and leaves the index as it is).</summary>
-    public static IReadOnlyList<ReplayRow> Rows(string? replayFolder, string indexFile)
+    public static IReadOnlyList<ReplayRow> Rows(string? replayFolder, string indexFile) =>
+        [.. Entries(replayFolder, indexFile).Select(e => e.Row).OfType<ReplayRow>().OrderByDescending(r => r.Recorded)];
+
+    /// <summary>The Replays page's listings of the replays in <paramref name="replayFolder"/>, newest first, read as
+    /// <see cref="Rows"/> reads its rows (the same index, the same files read).</summary>
+    public static IReadOnlyList<ReplayListing> Listings(string? replayFolder, string indexFile) =>
+        [.. Entries(replayFolder, indexFile).Select(e => e.Listing).OfType<ReplayListing>().OrderByDescending(r => r.Recorded)];
+
+    private static List<Entry> Entries(string? replayFolder, string indexFile)
     {
         ArgumentNullException.ThrowIfNull(indexFile);
         if (replayFolder is null || !Directory.Exists(replayFolder))
         {
             return [];
         }
+        lock (Gate)
+        {
+            return EntriesNow(replayFolder, indexFile);
+        }
+    }
+
+    private static List<Entry> EntriesNow(string replayFolder, string indexFile)
+    {
         var known = Load(indexFile);
         var entries = new List<Entry>();
         var changed = false;
@@ -51,7 +71,9 @@ public static class ReplayIndex
                     entries.Add(entry);
                     continue;
                 }
-                entries.Add(new Entry(path, length, written, ReplayFile.Read(path) is { } replay ? ReplayRow.Of(replay) : null));
+                var replay = ReplayFile.Read(path);
+                entries.Add(new Entry(path, length, written, replay is null ? null : ReplayRow.Of(replay),
+                    replay is null ? null : ReplayListing.From(replay)));
                 changed = true;
             }
         }
@@ -65,7 +87,7 @@ public static class ReplayIndex
         {
             Save(indexFile, entries);
         }
-        return [.. entries.Select(e => e.Row).OfType<ReplayRow>().OrderByDescending(r => r.Recorded)];
+        return entries;
     }
 
     private static Dictionary<string, Entry> Load(string indexFile)
@@ -83,7 +105,8 @@ public static class ReplayIndex
                 return [];
             }
             var byPath = new Dictionary<string, Entry>(StringComparer.Ordinal);
-            foreach (var entry in list.Where(e => e?.Path is not null && (e.Row is null || e.Row.Machine is not null)))
+            foreach (var entry in list.Where(e => e?.Path is not null && (e.Row is null || e.Row.Machine is not null)
+                                                  && (e.Row is null) == (e.Listing is null)))
             {
                 byPath[entry.Path] = entry;
             }

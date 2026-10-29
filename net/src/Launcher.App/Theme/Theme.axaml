@@ -390,6 +390,51 @@
     <Setter Property="FontSize" Value="{StaticResource Size14}" />
   </Style>
 
+  <!-- Scroll bars: a dim track and a light thumb that can be seen on the black ground. The thumb keeps a length a
+       pointer can grab, even on a page thousands of rows long (the Replays list). -->
+  <Style Selector="ScrollBar:vertical">
+    <Setter Property="Width" Value="12" />
+  </Style>
+  <Style Selector="ScrollBar:horizontal">
+    <Setter Property="Height" Value="12" />
+  </Style>
+  <Style Selector="ScrollBar">
+    <Setter Property="Background" Value="{StaticResource WellBrush}" />
+  </Style>
+  <Style Selector="ScrollBar /template/ Border#Background">
+    <Setter Property="Background" Value="{Binding $parent[ScrollBar].Background}" />
+    <Setter Property="CornerRadius" Value="6" />
+  </Style>
+  <Style Selector="ScrollBar /template/ Thumb">
+    <Setter Property="Background" Value="{StaticResource FaintBrush}" />
+  </Style>
+  <Style Selector="ScrollBar /template/ Thumb > Border">
+    <Setter Property="Background" Value="{Binding $parent[Thumb].Background}" />
+    <Setter Property="CornerRadius" Value="6" />
+  </Style>
+  <Style Selector="ScrollBar:vertical /template/ Track">
+    <Setter Property="Width" Value="NaN" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="ScrollBar:horizontal /template/ Track">
+    <Setter Property="Height" Value="NaN" />
+    <Setter Property="VerticalAlignment" Value="Stretch" />
+  </Style>
+  <Style Selector="ScrollBar:vertical /template/ Thumb">
+    <Setter Property="Width" Value="NaN" />
+    <Setter Property="MinHeight" Value="48" />
+  </Style>
+  <Style Selector="ScrollBar:horizontal /template/ Thumb">
+    <Setter Property="Height" Value="NaN" />
+    <Setter Property="MinWidth" Value="48" />
+  </Style>
+  <Style Selector="ScrollBar /template/ Thumb:pointerover">
+    <Setter Property="Background" Value="{StaticResource DimBrush}" />
+  </Style>
+  <Style Selector="ScrollBar /template/ Thumb:pressed">
+    <Setter Property="Background" Value="{StaticResource TextBrush}" />
+  </Style>
+
   <!-- The rest of the look, in this order (a later style wins over an earlier one). -->
   <StyleInclude Source="avares://Launcher.App/Theme/Buttons.axaml" />
   <StyleInclude Source="avares://Launcher.App/Theme/Forms.axaml" />

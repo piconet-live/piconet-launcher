@@ -122,8 +122,20 @@
         <Border Grid.Column="5" Width="150" />
       </Grid>
     </Border>
-    <ItemsControl ItemsSource="{Binding Items}">
-      <ItemsControl.ItemTemplate>
+    <!-- the replays in their groups by date (a group's heading, then its rows); only the rows on the screen are drawn,
+         so thousands of replays scroll as a few do -->
+    <ItemsControl Name="ReplayList" ItemsSource="{Binding Rows}">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.DataTemplates>
+        <DataTemplate x:DataType="vm:ReplayGroup">
+          <StackPanel Classes="replaygroup" Orientation="Horizontal" Spacing="8" Height="40">
+            <TextBlock Classes="caps" Text="{Binding Title, Converter={x:Static v:UpperText.Instance}}" LetterSpacing="1"
+                       VerticalAlignment="Bottom" Margin="0,0,0,6" />
+            <TextBlock Classes="dim" Text="{Binding Count}" FontFeatures="tnum" VerticalAlignment="Bottom" Margin="0,0,0,6" />
+          </StackPanel>
+        </DataTemplate>
         <DataTemplate x:DataType="vm:ReplayItem">
           <Border Classes="row tall hover" Classes.on="{Binding ShowingStats}">
             <StackPanel>
@@ -205,9 +217,18 @@
             </StackPanel>
           </Border>
         </DataTemplate>
-      </ItemsControl.ItemTemplate>
+      </ItemsControl.DataTemplates>
     </ItemsControl>
-    <Border Classes="row last" IsVisible="{Binding Empty}">
+    <Border Classes="row last" IsVisible="{Binding FirstLoad}">
+      <TextBlock Classes="dim" Text="Reading replays…" />
+    </Border>
+    <Border Classes="row last">
+      <Border.IsVisible>
+        <MultiBinding Converter="{x:Static BoolConverters.And}">
+          <Binding Path="Empty" />
+          <Binding Path="!Loading" />
+        </MultiBinding>
+      </Border.IsVisible>
       <TextBlock Classes="dim" Text="No replays" />
     </Border>
   </StackPanel>
