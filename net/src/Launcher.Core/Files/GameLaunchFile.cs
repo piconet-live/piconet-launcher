@@ -92,9 +92,12 @@ public sealed record TaskbarGroup(string Id, string Program, string Name)
 /// of them: not written, and the game draws its own picture a step.</param>
 /// <param name="Rumble">The controllers may rumble (the player's setting, <see cref="LauncherSettings.Rumble"/>;
 /// <c>"rumble": false</c>, written only when off: a runner from before the key refuses it).</param>
+/// <param name="Camera">The chase camera view a race starts in, 1 to 3 (the player's last,
+/// <see cref="LauncherSettings.StartCamera"/>; <c>match.camera</c>, written only in a race's file and only with a
+/// view: a runner from before the key refuses it). 0: the game's own.</param>
 public sealed record GameWindow(string Title, string? Name = null, bool ShowFrameRate = false, Picture? NamePicture = null,
     TaskbarGroup? Taskbar = null, string? Present = null, bool VerticalSync = false, string? FullScreen = null,
-    string? Board = null, string? RefreshRate = null, bool Rumble = true)
+    string? Board = null, string? RefreshRate = null, bool Rumble = true, int Camera = 0)
 {
     /// <summary>The largest name picture the game's reader takes.</summary>
     public const int MostPictureWidth = LaunchFormat.WindowNamePictureWidthHigh, MostPictureHeight = LaunchFormat.WindowNamePictureHeightHigh;
@@ -121,6 +124,10 @@ public sealed record GameWindow(string Title, string? Name = null, bool ShowFram
         // a group the game would refuse is left out, as the picture is: the game's window then has its own button
         Taskbar = Taskbar is { Taken: true } group ? new LaunchTaskbar(group.Id, group.Program, group.Name) : null,
         Board = Board,
+        // a race's only (a playback starts in the game's own view), and only a view the game takes
+        Match = file.Match is { } match && Camera is >= LaunchFormat.MatchCameraLow and <= LaunchFormat.MatchCameraHigh
+            ? match with { Camera = Camera }
+            : file.Match,
     };
 }
 

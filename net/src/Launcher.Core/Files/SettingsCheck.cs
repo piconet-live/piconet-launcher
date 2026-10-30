@@ -63,6 +63,8 @@ public static class SettingsCheck
             Present = read.GamePresent ?? defaults.Present,   // (one of the two other ways, or a console's)
             RefreshRate = read.GameRefreshRate ?? defaults.RefreshRate,   // (120, 240, the display's, or the game's)
             FullScreen = read.GameFullScreen,
+            // a view the game does not take (a hand's slip): none, and the game's own
+            RaceCamera = read.StartCamera,
         };
         return (sound, !sound.Equals(read));
     }
