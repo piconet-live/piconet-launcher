@@ -134,7 +134,8 @@ public sealed partial class LobbyViewModel
         {
             return;
         }
-        HostEditor = new LobbyRulesEditor(lobby.Rules, session.QuickPlayRules, PackNames(), LobbyName, session.CustomLocked, editing: true);
+        HostEditor = new LobbyRulesEditor(lobby.Rules, session.QuickPlayRules, PackNames(), LobbyName, session.CustomLocked, editing: true,
+            file: session.HostPack);
         HostRulePanels = Panels(HostEditor.RuleGroups);
         HostEditor.PropertyChanged += (_, e) =>
         {

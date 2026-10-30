@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using CommunityToolkit.Mvvm.ComponentModel;
+using Launcher.Core;
 using Online.Protocol;
 
 namespace Launcher.App.ViewModels;
@@ -19,6 +20,7 @@ public sealed partial class LobbyRulesEditor : ObservableObject
     private readonly LobbyRules _start;
     private readonly IReadOnlyList<string> _packs;
     private readonly Dictionary<string, RuleRow> _rows = [];
+    private HostPackFile? _file;
     private bool _applying;
 
     /// <param name="start">The rules the panel opens on (a lobby's own; null: Quick Play's).</param>
@@ -27,11 +29,13 @@ public sealed partial class LobbyRulesEditor : ObservableObject
     /// <param name="name">The lobby's name.</param>
     /// <param name="locked">The lobby has a password now (editing a lobby: the switch that keeps or clears it).</param>
     /// <param name="editing">The host's own lobby (not a new one): the password is kept unless changed.</param>
+    /// <param name="file">The host's own stat pack file sent last (<see cref="QuickPlaySession.HostPack"/>): offered
+    /// with the packs, and the choice when the lobby's rules name it.</param>
     public LobbyRulesEditor(LobbyRules? start, LobbyRules? quickPlay, IReadOnlyList<string> packs, string name, bool locked = false,
-        bool editing = false)
+        bool editing = false, HostPackFile? file = null)
     {
         ArgumentNullException.ThrowIfNull(packs);
-        (_quickPlay, Editing) = (quickPlay, editing);
+        (_quickPlay, Editing, _file) = (quickPlay, editing, file);
         // Quick Play's own pack is offered whatever this launcher holds; a new lobby opens on Quick Play's rules
         // whole, its pack too (no pack is the disc's own stats, not Quick Play's)
         _packs = quickPlay?.StatPack is { } served && !packs.Contains(served) ? [served, .. packs] : packs;
@@ -112,7 +116,8 @@ public sealed partial class LobbyRulesEditor : ObservableObject
             {
                 (differing[HostRules.CourseSelect.Name], differing[LobbyRules.FixedCourseKey]) = ((int)CourseSelectMode.Fixed, course);
             }
-            return new LobbyRules(differing, HostRuleRows.Pack(_rows[HostRules.StatPack.Name]));
+            var pack = _rows[HostRules.StatPack.Name];
+            return new LobbyRules(differing, HostRuleRows.Pack(pack), HostRuleRows.PackFile(pack));
         }
     }
 
@@ -134,10 +139,14 @@ public sealed partial class LobbyRulesEditor : ObservableObject
         {
             row.PropertyChanged -= OnRowChanged;
         }
+        if (_rows.GetValueOrDefault(HostRules.StatPack.Name) is PackRule { File: { } chosen })
+        {
+            _file = chosen;   // (a preset chosen after a file: the file stays offered)
+        }
         _rows.Clear();
         foreach (var rule in LobbyRules.Settable)
         {
-            var row = HostRuleRows.ForLobby(rule, rules, _quickPlay, _packs);
+            var row = HostRuleRows.ForLobby(rule, rules, _quickPlay, _packs, _file);
             row.PropertyChanged += OnRowChanged;
             _rows[rule.Name] = row;
         }
