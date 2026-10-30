@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using Online.Protocol;
 
 namespace Launcher.Core;
 
@@ -20,7 +21,7 @@ public static class MachineStatFile
     public const string MainModule = "enemy_line/line__.bin";
 
     /// <summary>A machine's block in the car data file.</summary>
-    public const int BlockSize = 0xB4;
+    public const int BlockSize = (int)GameFacts.Files.CarBlock;
 
     /// <summary>Where the letters stand in the main module of the pinned disc (<see cref="DiscPins.Game"/>), once
     /// decrypted and unpacked: 0x416B8 into its data section. 41 machines, three words each (body, boost, grip), high
