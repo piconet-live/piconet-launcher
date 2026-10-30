@@ -36,7 +36,6 @@ public sealed partial class HomeViewModel : ViewModelBase
     private long _news = Environment.TickCount64;
     private string _replaysOf = "";
     private string _askedFor = "";
-    private string? _motdId;
 
     public HomeViewModel(AppState state, ServerStatusFeed feed, LobbyViewModel lobby, Action showLobby, Action showReplays,
         Action showSettings)
@@ -159,13 +158,13 @@ public sealed partial class HomeViewModel : ViewModelBase
     [ObservableProperty]
     public partial string Notice { get; set; } = "";
 
-    /// <summary>The server's message of the day while it stands (its public status carries it), drawn as its notices
-    /// are; null: none.</summary>
+    /// <summary>The server's message of the day while it stands (its public status carries it), in its own place on
+    /// the page; empty: none.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasMotd))]
-    public partial NoticeItem? Motd { get; set; }
+    public partial string Motd { get; set; } = "";
 
-    public bool HasMotd => Motd is not null;
+    public bool HasMotd => Motd.Length > 0;
 
     /// <summary>The race's own page (the lobby's): the whole standings, the player's numbers, following a racer.</summary>
     [RelayCommand]
@@ -232,20 +231,9 @@ public sealed partial class HomeViewModel : ViewModelBase
         ShowLobbies(session, status);
     }
 
-    /// <summary>The message of the day, kept as it is while the status says the same (the card is not drawn again
-    /// every few seconds); it goes when the status has none, or when no status is known.</summary>
-    private void ShowMotd(RecentNotice? motd)
-    {
-        if (motd is null)
-        {
-            Motd = null;
-        }
-        else if (Motd is null || _motdId != motd.Id || Motd.Text != motd.Text)
-        {
-            _motdId = motd.Id;
-            Motd = NoticeItem.Of(ServerNotice.Of(motd));
-        }
-    }
+    /// <summary>The message of the day while the status carries it; it goes when the status has none, or when no
+    /// status is known.</summary>
+    private void ShowMotd(RecentNotice? motd) => Motd = motd?.Text ?? "";
 
     /// <summary>Out of Quick Play: what the server says of itself. A lobby seen from outside: its phase and how full
     /// it is, with its racers beside.</summary>

@@ -78,11 +78,9 @@
     <!-- Quick Play's action: RACE, or the lobby's box and the way out; "Play F-Zero GX" (PlayControlView, on the
          window's PlayControlViewModel) -->
     <v:PlayControlView DataContext="{Binding $parent[Window].((vm:MainViewModel)DataContext).Control}" />
-    <!-- The server's message of the day while it stands: drawn as its notices are (NoticeCard). -->
-    <v:NoticeCard Name="Motd" DataContext="{Binding Motd}" IsVisible="{Binding $parent[v:HomeView].((vm:HomeViewModel)DataContext).HasMotd}" />
     <!-- The race, and what stands in its place: the same block at the same size in every state. -->
     <Grid Name="Top" ColumnDefinitions="520,16,*" RowDefinitions="Auto,Auto">
-      <Border Name="MapPlace" Classes="well" Height="264" ClipToBounds="True">
+      <Border Name="MapPlace" Classes="well" Height="264" ClipToBounds="True" VerticalAlignment="Top">
         <Panel>
           <!-- A few words: nobody online, a lobby gathering, a race seen from outside, no answer. -->
           <StackPanel IsVisible="{Binding IsWords}" VerticalAlignment="Center" Margin="24,20" Spacing="4">
@@ -155,6 +153,14 @@
 
       <!-- Beside it: the same race's standings; or who is in the lobby; or what RACE would do. -->
       <StackPanel Name="Side" Grid.Column="2">
+        <!-- The server's message of the day while it stands, at the head of this column: its own place on Home. -->
+        <StackPanel Name="Motd" IsVisible="{Binding HasMotd}" Margin="0,0,0,24">
+          <TextBlock Classes="head" Text="Message of the day" Margin="0,0,0,8" />
+          <Border BorderBrush="{StaticResource AccentBrush}" BorderThickness="2,0,0,0" Padding="14,1,0,3">
+            <TextBlock Text="{Binding Motd}" TextWrapping="Wrap" Foreground="{StaticResource TextBrush}"
+                       FontSize="{StaticResource Size15}" LineHeight="22" />
+          </Border>
+        </StackPanel>
         <TextBlock Classes="dim" Text="{Binding SideOver}" TextTrimming="CharacterEllipsis" />
         <TextBlock Classes="head" Text="{Binding SideTitle}" TextTrimming="CharacterEllipsis" Margin="0,0,0,6" />
         <StackPanel IsVisible="{Binding IsRace}">

@@ -19,7 +19,7 @@ public sealed partial class HomeView : UserControl
     private void Arrange(double width)
     {
         var top = this.FindControl<Grid>("Top")!;
-        var side = this.FindControl<StackPanel>("Side")!;
+        var side = this.FindControl<Control>("Side")!;
         var narrow = width < TwoColumns;
         Classes.Set("narrow", narrow);
         if (narrow)
