@@ -125,7 +125,7 @@ public static class ReplayFile
         {
             return (null, "This replay's stat pack is not one this launcher takes: " + refusal);
         }
-        return (pack.Name, version is StatsFormatVersion or CustomFormatVersion or MinesFormatVersion or SeatsFormatVersion or GridFormatVersion ? null
+        return (pack.Name, version is StatsFormatVersion or CustomFormatVersion or MinesFormatVersion or SeatsFormatVersion or GridFormatVersion or ModeFormatVersion ? null
             : "This replay holds a stat pack in the format of races without one: the game does not play it.");
     }
 
@@ -172,6 +172,11 @@ public static class ReplayFile
     /// another number, whatever else the race holds, so that a game program from before refuses it and does not play
     /// the race from the game's own grid.</summary>
     public const int GridFormatVersion = ReplayFormat.VersionGrid;
+
+    /// <summary>Version 9: 0.6's set-up, a race on the simulation's own generator, a game mode or not (every race and
+    /// practice from 0.6): the same file under another number, whatever else the race holds, so that a game program from
+    /// before refuses it.</summary>
+    public const int ModeFormatVersion = ReplayFormat.VersionMode;
 
     /// <summary>The steps after which a mine of the replay's race came back, as the game reads its header's rule
     /// (the race block's word, <see cref="RaceWords"/>: the protocol's rules.toml); 0 when the header names none, as
@@ -234,7 +239,7 @@ public static class ReplayFile
             {
                 return $"Replay of another version of F-Zero GX · {id}";
             }
-            if (file.RaceVersion is not (SeatsFormatVersion or GridFormatVersion) && (file.RaceVersion == MinesFormatVersion) != (MineRegenSteps(doc.RootElement) != 0))
+            if (file.RaceVersion is not (SeatsFormatVersion or GridFormatVersion or ModeFormatVersion) && (file.RaceVersion == MinesFormatVersion) != (MineRegenSteps(doc.RootElement) != 0))
             {
                 return MinesDisagree;
             }
