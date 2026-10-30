@@ -17,7 +17,11 @@ public enum HomeBlock
 public sealed record PersonRow(string Name, string ColorHex, string? Tag = null);
 
 /// <summary>A line of the standings beside the map; a knocked-out racer's detail is "KO".</summary>
-public sealed record HomeStanding(string Place, string Name, string ColorHex, string Detail, bool You, bool Out = false);
+public sealed record HomeStanding(string Place, string Name, string ColorHex, string Detail, bool You, bool Out = false, string Team = "")
+{
+    /// <summary>The race is a mode's with teams.</summary>
+    public bool HasTeam => Team.Length > 0;
+}
 
 /// <summary>An option of the course vote: its votes once the server tells them (as they come; from an older server
 /// with the result), a pip a vote (the player's own first) and its chance ("38%"); after the draw, won (framed)

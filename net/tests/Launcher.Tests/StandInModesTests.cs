@@ -7,8 +7,8 @@ namespace Launcher.Tests;
 
 /// <summary>The stand-in service races Quick Play's rotation as the service does (<see cref="QuickPlayRotation"/>):
 /// on the protocol's rotation of today's words, its vote has five cards, one spicy with its badge, and Random; the
-/// draw's card names what the course drawn races. The official rotation does not load yet: the stand-in then votes on
-/// courses alone and says why. A custom lobby's host mode file is compiled as the service compiles it: a file that
+/// draw's card names what the course drawn races. The official rotation loads, with no notice. A rotation that does not
+/// load: the stand-in votes on courses alone and says why. A custom lobby's host mode file is compiled as the service compiles it: a file that
 /// does not compile is refused with its line (bad_mode), one that does names the lobby's mode.</summary>
 [Collection(StandInModesTests.Name)]
 public sealed class StandInModesTests
@@ -65,17 +65,53 @@ public sealed class StandInModesTests
     }
 
     [Fact]
-    public async Task TheOfficialRotationWaitsAndTheStandInSaysWhy()
+    public async Task TheOfficialRotationIsTheStandInsVote()
     {
         StandInService.UseQuickPlay(RepositoryFolder.Protocol("protocol", "quickplay"));
         try
         {
-            Assert.StartsWith("knockout.fzmode line 43: ", StandInService.RotationRefusal, StringComparison.Ordinal);
+            Assert.Null(StandInService.RotationRefusal);
+            var (link, got) = await Connected();
+            await using (link)
+            {
+                await link.EnterQuickPlayAsync(6, new Rgb(1, 2, 3), cancel: TestContext.Current.CancellationToken);
+                await link.VoteStartAsync(true, TestContext.Current.CancellationToken);
+                var vote = await Next<CourseVote>(got);
+                var cards = vote.Cards!;
+                var spicy = Assert.Single(cards, c => c.Badge is not null);
+                Assert.Equal(("KNOCKOUT", 0, 8), (spicy.Badge, spicy.Laps, vote.Options[cards.ToList().IndexOf(spicy)]));
+                var normal = StandInService.Rotation!.Normal;
+                for (var i = 0; i < 5; i++)
+                {
+                    if (cards[i].Badge is null)
+                    {
+                        Assert.Equal(normal.Laps(vote.Options[i]), cards[i].Laps);
+                    }
+                }
+                Assert.DoesNotContain(got.OfType<ChatMessage>(), c => c.NoticeId == "stand-in-modes");
+            }
+        }
+        finally
+        {
+            StandInService.UseQuickPlay(Vectors);
+        }
+    }
+
+    [Fact]
+    public async Task ARotationThatDoesNotLoadIsSaidAndTheVoteIsOfCourses()
+    {
+        var folder = Directory.CreateTempSubdirectory("rotation-").FullName;
+        try
+        {
+            File.WriteAllText(Path.Combine(folder, QuickPlayRotation.FileName), "spicy_cards = 0\n[normal]\nmode = \"broken.fzmode\"");
+            File.WriteAllText(Path.Combine(folder, "broken.fzmode"), "mode \"Broken\" {\n  api 1;\n}\n\nlaps 100;\n");
+            StandInService.UseQuickPlay(folder);
+            Assert.StartsWith("broken.fzmode line 5: ", StandInService.RotationRefusal, StringComparison.Ordinal);
             var (link, got) = await Connected();
             await using (link)
             {
                 var said = await Next<ChatMessage>(got, c => c.NoticeId == "stand-in-modes");
-                Assert.Contains("knockout.fzmode line 43", said.Text, StringComparison.Ordinal);
+                Assert.Contains("broken.fzmode line 5", said.Text, StringComparison.Ordinal);
                 await link.EnterQuickPlayAsync(6, new Rgb(1, 2, 3), cancel: TestContext.Current.CancellationToken);
                 await link.VoteStartAsync(true, TestContext.Current.CancellationToken);
                 Assert.Null((await Next<CourseVote>(got)).Cards);
@@ -84,6 +120,7 @@ public sealed class StandInModesTests
         finally
         {
             StandInService.UseQuickPlay(Vectors);
+            Directory.Delete(folder, recursive: true);
         }
     }
 
@@ -99,6 +136,16 @@ public sealed class StandInModesTests
         Assert.Same(mode, StandInService.ModeOf(new LobbyRules(new Dictionary<string, int>(), Mode: mode), mode, null).Mode);
         Assert.Equal("the lobby holds no such mode", StandInService.ModeOf(new LobbyRules(new Dictionary<string, int>(), Mode: mode), null, null).Refusal);
         Assert.Null(StandInService.ModeOf(new LobbyRules(new Dictionary<string, int>()), mode, null).Mode);
+        // the host's values: checked against the package, kept, and over the words
+        const string WithParam = "mode \"P\" { api 1; }\nparam n \"Laps\" number 2..10 step 2 default 4;\nlaps n;\n";
+        Assert.StartsWith("Laps:", StandInService.ModeOf(new LobbyRules(new Dictionary<string, int>(), ModeFile: WithParam, ModeValues: [3]), null, null).Refusal, StringComparison.Ordinal);
+        var (first, firstTerms, _) = StandInService.ModeOf(new LobbyRules(new Dictionary<string, int>(), ModeFile: WithParam), null, null);
+        Assert.Equal([4], first!.Values!);
+        Assert.Equal(4, first.Terms!["laps"]);
+        var (moved, movedTerms, _) = StandInService.ModeOf(new LobbyRules(new Dictionary<string, int>(), Mode: first, ModeValues: [8]), first, firstTerms);
+        Assert.Equal([8], moved!.Values!);
+        Assert.Equal((8, 8), (moved.Terms!["laps"], movedTerms!.Laps(1)));
+        Assert.StartsWith("Laps:", StandInService.ModeOf(new LobbyRules(new Dictionary<string, int>(), Mode: moved, ModeValues: [20]), moved, movedTerms).Refusal, StringComparison.Ordinal);
         Assert.StartsWith("line 5: ", StandInService.ModeOf(new LobbyRules(new Dictionary<string, int>(),
             ModeFile: "mode \"Broken\" {\n  api 1;\n}\n\nlaps 100;\n"), null, null).Refusal, StringComparison.Ordinal);
     }

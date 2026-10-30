@@ -10,18 +10,19 @@
        rules, the seats down the columns, the watchers beside them where the server takes spectators, and the chat
        beside it all. The page's classes (LobbyView: gathering, noping) choose what a seat's row shows. -->
   <UserControl.Styles>
-    <!-- a seat's row carries the racer's machine while gathering (two columns), in a column of its own: the name has a
-         fixed width, so every machine starts at the same place and has the rest of the row. 128 px holds 16 capitals
-         and figures in bold (121 to 126 px; "WWW..." is cut); at the least width a half then has 93 px for "Mighty
-         Hurricane" beside a ping. In the other states the name has the row. -->
+    <!-- a seat's row carries the racer's machine while gathering (two columns), in a column of its own: the name and the
+         host's plate have a column of at least 128 px, so every machine starts at the same place and has the rest of
+         the row, and a short host's plate takes no room from it. 128 px holds 16 capitals and figures in bold (121 to
+         126 px; "WWW..." is cut); at the least width a half then has 93 px for "Mighty Hurricane" beside a ping. In the
+         other states the name has the row. -->
     <Style Selector="Grid.seat TextBlock.machine">
       <Setter Property="IsVisible" Value="False" />
     </Style>
     <Style Selector="v|LobbyView.gathering Grid.seat TextBlock.machine">
       <Setter Property="IsVisible" Value="True" />
     </Style>
-    <Style Selector="v|LobbyView.gathering Grid.seat TextBlock.seatname">
-      <Setter Property="Width" Value="128" />
+    <Style Selector="v|LobbyView.gathering Grid.seat DockPanel.seatlead">
+      <Setter Property="MinWidth" Value="128" />
     </Style>
     <!-- the vote's three columns on a narrow page: the names before the pings -->
     <Style Selector="v|LobbyView.noping Grid.seat TextBlock.ping">
@@ -82,13 +83,15 @@
                             Background="{Binding ColorHex, Converter={x:Static v:HexToBrush.Instance}}" />
                     <!-- the name in its column (its fixed width while gathering), the tick, then the machine's column -->
                     <DockPanel Grid.Column="2">
-                      <c:NameTagText DockPanel.Dock="Left" Classes="seatname" PlayerName="{Binding Name}" PlayerTag="{Binding Tag}"
-                                     Classes.strong="{Binding You}" Classes.open="{Binding Open}" VerticalAlignment="Center" />
+                      <DockPanel DockPanel.Dock="Left" Classes="seatlead" LastChildFill="False">
+                        <Border DockPanel.Dock="Right" Classes="seathost" Margin="8,0,0,0" IsVisible="{Binding Host}">
+                          <TextBlock Text="HOST" />
+                        </Border>
+                        <c:NameTagText DockPanel.Dock="Left" Classes="seatname" PlayerName="{Binding Name}" PlayerTag="{Binding Tag}"
+                                       Classes.strong="{Binding You}" Classes.open="{Binding Open}" VerticalAlignment="Center" />
+                      </DockPanel>
                       <TextBlock DockPanel.Dock="Left" Name="Tick" Classes="accent" Text="✓" Margin="8,0,0,0" VerticalAlignment="Center"
                                  IsVisible="{Binding Ticked}" />
-                      <Border DockPanel.Dock="Left" Classes="seathost" Margin="8,0,0,0" IsVisible="{Binding Host}">
-                        <TextBlock Text="HOST" />
-                      </Border>
                       <!-- the host's own page: a player removed from the lobby -->
                       <Button DockPanel.Dock="Right" Name="Kick" Classes="link kick" Content="Kick" Margin="8,0,0,0"
                               IsVisible="{Binding Kickable}" AutomationProperties.Name="{Binding Name, StringFormat='Kick {0}'}"

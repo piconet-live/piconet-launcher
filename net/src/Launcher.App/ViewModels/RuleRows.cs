@@ -210,9 +210,7 @@ public sealed partial class GameModeRule : RuleRow
     }
 
     private IReadOnlyList<string> Offered() =>
-        [NoMode, .. Served is { } served ? [Named(served.Name, served.Badge)] : (string[])[], .. File is { } file ? [Named(file.Name, file.Badge)] : (string[])[]];
-
-    private static string Named(string name, string badge) => badge.Length > 0 && !badge.Equals(name, StringComparison.OrdinalIgnoreCase) ? $"{name} ({badge})" : name;
+        [NoMode, .. Served is { } served ? [served.Name] : (string[])[], .. File is { } file ? [file.Name] : (string[])[]];
 }
 
 /// <summary>One of a few, side by side.</summary>
@@ -231,14 +229,23 @@ public sealed partial class StepperRule(string label, int value, int minimum, in
 
     public int Maximum { get; } = maximum;
 
+    /// <summary>How much a press changes it; a typed value goes to the nearest step from the least.</summary>
+    public int Step { get; init; } = 1;
+
     [ObservableProperty]
     public partial int Value { get; set; } = Math.Clamp(value, minimum, maximum);
 
     partial void OnValueChanged(int value)
     {
-        if (value < Minimum || value > Maximum)
+        var kept = Math.Clamp(value, Minimum, Maximum);
+        if (Step > 1)
         {
-            Value = Math.Clamp(value, Minimum, Maximum);
+            var steps = (int)Math.Round((kept - (double)Minimum) / Step);
+            kept = Minimum + (Math.Min(steps, (Maximum - Minimum) / Step) * Step);
+        }
+        if (kept != value)
+        {
+            Value = kept;
         }
     }
 }

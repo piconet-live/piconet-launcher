@@ -237,7 +237,7 @@ public static class ServerMessages
                 // another member's garage-built machine, named and drawn from its parts: only one the game can build
                 Custom = CustomMachine.Checked(p.Custom),
             })],
-        Race = l.Race is { MatchId: not null, Seats: not null } race ? race with { Seats = Seats(race.Seats) } : null,
+        Race = l.Race is { MatchId: not null, Seats: not null } race ? race with { Seats = Seats(race.Seats), Teams = TeamsOfSeats(race.Teams) } : null,
         // the counts are added up for the lobby's notice: one no service has (none, less than none, more than
         // MaxPlayers) is left out
         OtherBuilds = l.OtherBuilds is null ? null : [.. l.OtherBuilds.Where(o => o is { Players: >= 1 and <= MaxPlayers }).Take(MaxSeats)
@@ -283,7 +283,28 @@ public static class ServerMessages
         About = Text(m.About, MaxAboutLength),
         Terms = m.Terms is { Count: <= MostModeTerms } ? m.Terms : null,
         Pack = m.Pack is null ? null : Text(m.Pack, MaxNameLength),
+        Params = SoundParams(m) ? [.. m.Params!.Select(p => p with
+        {
+            Label = Text(p.Label, MaxNameLength), Name = Text(p.Name, MaxNameLength), Choices = [.. p.Choices.Select(c => Text(c, MaxNameLength))],
+        })] : null,
+        Values = SoundParams(m) ? m.Values : null,
     };
+
+    /// <summary>A mode's parameters as a panel can show them: as many values as parameters, each within its
+    /// declaration; anything else is no control and no value.</summary>
+    private static bool SoundParams(LobbyMode m) => m.Params is { Count: > 0 and <= MostModeParams } declared && m.Values is { } values &&
+        values.Count == declared.Count && Enumerable.Range(0, declared.Count).All(i => declared[i] is { Label: not null, Name: not null } p &&
+            p.Choices is { Count: <= MostModeChoices } choices && choices.All(c => c is not null) &&
+            (p.Kind != ModeParamKind.Choice || p.Most == choices.Count - 1) && p.Fits(values[i]));
+
+    /// <summary>The most parameters and a parameter's most choices shown (a server that sends more is sending something else).</summary>
+    private const int MostModeParams = 64;
+
+    private const int MostModeChoices = 64;
+
+    /// <summary>Each seat's team as a label can say it; anything else: none.</summary>
+    private static IReadOnlyList<int>? TeamsOfSeats(IReadOnlyList<int>? teams) =>
+        teams is { Count: <= MaxSeats } && teams.All(t => t is >= 0 and < ModeWords.Teams) ? teams : null;
 
     /// <summary>The most rules a mode can own (a server that sends more is sending something else).</summary>
     private const int MostModeTerms = 64;

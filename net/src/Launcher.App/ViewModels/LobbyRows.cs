@@ -28,7 +28,7 @@ public sealed record SeatRow(string Number, string Name, string ColorHex, string
     /// <summary>The player may change this seat's team (their own, or the host's for anyone, while the lobby forms).</summary>
     public bool TeamChanges { get; init; }
 
-    public string TeamText => Team is { } team ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $"Team {team + 1}") : "No team";
+    public string TeamText => Team is { } team ? ModeTeams.Word(team) : "No team";
 
     public bool TeamShown => Teams > 0 && !TeamChanges;
 

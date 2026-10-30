@@ -61,9 +61,15 @@ public static class CustomRules
         }
         var against = quickPlay ?? Defaults;
         // (a game mode first, by its name: "Overdrive · 5 laps")
-        return string.Join(" · ", rules.Differing(against).Select(name => Said(name, rules, against)).Prepend(rules.Mode?.Name ?? "")
+        return string.Join(" · ", rules.Differing(against).Select(name => Said(name, rules, against))
+            .Prepend(ParamsLine(rules.Mode?.Params, rules.Mode?.Values)).Prepend(rules.Mode?.Name ?? "")
             .Append(TeamsLine(rules)).Where(s => s.Length > 0));
     }
+
+    /// <summary>A mode's settings the host moved from their defaults, as the summary says them: "Cut every 15 s"; "" for none.</summary>
+    public static string ParamsLine(IReadOnlyList<ModeParam>? declared, IReadOnlyList<int>? values) =>
+        declared is null || values is null || values.Count != declared.Count ? ""
+        : string.Join(" · ", declared.Select((p, i) => (p, v: values[i])).Where(x => x.v != x.p.Default).Select(x => $"{x.p.Label} {ModeParamRow.Text(x.p, x.v)}"));
 
     /// <summary>The lobby's teams in the summary: "3 teams"; "" for none.</summary>
     private static string TeamsLine(LobbyRules rules) => rules.Mode is not null && rules.Value(LobbyRules.TeamsKey) is > 0 and var teams ? N($"{teams} teams") : "";
@@ -145,10 +151,17 @@ public static class CustomRules
         // a game mode: its own group first, its name and what it changes
         return rules?.Mode is { } mode
             ? [new RuleGroup([new ValueRule("Mode", mode.Name) { Marked = true, Note = mode.About },
-                .. rules.Value(LobbyRules.TeamsKey) is > 0 and var teams ? [new ValueRule("Teams", N($"{teams}")) { Marked = true }] : (RuleRow[])[]]) { Heading = "Mode" },
+                .. rules.Value(LobbyRules.TeamsKey) is > 0 and var teams ? [new ValueRule("Teams", N($"{teams}")) { Marked = true }] : (RuleRow[])[],
+                .. ParamValues(mode)]) { Heading = "Mode" },
                .. groups.Select(g => g with { Later = true })]
             : groups;
     }
+
+    /// <summary>A mode's settings as the whole list shows them; those moved from their defaults marked.</summary>
+    private static IEnumerable<RuleRow> ParamValues(LobbyMode mode) =>
+        mode is { Params: { } declared, Values: { } values } && values.Count == declared.Count
+            ? declared.Select((p, i) => new ValueRule(p.Label, ModeParamRow.Text(p, values[i])) { Marked = values[i] != p.Default })
+            : [];
 
     /// <summary>The machine setting's range of a lobby's rules.</summary>
     public static SettingRange Range(LobbyRules? rules, LobbyRules? quickPlay) =>

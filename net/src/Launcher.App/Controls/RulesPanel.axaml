@@ -102,7 +102,7 @@
                AutomationProperties.Name="{Binding Label}" />
     </DataTemplate>
     <DataTemplate DataType="vm:StepperRule">
-      <c:Stepper Value="{Binding Value}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Typed="True"
+      <c:Stepper Value="{Binding Value}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Step="{Binding Step}" Typed="True"
                  AutomationProperties.Name="{Binding Label}" />
     </DataTemplate>
     <!-- the stepper at the row's right edge, over the switches of the rows under it, so that the pad's down goes

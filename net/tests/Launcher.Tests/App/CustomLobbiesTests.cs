@@ -545,7 +545,136 @@ public sealed class CustomLobbiesTests : IDisposable
             var other = main.Lobby.SeatColumns.SelectMany(c => c.Seats).First(s => s is { You: false, Id: not null });
             main.Lobby.NextTeamCommand.Execute(other);
             PumpTelling(state, () => main.Lobby.SeatColumns.SelectMany(c => c.Seats).First(s => s.Id == other.Id).Team == 0, "the host did not change another's team");
+            PumpTelling(state, () => main.Lobby.SeatColumns.SelectMany(c => c.Seats).Single(s => s.You).Machine.Length > 0, "no machine");
+            // the host's seat, both marks on it: the machine has its whole name
+            var seat = window.GetVisualDescendants().OfType<Grid>().First(g => g.Classes.Contains("seat") && g.DataContext is SeatRow { You: true });
+            var machine = seat.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Classes.Contains("machine"));
+            machine.Measure(Avalonia.Size.Infinity);
+            Assert.True(machine.Bounds.Width >= machine.DesiredSize.Width - 0.5, $"the machine {machine.Text} is cut: {machine.Bounds.Width} of {machine.DesiredSize.Width}");
             Shot(window, state, "lobby-teams");
+        });
+    }
+
+    private const string WithParams = """
+        mode "Cutter" { api 1; about "The last racer is out."; }
+        param interval "Cut every" delay 10s..120s step 5s default 30s;
+        param keep "Racers left" number 1..29 default 1;
+        param rate "Speed rate" number 0.5..2.0 default 1.0;
+        param loud "Warnings" switch default on;
+        param shape "Order" choice ["Distance", "Time"] default "Time";
+        laps 5;
+        teams 2..4;
+        """;
+
+    /// <summary>A mode's parameters are the lobby's controls, from the compiled package: each kind its row on its
+    /// default, what the host moves goes in the rules in the package's order, into the summary, and comes back kept
+    /// from the mode the lobby has; another mode, or none, takes the rows away.</summary>
+    [Fact]
+    public void AModesParametersAreRowsThatGoWithTheRules()
+    {
+        var path = Path.Combine(_dir, "cutter.fzmode");
+        File.WriteAllText(path, WithParams);
+        var editor = new LobbyRulesEditor(null, null, [], "Friday");
+        Assert.Null(editor.Rules.ModeValues);
+        editor.ModeRow.Load(path);
+        var rows = editor.ParamRows;
+        Assert.Equal(["Cut every", "Racers left", "Speed rate", "Warnings", "Order"], rows.Select(r => r.Row.Label));
+        Assert.All(rows, r => Assert.Contains(r.Row, editor.LobbyGroups.SelectMany(g => g.Rows)));
+        Assert.Equal(rows.Select(r => r.Param.Default), editor.Rules.ModeValues!);
+        var cut = Assert.IsType<ChoiceRule>(rows[0].Row);
+        Assert.Equal(("10 s", "120 s", 23, "30 s"), (cut.Options[0], cut.Options[^1], cut.Options.Count, cut.Chosen));
+        Assert.IsType<StepperRule>(rows[1].Row);
+        Assert.Equal("1", Assert.IsType<ChoiceRule>(rows[2].Row).Chosen);
+        Assert.True(Assert.IsType<SwitchRule>(rows[3].Row).On);
+        Assert.Equal("Time", Assert.IsType<ChoiceRule>(rows[4].Row).Chosen);
+
+        cut.Selected = cut.Options.ToList().IndexOf("15 s");
+        ((StepperRule)rows[1].Row).Value = 4;
+        Assert.Equal(900, editor.Rules.ModeValues![0]);
+        Assert.Equal(4, editor.Rules.ModeValues![1]);
+        Assert.Contains("Cut every 15 s · Racers left 4", editor.SummaryShown, StringComparison.Ordinal);
+
+        var package = ModeCompiler.Compile(WithParams).Mode!;
+        Assert.Null(package.ValuesRefusal(editor.Rules.ModeValues!));
+        var named = new LobbyMode(new string('a', 64), "A", "Cutter", 1, Params: package.Params, Values: editor.Rules.ModeValues);
+        var again = new LobbyRulesEditor(new LobbyRules(new Dictionary<string, int>(), Mode: named), null, [], "F", editing: true);
+        Assert.Equal(editor.Rules.ModeValues, again.Rules.ModeValues!);
+        Assert.Equal(editor.Rules.ModeValues, again.Rules.Mode!.Values!);
+        again.ModeRow.Selected = 0;
+        Assert.Empty(again.ParamRows);
+        Assert.Null(again.Rules.ModeValues);
+
+        var all = CustomRules.AllRules(new LobbyRules(new Dictionary<string, int>(), Mode: named), null).SelectMany(g => g.Rows).OfType<ValueRule>().ToList();
+        Assert.Equal(("15 s", true), (all.Single(r => r.Label == "Cut every").Value, all.Single(r => r.Label == "Cut every").Marked));
+        Assert.Equal(("Time", false), (all.Single(r => r.Label == "Order").Value, all.Single(r => r.Label == "Order").Marked));
+    }
+
+    [Fact]
+    public void AStepperOnStepsKeepsATypedValueOnThem()
+    {
+        var row = new StepperRule("N", 4, 2, 9) { Step = 2 };
+        row.Value = 5;
+        Assert.True(row.Value is 4 or 6);
+        row.Value = 100;
+        Assert.Equal(8, row.Value);
+    }
+
+    /// <summary>A value a server sends outside the declaration is no control and no value; a seat's teams likewise.</summary>
+    [Fact]
+    public void AModesParametersFromAServerAreCheckedBeforeTheyAreShown()
+    {
+        var package = ModeCompiler.Compile(WithParams).Mode!;
+        LobbyMode Mode(params int[] values) => new(new string('a', 64), "A", "Cutter", 1, Params: package.Params, Values: values);
+        LobbyState Of(LobbyMode mode) => LedServer.Lobby(LobbyState.Forming) with { Rules = new LobbyRules(new Dictionary<string, int>(), Mode: mode) };
+        var good = package.Params.Select(p => p.Default).ToArray();
+        Assert.Equal(good, Assert.IsType<LobbyState>(ServerMessages.Checked(Of(Mode(good)))).Rules!.Mode!.Values!);
+        var bad = (int[])good.Clone();
+        bad[0] = 1;
+        Assert.Null(Assert.IsType<LobbyState>(ServerMessages.Checked(Of(Mode(bad)))).Rules!.Mode!.Params);
+        Assert.Null(Assert.IsType<LobbyState>(ServerMessages.Checked(Of(Mode(4)))).Rules!.Mode!.Values);
+
+        var race = new LobbyRace("m", 1, 3, [], DateTimeOffset.UnixEpoch, Teams: [0, 1]);
+        LobbyState Raced(LobbyRace r) => LedServer.Lobby(LobbyState.Racing) with { Race = r };
+        Assert.Equal([0, 1], Assert.IsType<LobbyState>(ServerMessages.Checked(Raced(race))).Race!.Teams!);
+        Assert.Null(Assert.IsType<LobbyState>(ServerMessages.Checked(Raced(race with { Teams = [0, 99] }))).Race!.Teams);
+    }
+
+    /// <summary>The Create page with a mode's settings, and a lobby with them in All rules. LOBBY_SHOTS keeps them.</summary>
+    [Fact]
+    public async Task AModesSettingsShowInThePanelAndInTheLobbysRules()
+    {
+        var path = Path.Combine(_dir, "cutter.fzmode");
+        File.WriteAllText(path, WithParams);
+        var state = State(standIn: true);
+        await InTheWindow(state, (window, main) =>
+        {
+            var joining = state.JoinAsync(new Uri(StandInService.Address), custom: true);
+            PumpTelling(state, () => joining.IsCompleted && state.Session?.PlayerId is not null);
+            main.Current = main.Lobbies;
+            PumpFor(200, state);
+            var view = Page<CustomLobbiesView>(window);
+            Click(window, Named<Button>(view, "CreateButton"));
+            var editor = main.Lobbies.Editor!;
+            editor.ModeRow.Load(path);
+            Dispatcher.UIThread.RunJobs();
+            var cut = (ChoiceRule)editor.ParamRows[0].Row;
+            cut.Selected = cut.Options.ToList().IndexOf("15 s");
+            Dispatcher.UIThread.RunJobs();
+            foreach (var label in (string[])["Cut every", "Racers left", "Speed rate", "Warnings", "Order"])
+            {
+                Assert.Contains(view.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == label && t.IsEffectivelyVisible);
+            }
+            Shot(window, state, "create-mode-params");
+
+            Click(window, Named<Button>(Named<RulesPanel>(view, "CreatePanel"), "ActionButton"));
+            PumpTelling(state, () => state.Session?.Lobby is { Custom: true }, "no lobby came");
+            var mode = state.Session!.Lobby!.Rules!.Mode!;
+            Assert.Equal(900, mode.Values![0]);
+            PumpFor(300, state);
+            Shot(window, state, "lobby-params");
+            main.Lobby.ToggleAllRulesCommand.Execute(null);
+            PumpFor(300, state);
+            Shot(window, state, "lobby-params-all-rules");
         });
     }
 }

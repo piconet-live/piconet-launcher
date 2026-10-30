@@ -510,6 +510,8 @@
                       <TextBlock Name="Phase" Classes="dim" Classes.open="{Binding GameOpen}"
                                  FontSize="{StaticResource Size12}" Text="{Binding Phase}" VerticalAlignment="Center"
                                  IsVisible="{Binding Phase, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                      <TextBlock Name="StandingTeam" Classes="dim" FontSize="{StaticResource Size12}" Text="{Binding Team}"
+                                 VerticalAlignment="Center" IsVisible="{Binding HasTeam}" />
                       <TextBlock Classes="figure detail" FontSize="{StaticResource Size14}" Text="{Binding Detail}"
                                  VerticalAlignment="Center" />
                     </StackPanel>
