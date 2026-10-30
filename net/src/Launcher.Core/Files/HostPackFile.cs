@@ -1,3 +1,5 @@
+using System.Text;
+using System.Text.Json;
 using Online.Protocol;
 
 namespace Launcher.Core;
@@ -41,9 +43,21 @@ public sealed record HostPackFile(string Name, string Text)
         {
             return (null, TooLong);
         }
+        // as the rules' JSON (ControlProtocol.Json) a character outside ASCII, a quote, <, >, & and + are six bytes
+        // each (\uXXXX): the server takes a pack file of at most twice its longest (piconet-service's
+        // LauncherMessages.MaxBytes) and ends a connection that sends more, so a longer one is said here
+        if (Encoding.UTF8.GetByteCount(JsonSerializer.Serialize(text, ControlProtocol.Json)) > MostSentBytes)
+        {
+            return (null, TooLongToSend);
+        }
         var (pack, refusal) = StatPackText.Read(text);
         return pack is null ? (null, $"Not a stat pack: {refusal}") : (new HostPackFile(pack.Name, text), null);
     }
 
+    /// <summary>The most bytes a pack file is as the rules' JSON: twice its longest in characters.</summary>
+    public const int MostSentBytes = 2 * LobbyRules.MostPackFile;
+
     private const string TooLong = "That file is too big for a stat pack.";
+
+    private const string TooLongToSend = "That file is too big to send: shorten its comments.";
 }

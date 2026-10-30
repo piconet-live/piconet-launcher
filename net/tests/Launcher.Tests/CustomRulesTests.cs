@@ -129,6 +129,19 @@ public sealed class CustomRulesTests
     }
 
     [Fact]
+    public void APackFileTooLongAsJsonIsSaidAndNotSent()
+    {
+        // within the characters a pack file may be, but outside ASCII: six bytes a character as JSON, past what the
+        // server reads
+        var accented = MyPack + "# " + new string('\u00e9', (HostPackFile.MostSentBytes / 6) + 1) + "\n";
+        Assert.True(accented.Length <= LobbyRules.MostPackFile);
+        Assert.Equal((null, "That file is too big to send: shorten its comments."), HostPackFile.Of(accented));
+        // the same length in plain letters is sent
+        var plain = MyPack + "# " + new string('e', (HostPackFile.MostSentBytes / 6) + 1) + "\n";
+        Assert.Equal("My Pack", HostPackFile.Of(plain).File?.Name);
+    }
+
+    [Fact]
     public void ALobbysOwnRulesOpenTheHostsPanel()
     {
         var rules = Whole(new() { ["cpu-fill"] = (int)CpuFillMode.Always, ["course-select"] = (int)CourseSelectMode.Fixed,
