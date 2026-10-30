@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using System.Numerics;
 using System.Text;
 using Fzgx.GameCube.Textures;
 using Launcher.Core;
@@ -10,6 +11,25 @@ namespace Launcher.Tests;
 internal static class GarageFiles
 {
     public static Rgb Grey { get; } = new(128, 128, 128);
+
+    /// <summary>An attachment file (<c>.fmi</c>): a count, records from 0x200, names from 0x2A0.</summary>
+    public static byte[] Fmi(params (string Name, Vector3 Point)[] records)
+    {
+        var names = new List<byte>();
+        var file = new byte[0x2A0];
+        file[2] = (byte)records.Length;
+        for (var i = 0; i < records.Length; i++)
+        {
+            var at = 0x200 + (i * 0x14);
+            BinaryPrimitives.WriteInt32BigEndian(file.AsSpan(at + 4), names.Count);
+            BinaryPrimitives.WriteSingleBigEndian(file.AsSpan(at + 8), records[i].Point.X);
+            BinaryPrimitives.WriteSingleBigEndian(file.AsSpan(at + 12), records[i].Point.Y);
+            BinaryPrimitives.WriteSingleBigEndian(file.AsSpan(at + 16), records[i].Point.Z);
+            names.AddRange(Encoding.ASCII.GetBytes(records[i].Name));
+            names.Add(0);
+        }
+        return [.. file, .. names];
+    }
 
     /// <summary>An 8x8 (or larger) CMPR texture of the colours given per texel.</summary>
     public static byte[] Cmpr(int width, int height, Func<int, int, Rgb> color)

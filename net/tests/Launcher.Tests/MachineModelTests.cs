@@ -19,6 +19,39 @@ public sealed class MachineModelTests
     }
 
     [Fact]
+    public void AnObjectGoesWhereTheAttachmentFileSays()
+    {
+        // Fire Stingray's fin and Rainbow Phoenix's wings are stored around their hinges: left at the file's own
+        // coordinates the fin sank into the body and the wings crossed under it
+        var own = Tpl(Cmpr(8, 8, (_, _) => new Rgb(200, 0, 0)));
+        var at = new Vector3(1.5f, 0.25f, -2);
+        var plain = MachineModel.Read(Gma(0, 0), own, null);
+        var placed = MachineModel.Read(Gma(0, 0), own, null, Fmi(("other", Vector3.One), ("body", at)));
+        Assert.Equal(plain.Meshes.Count, placed.Meshes.Count);
+        Assert.Equal(plain.Meshes[0].Positions.Select(p => p + at), placed.Meshes[0].Positions);
+        Assert.Equal(plain.Radius, placed.Radius, 3);
+        Assert.Equal(plain.Center + at, placed.Center);
+        // a name it does not hold stays where the model has it
+        Assert.Equal(plain.Meshes[0].Positions, MachineModel.Read(Gma(0, 0), own, null, Fmi(("other", at))).Meshes[0].Positions);
+    }
+
+    [Fact]
+    public void AnAttachmentFileThatDoesNotFitPlacesNothing()
+    {
+        Assert.Empty(MachineModel.Attachments(null));
+        Assert.Empty(MachineModel.Attachments(new byte[16]));
+        // the count says more records than there is room for: those there are still read
+        var many = Fmi(("a", Vector3.One));
+        many[2] = 255;
+        Assert.Equal(Vector3.One, Assert.Single(MachineModel.Attachments(many)).Value);
+        // a name's place outside the file, and a point that is no number
+        var far = Fmi(("a", Vector3.One));
+        far.AsSpan(0x204).Fill(0xFF);
+        Assert.Empty(MachineModel.Attachments(far));
+        Assert.Empty(MachineModel.Attachments(Fmi(("a", new Vector3(float.NaN, 0, 0)))));
+    }
+
+    [Fact]
     public void TheModelReadsItsMeshesColoursAndTextures()
     {
         // two meshes: the machine's own texture 0, and the shared number 51, the shared file's first texture
