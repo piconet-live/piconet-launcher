@@ -7,7 +7,9 @@ namespace Launcher.Core;
 /// data folder so that they outlast a restart; whether one came that the player has not seen in the list (the
 /// bell's dot); and the ids of those whose banner the player dismissed (it stays dismissed). The file is the player's, on their disk: whatever is in it, <see cref="Load"/> never throws; a file
 /// that is not this one's JSON is read as no notices (a notice lost is no loss worth a word to the player), and an
-/// entry that is not sound is left out. A notice is kept once, by the server's id for it. One thread: the window's.
+/// entry that is not sound is left out. A notice is kept once, by the server's id for it, and for <see cref="KeptFor"/>
+/// after it was sent (an older one goes at the launcher's next start). One notice may be the server's standing one (its message of the day, <see cref="AddStanding"/>):
+/// a new standing one takes its place. One thread: the window's.
 /// </summary>
 public sealed class NoticeLog
 {
@@ -22,17 +24,24 @@ public sealed class NoticeLog
 
     public const int MostId = 40;
 
+    /// <summary>How long a notice is kept after it was sent: older ones go when the log is read (the launcher's
+    /// start).</summary>
+    public static readonly TimeSpan KeptFor = TimeSpan.FromDays(14);
+
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { WriteIndented = true };
 
     private readonly string _path;
     private readonly List<ServerNotice> _notices;
 
     private readonly HashSet<string> _dismissed;
+    private string? _standing;
 
-    private NoticeLog(string path, List<ServerNotice> notices, bool unseen, IEnumerable<string>? dismissed = null)
+    private NoticeLog(string path, List<ServerNotice> notices, bool unseen, IEnumerable<string>? dismissed = null,
+        string? standing = null)
     {
         _path = path;
         _notices = notices;
+        _standing = notices.Any(n => n.Id == standing) ? standing : null;
         Unseen = unseen;
         // only ids of notices kept: the list bounds them
         _dismissed = [.. (dismissed ?? []).Where(id => notices.Any(n => n.Id == id))];
@@ -56,9 +65,14 @@ public sealed class NoticeLog
     /// <summary>A notice came that the player has not seen in the list since.</summary>
     public bool Unseen { get; private set; }
 
-    public static NoticeLog Load(string path)
+    /// <summary>The server's standing notice as last seen (its message of the day), when it is kept; null: none.</summary>
+    public string? Standing => _standing;
+
+    /// <param name="time">The clock notices age by (tests: their own).</param>
+    public static NoticeLog Load(string path, TimeProvider? time = null)
     {
         ArgumentNullException.ThrowIfNull(path);
+        time ??= TimeProvider.System;
         try
         {
             if (!File.Exists(path) || new FileInfo(path).Length > MostBytes)
@@ -66,15 +80,18 @@ public sealed class NoticeLog
                 return new NoticeLog(path, [], false);
             }
             var stored = JsonSerializer.Deserialize<Stored>(File.ReadAllText(path), Json);
-            var notices = (stored?.Notices ?? []).Select(Sound).OfType<ServerNotice>().TakeLast(Most).ToList();
+            var now = time.GetUtcNow();
+            var notices = (stored?.Notices ?? []).Select(Sound).OfType<ServerNotice>().Where(n => Fresh(n, now)).TakeLast(Most).ToList();
             return new NoticeLog(path, notices, stored?.Unseen == true && notices.Count > 0,
-                (stored?.Dismissed ?? []).OfType<string>());
+                (stored?.Dismissed ?? []).OfType<string>(), stored?.Standing);
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or NotSupportedException)
         {
             return new NoticeLog(path, [], false);
         }
     }
+
+    private static bool Fresh(ServerNotice n, DateTimeOffset now) => now - n.Time < KeptFor;
 
     /// <summary>Keeps a notice and marks it unseen; false (nothing changes) when one with its id is kept already.</summary>
     public bool Add(ServerNotice notice)
@@ -85,14 +102,49 @@ public sealed class NoticeLog
             return false;
         }
         _notices.Add(notice with { Replayed = false });
-        if (_notices.Count > Most)
-        {
-            _notices.RemoveRange(0, _notices.Count - Most);
-            _dismissed.RemoveWhere(id => _notices.All(n => n.Id != id));
-        }
+        Trim();
         Unseen = true;
         Save();
         return true;
+    }
+
+    /// <summary>The server's standing notice (its message of the day, as its status shows it): kept as that one,
+    /// in the place of the standing one before (that one goes from the list: it no longer stands). One kept already
+    /// by its id (the same notice came at a welcome) becomes the standing one. It brings no dot: the home screen shows
+    /// it. False when nothing changed.</summary>
+    public bool AddStanding(ServerNotice notice)
+    {
+        ArgumentNullException.ThrowIfNull(notice);
+        if (notice.Id is null || notice.Id.Length > MostId || notice.Text.Length is 0 or > MostText || _standing == notice.Id)
+        {
+            return false;
+        }
+        if (_standing is { } before)
+        {
+            _notices.RemoveAll(n => n.Id == before);
+        }
+        _standing = notice.Id;
+        if (_notices.All(n => n.Id != notice.Id))
+        {
+            _notices.Add(notice with { Replayed = false });
+        }
+        Trim();
+        Save();
+        return true;
+    }
+
+    /// <summary>The oldest go past <see cref="Most"/>.</summary>
+    private void Trim()
+    {
+        if (_notices.Count > Most)
+        {
+            _notices.RemoveRange(0, _notices.Count - Most);
+        }
+        _dismissed.RemoveWhere(id => _notices.All(n => n.Id != id));
+        if (_notices.All(n => n.Id != _standing))
+        {
+            _standing = null;
+        }
     }
 
     /// <summary>The player opened the list: nothing is unseen.</summary>
@@ -112,7 +164,7 @@ public sealed class NoticeLog
         try
         {
             var stored = new Stored(Unseen, [.. _notices.Select(n => new StoredNotice(n.Id, n.Time, ServerNotice.WordOf(n.Level), n.Text))],
-                [.. _dismissed]);
+                [.. _dismissed], _standing);
             Online.Protocol.AtomicFile.WriteAllText(_path, JsonSerializer.Serialize(stored, Json));
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
@@ -127,7 +179,7 @@ public sealed class NoticeLog
             ? new ServerNotice(n.Id, ServerNotice.LevelOf(n.Level), text, time)
             : null;
 
-    private sealed record Stored(bool Unseen, List<StoredNotice?>? Notices, List<string?>? Dismissed = null);
+    private sealed record Stored(bool Unseen, List<StoredNotice?>? Notices, List<string?>? Dismissed = null, string? Standing = null);
 
     private sealed record StoredNotice(string? Id, DateTimeOffset? Time, string? Level, string? Text);
 }

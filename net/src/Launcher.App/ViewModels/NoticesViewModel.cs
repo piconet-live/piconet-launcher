@@ -101,6 +101,18 @@ public sealed partial class NoticesViewModel : ViewModelBase, IDisposable
         }
     }
 
+    /// <summary>The server's message of the day as its public status shows it (the Home screen has no connection
+    /// to be sent it at a welcome), on the window's thread: into the list in the place of the one before, with no
+    /// banner and no dot, since Home shows it while it stands.</summary>
+    public void ReceiveStanding(ServerNotice notice)
+    {
+        ArgumentNullException.ThrowIfNull(notice);
+        if (_state.Notices.AddStanding(notice))
+        {
+            Refresh();
+        }
+    }
+
     /// <summary>A notice from the server that came while connected, on the window's thread.</summary>
     public void Receive(ServerNotice notice)
     {

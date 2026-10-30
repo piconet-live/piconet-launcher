@@ -50,6 +50,14 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         Control = new PlayControlViewModel(state, _feed, Lobby, () => Current = Lobby, ShowSettings);
         Control.ShowFirstScreen = () => Current = Disc;
         Notices = new NoticesViewModel(state, noticeTime);
+        // the message of the day the status shows goes into the bell's list too (Home shows it: HomeViewModel.Motd)
+        _feed.Changed += () => OnUi(() =>
+        {
+            if (!_feed.Failed && _feed.Latest?.Motd is { } motd)
+            {
+                Notices.ReceiveStanding(ServerNotice.Of(motd));
+            }
+        });
         _play = Home;
         Settings.PropertyChanged += (_, e) =>
         {

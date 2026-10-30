@@ -80,7 +80,7 @@
     <v:PlayControlView DataContext="{Binding $parent[Window].((vm:MainViewModel)DataContext).Control}" />
     <!-- The race, and what stands in its place: the same block at the same size in every state. -->
     <Grid Name="Top" ColumnDefinitions="520,16,*" RowDefinitions="Auto,Auto">
-      <Border Name="MapPlace" Classes="well" Height="264" ClipToBounds="True">
+      <Border Name="MapPlace" Classes="well" Height="264" ClipToBounds="True" VerticalAlignment="Top">
         <Panel>
           <!-- A few words: nobody online, a lobby gathering, a race seen from outside, no answer. -->
           <StackPanel IsVisible="{Binding IsWords}" VerticalAlignment="Center" Margin="24,20" Spacing="4">
@@ -153,6 +153,14 @@
 
       <!-- Beside it: the same race's standings; or who is in the lobby; or what RACE would do. -->
       <StackPanel Name="Side" Grid.Column="2">
+        <!-- The server's message of the day while it stands, at the head of this column: its own place on Home. -->
+        <Border Name="Motd" Classes="well" IsVisible="{Binding HasMotd}" Padding="20,16,20,18" Margin="0,0,0,20">
+          <StackPanel Spacing="8">
+            <TextBlock Classes="caps" Text="MESSAGE OF THE DAY" Foreground="{StaticResource AccentBrush}" />
+            <c:LinkText Name="MotdText" Message="{Binding Motd}" Foreground="{StaticResource TextBrush}"
+                        LinkBrush="{StaticResource AccentBrush}" FontSize="{StaticResource Size15}" LineHeight="22" />
+          </StackPanel>
+        </Border>
         <TextBlock Classes="dim" Text="{Binding SideOver}" TextTrimming="CharacterEllipsis" />
         <TextBlock Classes="head" Text="{Binding SideTitle}" TextTrimming="CharacterEllipsis" Margin="0,0,0,6" />
         <StackPanel IsVisible="{Binding IsRace}">

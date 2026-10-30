@@ -158,6 +158,14 @@ public sealed partial class HomeViewModel : ViewModelBase
     [ObservableProperty]
     public partial string Notice { get; set; } = "";
 
+    /// <summary>The server's message of the day while it stands (its public status carries it), in its own place on
+    /// the page; empty: none.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasMotd))]
+    public partial string Motd { get; set; } = "";
+
+    public bool HasMotd => Motd.Length > 0;
+
     /// <summary>The race's own page (the lobby's): the whole standings, the player's numbers, following a racer.</summary>
     [RelayCommand]
     private void OpenRace() => _showLobby();
@@ -189,6 +197,7 @@ public sealed partial class HomeViewModel : ViewModelBase
         // (a visit to the custom lobbies is no Quick Play: Home shows Quick Play from outside then)
         var session = _state.InQuickPlay && _state.Session is { Custom: false } ? _state.Session : null;
         var status = _feed.Latest;
+        ShowMotd(status?.Motd);
         NoDisc = DiscCheck.Check(_state.Settings.DiscPath) != DiscStatus.Ok;
         RulesLine = session?.Rules is { } rules ? Rules(rules) : "";
         Stale = false;
@@ -221,6 +230,10 @@ public sealed partial class HomeViewModel : ViewModelBase
         }
         ShowLobbies(session, status);
     }
+
+    /// <summary>The message of the day while the status carries it; it goes when the status has none, or when no
+    /// status is known.</summary>
+    private void ShowMotd(RecentNotice? motd) => Motd = motd?.Text ?? "";
 
     /// <summary>Out of Quick Play: what the server says of itself. A lobby seen from outside: its phase and how full
     /// it is, with its racers beside.</summary>

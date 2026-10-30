@@ -22,28 +22,36 @@ public sealed class NoticeLogTests : IDisposable
 
     private static ServerNotice Notice(int i, NoticeLevel level = NoticeLevel.Info) => new($"n-{i}", level, $"text {i}", Noon.AddMinutes(i));
 
+    /// <summary>The clock the log is read by: the afternoon of the notices' day (they age by it).</summary>
+    private static readonly TimeProvider Afternoon = new At(Noon.AddHours(4));
+
+    private sealed class At(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
+    }
+
     [Fact]
     public void NoticesAreKeptAcrossARestartOnceEachAndTheOldestGoPastAHundred()
     {
-        var log = NoticeLog.Load(File);
+        var log = NoticeLog.Load(File, Afternoon);
         Assert.Empty(log.Notices);
         Assert.False(log.Unseen);
         Assert.True(log.Add(Notice(0, NoticeLevel.Urgent)));
         Assert.False(log.Add(Notice(0, NoticeLevel.Urgent) with { Text = "again" }));   // the same id: kept once
         Assert.True(log.Unseen);
 
-        var again = NoticeLog.Load(File);                                              // the launcher started again
+        var again = NoticeLog.Load(File, Afternoon);                                              // the launcher started again
         var kept = Assert.Single(again.Notices);
         Assert.Equal(("n-0", NoticeLevel.Urgent, "text 0", Noon), (kept.Id, kept.Level, kept.Text, kept.Time));
         Assert.True(again.Unseen);
         again.Seen();
-        Assert.False(NoticeLog.Load(File).Unseen);
+        Assert.False(NoticeLog.Load(File, Afternoon).Unseen);
 
         for (var i = 1; i <= 100; i++)
         {
             again.Add(Notice(i));
         }
-        var full = NoticeLog.Load(File);
+        var full = NoticeLog.Load(File, Afternoon);
         Assert.Equal(NoticeLog.Most, full.Notices.Count);
         Assert.Equal("n-1", full.Notices[0].Id);                                       // n-0, the oldest, has gone
         Assert.Equal("n-100", full.Notices[^1].Id);
@@ -52,11 +60,11 @@ public sealed class NoticeLogTests : IDisposable
     [Fact]
     public void ADismissedBannerStaysDismissedAcrossARestart()
     {
-        var log = NoticeLog.Load(File);
+        var log = NoticeLog.Load(File, Afternoon);
         log.Add(Notice(1, NoticeLevel.Warning));
         log.Dismiss("n-1");
         log.Dismiss("not kept");                                                     // only a notice kept is marked
-        var again = NoticeLog.Load(File);
+        var again = NoticeLog.Load(File, Afternoon);
         Assert.True(again.Dismissed("n-1"));
         Assert.False(again.Dismissed("not kept"));
         Assert.False(again.Dismissed(null));
@@ -64,7 +72,56 @@ public sealed class NoticeLogTests : IDisposable
         {
             again.Add(Notice(i));
         }
-        Assert.False(NoticeLog.Load(File).Dismissed("n-1"));                        // gone with its notice
+        Assert.False(NoticeLog.Load(File, Afternoon).Dismissed("n-1"));                        // gone with its notice
+    }
+
+    [Fact]
+    public void ANoticeOlderThanTwoWeeksGoesAtTheNextStart()
+    {
+        var log = NoticeLog.Load(File, Afternoon);
+        log.Add(Notice(0, NoticeLevel.Warning));
+        log.Dismiss("n-0");
+        log.Add(new ServerNotice("late", NoticeLevel.Info, "a day later", Noon.AddDays(1)));
+        Assert.Equal(2, NoticeLog.Load(File, new At(Noon + NoticeLog.KeptFor - TimeSpan.FromMinutes(1))).Notices.Count);
+        var later = NoticeLog.Load(File, new At(Noon + NoticeLog.KeptFor + TimeSpan.FromHours(1)));
+        Assert.Equal(["late"], later.Notices.Select(n => n.Id!));
+        Assert.False(later.Dismissed("n-0"));
+    }
+
+    [Fact]
+    public void AStandingNoticeTakesThePlaceOfTheOneBeforeWithoutTheDot()
+    {
+        var log = NoticeLog.Load(File, Afternoon);
+        log.Add(Notice(1));
+        log.Seen();
+        Assert.True(log.AddStanding(Notice(2, NoticeLevel.Notice)));
+        Assert.False(log.AddStanding(Notice(2, NoticeLevel.Notice)));                  // the same: nothing changes
+        Assert.False(log.Unseen);
+        var again = NoticeLog.Load(File, Afternoon);                                   // kept as standing across a restart
+        Assert.Equal("n-2", again.Standing);
+        Assert.True(again.AddStanding(Notice(3, NoticeLevel.Notice)));
+        Assert.Equal(["n-1", "n-3"], again.Notices.Select(n => n.Id!));                // n-2 no longer stands: gone
+        // the same notice came at a welcome first (a chat line, kept as any): it becomes the standing one, once
+        Assert.True(again.Add(Notice(4, NoticeLevel.Notice)));
+        Assert.True(again.AddStanding(Notice(4, NoticeLevel.Notice)));
+        Assert.Equal(["n-1", "n-4"], again.Notices.Select(n => n.Id!));
+        Assert.False(again.AddStanding(new ServerNotice(null, NoticeLevel.Notice, "no id", Noon)));
+    }
+
+    [Fact]
+    public void TheStatusMessageOfTheDayIsCheckedAsANotice()
+    {
+        static RecentNotice? Read(RecentNotice? motd) =>
+            ServerMessages.Checked(new ServiceStatus("s", Noon, 0, [], [], [], [], Motd: motd))!.Motd;
+        Assert.Equal(new RecentNotice("a-1", Notices.Notice, "Cup night", Noon), Read(new("a-1", Notices.Notice, "Cup\a night", Noon)));
+        Assert.Equal(Notices.Info, Read(new("a-1", "doom", "x", Noon))!.Level);
+        Assert.Null(Read(new(null!, Notices.Notice, "no id", Noon)));
+        Assert.Null(Read(new("a-1", Notices.Notice, "\a", Noon)));
+        Assert.Null(Read(null));
+        var older = System.Text.Json.JsonSerializer.Deserialize<ServiceStatus>(
+            """{"name":"s","time":"2026-10-14T12:00:00Z","playersOnline":0,"lobbies":[],"starting":[],"races":[],"relays":[]}""",
+            ControlProtocol.Json)!;
+        Assert.Null(ServerMessages.Checked(older)!.Motd);                              // a server from before: none
     }
 
     [Theory]
@@ -77,11 +134,11 @@ public sealed class NoticeLogTests : IDisposable
     public void ADamagedFileIsReadAsNoNotices(string text)
     {
         System.IO.File.WriteAllText(File, text);
-        var log = NoticeLog.Load(File);
+        var log = NoticeLog.Load(File, Afternoon);
         Assert.Empty(log.Notices);
         Assert.False(log.Unseen);
         Assert.True(log.Add(Notice(1)));                                              // and the launcher goes on
-        Assert.Single(NoticeLog.Load(File).Notices);
+        Assert.Single(NoticeLog.Load(File, Afternoon).Notices);
     }
 
     [Fact]
@@ -96,7 +153,7 @@ public sealed class NoticeLogTests : IDisposable
               null
             ]}
             """);
-        var log = NoticeLog.Load(File);
+        var log = NoticeLog.Load(File, Afternoon);
         Assert.Equal([("a", NoticeLevel.Warning), ("b", NoticeLevel.Info)], log.Notices.Select(n => (n.Id!, n.Level)));
         Assert.True(log.Unseen);
     }
