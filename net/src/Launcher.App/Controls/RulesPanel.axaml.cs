@@ -1,6 +1,7 @@
 using System.Windows.Input;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Launcher.App.ViewModels;
 
@@ -19,7 +20,21 @@ public sealed partial class RulesPanel : UserControl
     public static readonly StyledProperty<ICommand?> ActionCommandProperty =
         AvaloniaProperty.Register<RulesPanel, ICommand?>(nameof(ActionCommand));
 
-    public RulesPanel() => AvaloniaXamlLoader.Load(this);
+    public RulesPanel()
+    {
+        AvaloniaXamlLoader.Load(this);
+        AddHandler(Button.ClickEvent, OnClick);
+    }
+
+    /// <summary>A stat pack row's Choose file: the system's file picker, and the file into the row.</summary>
+    private async void OnClick(object? sender, RoutedEventArgs e)
+    {
+        if (e.Source is Button { Name: "PackFile", DataContext: PackRule row } button &&
+            await Views.StatPackPicker.PickAsync(button).ConfigureAwait(true) is { } path)
+        {
+            row.Load(path);
+        }
+    }
 
     public IReadOnlyList<RuleGroup>? Groups
     {

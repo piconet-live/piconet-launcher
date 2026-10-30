@@ -46,8 +46,16 @@ public static class HostRuleRows
         _ => throw new NotSupportedException($"the row {row?.Label} holds no number"),
     };
 
-    /// <summary>The stat pack a pack's row holds: null for <see cref="Stock"/>.</summary>
-    public static string? Pack(RuleRow row) => row is ChoiceRule { Selected: > 0 } choice ? choice.Chosen : null;
+    /// <summary>The stat pack a pack's row holds, by name: null for <see cref="Stock"/>.</summary>
+    public static string? Pack(RuleRow row) => row switch
+    {
+        ChoiceRule { Selected: > 0 } choice => choice.Chosen,
+        PackRule { Selected: > 0 } pack => pack.Chosen,
+        _ => null,
+    };
+
+    /// <summary>The host's own pack file's text when a pack's row holds it (<see cref="LobbyRules.PackFile"/>); else null.</summary>
+    public static string? PackFile(RuleRow row) => row is PackRule { FileChosen: true, File: { } file } ? file.Text : null;
 
     /// <summary>The CPU racers' choices, in <see cref="CpuFillMode"/>'s order.</summary>
     public static IReadOnlyList<string> CpuFillChoices { get; } = ["Vote", "Always", "Never"];
@@ -55,7 +63,10 @@ public static class HostRuleRows
     /// <summary>A custom lobby's rule as its host's row, holding the lobby's value (<see cref="CustomRules.Value"/>):
     /// a range its two ends, the CPU racers their choices side by side, the course its choices and its fixed course, a lobby's time its number;
     /// the others as <see cref="For"/> gives them.</summary>
-    public static RuleRow ForLobby(HostRule rule, LobbyRules? rules, LobbyRules? quickPlay, IReadOnlyList<string>? packs)
+    /// <param name="file">The host's own pack file, the pack's row's last choice; it is the choice when the rules name
+    /// its pack and none of the server's is the same by name.</param>
+    public static RuleRow ForLobby(HostRule rule, LobbyRules? rules, LobbyRules? quickPlay, IReadOnlyList<string>? packs,
+        HostPackFile? file = null)
     {
         ArgumentNullException.ThrowIfNull(rule);
         var value = CustomRules.Value(rules, rule.Name, quickPlay);
@@ -65,9 +76,17 @@ public static class HostRuleRows
             RuleKind.Choice when rule == HostRules.CpuFill => new SegmentedRule(rule.Label, CpuFillChoices, value),
             RuleKind.Course => new CourseRule(rule.Label, value, CustomRules.Value(rules, LobbyRules.FixedCourseKey, quickPlay)),
             RuleKind.Text => new StepperRule(rule.Label, value, rule.Least, rule.Most),
-            RuleKind.Pack => For(rule, 0, packs, rules?.StatPack),
+            RuleKind.Pack => PackRow(rule, rules?.StatPack, packs ?? [], file),
             _ => For(rule, value, packs),
         };
+    }
+
+    /// <summary>A custom lobby's stat pack: Stock, the server's packs, the host's own file (Choose file).</summary>
+    private static PackRule PackRow(HostRule rule, string? pack, IReadOnlyList<string> packs, HostPackFile? file)
+    {
+        var served = packs.ToList().IndexOf(pack ?? "");
+        var selected = pack is null ? 0 : served >= 0 ? served + 1 : file?.Name == pack ? packs.Count + 1 : 0;
+        return new PackRule(rule.Label, [Stock, .. packs], selected, file);
     }
 
     /// <summary>A custom lobby's row's value into the rules' values (<see cref="ForLobby"/>'s form): a range's two
@@ -91,7 +110,7 @@ public static class HostRuleRows
             case SegmentedRule segmented:
                 values[rule.Name] = segmented.Selected;
                 break;
-            case ChoiceRule:
+            case ChoiceRule or PackRule:
                 break;   // (the stat pack)
             default:
                 values[rule.Name] = Number(row);

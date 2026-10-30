@@ -86,6 +86,48 @@ public sealed class CustomRulesTests
         Assert.Equal("GX Unleashed", editor.Rules.StatPack);
     }
 
+    private const string MyPack = "fzstats 1\nname My Pack\n# heavier\nmachine 6 Weight 2520\n";
+
+    [Fact]
+    public void AHostsOwnPackFileIsOfferedByItsNameAndSentWhole()
+    {
+        var dir = Directory.CreateTempSubdirectory("host-pack").FullName;
+        try
+        {
+            var (good, bad) = (Path.Combine(dir, "mine.fzstats"), Path.Combine(dir, "bad.fzstats"));
+            File.WriteAllText(good, MyPack);
+            File.WriteAllText(bad, "fzstats 1\nname Bad\nmachine 6 Weight -1e30\n");
+            var editor = new LobbyRulesEditor(null, QuickPlay, ["GX+"], "Friday");
+            var row = Assert.IsType<PackRule>(editor.Rule(HostRules.StatPack.Name));
+            Assert.Equal(["Stock", "GX Unleashed", "GX+"], row.Options);
+            Assert.Null(editor.Rules.PackFile);
+
+            row.Load(bad);                                                                    // no pack: said, nothing chosen
+            Assert.StartsWith("Not a stat pack: ", row.Note, StringComparison.Ordinal);
+            Assert.Equal(("GX Unleashed", null), (editor.Rules.StatPack, editor.Rules.PackFile));
+
+            row.Load(good);                                                                   // the file: its pack's name, last
+            Assert.Equal("", row.Note);
+            Assert.Equal(["Stock", "GX Unleashed", "GX+", "My Pack"], row.Options);
+            Assert.Equal(("My Pack", MyPack), (editor.Rules.StatPack, editor.Rules.PackFile));
+            Assert.Equal("My Pack", editor.Summary);
+            row.Selected = 2;                                                                 // a server's pack again
+            Assert.Equal(("GX+", null), (editor.Rules.StatPack, editor.Rules.PackFile));
+            editor.PresetRow.Selected = 0;                                                    // a preset: the file stays offered
+            Assert.Equal("My Pack", Assert.IsType<PackRule>(editor.Rule(HostRules.StatPack.Name)).Options[^1]);
+
+            // the host's lobby, its rules naming the pack the host sent: the panel opens on the file
+            var again = new LobbyRulesEditor(new LobbyRules(QuickPlay.Values, "My Pack"), QuickPlay, ["GX+"], "Friday", editing: true,
+                file: new HostPackFile("My Pack", MyPack));
+            Assert.True(Assert.IsType<PackRule>(again.Rule(HostRules.StatPack.Name)).FileChosen);
+            Assert.Equal(("My Pack", MyPack), (again.Rules.StatPack, again.Rules.PackFile));
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
     [Fact]
     public void ALobbysOwnRulesOpenTheHostsPanel()
     {

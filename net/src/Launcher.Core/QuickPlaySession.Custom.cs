@@ -78,9 +78,24 @@ public sealed partial class QuickPlaySession
         return _client is not null && PlayerId is not null ? _client.BrowseLobbiesAsync(on) : Task.CompletedTask;
     }
 
+    /// <summary>The last stat pack file of the host's own this session sent with a lobby's rules
+    /// (<see cref="LobbyRules.PackFile"/>): the server names it in the lobby's rules alone, so the host's rules
+    /// editor offers it again from here. Null: none sent.</summary>
+    public HostPackFile? HostPack { get; private set; }
+
+    private void RulesSent(LobbyRules rules)
+    {
+        if (rules.PackFile is { } text && rules.StatPack is { } name)
+        {
+            HostPack = new HostPackFile(name, text);
+        }
+    }
+
     /// <summary>A lobby of the player's, as its host, with these rules; a password when not empty.</summary>
     public Task CreateLobbyAsync(string name, LobbyRules rules, string? password)
     {
+        ArgumentNullException.ThrowIfNull(rules);
+        RulesSent(rules);
         var (machine, color, setting, stock, custom) = RacerToSend();
         Requested();
         return Client.CreateLobbyAsync(new CreateLobby(name, rules, string.IsNullOrEmpty(password) ? null : password,
@@ -100,7 +115,9 @@ public sealed partial class QuickPlaySession
     /// none.</summary>
     public Task SetLobbyRulesAsync(string? name, LobbyRules rules, string? password, bool clearPassword)
     {
+        ArgumentNullException.ThrowIfNull(rules);
         LobbyRefusal = null;
+        RulesSent(rules);
         return Client.SetLobbyRulesAsync(new SetLobbyRules(name, rules, string.IsNullOrEmpty(password) ? null : password, clearPassword));
     }
 
