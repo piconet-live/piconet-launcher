@@ -153,6 +153,14 @@
 
       <!-- Beside it: the same race's standings; or who is in the lobby; or what RACE would do. -->
       <StackPanel Name="Side" Grid.Column="2">
+        <!-- The server's message of the day while it stands, at the head of this column: its own place on Home. -->
+        <Border Name="Motd" Classes="well" IsVisible="{Binding HasMotd}" Padding="20,16,20,18" Margin="0,0,0,20">
+          <StackPanel Spacing="8">
+            <TextBlock Classes="caps" Text="MESSAGE OF THE DAY" Foreground="{StaticResource AccentBrush}" />
+            <TextBlock Text="{Binding Motd}" TextWrapping="Wrap" Foreground="{StaticResource TextBrush}"
+                       FontSize="{StaticResource Size15}" LineHeight="22" />
+          </StackPanel>
+        </Border>
         <TextBlock Classes="dim" Text="{Binding SideOver}" TextTrimming="CharacterEllipsis" />
         <TextBlock Classes="head" Text="{Binding SideTitle}" TextTrimming="CharacterEllipsis" Margin="0,0,0,6" />
         <StackPanel IsVisible="{Binding IsRace}">
@@ -203,15 +211,6 @@
         </Border>
       </StackPanel>
     </Grid>
-
-    <!-- The server's message of the day while it stands: its own place on Home, between the race and the lobbies. -->
-    <Border Name="Motd" Classes="well" IsVisible="{Binding HasMotd}" Padding="24,18,24,20">
-      <Grid ColumnDefinitions="Auto,24,*">
-        <TextBlock Classes="head" Text="Message of the day" VerticalAlignment="Top" Width="190" TextWrapping="Wrap" />
-        <TextBlock Grid.Column="2" Text="{Binding Motd}" TextWrapping="Wrap" Foreground="{StaticResource TextBrush}"
-                   FontSize="{StaticResource Size15}" LineHeight="22" />
-      </Grid>
-    </Border>
 
     <!-- The server's lobbies. Today these are its Quick Play lobbies; lobbies opened by players get the same rows. -->
     <StackPanel>
