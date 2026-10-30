@@ -182,7 +182,7 @@ public sealed class StandInModesTests
         {
             var state = await Created(c, "racers 2..6;\nlaps 2;");
             Assert.Equal(6, state.Capacity);
-            Assert.True(state.NoCpuVote);                        // (no `cpus allowed`)
+            Assert.True(state.NoCpuVote);                        // (no `cpus on`)
             Assert.Equal(0, state.Rules!.Mode!.Terms!["finish-limit"]);
             Assert.Equal(2, state.Rules.Mode.Terms["laps"]);
             Assert.Equal((int)CpuFillMode.Never, state.Rules.Mode.Terms["cpu-fill"]);
@@ -190,7 +190,7 @@ public sealed class StandInModesTests
         var d = await Connected();
         await using (d.Link)
         {
-            Assert.False((await Created(d, "cpus allowed;")).NoCpuVote);
+            Assert.False((await Created(d, "cpus on;")).NoCpuVote);
         }
     }
 
