@@ -50,6 +50,20 @@ public sealed class CustomRulesTests
     }
 
     [Fact]
+    public void TheDefaultsAreTheServicesQuickPlay()
+    {
+        // the race's rules and the machine setting are rules.toml's defaults, as the service's; the lobby's times,
+        // which rules.toml gives none, are the service's own (not each rule's least)
+        var rules = CustomRules.Defaults;
+        Assert.Equal(RaceRules.QuickPlay, QuickPlayDefaults.Rules.Race);
+        Assert.Equal(SettingRange.QuickPlay, QuickPlayDefaults.Rules.MachineSetting);
+        Assert.All(HostRules.Race, rule => Assert.Equal(RaceRules.QuickPlay.Value(rule), rules.Value(rule)));
+        Assert.Equal((10, 40, 10), (rules.Value(HostRules.VoteSeconds), rules.Value(HostRules.ChooseSeconds),
+            rules.Value(HostRules.VotingMinimum)));
+        Assert.Equal("", CustomRules.Summary(new(new Dictionary<string, int> { ["vote-seconds"] = 10, ["choose-seconds"] = 40 }), null));
+    }
+
+    [Fact]
     public void TheWholeListMarksWhatDiffers()
     {
         var groups = CustomRules.AllRules(Whole(new() { ["laps"] = 5 }), QuickPlay);

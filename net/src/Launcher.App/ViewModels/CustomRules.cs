@@ -35,14 +35,9 @@ public static class CustomRules
             .. i == 0 ? unnamed : []]))];
     }
 
-    /// <summary>Quick Play's rules whole from the rules' own defaults: for a server that names none.</summary>
-    public static LobbyRules Defaults { get; } = new(LobbyRules.Settable.Where(r => r.Kind != RuleKind.Pack)
-        .Select(r => KeyValuePair.Create(r.Name, Fallback(r)))
-        .Append(KeyValuePair.Create(LobbyRules.SettingHighKey, HostRules.MachineSetting.Default))
-        .ToDictionary(p => p.Key, p => p.Value));
-
-    // a rule's default, or its least where it names none (the lobby's times)
-    private static int Fallback(HostRule r) => r.Kind == RuleKind.Text && r.Default == 0 ? r.Least : r.Default;
+    /// <summary>Quick Play's rules whole as the service's code sets them (<see cref="QuickPlayDefaults"/>): for a server
+    /// that names none.</summary>
+    public static LobbyRules Defaults { get; } = QuickPlayDefaults.Whole();
 
     /// <summary>The value under a key in <paramref name="rules"/>, else Quick Play's.</summary>
     public static int Value(LobbyRules? rules, string key, LobbyRules? quickPlay) =>

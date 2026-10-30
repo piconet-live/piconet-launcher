@@ -43,16 +43,9 @@ internal sealed class StandInRooms(string name, Action<ServerMessage> send, Canc
     /// <summary>The made-up lobbies' password.</summary>
     public const string Password = "gx";
 
-    /// <summary>The stand-in's Quick Play rules, whole (the stand-in lobby's clock: a 12 s vote, a 15 s machine
-    /// choice, 2 players to start).</summary>
-    public static LobbyRules QuickPlay { get; } = new(LobbyRules.Settable.Where(r => r.Kind != RuleKind.Pack).ToDictionary(r => r.Name, r => r.Name switch
-    {
-        "vote-seconds" => 12,
-        "choose-seconds" => 15,
-        "voting-minimum" => 2,
-        _ => r.Default,
-    }).Append(new KeyValuePair<string, int>(LobbyRules.SettingHighKey, HostRules.MachineSetting.Default))
-        .ToDictionary(p => p.Key, p => p.Value));
+    /// <summary>The stand-in's Quick Play rules, whole: the official service's (<see cref="QuickPlayDefaults"/>, with
+    /// its operator's voting minimum).</summary>
+    public static LobbyRules QuickPlay { get; } = QuickPlayDefaults.Whole(StandInLobby.VotingMinimum);
 
     /// <summary>Rules whole: the host's values over Quick Play's.</summary>
     public static LobbyRules Whole(LobbyRules rules)

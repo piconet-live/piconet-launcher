@@ -13,6 +13,7 @@ no `using` (`scripts/structure_check.py --explain 15`). What arrives from outsid
 | `StandIn/` | The stand-in service, the launcher's dev mode (`--dev-service`): a lobby, chat and the votes in the launcher's own process, no races (its own README) |
 | `Board/` | The status board of the running game, a file both map: its race, its heartbeat and phase, the freeze judge, the mailbox's stop (its own README) |
 | `Presence.cs`, `DiscordPresence.cs`, `DiscordLink.cs` | Discord's status: the launcher's state as two lines; the connection to the player's own Discord (local IPC, DiscordRichPresence), one card in 5 s at most, quiet retries |
+| `QuickPlayDefaults.cs` | Quick Play's rules as the service's code sets them: for a server that names none, and the stand-in's |
 | `ServerChoice.cs` | When a server is set and who is asked unprompted |
 | `LobbyScreen.cs`, `CourseDraw.cs`, `LobbyTones.cs`, `DrawSounds.cs`, `LauncherSounds.cs`, `RaceStandings.cs`, `Courses.cs`, `Machines.cs` | What the lobby page shows by the lobby's stage, the steps of its line, where its Garage is open; the draw as a strip of chances with a pointer; the launcher's sounds: which sound plays (the game's from the disc, `Files/GameSounds.cs`, the draw's made in code, `DrawSounds.cs`, else the launcher's own tones); a race's order; names |
 | `MachineStats.cs` | The machines' stats as one table, whatever it was read from, and the order a list of machines is shown in |

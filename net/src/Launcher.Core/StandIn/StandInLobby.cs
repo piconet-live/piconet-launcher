@@ -4,7 +4,8 @@ namespace Launcher.Core;
 
 /// <summary>
 /// The stand-in service's lobby (<see cref="StandInService"/>), played for one player: stand-in racers who chat,
-/// vote to start, vote for a course and choose their machines, on a short clock, as a coordinator's lobby goes
+/// vote to start, vote for a course and choose their machines, on the service's Quick Play rules and clock
+/// (<see cref="QuickPlayDefaults"/>), as a coordinator's lobby goes
 /// (forming, starting with the course vote and its draw, choosing). Where the race would start the stand-in has no
 /// race server: the lobby says so and forms again. Quick Play's lobby has the five stand-in racers; a custom lobby
 /// (<paramref name="room"/>) has the room's members and host, its rules, and the host's requests (rules, kick,
@@ -21,12 +22,13 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
 
     private const string YourTag = "DEV2";
 
-    /// <summary>How long the course vote and the machine stage last on the stand-in (a real server's are longer).</summary>
-    private const int VoteMs = 12_000, ChooseMs = 15_000, DrawMs = 4_000;
+    /// <summary>The official service's voting minimum and start countdown, its operator's (piconet-service's
+    /// deploy/fly/coordinator.toml: --voting-minimum 2 --start-countdown 60), over its code's
+    /// (<see cref="QuickPlayDefaults"/>).</summary>
+    public const int VotingMinimum = 2, CountdownSeconds = 60;
 
-    /// <summary>Quick Play's start countdown on the stand-in (a real server's runs from its rule, longer with fewer
-    /// players: HostRules.StartCountdown).</summary>
-    private const int CountdownMs = 45_000;
+    /// <summary>The draw's animation before the machine stage (the service's CourseRevealMs).</summary>
+    private const int DrawMs = 4_000;
 
     /// <summary>The stand-in racers.</summary>
     public static IReadOnlyList<PlayerInfo> Others { get; } =
@@ -82,13 +84,15 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
 
     private string MatchId => string.Create(System.Globalization.CultureInfo.InvariantCulture, $"stand-in-{_match}");
 
-    private static readonly ServerRules Rules = new(3, Capacity, CpuFillMode.Vote, CourseSelectMode.Vote, null,
-        [.. Enumerable.Range(0, Machines.Names.Count)], SettingRange.Free, new RaceRules());
+    /// <summary>The course vote's and the machine stage's lengths: the room's rules, else Quick Play's.</summary>
+    private int VoteMs => (room?.Rules.Value(HostRules.VoteSeconds) ?? QuickPlayDefaults.VoteSeconds) * 1000;
+
+    private int ChooseMs => (room?.Rules.Value(HostRules.ChooseSeconds) ?? QuickPlayDefaults.ChooseSeconds) * 1000;
 
     /// <summary>The hello taken: the welcome, and the notice that this is the stand-in.</summary>
     public void Welcome()
     {
-        send(new Welcome(You, StandInService.Name, ControlProtocol.Version, Rules, Renames: true, Tag: YourTag));
+        send(new Welcome(You, StandInService.Name, ControlProtocol.Version, QuickPlayDefaults.Rules, Renames: true, Tag: YourTag));
         send(new ChatMessage(ControlProtocol.GlobalChannel, Notices.ServerId, Notices.SenderName,
             "This is the stand-in service (dev mode): lobbies, chat and votes work, races do not start.",
             DateTimeOffset.UtcNow, Notices.Info, "stand-in-welcome"));
@@ -337,7 +341,7 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
                 }
                 _stage = LobbyState.Choosing;
                 SendState();
-                send(new ChooseMachine(MatchId, course, Rules.AllowedMachines, ChooseMs));
+                send(new ChooseMachine(MatchId, course, QuickPlayDefaults.Rules.AllowedMachines, ChooseMs));
             }
             foreach (var (other, i) in _others.ToList().Select((p, i) => (p, i)))
             {
@@ -412,8 +416,9 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
             return;
         }
         var countdown = ++_countdowns;
-        _startsAt = DateTimeOffset.UtcNow.AddMilliseconds(CountdownMs);
-        Later(CountdownMs, () =>
+        var ms = CountdownMs();
+        _startsAt = DateTimeOffset.UtcNow.AddMilliseconds(ms);
+        Later(ms, () =>
         {
             lock (_gate)
             {
@@ -423,6 +428,15 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
                 }
             }
         });
+    }
+
+    /// <summary>(Under the lock.) The start countdown's length at the lobby's players now, as the service's
+    /// (HostRules.StartCountdown): the longest at the voting minimum, HostRules.StartCountdownLeast with one seat
+    /// left.</summary>
+    private int CountdownMs()
+    {
+        var fill = Math.Clamp((double)(Players.Count - VotingMinimum) / (Capacity - 1 - VotingMinimum), 0, 1);
+        return (int)Math.Round((CountdownSeconds - ((CountdownSeconds - HostRules.StartCountdownLeast) * fill)) * 1000);
     }
 
     private List<PlayerInfo> Players => [.. _me is { } me ? [me] : Array.Empty<PlayerInfo>(), .. _others];
@@ -436,7 +450,8 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
         }
         var choosing = _stage == LobbyState.Choosing;
         var players = Players.Select(p => p with { Chosen = choosing && _chosen.Contains(p.Id) }).ToList();
-        send(new LobbyState(_id, players, room?.Capacity ?? Capacity, VotingMinimum: 2, VotingOpen: _stage == LobbyState.Forming,
+        send(new LobbyState(_id, players, room?.Capacity ?? Capacity,
+            VotingMinimum: room?.Rules.Value(HostRules.VotingMinimum) ?? VotingMinimum, VotingOpen: _stage == LobbyState.Forming,
             StartVotes, _votedCpu ? 1 : 0, _stage, Custom: room is not null, HostId: room?.HostId, Rules: room?.Rules,
             Name: room?.Name, Locked: room?.Password is not null,
             StartsInMs: _startsAt is { } at ? (int)Math.Max(0, Math.Ceiling((at - DateTimeOffset.UtcNow).TotalMilliseconds)) : null));
