@@ -71,7 +71,7 @@ The two submodules are found through `ProtocolFolder` and `FzgxTools` in `net/Di
       export DOTNET_ROOT=$HOME/.dotnet PATH=$HOME/.dotnet:$PATH    # in ~/.bashrc too
 
   In WSL, Windows' `dotnet.exe` can come first on `PATH`; `command -v dotnet` should name `~/.dotnet/dotnet`.
-- nuget.org (Avalonia 12.1.3, Huskui.Avalonia, CommunityToolkit.Mvvm, DiscordRichPresence, Velopack, xunit.v3; the versions are in `net/Directory.Packages.props`)
+- nuget.org (Avalonia 12.1.3, Huskui.Avalonia, CommunityToolkit.Mvvm, DiscordRichPresence, Velopack, Tomlyn, xunit.v3; the versions are in `net/Directory.Packages.props`)
 - Windows 10 or later to run the launcher with the game; the build and the tests also run on Linux
 
 ## Build and test

@@ -1,3 +1,5 @@
+using Online.Protocol;
+
 namespace Launcher.Core;
 
 /// <summary>
@@ -25,4 +27,67 @@ public static class StandInService
 
     /// <summary>The answers of the stand-in's status page and health check, for one asker's HTTP client.</summary>
     public static HttpMessageHandler Answers() => new StandInStatus();
+
+    /// <summary>The folder of Quick Play's rotation the stand-in races (<see cref="QuickPlayRotation"/>): the
+    /// protocol's protocol/quickplay/, which the build puts beside the program, as the service's image has it.</summary>
+    public static string QuickPlayFolder { get; private set; } = Path.Combine(AppContext.BaseDirectory, "quickplay");
+
+    private static readonly Lock RotationGate = new();
+    private static (string Folder, QuickPlayRotation? Rotation, string? Refusal)? _rotation;
+
+    /// <summary>The rotation the stand-in's Quick Play votes on, read once a folder; null when the folder's does not
+    /// load (<see cref="RotationRefusal"/>): the stand-in then votes on courses alone, the vote of before modes,
+    /// where the service would refuse to start.</summary>
+    public static QuickPlayRotation? Rotation => Rotated().Rotation;
+
+    /// <summary>Why the rotation did not load (the file, and the compiler's line); null when it did.</summary>
+    public static string? RotationRefusal => Rotated().Refusal;
+
+    /// <summary>The stand-in races the rotation in <paramref name="folder"/> from its next lobby on (a test's own).</summary>
+    public static void UseQuickPlay(string folder)
+    {
+        ArgumentNullException.ThrowIfNull(folder);
+        lock (RotationGate)
+        {
+            QuickPlayFolder = folder;
+            _rotation = null;
+        }
+    }
+
+    private static (string Folder, QuickPlayRotation? Rotation, string? Refusal) Rotated()
+    {
+        lock (RotationGate)
+        {
+            if (_rotation is not { } read || read.Folder != QuickPlayFolder)
+            {
+                try
+                {
+                    read = (QuickPlayFolder, QuickPlayRotation.Read(QuickPlayFolder), null);
+                }
+                catch (InvalidDataException e)
+                {
+                    read = (QuickPlayFolder, null, e.Message);
+                }
+                _rotation = read;
+            }
+            return read;
+        }
+    }
+
+    /// <summary>The mode a host's rules give a stand-in lobby, as the service takes it: a mode file compiled (its first error
+    /// refused, <see cref="CustomLobby.BadMode"/>), the mode the lobby has named again (kept), or none.</summary>
+    public static (LobbyMode? Mode, string? Refusal) ModeOf(LobbyRules rules, LobbyMode? had)
+    {
+        ArgumentNullException.ThrowIfNull(rules);
+        if (rules.ModeFile is { } text)
+        {
+            var compiled = text.Length > LobbyRules.MostModeFile ? null : ModeCompiler.Compile(text);
+            return compiled?.Mode is { } m
+                ? (new LobbyMode(compiled.Hash!, compiled.ShareCode!, m.Name, m.Api, m.Badge, m.About), null)
+                : (null, compiled?.Errors[0] ?? "the mode file is too long");
+        }
+        return rules.Mode is null ? (null, null)
+            : rules.Mode.Hash == had?.Hash ? (had, null)
+            : (null, "the lobby holds no such mode");
+    }
 }

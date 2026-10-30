@@ -42,6 +42,8 @@
     <OnlineProtocolProject Condition="'$(OnlineProtocolProject)' == ''">$(ProtocolFolder)net/src/Online.Protocol/Online.Protocol.csproj</OnlineProtocolProject>
     <ProtocolGenerated Condition="'$(ProtocolGenerated)' == ''">$(ProtocolFolder)protocol/generated/</ProtocolGenerated>
     <ProtocolPacks Condition="'$(ProtocolPacks)' == ''">$(ProtocolFolder)protocol/packs/</ProtocolPacks>
+    <!-- Quick Play's rotation, quickplay.toml and its mode files (the stand-in service races what the service races) -->
+    <ProtocolQuickPlay Condition="'$(ProtocolQuickPlay)' == ''">$(ProtocolFolder)protocol/quickplay/</ProtocolQuickPlay>
   </PropertyGroup>
 
   <!-- The runner's table of pins (port/setup/pins.tsv), where the launcher's disc tests find your disc image

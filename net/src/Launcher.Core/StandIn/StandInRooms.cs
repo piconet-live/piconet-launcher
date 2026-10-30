@@ -48,14 +48,14 @@ internal sealed class StandInRooms(string name, Action<ServerMessage> send, Canc
     public static LobbyRules QuickPlay { get; } = QuickPlayDefaults.Whole(StandInLobby.VotingMinimum);
 
     /// <summary>Rules whole: the host's values over Quick Play's.</summary>
-    public static LobbyRules Whole(LobbyRules rules)
+    public static LobbyRules Whole(LobbyRules rules, LobbyMode? mode = null)
     {
         var values = QuickPlay.Values.ToDictionary(p => p.Key, p => p.Value);
         foreach (var (key, value) in rules?.Values ?? new Dictionary<string, int>())
         {
             values[key] = value;
         }
-        return new LobbyRules(values, rules?.StatPack);
+        return new LobbyRules(values, rules?.StatPack, Mode: mode);
     }
 
     private static List<PlayerInfo> Of(params int[] others) => [.. others.Select(i => StandInLobby.Others[i])];
@@ -111,13 +111,19 @@ internal sealed class StandInRooms(string name, Action<ServerMessage> send, Canc
 
     public void Create(CreateLobby request, string playerName)
     {
+        var (mode, refusal) = StandInService.ModeOf(request.Rules, null);
+        if (refusal is not null)
+        {
+            send(new ErrorMessage(CustomLobby.BadMode, refusal));
+            return;
+        }
         LeaveCurrent();
         StandInRoom room;
         lock (_gate)
         {
             _made++;
             room = new StandInRoom(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"stand-in-mine-{_made}"),
-                request.Name.Trim(), StandInLobby.You, playerName, Whole(request.Rules), string.IsNullOrEmpty(request.Password) ? null : request.Password, []);
+                request.Name.Trim(), StandInLobby.You, playerName, Whole(request.Rules, mode), string.IsNullOrEmpty(request.Password) ? null : request.Password, []);
             _rooms.Add(room);
         }
         Enter(room, request.Machine, request.Color, request.StockColor);
@@ -200,7 +206,7 @@ internal sealed class StandInRooms(string name, Action<ServerMessage> send, Canc
     {
         if (Current?.SetRules(change) is { } refused)
         {
-            send(new ErrorMessage(refused, refused == CustomLobby.RulesLocked ? "Rules can change only while the lobby waits" : "Only the host can do that"));
+            send(new ErrorMessage(refused.Code, refused.Message));
         }
         Changed();
     }

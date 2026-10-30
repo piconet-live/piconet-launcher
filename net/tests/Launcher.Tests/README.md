@@ -6,6 +6,7 @@ test where it is at hand: `Files/RealDiscStatsTests`), no window, and no network
 | Files | What they test |
 |---|---|
 | `CoreTests`, `SessionTests`, `RulesTests`, `LobbyTests`, `RaceStandingsTests`, `LiveTests` | Settings, names, the LAN browser, the build's name and the match file, the words for a refusal, the course draw, the lobby's screens, the live race |
+| `StandInModesTests` | The stand-in service's Quick Play from the protocol's rotation (five cards, one spicy with its badge, Random; the draw's card), the official rotation's refusal said, a host's mode file compiled as the service does |
 | `StatPackMessageTests` | A race's stat pack from the server's match start to the match file, and a match start whose pack is none |
 | `CustomRulesTests` | A custom lobby's rules: the summary line of what differs from Quick Play's, the whole list, the host's settings (only what differs, the pack always, the presets), the refusals' and leavings' lines, a browser's row |
 | `LobbyFlowTests`, `StoryStageTests`, `GameVolumeTests` | The draw as a strip of chances and a pointer, the lobby's steps, the start vote's count, where the Garage is open; the story's stages named by their chapter; the game's volume written into its settings, and the launcher's three tones |
