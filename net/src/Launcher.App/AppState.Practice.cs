@@ -28,7 +28,7 @@ public sealed partial class AppState
         {
             return "Stat pack not found";
         }
-        var mode = PracticeMode.Start(StandInService.QuickPlayFolder, setup.Restore, out var problem);
+        var mode = PracticeMode.Start(Path.Combine(AppContext.BaseDirectory, "quickplay"), setup.Restore, out var problem);
         if (mode is null)
         {
             return problem;
