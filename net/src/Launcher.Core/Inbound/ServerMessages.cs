@@ -151,7 +151,15 @@ public static class ServerMessages
             Live = Sound(r.Live) ? r.Live : null,
         })],
         Relays = [.. (status.Relays ?? []).Where(r => r is not null).Take(MaxListed)],
+        Motd = Motd(status.Motd),
     };
+
+    /// <summary>The message of the day in the status, as a notice of the last hour is checked: an id, a text, a tier
+    /// that is one of the four (else info); null when it is none or cannot be shown.</summary>
+    private static RecentNotice? Motd(RecentNotice? motd) =>
+        motd is { Id.Length: >= 1 and <= MaxNameLength, Text: not null } && Text(motd.Text, MaxChatLength) is { Length: > 0 } text
+            ? motd with { Level = Notices.Known(motd.Level) ? motd.Level : Notices.Info, Text = text }
+            : null;
 
     private static IReadOnlyList<RacerView> Racers(IReadOnlyList<RacerView>? racers) =>
         [.. (racers ?? []).Where(r => r is not null).Take(MaxMembers)

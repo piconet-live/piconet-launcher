@@ -78,6 +78,8 @@
     <!-- Quick Play's action: RACE, or the lobby's box and the way out; "Play F-Zero GX" (PlayControlView, on the
          window's PlayControlViewModel) -->
     <v:PlayControlView DataContext="{Binding $parent[Window].((vm:MainViewModel)DataContext).Control}" />
+    <!-- The server's message of the day while it stands: drawn as its notices are (NoticeCard). -->
+    <v:NoticeCard Name="Motd" DataContext="{Binding Motd}" IsVisible="{Binding $parent[v:HomeView].((vm:HomeViewModel)DataContext).HasMotd}" />
     <!-- The race, and what stands in its place: the same block at the same size in every state. -->
     <Grid Name="Top" ColumnDefinitions="520,16,*" RowDefinitions="Auto,Auto">
       <Border Name="MapPlace" Classes="well" Height="264" ClipToBounds="True">
