@@ -57,10 +57,14 @@ public static class Replays
     {
         ArgumentNullException.ThrowIfNull(path);
         var info = OperatingSystem.IsWindows()
-            ? new ProcessStartInfo("explorer.exe") { ArgumentList = { "/select," + System.IO.Path.GetFullPath(path) } }
+            ? new ProcessStartInfo("explorer.exe") { Arguments = RevealArguments(path) }
             : new ProcessStartInfo(System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(path)) ?? ".") { UseShellExecute = true };
         Process.Start(info)?.Dispose();
     }
+
+    /// <summary>Explorer's own form: its parser wants the quotes around the path alone, so an ArgumentList (which
+    /// quotes the whole argument when the path has a space) opens a default folder instead.</summary>
+    public static string RevealArguments(string path) => $"/select,\"{System.IO.Path.GetFullPath(path)}\"";
 
     /// <summary><see cref="Reveal"/> for a button: false when the file cannot be shown (a path that is none, no
     /// file browser), and the launcher goes on.</summary>
