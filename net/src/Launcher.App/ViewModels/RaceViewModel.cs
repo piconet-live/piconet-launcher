@@ -297,7 +297,6 @@ public sealed partial class RaceViewModel : ViewModelBase
         {
             var r = ordered[i];
             var s = r.Seat < seats.Count ? seats[r.Seat] : null;
-            var machine = s?.Machine ?? 0;
             var detail = r.State switch
             {
                 RacerLive.Finished => Time(r.TotalMs),
@@ -305,7 +304,7 @@ public sealed partial class RaceViewModel : ViewModelBase
                 _ => $"Lap {Math.Min(r.Lap + 1, laps)}",
             };
             var row = new StandingRow(r.Seat, r.State == RacerLive.Out ? "-" : (++place).ToString(CultureInfo.InvariantCulture),
-                RacerName(s, r.Seat), Machines.Names[Math.Clamp(machine, 0, Machines.Names.Count - 1)],
+                RacerName(s, r.Seat), MachineName(s),
                 Rgb.Hex(SeatColor(s)), detail, r.BestLapMs is { } b ? Time(b) : "", r.Seat == mySeat, r.State == RacerLive.Out,
                 r.Seat == Followed, Phase(r, s, open));
             if (i == Standings.Count)
@@ -324,6 +323,11 @@ public sealed partial class RaceViewModel : ViewModelBase
     }
 
     private static string RacerName(SeatSetup? s, int seat) => s?.Name ?? $"Racer {seat + 1}";
+
+    /// <summary>A seat's machine as the standings write it: the custom machine the seat races (named by the game's rule,
+    /// <see cref="Theme.GameSkin.NameOf"/>), else its stock machine.</summary>
+    public static string MachineName(SeatSetup? s) =>
+        Theme.GameSkin.NameOf(new RacedMachine(Math.Clamp(s?.Machine ?? 0, 0, Machines.Names.Count - 1), s?.Custom));
 
     /// <summary>The players of the lobby whose game is still open (the server's Racing: set at the race's start,
     /// cleared when their launcher says the game closed); null: no lobby to tell.</summary>

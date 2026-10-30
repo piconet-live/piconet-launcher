@@ -59,15 +59,15 @@ public sealed class CustomPartTables
     public static int First(PartKind kind) => (int)kind * PerKind;
 
     /// <summary>A part's name as the game's parts list shows it: a body or cockpit's first name ("Dread Hammer"), a
-    /// booster's model ("Titan"); "" for no part.</summary>
+    /// booster's model and suffix ("Titan -G4", "Sunrise 140"); "" for no part.</summary>
     public string PartName(int part)
     {
-        if (KindOf(part) is not { } kind)
+        if (KindOf(part) is null)
         {
             return "";
         }
         var words = Words(_parts[part]);
-        return kind == PartKind.Booster ? Word(words, 0) : $"{Word(words, 0)} {Word(words, 1)}".Trim();
+        return $"{Word(words, 0)} {Word(words, 1)}".Trim();
     }
 
     /// <summary>The name the game gives the machine of these three parts (English, as a race shows it); "" when an id

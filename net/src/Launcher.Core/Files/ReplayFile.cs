@@ -153,14 +153,13 @@ public static class ReplayFile
     public const int GridFormatVersion = ReplayFormat.VersionGrid;
 
     /// <summary>The steps after which a mine of the replay's race came back, as the game reads its header's rule
-    /// (milliseconds, at most <see cref="GameFacts.Limits.MineRegenMax"/>, as whole steps of 60 a second); 0 when
-    /// the header names none, as every recording made before the rule.</summary>
+    /// (the race block's word, <see cref="RaceWords"/>: the protocol's rules.toml); 0 when the header names none, as
+    /// every recording made before the rule.</summary>
     public static int MineRegenSteps(JsonElement header) =>
         header.TryGetProperty(ReplayFormat.Header.Match, out var match) && match.ValueKind == JsonValueKind.Object &&
         match.TryGetProperty("setup", out var setup) && setup.ValueKind == JsonValueKind.Object &&
-        setup.TryGetProperty("rules", out var rules) && rules.ValueKind == JsonValueKind.Object &&
-        rules.TryGetProperty("mineRegenMs", out var ms) && ms.ValueKind == JsonValueKind.Number
-            ? (int)Math.Clamp(ms.GetDouble(), 0, GameFacts.Limits.MineRegenMax) * 60 / 1000
+        setup.TryGetProperty("rules", out var rules)
+            ? (int)RaceWords.Word(HostRules.MinesReturn, rules)
             : 0;
 
     public const string MinesDisagree = "This replay's mine rule and its format disagree: the game does not play it.";
