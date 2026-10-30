@@ -70,6 +70,16 @@ public sealed partial class AppState
             }
             Changed?.Invoke();
         };
+        // the view the player chose with the camera button: kept for the next race (LauncherSettings.RaceCamera)
+        board.EventRead += (e, _) =>
+        {
+            var view = (int)e.A;
+            if (e.Kind == BoardEventKind.Camera && view is >= LaunchFormat.MatchCameraLow and <= LaunchFormat.MatchCameraHigh &&
+                view != Settings.RaceCamera)
+            {
+                Update(s => s with { RaceCamera = view });
+            }
+        };
         BoardMade?.Invoke(board);
         board.Start();
         return GameWindow with { Board = board.Path };

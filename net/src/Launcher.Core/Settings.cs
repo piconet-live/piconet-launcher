@@ -195,6 +195,16 @@ public sealed record LauncherSettings
     /// "Set up in the game") still applies: off there is off too.</summary>
     public bool Rumble { get; init; } = true;
 
+    /// <summary>The chase camera view (1 to 3) the player last raced in: the game says each view chosen with the
+    /// camera button on its status board (<see cref="Board.BoardEventKind.Camera"/>), and the next race starts in it
+    /// (the launch file's <c>match.camera</c>). 0: none yet, and the game starts in its own. The player's picture
+    /// only: no other game of the race sees it.</summary>
+    public int RaceCamera { get; init; }
+
+    /// <summary>The view a race starts in: <see cref="RaceCamera"/> when it is one the game takes (1 to 3), else 0
+    /// (the game's own, and the launch file holds no <c>match.camera</c>).</summary>
+    public int StartCamera => RaceCamera is >= LaunchFormat.MatchCameraLow and <= LaunchFormat.MatchCameraHigh ? RaceCamera : 0;
+
     /// <summary>Whether the game window's strip shows the frame rate: the player's <see cref="ShowFrameRate"/>, and
     /// always on a test build (<paramref name="build"/>: a review or try copy) and in a test game
     /// (<paramref name="testGame"/>: a start whose launch file has test settings): the frame

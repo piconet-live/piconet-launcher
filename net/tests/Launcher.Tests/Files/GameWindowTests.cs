@@ -61,6 +61,28 @@ public sealed class GameWindowTests : IDisposable
             Flat(GameLaunchFile.Offline("b", window: on)));
     }
 
+    /// <summary>The player's last chase camera view is kept with the settings and reaches a race's launch file as
+    /// <c>match.camera</c>: never a playback's or an offline start's, never a view the game does not take.</summary>
+    [Fact]
+    public void TheLastCameraViewStartsTheNextRaceOnly()
+    {
+        Assert.Equal(0, new LauncherSettings().StartCamera);
+        var file = Path.Combine(_dir, "settings.json");
+        var store = new SettingsStore(file);
+        store.Save(new LauncherSettings { RaceCamera = 3 });
+        Assert.Equal(3, new SettingsStore(file).Load().StartCamera);
+        File.WriteAllText(file, """{"raceCamera": 7}""");
+        Assert.Equal(0, new SettingsStore(file).Load().RaceCamera);
+        var three = new GameWindow("F-Zero GX", Camera: 3);
+        Assert.Equal(3, (int)JsonNode.Parse(GameLaunchFile.Race("b", Match, window: three))!["match"]!["camera"]!);
+        Assert.Null(JsonNode.Parse(GameLaunchFile.Playback("b", "r.fzrp", window: three))!["replay"]!["camera"]);
+        Assert.DoesNotContain("camera", GameLaunchFile.Offline("b", window: three), StringComparison.Ordinal);
+        foreach (var none in new[] { 0, 4, -1 })
+        {
+            Assert.Null(JsonNode.Parse(GameLaunchFile.Race("b", Match, window: new GameWindow("F-Zero GX", Camera: none)))!["match"]!["camera"]);
+        }
+    }
+
     /// <summary>The picture is one setting of three choices; the on/off it replaced carries over (true: the game's
     /// 16:9, false: Off), and a value that is no choice reads as the default, the game's 16:9.</summary>
     [Theory]
