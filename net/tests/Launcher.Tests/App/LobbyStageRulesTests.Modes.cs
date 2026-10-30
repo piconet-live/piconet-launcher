@@ -29,6 +29,34 @@ public sealed partial class LobbyStageRulesTests
         window.CaptureRenderedFrame()?.Save(Path.Combine(folder, name + ".png"), new Avalonia.Media.Imaging.PngBitmapEncoderOptions());
     }
 
+    /// <summary>The player's game left a race of a mode without CPUs: Watch stands where Rejoin would, the lobby's own
+    /// Watch gives way, and a rejoin asked for anyway says plainly why not. LOBBY_SHOTS keeps both.</summary>
+    [Fact]
+    public async Task AModeWithoutCpusShowsWatchWhereRejoinWouldBe()
+    {
+        await using var server = new LedServer();
+        var seat = new SeatSetup(0, "p1", "ANA", 6, new Rgb(1, 2, 3));
+        await InALobby(server, LedServer.Welcome() with { Spectators = true }, LedServer.Lobby(LobbyState.Forming), (window, main, state) =>
+        {
+            var session = state.Session!;
+            // (no game runs here, so no game can leave: what RaceOverAsync keeps, RejoinTests has that step whole)
+            var start = new MatchStart("m1", new RelayEndpoint("r1", "", 47811), "1f2e3d4c5b6a7988", 0, new RaceSetup(21, 3, [seat], 1, 2), NoRejoin: true);
+            typeof(Launcher.Core.QuickPlaySession).GetProperty(nameof(session.LeftForGood))!.SetValue(session, new Launcher.Core.ForkRace("", null, start));
+            Send(server, LedServer.Lobby(LobbyState.Racing) with { Race = new LobbyRace("m1", 21, 3, [seat], DateTimeOffset.UtcNow) });
+            PumpTelling(state, () => main.Lobby.CanWatchLeftRace, "Watch was not offered");
+            Assert.False(main.Lobby.CanRejoin);
+            Assert.False(main.Lobby.CanWatch);
+            var view = window.GetVisualDescendants().OfType<LobbyView>().Single();
+            Assert.True(Named<Button>(view, "WatchLeftRace").IsEffectivelyVisible);
+            Assert.False(Named<Button>(view, "Rejoin").IsEffectivelyVisible);
+            Shot(window, state, "no-rejoin-watch");
+
+            state.Rejoin();
+            PumpTelling(state, () => main.Lobby.Notice == "Can't rejoin", "the refusal was not said");
+            Shot(window, state, "no-rejoin-refused");
+        });
+    }
+
     /// <summary>Quick Play's vote of game modes (<see cref="CourseVote.Cards"/>): each card says its laps beside its
     /// venue, the spicy card its mode's badge (and its line when hovered), "Random course" nothing; the draw's card
     /// (<see cref="CourseChosen.Card"/>) is what the course drawn races. LOBBY_SHOTS keeps the vote and the draw.</summary>

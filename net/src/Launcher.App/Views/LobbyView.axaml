@@ -245,6 +245,9 @@
         <!-- Rejoin: the player's game left its race while it ran. Watch: a spectator seat. -->
         <Button Name="Rejoin" Classes="primary" c:PadNav.Main="True" Height="32" Content="Rejoin" Command="{Binding RejoinCommand}"
                 IsVisible="{Binding CanRejoin}" />
+        <!-- A mode without CPUs has no rejoin: the race can be watched, where Rejoin would be. -->
+        <Button Name="WatchLeftRace" Classes="primary" c:PadNav.Main="True" Height="32" Content="Watch" Command="{Binding WatchLeftRaceCommand}"
+                IsVisible="{Binding CanWatchLeftRace}" />
         <Button Name="WatchButton" Classes="secondary surface" Content="{Binding WatchText}" Command="{Binding WatchCommand}" IsVisible="{Binding CanWatch}" />
         <Button Name="Face" Classes="secondary surface" Content="{Binding FaceText}" Command="{Binding TurnPageCommand}" IsVisible="{Binding GarageOpen}" AutomationProperties.Name="{Binding FaceText}" />
         <Button Name="LeaveHere" Classes="secondary surface" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Control.LeaveText}" Command="{Binding LeaveCommand}" />

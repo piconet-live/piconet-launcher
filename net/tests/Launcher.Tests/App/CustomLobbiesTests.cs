@@ -454,6 +454,60 @@ public sealed class CustomLobbiesTests : IDisposable
 
     // the overhaul: restore gone, what a mode owns, teams
 
+    /// <summary>A mode's list reaches the Garage from the lobby's rules, before the machine choice opens: the lobby's
+    /// machines alone, and with "All 41" the others greyed. LOBBY_SHOTS keeps the panel and the Garage.</summary>
+    [Fact]
+    public async Task AModesListsAndStatsShowInTheEditorTheLobbyAndTheGarage()
+    {
+        var state = State(standIn: true);
+        var path = Path.Combine(_dir, "two.fzmode");
+        File.WriteAllText(path, "mode \"Two Machines\" { api 1; }\nstats stock;\nmachines [\"Blue Falcon\", \"Golden Fox\"];\n");
+        await InTheWindow(state, (window, main) =>
+        {
+            main.Current = main.Practice;
+            Dispatcher.UIThread.RunJobs();
+            Assert.Null(main.Practice.Setup.StatPack);
+            PumpFor(200, state);
+            Shot(window, state, "stats-default-practice");
+
+            main.Current = main.Lobbies;
+            PumpTelling(state, () => main.Lobbies.Rows.Count == 3, "the browser listed nothing");
+            var view = Page<CustomLobbiesView>(window);
+            Click(window, Named<Button>(view, "CreateButton"));
+            var editor = main.Lobbies.Editor!;
+            Assert.Null(editor.Rules.StatPack);   // (the stand-in is a bare server: it names no pack, and the launcher adds none)
+            editor.PresetRow.RulesShown = true;
+            PumpFor(200, state);
+            Shot(window, state, "stats-default-create");
+
+            editor.ModeRow.Load(path);
+            Dispatcher.UIThread.RunJobs();
+            Assert.DoesNotContain(editor.RuleGroups.SelectMany(g => g.Rows), r => r.Label == HostRules.StatPack.Label);
+            Assert.Contains("2 machines", editor.Summary, StringComparison.Ordinal);
+            PumpFor(200, state);
+            Shot(window, state, "stats-enforced-create");
+
+            Click(window, Named<Button>(Named<RulesPanel>(view, "CreatePanel"), "ActionButton"));
+            PumpTelling(state, () => state.Session?.Lobby is { Custom: true }, "no lobby came");
+            Assert.Equal([2, 6], state.Session!.Lobby!.Rules!.Mode!.Machines);
+            PumpFor(300, state);
+            main.Lobby.ToggleAllRulesCommand.Execute(null);
+            PumpFor(300, state);
+            Shot(window, state, "machines-lobby-all-rules");
+            main.Lobby.ToggleAllRulesCommand.Execute(null);
+
+            PumpTelling(state, () => main.Lobby.Garage.Offer is not null, "the Garage did not take the mode's list");
+            Assert.Equal([2, 6], main.Lobby.Garage.Offer);
+            Assert.True(main.Lobby.Garage.OfferLimited);
+            main.Lobby.GarageShown = true;
+            PumpFor(400, state);
+            Shot(window, state, "machines-garage");
+            main.Lobby.Garage.ShowAll = true;
+            PumpFor(400, state);
+            Shot(window, state, "machines-garage-all");
+        });
+    }
+
     [Fact]
     public void RestoreIsNoRowOfALobby()
     {

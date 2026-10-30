@@ -31,7 +31,7 @@ public sealed partial class PracticeViewModel : ViewModelBase
     /// <param name="start">Starts the game on a set-up: null when it started, else the notice; null: nothing to
     /// start.</param>
     /// <param name="last">The practice last started (the settings'): the page opens on its course and rules; null:
-    /// <see cref="PracticeSetup.Default"/>.</param>
+    /// <see cref="PracticeSetup.Fresh"/>.</param>
     public PracticeViewModel(Func<RacedMachine> machine, Action garage, IReadOnlyList<string> packs, Func<PracticeSetup, string?>? start = null,
                              PracticeSetup? last = null)
     {

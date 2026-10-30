@@ -235,6 +235,13 @@ public sealed partial class LobbyViewModel : ViewModelBase
     [RelayCommand]
     private void Rejoin() => _state.Rejoin();
 
+    /// <summary>The player's game left a race whose mode has no rejoin: Watch stands where Rejoin would.</summary>
+    [ObservableProperty]
+    public partial bool CanWatchLeftRace { get; set; }
+
+    [RelayCommand]
+    private Task WatchLeftRaceAsync() => _session?.WatchLeftRaceAsync() ?? Task.CompletedTask;
+
     /// <summary>The server takes spectators: the player may watch the lobby's races instead of racing.</summary>
     [ObservableProperty]
     public partial bool CanWatch { get; set; }
@@ -315,7 +322,8 @@ public sealed partial class LobbyViewModel : ViewModelBase
         Clock(_session);
         LeaveText = lobby is null ? "Leave the queue" : "Leave the lobby";
         CanRejoin = _session.CanRejoin && !_state.Racing;
-        CanWatch = _session.CanWatch && _session.Race is null;
+        CanWatchLeftRace = _session.CanWatchLeftRace && !_state.Racing;
+        CanWatch = _session.CanWatch && _session.Race is null && !CanWatchLeftRace;
         WatchText = _session.Watching ? "Race" : "Watch";
         Watching = _session.Watching;
         ShowNotice(_session, lobby);
@@ -430,7 +438,8 @@ public sealed partial class LobbyViewModel : ViewModelBase
 
     private void ShowNotice(QuickPlaySession session, LobbyState? lobby)
     {
-        var (label, values, whole) = CustomNotice(session) is { } custom ? custom
+        var (label, values, whole) = session.RejoinRefused is { } noRejoin ? ("Can't rejoin", [], noRejoin)
+            : CustomNotice(session) is { } custom ? custom
             : session.LastError is { Code: "machine_not_allowed" } error
             ? ("Machine not allowed", session.Rules is { } rules ? [new NoticeValue("allowed", Allowed(rules) ?? "any")] : [], error.Message)
             // (until a race starts, the lobby is left or its pack changes)
@@ -481,9 +490,7 @@ public sealed partial class LobbyViewModel : ViewModelBase
 
     /// <summary>The machines a server allows, when not all: "Blue Falcon only", "12 machines"; null: all.</summary>
     private static string? Allowed(ServerRules r) =>
-        r.AllowedMachines.Count >= Machines.Names.Count ? null
-        : r.AllowedMachines.Count == 1 && r.AllowedMachines[0] is var only && Machines.Has(only) ? Machines.Names[only] + " only"
-        : $"{r.AllowedMachines.Count} machines";
+        CustomRules.MachinesLine(r.AllowedMachines) is { Length: > 0 } line ? line : null;
 
     /// <summary>Quick Play's mines' rule (the server's default, the rule's own: <see cref="HostRules.MinesReturn"/>):
     /// the rules line says nothing of it.</summary>

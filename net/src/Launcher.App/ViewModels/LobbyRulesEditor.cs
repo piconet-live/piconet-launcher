@@ -194,7 +194,7 @@ public sealed partial class LobbyRulesEditor : ObservableObject
 
     /// <summary>The rules that differ from Quick Play's, in one line ("" for Quick Play's own), the mode first.</summary>
     public string Summary => ModeRow.FileChosen && ModeRow.File is { } file
-        ? string.Join(" · ", new[] { file.Name, CustomRules.ParamsLine(file.Params, ModeValues), CustomRules.Summary(Rules with { Mode = null, ModeValues = null }, _quickPlay) }.Where(s => s.Length > 0))
+        ? string.Join(" · ", new[] { file.Name, CustomRules.ParamsLine(file.Params, ModeValues), CustomRules.MachinesLine(file.Terms.Machines), CustomRules.Summary(Rules with { Mode = null, ModeValues = null }, _quickPlay) }.Where(s => s.Length > 0))
         : CustomRules.Summary(Rules, _quickPlay);
 
     /// <summary>The line under the preset: the differing rules, or that they are Quick Play's.</summary>

@@ -109,7 +109,8 @@ public static class StandInService
                 return (null, null, "this mode's stats: this server has no stat packs");
             }
             return (new LobbyMode(compiled.Hash!, compiled.ShareCode!, m.Name, m.Api, m.Badge, m.About, terms.Rules(), terms.Pack,
-                m.Params.Count > 0 ? m.Params : null, m.Params.Count > 0 ? rules.ModeValues ?? [.. m.Params.Select(p => p.Default)] : null), terms, null);
+                m.Params.Count > 0 ? m.Params : null, m.Params.Count > 0 ? rules.ModeValues ?? [.. m.Params.Select(p => p.Default)] : null,
+                terms.Machines is { Count: > 0 } machines ? machines : null), terms, null);
         }
         if (rules.Mode is null)
         {
