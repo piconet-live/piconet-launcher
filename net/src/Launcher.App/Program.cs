@@ -150,11 +150,12 @@ internal static class Program
         }
         state.BoardMade += board => Launcher.Core.BoardLines.Follow(board, Write);
         var script = new Launcher.Core.QuickPlayScript(new Launcher.Core.QuickPlayScriptOptions(
-            visit.Races, visit.StartWith, visit.VoteCourse, Watch: visit.Watch), Write);
+            visit.Races, visit.StartWith, visit.VoteCourse, Watch: visit.Watch, Custom: visit.Custom, AfterLeave: visit.AfterLeave,
+            Rejoin: state.Rejoin), Write);
         Launcher.Core.QuickPlaySession session;
         try
         {
-            session = state.JoinAsync(new Uri(url)).GetAwaiter().GetResult();
+            session = state.JoinAsync(new Uri(url), visit.Custom is not null).GetAwaiter().GetResult();
         }
         catch (Exception e) when (e is System.Net.WebSockets.WebSocketException or UriFormatException or IOException)
         {

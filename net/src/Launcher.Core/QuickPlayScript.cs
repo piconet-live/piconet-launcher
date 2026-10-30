@@ -14,7 +14,7 @@ namespace Launcher.Core;
 /// <param name="Watch">It only waits in the lobby: no vote, no choice. It should join while the lobby's race is on
 /// (everyone in a lobby when a match forms races in it).</param>
 public sealed record QuickPlayScriptOptions(int Races = 1, int StartWith = 2, int? Course = null, int? Machine = null,
-    bool Watch = false);
+    bool Watch = false, QuickPlayCustom? Custom = null, string? AfterLeave = null, Action? Rejoin = null);
 
 /// <summary>
 /// Quick Play driven without a person, for tests (a launch file's <c>"quickPlay"</c>): it makes the calls the lobby
@@ -47,6 +47,12 @@ public sealed class QuickPlayScript(QuickPlayScriptOptions options, Action<strin
     private bool _connected;
     private int _watchFrame = -1;
     private RaceSnapshot? _watchLast;
+    private bool _browsing;
+    private bool _lobbyAsked;
+    private bool _teamChosen;
+    private string? _hostStarted;
+    private string? _offers;
+    private bool _pressedAfterLeave;
 
     /// <summary>Why the visit ended before its races were over (the server refused the player, or the connection
     /// closed); null: it did not.</summary>
@@ -124,10 +130,90 @@ public sealed class QuickPlayScript(QuickPlayScriptOptions options, Action<strin
         }
     }
 
+    /// <summary>What the lobby page offers after a game was closed in the race, as its Rejoin and Watch show, and the
+    /// press of the visit's "afterLeave".</summary>
+    private void AfterLeave(QuickPlaySession session)
+    {
+        var offers = string.Create(CultureInfo.InvariantCulture,
+            $"{session.CanRejoin} {session.CanWatchLeftRace} {session.Watching} {session.RejoinRefused}");
+        if (offers != _offers)
+        {
+            _offers = offers;
+            Log("offers", new { rejoin = session.CanRejoin, watchLeft = session.CanWatchLeftRace, watching = session.Watching, refused = session.RejoinRefused });
+        }
+        if (_pressedAfterLeave)
+        {
+            return;
+        }
+        if (options.AfterLeave == "rejoin" && session.CanRejoin)
+        {
+            _pressedAfterLeave = true;
+            Log("press", new { button = "rejoin" });
+            options.Rejoin?.Invoke();
+        }
+        else if (options.AfterLeave == "watch" && session.CanWatchLeftRace)
+        {
+            _pressedAfterLeave = true;
+            Log("press", new { button = "watch the race left" });
+            _ = session.WatchLeftRaceAsync();
+        }
+    }
+
+    /// <summary>The custom lobby pages' buttons: make or join the lobby, take a team, the host's Start.</summary>
+    private void PressCustom(QuickPlaySession session, LobbyState? lobby, bool gameRunning)
+    {
+        var plan = options.Custom!;
+        if (session.ConnectedTo is null)
+        {
+            return;
+        }
+        if (!_browsing)
+        {
+            _browsing = true;
+            _ = session.BrowseAsync(true);
+        }
+        if (lobby is null && !_lobbyAsked && plan.Create is { } name)
+        {
+            _lobbyAsked = true;
+            var values = new Dictionary<string, int>(plan.Rules ?? new Dictionary<string, int>(), StringComparer.Ordinal);
+            if (plan.Teams is { } teams)
+            {
+                values[LobbyRules.TeamsKey] = teams;
+            }
+            var text = plan.ModeFile is { } file ? File.ReadAllText(file) : null;
+            Log("press", new { button = "create lobby", name, modeFile = plan.ModeFile, values = plan.Values, rules = values });
+            _ = session.CreateLobbyAsync(name, new LobbyRules(values, null, null, null, text, plan.Values), null);
+        }
+        else if (lobby is null && !_lobbyAsked && plan.Join is { } wanted && session.Lobbies.FirstOrDefault(l => l.Name == wanted) is { } row)
+        {
+            _lobbyAsked = true;
+            Log("press", new { button = "join lobby", id = row.Id, name = wanted });
+            _ = session.JoinLobbyAsync(row.Id);
+        }
+        if (lobby is { Custom: true } && plan.Team is { } team && !_teamChosen)
+        {
+            _teamChosen = true;
+            Log("press", new { button = "team", team });
+            _ = session.ChooseTeamAsync(team);
+        }
+        if (lobby is { Custom: true, Stage: LobbyState.Forming } && session.IsHost && !gameRunning && session.Race is null &&
+            _races < options.Races && lobby.Players.Count >= options.StartWith && _hostStarted != lobby.LobbyId + _races)
+        {
+            _hostStarted = lobby.LobbyId + _races;
+            Log("press", new { button = "start race", players = lobby.Players.Count });
+            _ = session.StartLobbyRaceAsync();
+        }
+    }
+
     /// <summary>What a player presses now, if anything.</summary>
     private void Press(QuickPlaySession session, LobbyState? lobby, bool gameRunning)
     {
-        if (lobby is { Stage: LobbyState.Forming } && !_voted && !gameRunning && session.Race is null &&
+        AfterLeave(session);
+        if (options.Custom is not null)
+        {
+            PressCustom(session, lobby, gameRunning);
+        }
+        if (options.Custom is null && lobby is { Stage: LobbyState.Forming } && !_voted && !gameRunning && session.Race is null &&
             _races < options.Races && lobby.Players.Count >= options.StartWith && lobby.Players.Count >= lobby.VotingMinimum)
         {
             _voted = true;

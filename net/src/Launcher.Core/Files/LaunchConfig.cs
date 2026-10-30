@@ -13,8 +13,24 @@ namespace Launcher.Core;
 /// <param name="Watch">It only waits in the lobby (<c>"watch"</c>).</param>
 /// <param name="Log">A file for the visit's lines, one line of JSON a step (<c>"log"</c>); null: standard output.</param>
 /// <param name="TimeLimitSeconds">The longest the whole visit may take (<c>"timeLimitSeconds"</c>).</param>
+/// <param name="Custom">The visit goes to a custom lobby and not Quick Play (<c>"custom"</c>).</param>
+/// <param name="AfterLeave">What it presses when its game was closed in the race (<c>"afterLeave"</c>): "rejoin" or
+/// "watch", as the lobby page offers them; null: nothing.</param>
 public sealed record QuickPlayVisit(string Server, int Races = 1, int StartWith = 2, int? VoteCourse = null,
-    bool Watch = false, string? Log = null, int TimeLimitSeconds = 600);
+    bool Watch = false, string? Log = null, int TimeLimitSeconds = 600, QuickPlayCustom? Custom = null,
+    string? AfterLeave = null);
+
+/// <summary>A scripted visit's custom lobby (a launch file's <c>"quickPlay"."custom"</c>): the calls the custom lobby
+/// pages' buttons make.</summary>
+/// <param name="Create">It makes a lobby of this name, as its host (<c>"create"</c>).</param>
+/// <param name="Join">It joins the lobby of this name when the list shows it (<c>"join"</c>).</param>
+/// <param name="ModeFile">The host's mode file, as Choose file (<c>"modeFile"</c>).</param>
+/// <param name="Values">The mode's parameters, in the package's order (<c>"values"</c>).</param>
+/// <param name="Teams">The lobby's teams (<c>"teams"</c>).</param>
+/// <param name="Team">The team this player takes (<c>"team"</c>).</param>
+/// <param name="Rules">More of the lobby's rules, by name (<c>"rules"</c>).</param>
+public sealed record QuickPlayCustom(string? Create = null, string? Join = null, string? ModeFile = null,
+    IReadOnlyList<int>? Values = null, int? Teams = null, int? Team = null, IReadOnlyDictionary<string, int>? Rules = null);
 
 /// <summary>
 /// The test settings of one start of the launcher: a launch file's <c>"debug"</c> object (<see cref="LaunchConfig"/>).
@@ -223,6 +239,8 @@ public sealed record LaunchConfig(string About, DebugSettings Debug)
                 "watch" => v with { Watch = YesNo(member) },
                 "log" => v with { Log = Text(member) },
                 "timeLimitSeconds" => v with { TimeLimitSeconds = Whole(member, 1, 86_400) },
+                "custom" => v with { Custom = CustomOf(member) },
+                "afterLeave" => v with { AfterLeave = Text(member) },
                 _ => throw Unknown(member, "debug.quickPlay."),
             };
         }
@@ -232,6 +250,26 @@ public sealed record LaunchConfig(string About, DebugSettings Debug)
     }
 
     /// <summary>An object's members, each name once.</summary>
+    private static QuickPlayCustom CustomOf(JsonProperty custom)
+    {
+        var c = new QuickPlayCustom();
+        foreach (var member in Members(custom.Value, "\"custom\""))
+        {
+            c = member.Name switch
+            {
+                "create" => c with { Create = Text(member) },
+                "join" => c with { Join = Text(member) },
+                "modeFile" => c with { ModeFile = Text(member) },
+                "values" => c with { Values = [.. member.Value.EnumerateArray().Select(n => n.GetInt32())] },
+                "teams" => c with { Teams = Whole(member, 0, 30) },
+                "team" => c with { Team = Whole(member, 0, 29) },
+                "rules" => c with { Rules = member.Value.EnumerateObject().ToDictionary(r => r.Name, r => r.Value.GetInt32(), StringComparer.Ordinal) },
+                _ => throw Unknown(member, "debug.quickPlay.custom."),
+            };
+        }
+        return c;
+    }
+
     private static List<JsonProperty> Members(JsonElement element, string what)
     {
         if (element.ValueKind != JsonValueKind.Object)
