@@ -34,7 +34,7 @@ public sealed record RaceResult(ReplayRacer Racer, int Place, bool Finished, boo
 public sealed record ReplayInfo(
     string Path, DateTimeOffset Recorded, int Course, int Laps, IReadOnlyList<string> Players, string You, TimeSpan Length,
     ReplayRacer? Recorder = null, IReadOnlyList<RaceResult>? Results = null, string? StatPack = null, string? StatPackProblem = null,
-    bool Practice = false, IReadOnlyList<int>? Teams = null)
+    bool Practice = false, IReadOnlyList<int>? Teams = null, IReadOnlyList<ReplayRacer>? Racers = null)
 {
     /// <summary>What a row says of the race's stats in a word or two: the pack's name, "Stat pack not playable"
     /// for a file the game would refuse, or nothing for the original stats.</summary>

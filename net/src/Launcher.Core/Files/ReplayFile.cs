@@ -80,7 +80,7 @@ public static class ReplayFile
                 players, you, TimeSpan.FromSeconds(steps / 60.0), racers.GetValueOrDefault(seat),
                 results is { } block ? Results(block, racers) : null, pack, packProblem,
                 h.TryGetProperty(ReplayFormat.Header.Practice, out var practice) && practice.ValueKind == JsonValueKind.True,
-                TeamsOf(setup));
+                TeamsOf(setup), [.. racers.Values.OrderBy(racer => racer.Seat)]);
         }
         catch (Exception e) when (Unreadable(e))
         {

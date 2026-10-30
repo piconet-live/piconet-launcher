@@ -13,7 +13,7 @@ Each reads and drives the shared state, `../AppState.cs`.
 | `PlayControlViewModel.cs` | The left column's RACE button, or what the lobby is doing; "Play F-Zero GX"; both off with the reason while the game cannot be started |
 | `HomeViewModel.cs`, `.Tables.cs`, `HomeRows.cs` | The Play page out of a lobby: the map's place; the lobbies table and the last races; the rows' types |
 | `LobbyViewModel.cs`, `.Stages.cs`, `.Machine.cs`, `LobbyRows.cs` | The lobby: racers, votes, chat; the line of steps with its clock, the course vote with each course's chance and the draw on the strip; the machine stage, which is the Garage (what is selected there is raced); the rows' types |
-| `RaceViewModel.cs` | The lobby's race as it runs (standings, the map's racers), then its results |
+| `RaceViewModel.cs` | The lobby's race as it runs (standings, the map's racers, a mode's `board` lines from this launcher's own game), then its results; `ForPlayback`: the race of a replay the game plays, over the Replays page when its mode has lines |
 | `LanViewModel.cs` | Local network: servers heard, join by address |
 | `GarageViewModel.cs`, `GarageViewModel.Stats.cs`, `GarageViewModel.Lobby.cs` | Each machine's look: colour and setting; its stats from the disc, and the order of the machines' cells by one of them; favourites and their filter, and the Garage's part in a lobby (the machines on offer, the server's fixed setting, the machine picked) |
 | `ReplaysViewModel.cs` | The replays as rows, played in the game |
