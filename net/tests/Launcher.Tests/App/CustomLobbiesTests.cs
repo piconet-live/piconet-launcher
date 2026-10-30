@@ -294,6 +294,47 @@ public sealed class CustomLobbiesTests : IDisposable
         });
     }
 
+    /// <summary>The host's own stat pack: Choose file's row takes a .fzstats file, offered by its pack's name, and
+    /// CREATE sends the file's text whole with the rules.</summary>
+    [Fact]
+    public async Task AHostsOwnPackFileGoesWithTheCreate()
+    {
+        const string Pack = "fzstats 1\nname Heavy Blue\nauthor ANA\n# heavier\nmachine 6 Weight 2520\n";
+        var file = Path.Combine(_dir, "heavy-blue.fzstats");
+        File.WriteAllText(file, Pack);
+        var state = State(standIn: false);
+        await using var server = new LedServer();
+        await InTheWindow(state, (window, main) =>
+        {
+            var joining = state.JoinAsync(server.Address, custom: true);
+            Pump(() => server.Of<Hello>().Count == 1, "the launcher did not connect");
+            server.SendAsync(LedServer.Welcome()).GetAwaiter().GetResult();
+            PumpTelling(state, () => joining.IsCompleted && state.Session?.PlayerId is not null);
+            main.Current = main.Lobbies;
+            PumpFor(200, state);
+            var view = Page<CustomLobbiesView>(window);
+            Click(window, Named<Button>(view, "CreateButton"));
+            Click(window, Named<Button>(view, "RulesToggle"));
+            var row = Assert.IsType<PackRule>(main.Lobbies.Editor!.Rule(HostRules.StatPack.Name));
+            var choose = Named<ItemsControl>(view, "RulePanels").GetVisualDescendants().OfType<Button>()
+                .Single(b => b.Name == "PackFile" && b.IsEffectivelyVisible);
+            Assert.Equal(("Choose file", row), (choose.Content, choose.DataContext));
+            row.Load(file);   // (what Choose file does with the file the system's picker gives)
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal("Heavy Blue", row.Chosen);
+            var box = Named<ItemsControl>(view, "RulePanels").GetVisualDescendants().OfType<ComboBox>().Single(c => c.DataContext == row);
+            Assert.Equal("Heavy Blue", box.SelectedItem);
+            Assert.Equal("Heavy Blue", main.Lobbies.Editor.SummaryShown);
+            Shot(window, state, "create-pack-file");
+
+            Click(window, Named<Button>(Named<RulesPanel>(view, "CreatePanel"), "ActionButton"));
+            Pump(() => server.Of<CreateLobby>().Count == 1, "CREATE sent nothing");
+            var sent = server.Of<CreateLobby>()[0].Rules;
+            Assert.Equal(("Heavy Blue", Pack), (sent.StatPack, sent.PackFile));
+            Assert.Equal(new HostPackFile("Heavy Blue", Pack), state.Session!.HostPack);
+        });
+    }
+
     /// <summary>A custom lobby's own machine setting rules the Garage and the choice, not the server's Quick Play one
     /// (100 for everyone): a 0 lobby fixes the slider at 0, a lobby of each player's own frees it; the join and the
     /// choice carry the player's own setting, which the server brings into the lobby's range. The lobby's whole list

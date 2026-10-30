@@ -186,7 +186,8 @@ public sealed partial class HomeViewModel : ViewModelBase
 
     private void Refresh()
     {
-        var session = _state.InQuickPlay ? _state.Session : null;
+        // (a visit to the custom lobbies is no Quick Play: Home shows Quick Play from outside then)
+        var session = _state.InQuickPlay && _state.Session is { Custom: false } ? _state.Session : null;
         var status = _feed.Latest;
         NoDisc = DiscCheck.Check(_state.Settings.DiscPath) != DiscStatus.Ok;
         RulesLine = session?.Rules is { } rules ? Rules(rules) : "";

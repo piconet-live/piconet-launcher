@@ -462,9 +462,9 @@ public sealed partial class LobbyViewModel : ViewModelBase
         : r.AllowedMachines.Count == 1 && r.AllowedMachines[0] is var only && Machines.Has(only) ? Machines.Names[only] + " only"
         : $"{r.AllowedMachines.Count} machines";
 
-    /// <summary>Quick Play's mines' rule (the server's default, ServerOptions.MineRegenMs): the rules line says
-    /// nothing of it.</summary>
-    public const int QuickPlayMinesMs = 200;
+    /// <summary>Quick Play's mines' rule (the server's default, the rule's own: <see cref="HostRules.MinesReturn"/>):
+    /// the rules line says nothing of it.</summary>
+    public static int QuickPlayMinesMs => HostRules.MinesReturn.Default;
 
     /// <summary>The mines' rule as the rules line says it, only when it is not Quick Play's:
     /// "mines stay gone" (0: the game's own way), "mines back after 0.5 s"; null at Quick Play's 0.2 s.</summary>

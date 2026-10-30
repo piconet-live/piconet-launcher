@@ -52,7 +52,7 @@ public sealed class CustomBuilderTests : IDisposable
     public void PartsAreNamedAsTheirListsShowThemAndKindsAreChecked()
     {
         var tables = Tables();
-        Assert.Equal(("Dread Hammer", "Maximum Star", "Titan"), (tables.PartName(15), tables.PartName(44), tables.PartName(58)));
+        Assert.Equal(("Dread Hammer", "Maximum Star", "Titan -G4"), (tables.PartName(15), tables.PartName(44), tables.PartName(58)));
         Assert.Equal("", tables.NameOf(25, 44, 58));     // a cockpit in the body's place: no name, never a guess
         Assert.Equal("", tables.NameOf(15, 58, 44));
         Assert.Equal("", tables.PartName(75));

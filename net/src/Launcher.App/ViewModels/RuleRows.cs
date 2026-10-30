@@ -84,6 +84,70 @@ public sealed partial class ChoiceRule(string label, IReadOnlyList<string> optio
     }
 }
 
+/// <summary>
+/// A custom lobby's stat pack, dropped down as a choice is: Stock, the server's packs by name, and the host's own
+/// file by its pack's name once one is chosen (Choose file beside it; Controls/RulesPanel opens the system's file
+/// picker and hands the path to <see cref="Load"/>). A file that is no pack keeps the choice as it was and says why
+/// in the line under the row.
+/// </summary>
+public sealed partial class PackRule : RuleRow
+{
+    private readonly IReadOnlyList<string> _served;
+
+    /// <param name="served">The choices before the host's file: Stock and the server's packs.</param>
+    /// <param name="selected">The choice among <paramref name="served"/>, or past them the host's file.</param>
+    /// <param name="file">The host's own pack file, offered last (null: none yet).</param>
+    public PackRule(string label, IReadOnlyList<string> served, int selected, Launcher.Core.HostPackFile? file) : base(label)
+    {
+        (_served, File) = (served, file);
+        Options = Offered();
+        Selected = Math.Clamp(selected, 0, Options.Count - 1);
+    }
+
+    /// <summary>The host's own pack file (null: none chosen this session).</summary>
+    public Launcher.Core.HostPackFile? File { get; private set; }
+
+    [ObservableProperty]
+    public partial IReadOnlyList<string> Options { get; private set; }
+
+    [ObservableProperty]
+    public partial int Selected { get; set; }
+
+    /// <summary>The host's file is the choice.</summary>
+    public bool FileChosen => File is not null && Selected == _served.Count;
+
+    /// <summary>The choice's name ("" for none).</summary>
+    public string Chosen => Selected >= 0 && Selected < Options.Count ? Options[Selected] : "";
+
+    partial void OnSelectedChanged(int value)
+    {
+        if (value < 0 || value >= Options.Count)
+        {
+            Selected = Math.Clamp(value, 0, Math.Max(0, Options.Count - 1));
+        }
+        OnPropertyChanged(nameof(Chosen));
+        OnPropertyChanged(nameof(FileChosen));
+    }
+
+    /// <summary>The file at <paramref name="path"/> as the choice; a file that is no pack is said under the row.</summary>
+    public void Load(string path)
+    {
+        var (file, problem) = Launcher.Core.HostPackFile.Read(path);
+        if (file is null)
+        {
+            Note = problem ?? "";
+            return;
+        }
+        Note = "";
+        File = file;
+        Options = Offered();
+        Selected = Options.Count - 1;
+        OnPropertyChanged(nameof(FileChosen));
+    }
+
+    private IReadOnlyList<string> Offered() => File is { } file ? [.. _served, file.Name] : _served;
+}
+
 /// <summary>One of a few, side by side.</summary>
 public sealed partial class SegmentedRule(string label, IReadOnlyList<string> options, int selected = 0) : RuleRow(label)
 {

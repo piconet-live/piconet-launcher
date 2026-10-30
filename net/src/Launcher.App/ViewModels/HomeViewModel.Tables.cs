@@ -7,15 +7,21 @@ namespace Launcher.App.ViewModels;
 /// <summary>Under the map's place: the server's lobbies as a table, and the player's last races from their replays.</summary>
 public sealed partial class HomeViewModel
 {
-    /// <summary>The table: every lobby the server lists (its Quick Play lobbies; it has no others today), the player's own
-    /// marked; without the server's list, the player's own lobby alone.</summary>
+    /// <summary>The table: every lobby the server's status lists (its Quick Play lobbies: a custom lobby is the custom
+    /// lobbies page's), the player's own marked; without the server's list, the player's own lobby alone.</summary>
     private void ShowLobbies(QuickPlaySession? session, ServiceStatus? status)
     {
         var mine = session?.Lobby;
         var shown = mine?.LobbyId ?? (status is null ? null : ShownLobby(status)?.Id);
         var rows = new List<LobbyRow>();
+        // the player's own custom lobby is never Quick Play's, though a server from before lists it
+        var custom = _state.Session?.Lobby is { Custom: true } c ? c.LobbyId : null;
         foreach (var l in status?.Lobbies ?? [])
         {
+            if (l.Id == custom)
+            {
+                continue;
+            }
             if (l.Id == mine?.LobbyId)
             {
                 // the player's own lobby from the lobby itself: it is told at once, the status every few seconds
