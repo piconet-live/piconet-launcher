@@ -508,6 +508,98 @@ public sealed class CustomLobbiesTests : IDisposable
         });
     }
 
+    /// <summary>A mode with <c>customs off</c>: the summary and the panel say so, the Garage greys its Custom shelf and
+    /// shows none on Favourites, the choice opens without the custom machine, and the player's saved one stays saved.
+    /// With a list, both hold. Without the word, nothing changes. LOBBY_SHOTS keeps the Garage.</summary>
+    [Theory]
+    [InlineData("customs off;\n", true, null)]
+    [InlineData("machines [\"Blue Falcon\", \"Golden Fox\"];\ncustoms off;\n", true, 2)]
+    [InlineData("machines [\"Blue Falcon\", \"Golden Fox\"];\n", false, 2)]
+    [InlineData("", false, null)]
+    public async Task CustomsOffGreysTheCustomShelfAndSaysSo(string words, bool off, int? listed)
+    {
+        var state = State(standIn: true);
+        var built = CustomBuild.First;
+        state.Update(s => s with { Racer = s.Racer with { Customs = [built with { Favourite = true }], Custom = new CustomMachine(built.Body, built.Cockpit, built.Booster, built.Pilot) } });
+        var saved = state.Settings.Racer.Custom;
+        var path = Path.Combine(_dir, "customs.fzmode");
+        File.WriteAllText(path, "mode \"Stock Only\" { api 1; }\nstats stock;\n" + words);
+        await InTheWindow(state, (window, main) =>
+        {
+            main.Current = main.Lobbies;
+            PumpTelling(state, () => main.Lobbies.Rows.Count == 3, "the browser listed nothing");
+            var view = Page<CustomLobbiesView>(window);
+            Click(window, Named<Button>(view, "CreateButton"));
+            var editor = main.Lobbies.Editor!;
+            editor.ModeRow.Load(path);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(off, editor.Summary.Contains(CustomRules.NoCustoms, StringComparison.Ordinal));
+            Click(window, Named<Button>(Named<RulesPanel>(view, "CreatePanel"), "ActionButton"));
+            PumpTelling(state, () => state.Session?.Lobby is { Custom: true }, "no lobby came");
+            var rules = state.Session!.Lobby!.Rules!;
+            Assert.Equal(off, rules.Mode!.CustomsOff);
+            Assert.Equal(listed, rules.Mode.Machines?.Count);
+            Assert.Equal(off, CustomRules.Summary(rules, null).Contains(CustomRules.NoCustoms, StringComparison.Ordinal));
+            Assert.Equal(off, CustomRules.AllRules(rules, null).SelectMany(g => g.Rows).Any(r => r.Label == "Custom machines"));
+
+            PumpTelling(state, () => main.Lobby.Garage.CustomsOff == off && (listed is null || main.Lobby.Garage.Offer is not null), "the Garage did not take the mode");
+            var garage = main.Lobby.Garage;
+            main.Lobby.GarageShown = true;
+            PumpFor(300, state);
+            garage.ShowShelfCommand.Execute(GarageViewModel.CustomShelf);
+            Assert.Equal(off ? GarageViewModel.StockShelf : GarageViewModel.CustomShelf, garage.Shelf);
+            Assert.Equal(!off, Named<Button>(Page<GarageView>(window), "ShelfCustom").IsEffectivelyEnabled);
+            garage.ShowShelfCommand.Execute(GarageViewModel.FavouritesShelf);
+            Assert.Equal(off ? 0 : 1, garage.ShelfCustoms.Count);
+            garage.ShowShelfCommand.Execute(GarageViewModel.StockShelf);
+            if (off)
+            {
+                PumpFor(400, state);
+                Shot(window, state, listed is null ? "customs-off-garage" : "customs-off-list-garage");
+            }
+            Assert.Equal(saved, state.Settings.Racer.Custom);
+            PumpTelling(state, () => (main.ShownCustom is null) == off, "the column names the wrong machine");
+        });
+    }
+
+    /// <summary>The choice under <c>customs off</c>, for a player whose machine is custom: nothing sent unasked (they
+    /// are not called ready), a pick goes without the parts, and the next choice that takes customs tells them again.</summary>
+    [Fact]
+    public async Task UnderCustomsOffTheChoiceSendsNoCustomMachine()
+    {
+        var state = State(standIn: false);
+        var parts = new CustomMachine(1, 26, 52, 0);
+        state.Update(s => s with { Racer = s.Racer with { Custom = parts } });
+        await using var server = new LedServer();
+        await InTheWindow(state, (window, main) =>
+        {
+            var joining = state.JoinAsync(server.Address, custom: true);
+            Pump(() => server.Of<Hello>().Count == 1, "the launcher did not connect");
+            server.SendAsync(LedServer.Welcome()).GetAwaiter().GetResult();
+            PumpTelling(state, () => joining.IsCompleted && state.Session?.PlayerId is not null);
+            var session = state.Session!;
+            session.JoinLobbyAsync("l1", null).GetAwaiter().GetResult();
+            Pump(() => server.Of<JoinLobby>().Count == 1, "the join was not sent");
+            Assert.Equal(parts, server.Of<JoinLobby>()[0].Custom);
+            var all = Enumerable.Range(0, GameMachines.Count).ToList();
+
+            server.SendAsync(new ChooseMachine("m1", 1, all, 40_000, CustomsOff: true)).GetAwaiter().GetResult();
+            PumpTelling(state, () => session.Choice is not null, "no choice came");
+            Assert.True(session.CustomsOff);
+            PumpFor(100, state);
+            Assert.Empty(server.Of<MachineChoice>());
+            session.ChooseMachineAsync(6).GetAwaiter().GetResult();
+            Pump(() => server.Of<MachineChoice>().Count == 1, "the choice was not sent");
+            Assert.Null(server.Of<MachineChoice>()[0].Custom);
+            Assert.Equal(parts, state.Settings.Racer.Custom);
+
+            server.SendAsync(new ChooseMachine("m2", 1, all, 40_000)).GetAwaiter().GetResult();
+            PumpTelling(state, () => session.Choice?.Choose.MatchId == "m2", "no second choice came");
+            Pump(() => server.Of<MachineChoice>().Count == 2, "the custom machine was not told again");
+            Assert.Equal(parts, server.Of<MachineChoice>()[1].Custom);
+        });
+    }
+
     [Fact]
     public void RestoreIsNoRowOfALobby()
     {

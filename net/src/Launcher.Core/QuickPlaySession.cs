@@ -251,6 +251,10 @@ public sealed partial class QuickPlaySession(LauncherSettings settings, string w
     /// <summary>This player as the server has them in the lobby: the machine and colour it races them with.</summary>
     public PlayerInfo? Me => Lobby?.Players.FirstOrDefault(p => p.Id == PlayerId);
 
+    /// <summary>The race's mode takes no custom machines (<c>customs off</c>): the choice's word, or before the choice
+    /// opens the lobby's mode's. The player's own custom machine stays saved; it is just not sent.</summary>
+    public bool CustomsOff => Choice is { } c ? c.Choose.CustomsOff : Lobby?.Rules?.Mode?.CustomsOff == true;
+
     /// <summary>Races this machine, in its garage look (it can change until the choice ends), and keeps it as the racer's
     /// machine. Nothing once the choice is closed (<see cref="ChoiceOpen"/>).</summary>
     public Task ChooseMachineAsync(int machine)
@@ -263,12 +267,13 @@ public sealed partial class QuickPlaySession(LauncherSettings settings, string w
         var look = profile.LookOf(machine);
         Choice = c with { Mine = look };
         Machine = machine;
-        Sent = new RacedMachine(machine, CustomMachine.Checked(profile.Custom));
+        var custom = CustomsOff ? null : CustomMachine.Checked(profile.Custom);
+        Sent = new RacedMachine(machine, custom);
         _racer = profile.WithMachine(machine);
         MachineChosen?.Invoke(machine);
         Changed?.Invoke();
         return Client.ChooseMachineAsync(c.Choose.MatchId, machine, look.Color ?? profile.Color,
-            MachineSetting?.Clamp(Math.Clamp(look.Setting, 0, 100)), look.StockColor, profile.Custom,
+            MachineSetting?.Clamp(Math.Clamp(look.Setting, 0, 100)), look.StockColor, custom,
             Lobby?.SeatPacks is not null ? SeatPack : null);
     }
 

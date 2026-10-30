@@ -219,6 +219,22 @@ public sealed class StandInModesTests
         }
     }
 
+    [Theory]
+    [InlineData("customs off;", true)]
+    [InlineData("machines [\"Blue Falcon\"];\ncustoms off;", true)]
+    [InlineData("machines [\"Blue Falcon\"];", false)]
+    [InlineData("", false)]
+    public async Task TheChoiceSaysWhenTheModeTakesNoCustoms(string words, bool off)
+    {
+        var c = await Connected();
+        await using (c.Link)
+        {
+            await Created(c, words);
+            await c.Link.StartLobbyRaceAsync(TestContext.Current.CancellationToken);
+            Assert.Equal(off, (await Next<ChooseMachine>(c.Got)).CustomsOff);
+        }
+    }
+
     [Fact]
     public async Task BelowItsRacersAModeRefusesTheRace()
     {

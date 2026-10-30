@@ -202,10 +202,14 @@ public sealed partial class QuickPlaySession
         var start = DefaultChoice(profile.Machine, Machine, c.Machines);
         Choice = new MachineChoiceState(c, DateTimeOffset.UtcNow.AddMilliseconds(c.DurationMs), profile.LookOf(start), null);
         Set("Machines");
+        if (c.CustomsOff && Sent is { IsCustom: true } told)
+        {
+            Sent = told with { Custom = null };   // (the service dropped it: no reason to call the racer ready)
+        }
         // Only while nothing has been chosen: Set tells Changed's handlers at once, on this thread, and one of them may
         // have chosen already (a scripted visit presses there); the start sent after that would undo its pick.
         if (Choice is { Mine: null } open && open.Choose.MatchId == c.MatchId &&
-            !new RacedMachine(start, CustomMachine.Checked(profile.Custom)).Same(Sent))
+            !new RacedMachine(start, c.CustomsOff ? null : CustomMachine.Checked(profile.Custom)).Same(Sent))
         {
             // the raced machine changed since the server was told (a Garage visit in the lobby): told now, unasked,
             // or the race would start on the old one (a choice sent marks the player ready, as a pick does)

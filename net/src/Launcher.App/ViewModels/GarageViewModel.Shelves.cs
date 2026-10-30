@@ -66,11 +66,16 @@ public sealed partial class GarageViewModel
         ShowChoices();
     }
 
+    /// <summary>The greyed Custom shelf's word; null: it is open.</summary>
+    public string? CustomsOffText => CustomsOff ? CustomRules.NoCustoms : null;
+
+    partial void OnCustomsOffChanged(bool value) => OnPropertyChanged(nameof(CustomsOffText));
+
     /// <summary>A shelf's tab pressed.</summary>
     [RelayCommand]
     private void ShowShelf(int shelf)
     {
-        if (shelf is >= FavouritesShelf and <= CustomShelf)
+        if (shelf is >= FavouritesShelf and <= CustomShelf && !(shelf == CustomShelf && CustomsOff))
         {
             Shelf = shelf;
         }
@@ -89,7 +94,7 @@ public sealed partial class GarageViewModel
         {
             return;   // (still being made)
         }
-        var customs = StockShelf == Shelf ? [] : SortedCustoms()
+        var customs = StockShelf == Shelf || CustomsOff ? [] : SortedCustoms()
             .Where(c => (CustomShown || c.Favourite) && (Filter.Open || Filter.Matches(c.Name, Builder.ValuesOf(c.Index)))).ToList();
         if (!customs.SequenceEqual(ShelfCustoms))
         {
@@ -100,7 +105,7 @@ public sealed partial class GarageViewModel
             }
         }
         var offered = Enumerable.Range(0, Machines.Names.Count).Count(Offers);
-        var marked = _cards.Count(c => c.Favourite) + Builder.Saved.Count(c => c.Favourite);
+        var marked = _cards.Count(c => c.Favourite) + (CustomsOff ? 0 : Builder.Saved.Count(c => c.Favourite));
         ShelfTabs[FavouritesShelf].Count = marked.ToString(CultureInfo.InvariantCulture);
         ShelfTabs[StockShelf].Count = Offer is null ? Machines.Names.Count.ToString(CultureInfo.InvariantCulture)
             : string.Create(CultureInfo.InvariantCulture, $"{offered} / {Machines.Names.Count}");

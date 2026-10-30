@@ -278,6 +278,9 @@
     <Setter Property="Background" Value="{StaticResource WellBrush}" />
     <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
   </Style>
+  <Style Selector="Button.chip:disabled">
+    <Setter Property="Opacity" Value="0.4" />
+  </Style>
   <Style Selector="Button.chip.on, Button.chip.on:pointerover">
     <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
     <Setter Property="Background" Value="{StaticResource RaisedBrush}" />

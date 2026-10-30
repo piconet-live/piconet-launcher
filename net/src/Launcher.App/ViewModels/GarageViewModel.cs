@@ -193,7 +193,7 @@ public sealed partial class GarageViewModel : ViewModelBase
     /// unless a custom machine is raced (<see cref="RacerProfile.Raced"/>): then its tile alone, and no stock tile.</summary>
     private void ShowSelected()
     {
-        var lit = _state.Settings.Racer.Raced.IsCustom ? -1 : ChosenIndex;
+        var lit = _state.Settings.Racer.Raced.IsCustom && !CustomsOff ? -1 : ChosenIndex;
         foreach (var card in _cards)
         {
             card.Selected = card.Id == lit;
