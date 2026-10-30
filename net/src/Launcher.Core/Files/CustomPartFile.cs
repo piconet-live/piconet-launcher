@@ -13,8 +13,9 @@ namespace Launcher.Core;
 /// </summary>
 public static class CustomPartFile
 {
-    private const int Rodata = 0x15F710;
-    private const int Data = 0x16D600;
+    // main.rel's sections in its file (the facts table, port/facts/game.tsv: REL_RODATA, REL_DATA)
+    private const int Rodata = (int)GameFacts.Rel.RelRodata;
+    private const int Data = (int)GameFacts.Rel.RelData;
 
     /// <summary>75 words, one a part: a booster's naming flags in the low five bits (.rodata 0x99D8).</summary>
     public const int FlagsAt = Rodata + 0x99D8;
@@ -49,7 +50,12 @@ public static class CustomPartFile
     private static readonly float TurnShare = BitConverter.Int32BitsToSingle(0x3E99999A);
 
     /// <summary>Where each kind's 25 blocks start in the unpacked car data.</summary>
-    private static readonly int[] KindAt = [0x1F04, 0x3098, 0x422C];
+    private static readonly int[] KindAt =
+    [
+        (int)GameFacts.Files.CarPartsAt,
+        (int)GameFacts.Files.CarPartsAt + (CustomPartTables.PerKind * MachineStatFile.BlockSize),
+        (int)GameFacts.Files.CarPartsAt + (2 * CustomPartTables.PerKind * MachineStatFile.BlockSize),
+    ];
 
     /// <summary>A part's name word points into the car data, which the game loads at this address.</summary>
     private const uint CarDataBase = 0x23800000;
