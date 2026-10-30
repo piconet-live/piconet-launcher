@@ -466,7 +466,7 @@ public sealed class CustomLobbiesTests : IDisposable
         {
             main.Current = main.Practice;
             Dispatcher.UIThread.RunJobs();
-            Assert.Equal(PracticeSetup.FreshStatPack, main.Practice.Setup.StatPack);
+            Assert.Null(main.Practice.Setup.StatPack);
             PumpFor(200, state);
             Shot(window, state, "stats-default-practice");
 

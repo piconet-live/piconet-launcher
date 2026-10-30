@@ -39,7 +39,7 @@ public sealed partial class PracticeViewModel : ViewModelBase
         ArgumentNullException.ThrowIfNull(packs);
         _machineOf = machine;
         _start = start;
-        var opened = (last ?? PracticeSetup.Fresh(packs)).Kept();
+        var opened = (last ?? PracticeSetup.Default).Kept();
         Courses = new CoursePickerModel(PickMode.One, [opened.Course]);
         _machine = new MachineRule("Machine", NameOf(machine()), garage);
         _rules = HostRules.Alone.ToDictionary(r => r.Name, r => HostRuleRows.For(r, ValueOf(r, opened), packs, opened.StatPack));

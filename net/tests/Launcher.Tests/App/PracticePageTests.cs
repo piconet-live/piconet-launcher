@@ -156,7 +156,7 @@ public sealed class PracticePageTests : IDisposable
         Assert.Single(window.GetVisualDescendants().OfType<PracticeView>());
         Assert.Equal("play", main.Tab);
         // the set-up as it opens: the first course, the Garage's machine, stock stats, 100, three laps
-        Assert.Equal(PracticeSetup.Fresh([PracticeSetup.FreshStatPack]) with { Machine = main.Garage.MachineIndex }, main.Practice.Setup);
+        Assert.Equal(PracticeSetup.Default with { Machine = main.Garage.MachineIndex }, main.Practice.Setup);
         var labels = window.GetVisualDescendants().OfType<Grid>().Where(g => g.Classes.Contains("rule"))
             .Select(g => g.Children.OfType<TextBlock>().Single().Text);
         Assert.Equal(["Machine", "Stats", "Machine setting", "Laps", "Boost from the start", "Restore", "Mines return", "Rewind",

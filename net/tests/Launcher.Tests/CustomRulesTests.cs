@@ -89,19 +89,11 @@ public sealed class CustomRulesTests
     }
 
     [Fact]
-    public void AFreshPracticeStartsOnItsPackIfHeldAndASavedOneKeepsItsChoice()
+    public void AFreshPracticeStartsOnStockAndASavedOneKeepsItsChoice()
     {
-        Assert.Equal(PracticeSetup.FreshStatPack, PracticeSetup.Fresh(["F-Zero GX+", PracticeSetup.FreshStatPack]).StatPack);
-        Assert.Null(PracticeSetup.Fresh(["F-Zero GX+"]).StatPack);   // (its file absent: Stock)
-        Assert.Null(PracticeSetup.Fresh([]).StatPack);
         Assert.Null(PracticeSetup.Default.StatPack);
         Assert.Equal("F-Zero GX+", (PracticeSetup.Default with { StatPack = "F-Zero GX+" }).Kept().StatPack);
         Assert.Null(PracticeSetup.Default.Kept().StatPack);          // (a saved Stock stays Stock)
-
-        // the name is a pack of the repository's, by its own name
-        var names = Directory.EnumerateFiles(TestSupport.RepositoryFolder.Protocol("protocol", "packs"), "*" + StatPackText.Extension)
-            .Select(f => StatPackText.Read(File.ReadAllText(f)).Pack?.Name);
-        Assert.Contains(PracticeSetup.FreshStatPack, names);
     }
 
     [Fact]

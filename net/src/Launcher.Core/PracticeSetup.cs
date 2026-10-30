@@ -34,16 +34,6 @@ public sealed record PracticeSetup(int Course, int Machine, string? StatPack, in
     /// <summary>How far a rewind reaches, in seconds (the game's rolling buffer).</summary>
     public const int RewindSeconds = 60;
 
-    /// <summary>The stat pack a fresh practice opens on, by the pack's own name: a practice has no server to say one, so
-    /// this launcher does (<see cref="Fresh"/>). A practice saved earlier keeps its own choice, Stock too.</summary>
-    public const string FreshStatPack = "GX Unleashed";
-
-    /// <summary>A practice with nothing saved: <see cref="Default"/> on <see cref="FreshStatPack"/>, or on the disc's stats
-    /// when this launcher does not hold that pack's file.</summary>
-    /// <param name="packs">The names of the packs this launcher holds.</param>
-    public static PracticeSetup Fresh(IEnumerable<string> packs) =>
-        Default with { StatPack = packs.Contains(FreshStatPack) ? FreshStatPack : null };
-
     /// <summary>The first course, the first machine, the disc's stats and Quick Play's rules.</summary>
     public static PracticeSetup Default { get; } = new(1, 0, null, HostRules.MachineSetting.Default, HostRules.Laps.Default,
         HostRules.Restore.Default != 0, HostRules.BoostStart.Default != 0, HostRules.MinesReturn.Default);
