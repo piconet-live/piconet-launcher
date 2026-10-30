@@ -83,6 +83,7 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
     /// and a rotation that did not load have none: their vote is of courses alone.</summary>
     private readonly QuickPlayRotation? _rotation = room is null ? StandInService.Rotation : null;
     private IReadOnlyList<int>? _machines;
+    private bool _customsOff;
     private int[] _votes = [];
     private readonly HashSet<string> _voted = [];
     private readonly HashSet<string> _chosen = [];
@@ -424,6 +425,7 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
             course = drawn?.Course ?? (_options[winner] == CourseVote.RandomCourse ? Courses.Pool[Random.Shared.Next(Courses.Pool.Count)] : _options[winner]);
             send(new CourseChosen(MatchId, _options, [.. _votes], winner, course, drawn?.Card));
             _machines = drawn?.Mode.Terms.Machines;
+            _customsOff = drawn?.Mode.Terms.CustomsOff == true;
         }
         Later(DrawMs, () => ChoosingOn(match, course));
     }
@@ -440,7 +442,8 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
                 _stage = LobbyState.Choosing;
                 SendState();
                 var machines = room?.Terms?.Machines ?? _machines;
-                send(new ChooseMachine(MatchId, course, machines is { Count: > 0 } ? machines : QuickPlayDefaults.Rules.AllowedMachines, ChooseMs));
+                send(new ChooseMachine(MatchId, course, machines is { Count: > 0 } ? machines : QuickPlayDefaults.Rules.AllowedMachines, ChooseMs,
+                    room?.Terms?.CustomsOff ?? _customsOff));
             }
             foreach (var (other, i) in _others.ToList().Select((p, i) => (p, i)))
             {

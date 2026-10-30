@@ -65,7 +65,8 @@
               </StackPanel>
             </Button>
             <Button Name="ShelfCustom" Classes="chip" Classes.on="{Binding ShelfTabs[2].On}" Command="{Binding ShowShelfCommand}"
-                    CommandParameter="{x:Static vm:GarageViewModel.CustomShelf}" AutomationProperties.Name="Custom">
+                    CommandParameter="{x:Static vm:GarageViewModel.CustomShelf}" AutomationProperties.Name="Custom"
+                    IsEnabled="{Binding !CustomsOff}" ToolTip.Tip="{Binding CustomsOffText}">
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <TextBlock Text="{Binding ShelfTabs[2].Label}" VerticalAlignment="Center" />
                 <TextBlock Classes="count" Text="{Binding ShelfTabs[2].Count}" VerticalAlignment="Center" />
