@@ -6,7 +6,8 @@ namespace Launcher.Core;
 
 /// <summary>
 /// The launcher's connection to a coordinator: one WebSocket of JSON messages. It says hello with the
-/// player's name, and answers the coordinator's relay measurements by itself (pinging each relay over UDP) and its
+/// player's name (and the game-mode api its game runs, <see cref="ModeWords.Api"/>: a mode race's set-up reaches the
+/// game in the match file as it came), and answers the coordinator's relay measurements by itself (pinging each relay over UDP) and its
 /// pings (at once, also while it measures); every other message reaches <see cref="Received"/>, on the receiving
 /// thread, in the order it came. Matches start with <see cref="MatchStart"/>.
 /// Nothing is read until <see cref="Received"/> has a handler: the coordinator answers the hello at once (welcome, or
@@ -75,7 +76,8 @@ public sealed partial class CoordinatorClient : ICoordinatorConnection
         try
         {
             await client._socket.ConnectAsync(server, cancel).ConfigureAwait(false);
-            await client.SendNowAsync(new Hello(name, ControlProtocol.Version, build, VoteCounts: true, Debug: debug, StatPacks: true, Pings: true, Notices: true, Key: key, Line: LauncherLine.Own), cancel).ConfigureAwait(false);
+            await client.SendNowAsync(new Hello(name, ControlProtocol.Version, build, VoteCounts: true, Debug: debug, StatPacks: true, Pings: true, Notices: true, Key: key, Line: LauncherLine.Own,
+                Modes: ModeWords.Api), cancel).ConfigureAwait(false);
         }
         catch
         {

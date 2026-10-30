@@ -75,7 +75,7 @@ public sealed partial class CourseOption(int index, string name, int course) : O
     /// <summary>The course number (<see cref="CourseVote.RandomCourse"/> for "Random course", until the draw reveals
     /// the course it picked), for its picture.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Mark), nameof(ShowsMark), nameof(Place), nameof(Cup), nameof(HasGem))]
+    [NotifyPropertyChangedFor(nameof(Mark), nameof(ShowsMark), nameof(Place), nameof(PlaceLine), nameof(Cup), nameof(HasGem))]
     public partial int Course { get; set; } = course;
 
     /// <summary>The course's cup, for its gem beside the venue ("Ruby", "AX", "Story"); "" for the random course
@@ -85,8 +85,39 @@ public sealed partial class CourseOption(int index, string name, int course) : O
     public bool HasGem => Cup.Length > 0;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Venue), nameof(Place), nameof(Track), nameof(Mark), nameof(ShowsMark))]
+    [NotifyPropertyChangedFor(nameof(Venue), nameof(Place), nameof(PlaceLine), nameof(Track), nameof(Mark), nameof(ShowsMark))]
     public partial string Name { get; set; } = name;
+
+    /// <summary>The race's laps, from the vote's card (<see cref="VoteCard"/>; 0: unlimited); null: not shown (no
+    /// card, the random course before the draw).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PlaceLine))]
+    public partial int? Laps { get; set; }
+
+    /// <summary>The badge of a mode that changes the race (a spicy card: "KNOCKOUT"); "" on a normal card.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasBadge))]
+    public partial string Badge { get; set; } = "";
+
+    /// <summary>The spicy mode's line of what it changes, shown when the card is hovered; null on a normal card.</summary>
+    [ObservableProperty]
+    public partial string? About { get; set; }
+
+    public bool HasBadge => Badge.Length > 0;
+
+    /// <summary>The card as the vote's card says it: its laps, and a spicy mode's badge and line.</summary>
+    public void Show(VoteCard? card)
+    {
+        Laps = card?.Laps;
+        Badge = card?.Badge ?? "";
+        About = card?.Badge is null ? null : card.About;
+    }
+
+    /// <summary>The venue line: the venue and the race's laps when the card has them ("Casino Palace · 6 laps";
+    /// unlimited laps say nothing).</summary>
+    public string PlaceLine => Laps is > 0 and var laps
+        ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{Place} · {laps} {(laps == 1 ? "lap" : "laps")}")
+        : Place;
 
     /// <summary>The venue in capitals, over the course's own name ("MUTE CITY" / "Twist Road").</summary>
     public string Venue => Name.Contains(": ", StringComparison.Ordinal) ? Name[..Name.IndexOf(": ", StringComparison.Ordinal)].ToUpperInvariant() : "ANY VENUE";
