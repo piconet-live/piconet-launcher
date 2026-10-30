@@ -70,12 +70,12 @@ public sealed class StandInModesTests
         StandInService.UseQuickPlay(RepositoryFolder.Protocol("protocol", "quickplay"));
         try
         {
-            Assert.StartsWith("competitive.fzmode line 14: ", StandInService.RotationRefusal, StringComparison.Ordinal);
+            Assert.StartsWith("knockout.fzmode line 15: ", StandInService.RotationRefusal, StringComparison.Ordinal);
             var (link, got) = await Connected();
             await using (link)
             {
                 var said = await Next<ChatMessage>(got, c => c.NoticeId == "stand-in-modes");
-                Assert.Contains("competitive.fzmode line 14", said.Text, StringComparison.Ordinal);
+                Assert.Contains("knockout.fzmode line 15", said.Text, StringComparison.Ordinal);
                 await link.EnterQuickPlayAsync(6, new Rgb(1, 2, 3), cancel: TestContext.Current.CancellationToken);
                 await link.VoteStartAsync(true, TestContext.Current.CancellationToken);
                 Assert.Null((await Next<CourseVote>(got)).Cards);
