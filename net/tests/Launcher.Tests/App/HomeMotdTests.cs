@@ -1,5 +1,7 @@
 using System.Net;
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.VisualTree;
 using LobbyView = Online.Protocol.LobbyView;
 using RacerView = Online.Protocol.RacerView;
 using Avalonia.Headless;
@@ -30,7 +32,7 @@ public sealed class HomeMotdTests : IDisposable
 
     /// <summary>A long one: about as long as the server takes (200 characters).</summary>
     private static readonly RecentNotice First = new("r1-1", Notices.Notice,
-        "Weekly netplay sessions this week starting on 10/30 at 8:00 PM EST! This Saturday at 6:00 PM EST. This Sunday at 2:00 PM EST. Bring a friend, new racers welcome. Join us on Discord!",
+        "Weekly netplay sessions this week starting on 10/30 at 8:00 PM EST! This Saturday at 6:00 PM EST. This Sunday at 2:00 PM EST. Times and sign-up at https://piconet.live/events, or join us on discord.gg/piconet!",
         DateTimeOffset.UtcNow);
 
     private static readonly RecentNotice Second = new("r1-2", Notices.Notice, "Cup night Friday", DateTimeOffset.UtcNow);
@@ -64,6 +66,21 @@ public sealed class HomeMotdTests : IDisposable
                 Assert.Equal(First.Text, home.Motd);
                 Assert.Equal(["r1-1"], state.Notices.Notices.Select(n => n.Id!));   // in the bell's list
                 Assert.False(main.Notices.HasDot);                                   // Home shows it: no dot
+                // its links open in the browser on a press, and only they do
+                var text = Named<Launcher.App.Controls.LinkText>(window, "MotdText");
+                Assert.Equal(["https://piconet.live/events", "https://discord.gg/piconet"], text.Links.Select(l => l.AbsoluteUri));
+                var opened = new List<Uri>();
+                text.Open = uri =>
+                {
+                    opened.Add(uri);
+                    return Task.CompletedTask;
+                };
+                var discord = text.Links[1];
+                Assert.Equal(discord, text.LinkAt(text.PointOf(discord)!.Value));
+                Assert.Null(text.LinkAt(new Point(4, 8)));
+                PressAt(window, text, text.PointOf(discord)!.Value);
+                PressAt(window, text, new Point(4, 8));                             // plain text: nothing opens
+                Assert.Equal([discord], opened);
                 Shot(window, state, "home-motd-empty-1280x800");
                 answers.Lobby = true;    // a lobby with its racers beside the map
                 PumpTelling(state, () => home.HasPeople, "Home listed no racers", 15);
@@ -90,6 +107,15 @@ public sealed class HomeMotdTests : IDisposable
             state.Shutdown();
             await ui.DisposeAsync();
         }
+    }
+
+    private static void PressAt(Window window, Control control, Point point)
+    {
+        var at = control.TranslatePoint(point, window)!.Value;
+        window.MouseMove(at);
+        window.MouseDown(at, Avalonia.Input.MouseButton.Left);
+        window.MouseUp(at, Avalonia.Input.MouseButton.Left);
+        Dispatcher.UIThread.RunJobs();
     }
 
     private static void Shot(MainWindow window, AppState state, string name)

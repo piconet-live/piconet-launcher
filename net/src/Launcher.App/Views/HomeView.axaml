@@ -157,8 +157,8 @@
         <Border Name="Motd" Classes="well" IsVisible="{Binding HasMotd}" Padding="20,16,20,18" Margin="0,0,0,20">
           <StackPanel Spacing="8">
             <TextBlock Classes="caps" Text="MESSAGE OF THE DAY" Foreground="{StaticResource AccentBrush}" />
-            <TextBlock Text="{Binding Motd}" TextWrapping="Wrap" Foreground="{StaticResource TextBrush}"
-                       FontSize="{StaticResource Size15}" LineHeight="22" />
+            <c:LinkText Name="MotdText" Message="{Binding Motd}" Foreground="{StaticResource TextBrush}"
+                        LinkBrush="{StaticResource AccentBrush}" FontSize="{StaticResource Size15}" LineHeight="22" />
           </StackPanel>
         </Border>
         <TextBlock Classes="dim" Text="{Binding SideOver}" TextTrimming="CharacterEllipsis" />
