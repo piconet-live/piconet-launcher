@@ -558,6 +558,7 @@ public sealed class CustomLobbiesTests : IDisposable
                 Shot(window, state, listed is null ? "customs-off-garage" : "customs-off-list-garage");
             }
             Assert.Equal(saved, state.Settings.Racer.Custom);
+            PumpTelling(state, () => (main.ShownCustom is null) == off, "the column names the wrong machine");
         });
     }
 

@@ -377,7 +377,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         MachineShown = !_state.Racing;
         // the machine raced (RacedMachine): once the server has spoken, what it races the player with (the custom
         // machine it was told of); else the player's own, the custom machine when one is set
-        var custom = _state.Settings.Racer.Raced.Custom;
+        var custom = _state.Session?.CustomsOff == true ? null : _state.Settings.Racer.Raced.Custom;
         if (Lobby.Raced is { } raced && Machines.Has(raced.Machine))
         {
             custom = _state.Session is { } session ? LobbyViewModel.RacedOf(raced, session).Custom : custom;
