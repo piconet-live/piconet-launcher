@@ -28,6 +28,8 @@
          goes into the launcher (the artwork the icon is made from, the script that makes it, what Python leaves
          beside a script it ran). -->
     <AvaloniaResource Include="Assets/Fonts/*.ttf;Assets/Fonts/OFL.txt;Assets/Icon/app.ico" />
+    <!-- The look's tokens (the protocol's theme.tokens.json, generated: ProtocolGenerated), which Theme.axaml merges in. -->
+    <AvaloniaXaml Include="$(ProtocolGenerated)Theme.g.axaml" Link="Theme/Theme.g.axaml" />
   </ItemGroup>
 
   <ItemGroup>
