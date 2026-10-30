@@ -10,7 +10,7 @@ namespace Launcher.App.ViewModels;
 /// the game's own Practice mode. The courses on the left (one picked), the set-up on the right: a custom lobby's
 /// rules panel for one player: the machine with the Garage, then every host's rule that
 /// means something alone (<see cref="HostRules.Alone"/>: the stats and the machine setting with the machine, then
-/// the race's (laps are Practice's mode file's, unlimited): boosting from the start, Restore, the mines' return), as rows of the one list
+/// the race's: laps, boosting from the start, Restore, the mines' return), as rows of the one list
 /// (<see cref="HostRuleRows"/>); the rewind's reach and the save's buttons as values; START PRACTICE. It opens on
 /// the practice last started, else Quick Play's rules. Labels and values only.
 /// </summary>
@@ -45,7 +45,7 @@ public sealed partial class PracticeViewModel : ViewModelBase
         _rules = HostRules.Alone.ToDictionary(r => r.Name, r => HostRuleRows.For(r, ValueOf(r, opened), packs, opened.StatPack));
         Groups = RuleGroup.Of(
             [_machine, .. MachineRules.Select(r => _rules[r.Name])],
-            [.. HostRules.Alone.Except(MachineRules).Where(r => r != HostRules.Laps).Select(r => _rules[r.Name])],
+            [.. HostRules.Alone.Except(MachineRules).Select(r => _rules[r.Name])],
             [new ValueRule("Rewind", Clock(PracticeSetup.RewindSeconds)), new ValueRule("Save · Load", "D-pad right · left")]);
     }
 

@@ -106,13 +106,13 @@
                  AutomationProperties.Name="{Binding Label}" />
     </DataTemplate>
     <!-- the stepper at the row's right edge, over the switches of the rows under it, so that the pad's down goes
-         to the next row (Boost from the start) and not past it; Unlimited's switch to its left -->
+         to the next row (Boost from the start) and not past it; Unlimited's switch to its left. Unlimited: no stepper, the switch comes over the rows under it, so down stops here -->
     <DataTemplate DataType="vm:LapsRule">
       <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
         <ToggleSwitch IsChecked="{Binding Unlimited}" OnContent="" OffContent="" AutomationProperties.Name="Unlimited" />
         <TextBlock Classes="dim" Text="Unlimited" VerticalAlignment="Center" />
         <c:Stepper Value="{Binding Value}" Minimum="1" Maximum="{Binding Maximum}" Typed="True"
-                   IsEnabled="{Binding Counted}" AutomationProperties.Name="{Binding Label}" />
+                   IsVisible="{Binding Counted}" AutomationProperties.Name="{Binding Label}" />
       </StackPanel>
     </DataTemplate>
     <!-- the switch first: the pad's right turns it on, then moves on to the delay; no "On" beside it (the row is

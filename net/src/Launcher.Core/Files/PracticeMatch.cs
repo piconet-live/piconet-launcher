@@ -25,8 +25,8 @@ public static class PracticeMatch
     /// <param name="look">The machine's look from the garage: a stock colour or a colour; null: its own.</param>
     /// <param name="pack">The stat pack the set-up names (<see cref="PracticePacks"/>), carried whole as a match
     /// start carries one (<c>setup.stats</c>); null: the disc's own stats.</param>
-    /// <param name="mode">Practice's game mode (<see cref="PracticeMode"/>), its Restore among its parameters and its
-    /// laps its own word; null: none, the game's own words for a practice (old launch files and tests).</param>
+    /// <param name="mode">Practice's game mode (<see cref="PracticeMode"/>), its Restore and laps among its
+    /// parameters; null: none, the game's own words for a practice (old launch files and tests).</param>
     public static string Build(PracticeSetup setup, string name, MachineLook? look, DateTimeOffset now, StatPack? pack = null, ModeStart? mode = null)
     {
         ArgumentNullException.ThrowIfNull(setup);
@@ -56,7 +56,7 @@ public static class PracticeMatch
         var set = new JsonObject
         {
             ["course"] = s.Course,
-            ["laps"] = mode is null ? s.Laps : PracticeSetup.Unlimited,
+            ["laps"] = s.Laps,
             ["seats"] = new JsonArray(seat),
         };
         // the race's rules as a match start carries them (Online.Protocol RaceRules; the game's RulesIntoRace,

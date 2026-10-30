@@ -4,7 +4,7 @@ namespace Launcher.Core;
 
 /// <summary>Play's Practice as a game mode: the protocol's <c>practice.fzmode</c>, which the build puts in the quickplay
 /// folder beside the program, compiled by the one compiler. Its rewind, pause, save and countdown are its words; the
-/// page's Restore row is its parameter.</summary>
+/// page's Restore and Laps rows are its parameters.</summary>
 public static class PracticeMode
 {
     /// <summary>The mode file's name.</summary>
@@ -12,9 +12,11 @@ public static class PracticeMode
 
     private const string RestoreParam = "restore_on";
 
+    private const string LapsParam = "lap_count";
+
     /// <summary>The match's <c>setup.mode</c> for a practice; null, with <paramref name="problem"/>, when the file is
     /// missing or does not compile.</summary>
-    public static ModeStart? Start(string folder, bool restore, out string? problem)
+    public static ModeStart? Start(string folder, bool restore, int laps, out string? problem)
     {
         var path = Path.Combine(folder, FileName);
         problem = null;
@@ -30,6 +32,11 @@ public static class PracticeMode
             return null;
         }
         var mode = compiled.Mode!;
-        return mode.Start([.. mode.Params.Select(p => p.Name == RestoreParam ? (restore ? 1 : 0) : p.Default)]);
+        return mode.Start([.. mode.Params.Select(p => p.Name switch
+        {
+            RestoreParam => restore ? 1 : 0,
+            LapsParam => laps,
+            _ => p.Default,
+        })]);
     }
 }
