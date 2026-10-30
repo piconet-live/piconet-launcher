@@ -145,6 +145,8 @@ public sealed class StandInCoordinator : ICoordinatorConnection
 
     public Task KickPlayerAsync(string playerId, CancellationToken cancel = default) => Done(() => _rooms.Kick(playerId));
 
+    public Task ChooseTeamAsync(int? team, string? playerId, CancellationToken cancel = default) => Done(() => _rooms.ChooseTeam(team, playerId));
+
     public Task StartLobbyRaceAsync(CancellationToken cancel = default) => Done(_rooms.Start);
 
     public Task LeaveLobbyAsync(CancellationToken cancel = default) => Done(() =>

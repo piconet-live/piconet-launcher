@@ -100,6 +100,8 @@
     <SolidColorBrush x:Key="OnGoldBrush" Color="#000000" />
     <SolidColorBrush x:Key="OnlineBrush" Color="{StaticResource AccentColor}" />
     <SolidColorBrush x:Key="NoticeBrush" Color="{StaticResource WarnColor}" />
+    <!-- a spicy vote card's badge (a game mode that changes the race), black text on it -->
+    <SolidColorBrush x:Key="SpicyBrush" Color="{StaticResource WarnColor}" />
     <SolidColorBrush x:Key="OfflineBrush" Color="{StaticResource DangerColor}" />
     <!-- A server notice's tier (NoticeCard): its bar, label and icon, and a light tint of it behind the card. Info is
          the accent, notice a lighter green, warning amber, urgent red. -->

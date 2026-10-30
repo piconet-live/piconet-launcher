@@ -17,7 +17,7 @@ public static class CustomRules
     /// the first.</summary>
     private static readonly (string Heading, string[] Names)[] Grouped =
     [
-        ("Race", ["course-select", "laps", "racers", "cpu-fill", "cpu-level", "boost-start", "restore", "finish-limit", "mine-regen"]),
+        ("Race", ["course-select", "laps", "racers", "cpu-fill", "cpu-level", "boost-start", "finish-limit", "mine-regen"]),
         ("Machines", ["machine-setting", "stat-pack", "mixed-packs"]),
         ("Lobby", ["vote-seconds", "choose-seconds", "voting-minimum"]),
         ("Connection", ["latency-limit"]),
@@ -43,8 +43,13 @@ public static class CustomRules
     public static int Value(LobbyRules? rules, string key, LobbyRules? quickPlay) =>
         rules?.Value(key) ?? quickPlay?.Value(key) ?? Defaults.Value(key) ?? 0;
 
-    /// <summary>The stat pack of <paramref name="rules"/> (null: stock), else Quick Play's.</summary>
-    private static string? Pack(LobbyRules? rules) => rules?.StatPack;
+    /// <summary>The value as it is raced: what the lobby's mode owns (<see cref="LobbyMode.Terms"/>), else
+    /// <see cref="Value"/>. (A row of the host's holds their own value, which comes back without the mode.)</summary>
+    public static int Raced(LobbyRules? rules, string key, LobbyRules? quickPlay) =>
+        rules?.Mode?.Terms is { } terms && terms.TryGetValue(key, out var owned) ? owned : Value(rules, key, quickPlay);
+
+    /// <summary>The stat pack as it is raced: the mode's when it names one ("": stock), else the lobby's (null: stock).</summary>
+    private static string? Pack(LobbyRules? rules) => rules?.Mode?.Pack is { } pack ? pack.Length == 0 ? null : pack : rules?.StatPack;
 
     /// <summary>The rules that differ from Quick Play's, as one short line: "5 laps · GX+ · ping limit 150 ms";
     /// "" when none does.</summary>
@@ -55,8 +60,25 @@ public static class CustomRules
             return "";
         }
         var against = quickPlay ?? Defaults;
-        return string.Join(" · ", rules.Differing(against).Select(name => Said(name, rules, against)).Where(s => s.Length > 0));
+        // (a game mode first, by its name: "Overdrive · 5 laps")
+        return string.Join(" · ", rules.Differing(against).Select(name => Said(name, rules, against))
+            .Prepend(ParamsLine(rules.Mode?.Params, rules.Mode?.Values)).Prepend(rules.Mode?.Name ?? "")
+            .Append(TeamsLine(rules)).Append(MachinesLine(rules.Mode?.Machines)).Where(s => s.Length > 0));
     }
+
+    /// <summary>A list of allowed machines in words: "Blue Falcon only", "12 machines"; "" for none or all.</summary>
+    public static string MachinesLine(IReadOnlyList<int>? machines) =>
+        machines is null or { Count: 0 } || machines.Count >= Machines.Names.Count ? ""
+        : machines.Count == 1 && Machines.Has(machines[0]) ? Machines.Names[machines[0]] + " only"
+        : N($"{machines.Count} machines");
+
+    /// <summary>A mode's settings the host moved from their defaults, as the summary says them: "Cut every 15 s"; "" for none.</summary>
+    public static string ParamsLine(IReadOnlyList<ModeParam>? declared, IReadOnlyList<int>? values) =>
+        declared is null || values is null || values.Count != declared.Count ? ""
+        : string.Join(" · ", declared.Select((p, i) => (p, v: values[i])).Where(x => x.v != x.p.Default).Select(x => $"{x.p.Label} {ModeParamRow.Text(x.p, x.v)}"));
+
+    /// <summary>The lobby's teams in the summary: "3 teams"; "" for none.</summary>
+    private static string TeamsLine(LobbyRules rules) => rules.Mode is not null && rules.Value(LobbyRules.TeamsKey) is > 0 and var teams ? N($"{teams} teams") : "";
 
     /// <summary>A rule as the summary line says it.</summary>
     public static string Said(string name, LobbyRules rules, LobbyRules? quickPlay)
@@ -82,7 +104,6 @@ public static class CustomRules
                 _ => "course vote",
             },
             "boost-start" => v != 0 ? "boost from the start" : "no boost on lap 1",
-            "restore" => v != 0 ? "machines come back" : "no restore",
             "finish-limit" => v == 0 ? "no finish limit" : N($"finish limit {v} s"),
             "mine-regen" => LobbyViewModel.MinesRule(v) ?? "mines back after 0.2 s",
             "machine-setting" => LobbyViewModel.SettingRule(Range(rules, quickPlay)) ?? "setting 100",
@@ -100,16 +121,17 @@ public static class CustomRules
     public static string ValueText(HostRule rule, LobbyRules? rules, LobbyRules? quickPlay)
     {
         ArgumentNullException.ThrowIfNull(rule);
-        var v = Value(rules, rule.Name, quickPlay);
+        var v = Raced(rules, rule.Name, quickPlay);
         return rule.Name switch
         {
+            "laps" when v == ModeTerms.LapsByCourse => "By course",
             "laps" when v == 0 => "Unlimited",
             "cpu-level" => LanViewModel.CpuLevels[Math.Clamp(v, 0, LanViewModel.CpuLevels.Count - 1)],
             "cpu-fill" => ((CpuFillMode)v).ToString(),
             "course-select" => (CourseSelectMode)v == CourseSelectMode.Fixed
-                ? Courses.Name(Value(rules, LobbyRules.FixedCourseKey, quickPlay)) : ((CourseSelectMode)v).ToString(),
+                ? Courses.Name(Raced(rules, LobbyRules.FixedCourseKey, quickPlay)) : ((CourseSelectMode)v).ToString(),
             "finish-limit" => v == 0 ? "Off" : N($"{v} s"),
-            "machine-setting" => Range(rules, quickPlay).Text,
+            "machine-setting" => new SettingRange(Raced(rules, HostRules.MachineSetting.Name, quickPlay), Raced(rules, LobbyRules.SettingHighKey, quickPlay)).Text,
             "stat-pack" => Pack(rules) ?? HostRuleRows.Stock,
             "vote-seconds" or "choose-seconds" => N($"{v} s"),
             "latency-limit" => N($"{v} ms"),
@@ -126,13 +148,27 @@ public static class CustomRules
     public static IReadOnlyList<RuleGroup> AllRules(LobbyRules? rules, LobbyRules? quickPlay)
     {
         var differing = rules?.Differing(quickPlay ?? Defaults).ToHashSet(StringComparer.Ordinal) ?? [];
-        return [.. Groups.Select((g, i) => new RuleGroup([.. g.Rules.Select(r =>
+        IReadOnlyList<RuleGroup> groups = [.. Groups.Select((g, i) => new RuleGroup([.. g.Rules.Select(r =>
             (RuleRow)new ValueRule(r.Label, ValueText(r, rules, quickPlay)) { Marked = differing.Contains(r.Name) })])
         {
             Later = i > 0,
             Heading = g.Heading,
         })];
+        // a game mode: its own group first, its name and what it changes
+        return rules?.Mode is { } mode
+            ? [new RuleGroup([new ValueRule("Mode", mode.Name) { Marked = true, Note = mode.About },
+                .. rules.Value(LobbyRules.TeamsKey) is > 0 and var teams ? [new ValueRule("Teams", N($"{teams}")) { Marked = true }] : (RuleRow[])[],
+                .. ParamValues(mode),
+                .. MachinesLine(mode.Machines) is { Length: > 0 } machines ? [new ValueRule("Machines", machines) { Marked = true }] : (RuleRow[])[]]) { Heading = "Mode" },
+               .. groups.Select(g => g with { Later = true })]
+            : groups;
     }
+
+    /// <summary>A mode's settings as the whole list shows them; those moved from their defaults marked.</summary>
+    private static IEnumerable<RuleRow> ParamValues(LobbyMode mode) =>
+        mode is { Params: { } declared, Values: { } values } && values.Count == declared.Count
+            ? declared.Select((p, i) => new ValueRule(p.Label, ModeParamRow.Text(p, values[i])) { Marked = values[i] != p.Default })
+            : [];
 
     /// <summary>The machine setting's range of a lobby's rules.</summary>
     public static SettingRange Range(LobbyRules? rules, LobbyRules? quickPlay) =>

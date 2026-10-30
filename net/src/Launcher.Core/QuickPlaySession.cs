@@ -338,7 +338,12 @@ public sealed partial class QuickPlaySession(LauncherSettings settings, string w
         if (Race is { } race && _client is not null)
         {
             Race = null;
-            if (rejoinable)
+            if (rejoinable && race.Start.NoRejoin)
+            {
+                // a mode without CPUs: the seat does not come back, and the server is told, so the player may watch
+                LeftForGood = race;
+            }
+            else if (rejoinable)
             {
                 RejoinableRace = race with { Rejoin = true };
                 Set("Race left");

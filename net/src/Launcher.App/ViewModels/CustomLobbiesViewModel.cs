@@ -253,6 +253,8 @@ public sealed partial class CustomLobbiesViewModel : ViewModelBase
         CustomLobby.NoSuchLobby => "Lobby gone",
         CustomLobby.NotHost => "Only the host can do that",
         CustomLobby.BadRules => "Rules not taken",
+        CustomLobby.BadMode => "Mode not taken",
+        CustomLobby.ModeRefuses => "Can't race this mode yet",
         CustomLobby.RulesLocked => "Rules change only while the lobby waits",
         CustomLobby.BadName => "Lobby name not taken",
         _ => "Refused",

@@ -44,9 +44,56 @@ public sealed class CustomRulesTests
     {
         var rules = new LobbyRules(CustomRules.Defaults.Values.ToDictionary(p => p.Key, p => p.Value));
         Assert.Equal("", CustomRules.Summary(rules, null));
-        var five = new LobbyRules(rules.Values.ToDictionary(p => p.Key, p => p.Key == "laps" ? 5 : p.Value));
+        var five = rules with { Values = rules.Values.ToDictionary(p => p.Key, p => p.Key == "laps" ? 5 : p.Value) };
         Assert.Equal("5 laps", CustomRules.Summary(five, null));
+        Assert.Null(rules.StatPack);   // (no word from a server: no pack, nothing of the launcher's own)
+        Assert.Equal("GX Unleashed", CustomRules.Summary(rules with { StatPack = "GX Unleashed" }, null));
         Assert.Equal(HostRules.LatencyLimit.Default, CustomRules.Value(null, "latency-limit", null));
+    }
+
+    /// <summary>The stats row starts on the server's own value, as the lobby list carries it, and Stock is a choice; a bare
+    /// server's is Stock; a mode that states stats, either way, takes the row away and says what is raced; a list of
+    /// machines is said.</summary>
+    [Fact]
+    public void TheStatsRowStartsOnTheServersPackAndAModeThatStatesItTakesTheRow()
+    {
+        string[] Shown(LobbyRulesEditor e) => [.. e.RuleGroups.SelectMany(g => g.Rows).Select(r => r.Label)];
+        var bare = new LobbyRulesEditor(null, new LobbyRules(CustomRules.Defaults.Values), ["GX Unleashed"], "Friday");
+        Assert.Null(bare.Rules.StatPack);
+        Assert.Equal(HostRuleRows.Stock, Assert.IsType<PackRule>(bare.Rule(HostRules.StatPack.Name)).Chosen);
+        Assert.Null(new LobbyRulesEditor(null, null, ["GX Unleashed"], "Friday").Rules.StatPack);   // (no word yet: never the launcher's own)
+
+        var start = new LobbyRulesEditor(null, QuickPlay, [], "Friday");
+        Assert.Equal("GX Unleashed", start.Rules.StatPack);
+        Assert.Equal("Same as Quick Play", start.SummaryShown);
+        var row = Assert.IsType<PackRule>(start.Rule(HostRules.StatPack.Name));
+        row.Selected = 0;
+        Assert.Null(start.Rules.StatPack);
+        Assert.Equal("stock stats", start.Summary);
+
+        LobbyMode Mode(string? pack) => new(new string('a', 64), "AAAAAAAA", "M", 1, Pack: pack, Machines: [6]);
+        foreach (var (pack, raced) in new[] { ("", HostRuleRows.Stock), ("GX+", "GX+") })
+        {
+            var rules = new LobbyRules(new Dictionary<string, int>(), "GX Unleashed", Mode: Mode(pack));
+            Assert.DoesNotContain(HostRules.StatPack.Label, Shown(new LobbyRulesEditor(rules, null, [], "Friday", editing: true)));
+            var all = CustomRules.AllRules(rules, null).SelectMany(g => g.Rows).OfType<ValueRule>().ToList();
+            Assert.Equal(raced, all.Single(r => r.Label == HostRules.StatPack.Label).Value);
+            Assert.Equal("Blue Falcon only", all.Single(r => r.Label == "Machines").Value);
+        }
+        var open = new LobbyRules(new Dictionary<string, int>(), Mode: Mode(null));
+        Assert.Contains(HostRules.StatPack.Label, Shown(new LobbyRulesEditor(open, null, [], "Friday", editing: true)));
+        Assert.Equal("M · Blue Falcon only", CustomRules.Summary(open, null));
+        Assert.Equal("", CustomRules.MachinesLine(null));
+        Assert.Equal("", CustomRules.MachinesLine([.. Enumerable.Range(0, Machines.Names.Count)]));
+        Assert.Equal("2 machines", CustomRules.MachinesLine([2, 6]));
+    }
+
+    [Fact]
+    public void AFreshPracticeStartsOnStockAndASavedOneKeepsItsChoice()
+    {
+        Assert.Null(PracticeSetup.Default.StatPack);
+        Assert.Equal("F-Zero GX+", (PracticeSetup.Default with { StatPack = "F-Zero GX+" }).Kept().StatPack);
+        Assert.Null(PracticeSetup.Default.Kept().StatPack);          // (a saved Stock stays Stock)
     }
 
     [Fact]

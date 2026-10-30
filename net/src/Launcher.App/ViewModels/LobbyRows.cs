@@ -18,6 +18,24 @@ public sealed record SeatRow(string Number, string Name, string ColorHex, string
 
     /// <summary>The host may remove this player (the host's own page, another's row).</summary>
     public bool Kickable { get; init; }
+
+    /// <summary>The seat's team (0 on); null: none yet.</summary>
+    public int? Team { get; init; }
+
+    /// <summary>The lobby's teams; 0: a lobby without teams.</summary>
+    public int Teams { get; init; }
+
+    /// <summary>The player may change this seat's team (their own, or the host's for anyone, while the lobby forms).</summary>
+    public bool TeamChanges { get; init; }
+
+    public string TeamText => Team is { } team ? ModeTeams.Word(team) : "No team";
+
+    public bool TeamShown => Teams > 0 && !TeamChanges;
+
+    public bool TeamButton => Teams > 0 && TeamChanges;
+
+    /// <summary>The row with its player's team, in a lobby of so many teams.</summary>
+    public SeatRow OnTeam(PlayerInfo player, int teams, bool changes) => this with { Team = player.Team, Teams = teams, TeamChanges = changes };
 }
 
 /// <summary>A column of the racers' list (the seats run down the columns).</summary>
@@ -75,7 +93,7 @@ public sealed partial class CourseOption(int index, string name, int course) : O
     /// <summary>The course number (<see cref="CourseVote.RandomCourse"/> for "Random course", until the draw reveals
     /// the course it picked), for its picture.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Mark), nameof(ShowsMark), nameof(Place), nameof(Cup), nameof(HasGem))]
+    [NotifyPropertyChangedFor(nameof(Mark), nameof(ShowsMark), nameof(Place), nameof(PlaceLine), nameof(Cup), nameof(HasGem))]
     public partial int Course { get; set; } = course;
 
     /// <summary>The course's cup, for its gem beside the venue ("Ruby", "AX", "Story"); "" for the random course
@@ -85,8 +103,39 @@ public sealed partial class CourseOption(int index, string name, int course) : O
     public bool HasGem => Cup.Length > 0;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Venue), nameof(Place), nameof(Track), nameof(Mark), nameof(ShowsMark))]
+    [NotifyPropertyChangedFor(nameof(Venue), nameof(Place), nameof(PlaceLine), nameof(Track), nameof(Mark), nameof(ShowsMark))]
     public partial string Name { get; set; } = name;
+
+    /// <summary>The race's laps, from the vote's card (<see cref="VoteCard"/>; 0: unlimited); null: not shown (no
+    /// card, the random course before the draw).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PlaceLine))]
+    public partial int? Laps { get; set; }
+
+    /// <summary>The badge of a mode that changes the race (a spicy card: "KNOCKOUT"); "" on a normal card.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasBadge))]
+    public partial string Badge { get; set; } = "";
+
+    /// <summary>The spicy mode's line of what it changes, shown when the card is hovered; null on a normal card.</summary>
+    [ObservableProperty]
+    public partial string? About { get; set; }
+
+    public bool HasBadge => Badge.Length > 0;
+
+    /// <summary>The card as the vote's card says it: its laps, and a spicy mode's badge and line.</summary>
+    public void Show(VoteCard? card)
+    {
+        Laps = card?.Laps;
+        Badge = card?.Badge ?? "";
+        About = card?.Badge is null ? null : card.About;
+    }
+
+    /// <summary>The venue line: the venue and the race's laps when the card has them ("Casino Palace · 6 laps";
+    /// unlimited laps say nothing).</summary>
+    public string PlaceLine => Laps is > 0 and var laps
+        ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{Place} · {laps} {(laps == 1 ? "lap" : "laps")}")
+        : Place;
 
     /// <summary>The venue in capitals, over the course's own name ("MUTE CITY" / "Twist Road").</summary>
     public string Venue => Name.Contains(": ", StringComparison.Ordinal) ? Name[..Name.IndexOf(": ", StringComparison.Ordinal)].ToUpperInvariant() : "ANY VENUE";

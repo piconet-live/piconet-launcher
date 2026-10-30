@@ -77,6 +77,21 @@
     <Style Selector="Border.card.lost">
       <Setter Property="Opacity" Value="0.32" />
     </Style>
+    <!-- a spicy card's badge: its mode's one word, black on orange in the display face, on the picture's corner -->
+    <Style Selector="Border.modebadge">
+      <Setter Property="Background" Value="{StaticResource SpicyBrush}" />
+      <Setter Property="CornerRadius" Value="3" />
+      <Setter Property="Padding" Value="10,1" />
+    </Style>
+    <Style Selector="Border.modebadge > TextBlock">
+      <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+      <Setter Property="FontWeight" Value="ExtraBold" />
+      <Setter Property="FontSize" Value="15" />
+      <Setter Property="LetterSpacing" Value="0.4" />
+      <Setter Property="Foreground" Value="{StaticResource OnAccentBrush}" />
+      <Setter Property="RenderTransformOrigin" Value="0%,100%" />
+      <Setter Property="RenderTransform" Value="skewX(-12deg)" />
+    </Style>
     <!-- each card's share of its row, eased as the card drawn widens; its room for the lift -->
     <Style Selector="Button.votecard">
       <Setter Property="Margin" Value="0,4,0,0" />
@@ -230,6 +245,9 @@
         <!-- Rejoin: the player's game left its race while it ran. Watch: a spectator seat. -->
         <Button Name="Rejoin" Classes="primary" c:PadNav.Main="True" Height="32" Content="Rejoin" Command="{Binding RejoinCommand}"
                 IsVisible="{Binding CanRejoin}" />
+        <!-- A mode without CPUs has no rejoin: the race can be watched, where Rejoin would be. -->
+        <Button Name="WatchLeftRace" Classes="primary" c:PadNav.Main="True" Height="32" Content="Watch" Command="{Binding WatchLeftRaceCommand}"
+                IsVisible="{Binding CanWatchLeftRace}" />
         <Button Name="WatchButton" Classes="secondary surface" Content="{Binding WatchText}" Command="{Binding WatchCommand}" IsVisible="{Binding CanWatch}" />
         <Button Name="Face" Classes="secondary surface" Content="{Binding FaceText}" Command="{Binding TurnPageCommand}" IsVisible="{Binding GarageOpen}" AutomationProperties.Name="{Binding FaceText}" />
         <Button Name="LeaveHere" Classes="secondary surface" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Control.LeaveText}" Command="{Binding LeaveCommand}" />
@@ -366,6 +384,7 @@
                   <DataTemplate x:DataType="vm:CourseOption">
                     <!-- (a watcher has no vote: the cards take no press and the pad passes them by) -->
                     <Button Classes="plain votecard" Classes.won="{Binding IsWon}" c:ShareRow.Share="{Binding Grow}" AutomationProperties.Name="{Binding Name}" HorizontalAlignment="Stretch"
+                            ToolTip.Tip="{Binding About}"
                             HorizontalContentAlignment="Stretch"
                             IsHitTestVisible="{Binding !$parent[v:LobbyView].((vm:LobbyViewModel)DataContext).Watching}"
                             c:PadNav.Skip="{Binding $parent[v:LobbyView].((vm:LobbyViewModel)DataContext).Watching}"
@@ -382,13 +401,20 @@
                               <TextBlock Classes="head nopicture" Text="{Binding Mark}" HorizontalAlignment="Center" VerticalAlignment="Center"
                                          FontWeight="SemiBold" FontSize="18" Foreground="{StaticResource HeadBrush}"
                                          IsVisible="{Binding ShowsMark}" />
+                              <!-- a spicy card: its mode's badge (on a canvas: the card's row measures its cards on no width
+                                   first, and a badge measured there would keep none) -->
+                              <Canvas IsVisible="{Binding HasBadge}">
+                                <Border Classes="modebadge" Canvas.Left="8" Canvas.Top="8">
+                                  <TextBlock Text="{Binding Badge}" />
+                                </Border>
+                              </Canvas>
                             </Panel>
                             <!-- the venue with its cup's gem (none for the random course), the course and its chance,
                                  a pip a vote: 16 px in from the sides, on 8 px steps -->
                             <StackPanel Margin="16,8">
                               <StackPanel Orientation="Horizontal" Spacing="8" Height="16">
                                 <Rectangle Classes="gem" Fill="{Binding Cup, Converter={x:Static v:CupGem.Instance}}" IsVisible="{Binding HasGem}" />
-                                <TextBlock Classes="faint" Text="{Binding Place}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                <TextBlock Classes="faint" Text="{Binding PlaceLine}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                               </StackPanel>
                               <Grid ColumnDefinitions="*,Auto" Height="24">
                                 <TextBlock Classes="figure" FontSize="18" Text="{Binding Track}" TextTrimming="CharacterEllipsis"
@@ -487,6 +513,8 @@
                       <TextBlock Name="Phase" Classes="dim" Classes.open="{Binding GameOpen}"
                                  FontSize="{StaticResource Size12}" Text="{Binding Phase}" VerticalAlignment="Center"
                                  IsVisible="{Binding Phase, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                      <TextBlock Name="StandingTeam" Classes="dim" FontSize="{StaticResource Size12}" Text="{Binding Team}"
+                                 VerticalAlignment="Center" IsVisible="{Binding HasTeam}" />
                       <TextBlock Classes="figure detail" FontSize="{StaticResource Size14}" Text="{Binding Detail}"
                                  VerticalAlignment="Center" />
                     </StackPanel>

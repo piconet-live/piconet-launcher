@@ -72,6 +72,9 @@ public interface ICoordinatorConnection : IAsyncDisposable
     /// <summary>The host removes a member from their lobby.</summary>
     Task KickPlayerAsync(string playerId, CancellationToken cancel = default);
 
+    /// <summary>The player's team, or (from the host) another member's; null team: none (<see cref="ChooseTeam"/>).</summary>
+    Task ChooseTeamAsync(int? team, string? playerId, CancellationToken cancel = default);
+
     /// <summary>The host starts their lobby's next race.</summary>
     Task StartLobbyRaceAsync(CancellationToken cancel = default);
 

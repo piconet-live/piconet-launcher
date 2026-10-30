@@ -17,15 +17,17 @@ public static class PracticeMatch
 
     /// <summary>Writes the match file (<see cref="Build"/>) at <paramref name="path"/>.</summary>
     public static void Write(string path, PracticeSetup setup, string name, MachineLook? look, DateTimeOffset now,
-                             StatPack? pack = null) =>
-        File.WriteAllText(path, Build(setup, name, look, now, pack));
+                             StatPack? pack = null, ModeStart? mode = null) =>
+        File.WriteAllText(path, Build(setup, name, look, now, pack, mode));
 
     /// <summary>The match file's text.</summary>
     /// <param name="name">The racer's name as the game shows it.</param>
     /// <param name="look">The machine's look from the garage: a stock colour or a colour; null: its own.</param>
     /// <param name="pack">The stat pack the set-up names (<see cref="PracticePacks"/>), carried whole as a match
     /// start carries one (<c>setup.stats</c>); null: the disc's own stats.</param>
-    public static string Build(PracticeSetup setup, string name, MachineLook? look, DateTimeOffset now, StatPack? pack = null)
+    /// <param name="mode">Practice's game mode (<see cref="PracticeMode"/>), its Restore among its parameters and its
+    /// laps its own word; null: none, the game's own words for a practice (old launch files and tests).</param>
+    public static string Build(PracticeSetup setup, string name, MachineLook? look, DateTimeOffset now, StatPack? pack = null, ModeStart? mode = null)
     {
         ArgumentNullException.ThrowIfNull(setup);
         ArgumentNullException.ThrowIfNull(name);
@@ -54,12 +56,16 @@ public static class PracticeMatch
         var set = new JsonObject
         {
             ["course"] = s.Course,
-            ["laps"] = s.Laps,
+            ["laps"] = mode is null ? s.Laps : PracticeSetup.Unlimited,
             ["seats"] = new JsonArray(seat),
         };
         // the race's rules as a match start carries them (Online.Protocol RaceRules; the game's RulesIntoRace,
         // port/core/src/files_match.cpp): Restore, boosting on the first lap, the mines' return
-        set["rules"] = JsonSerializer.SerializeToNode(s.Rules, ControlProtocol.Json);
+        set["rules"] = JsonSerializer.SerializeToNode(mode is null ? s.Rules : s.Rules with { Restore = false }, ControlProtocol.Json);
+        if (mode is not null)
+        {
+            set["mode"] = JsonSerializer.SerializeToNode(mode, ControlProtocol.Json);
+        }
         if (pack is not null)
         {
             var wire = pack.ToWire();

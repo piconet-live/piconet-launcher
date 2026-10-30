@@ -25,6 +25,7 @@ public sealed partial class QuickPlaySession
                 break;
             case LobbyState l:
                 OnLobbyState(l);
+                LeftRaceBehind(l);
                 break;
             case LiveRace live when Lobby?.Race?.MatchId == live.MatchId:
                 Live = live;
