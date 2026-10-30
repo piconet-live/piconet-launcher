@@ -226,7 +226,8 @@ public sealed class QuickPlayScript(QuickPlayScriptOptions options, Action<strin
             _votedCourse = vote.Vote.MatchId;
             var wanted = options.Course is { } c ? vote.Vote.Options.ToList().IndexOf(c) : -1;
             var option = wanted >= 0 ? wanted : 0;
-            Log("press", new { button = "course vote", match = vote.Vote.MatchId, options = vote.Vote.Options, option, course = vote.Vote.Options[option] });
+            Log("press", new { button = "course vote", match = vote.Vote.MatchId, options = vote.Vote.Options, option, course = vote.Vote.Options[option],
+                cards = vote.Vote.Cards?.Select(c => new { c.Mode, c.Laps, c.Badge }) });
             _ = session.VoteCourseAsync(option);
         }
         if (session.CourseChosen is { } chosen && _courseSaid != chosen.MatchId)
