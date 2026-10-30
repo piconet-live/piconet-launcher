@@ -46,22 +46,6 @@ public sealed record ModeBoardHead(string Name, string Hash, IReadOnlyList<Shown
 {
     private const int WordsALine = 16;
 
-    /// <summary>A head for the generated reader and writer: their records' text fields are arrays that a new
-    /// <see cref="BoardModeHead"/> leaves null (its lists are of structs, and no list element runs a constructor).</summary>
-    public static BoardModeHead Blank()
-    {
-        var head = new BoardModeHead();
-        for (var i = 0; i < head.Lines.Length; i++)
-        {
-            head.Lines[i] = new BoardModeLine();
-        }
-        for (var i = 0; i < head.Words.Length; i++)
-        {
-            head.Words[i] = new BoardModeWord();
-        }
-        return head;
-    }
-
     /// <summary>The head as the game wrote it, or null when it says no mode. The board is another process's file, so a
     /// length past its field is cut and a line of no scope, type or column there is left out.</summary>
     public static ModeBoardHead? Of(BoardModeHead head)

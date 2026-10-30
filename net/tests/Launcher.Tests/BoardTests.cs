@@ -64,7 +64,7 @@ public sealed unsafe class BoardTests : IDisposable
     /// <summary>What the protocol's own vector would put on the board, every scope and type, written by its generated writer.</summary>
     private static BoardModeHead ModeHead(params (BoardModeBoardScope Scope, BoardModeBoardType Type, ushort Column, string Label, string[] Words)[] lines)
     {
-        var head = ModeBoardHead.Blank();
+        var head = new BoardModeHead();
         head.Serial = 1;
         head.NameLength = 5;
         head.Count = (uint)lines.Length;
@@ -174,7 +174,7 @@ public sealed unsafe class BoardTests : IDisposable
     [Fact]
     public void AModeOfNoLinesOrAHeadWrittenBadlyShowsNothingItCannotRead()
     {
-        Assert.Null(ModeBoardHead.Of(ModeBoardHead.Blank()));   // serial 0: no mode
+        Assert.Null(ModeBoardHead.Of(new BoardModeHead()));   // serial 0: no mode
         var head = ModeHead(
             (BoardModeBoardScope.Seat, BoardModeBoardType.Int, 8, "Column past the eighth", []),
             ((BoardModeBoardScope)9, BoardModeBoardType.Int, 0, "No scope", []),

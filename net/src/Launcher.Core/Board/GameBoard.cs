@@ -26,7 +26,7 @@ public sealed class GameBoard : IDisposable
     private readonly BoardStatus _status = new();
     private readonly BoardSnapshot _snapshot = new();
     private readonly BoardMailbox _mail = new();
-    private readonly BoardModeHead _modeHead = ModeBoardHead.Blank();
+    private readonly BoardModeHead _modeHead = new BoardModeHead();
     private readonly BoardModeValues _modeValues = new();
     private readonly CancellationTokenSource _stop = new();
     private readonly Stopwatch _clock = Stopwatch.StartNew();

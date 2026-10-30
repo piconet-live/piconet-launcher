@@ -251,7 +251,7 @@ public sealed class RaceModeBoardTests : IDisposable
 
         public void Write()
         {
-            var head = ModeBoardHead.Blank();
+            var head = new BoardModeHead();
             head.Serial = 1;
             head.Count = 4;
             Line(head, 0, BoardModeBoardScope.Global, BoardModeBoardType.Int, 0, "Next cut");
