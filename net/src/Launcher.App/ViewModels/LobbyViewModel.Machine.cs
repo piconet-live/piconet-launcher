@@ -192,7 +192,8 @@ public sealed partial class LobbyViewModel
             }
             return;
         }
-        var offer = session.Choice?.Choose.Machines ?? session.Rules?.AllowedMachines;
+        // (a custom lobby's mode's list before the choice opens: the choice's own, every other way, is the service's word)
+        var offer = session.Choice?.Choose.Machines ?? session.Lobby?.Rules?.Mode?.Machines ?? session.Rules?.AllowedMachines;
         // (the stats shown are the lobby's: its stat pack's over the disc's, while its state names a pack)
         Garage.InLobby(offer, session.MachineSetting, session.LobbyStatPack, LobbyScreens.PackLabel(session.Lobby?.StatPack));
         if (_garageFor != session)

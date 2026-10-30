@@ -42,11 +42,51 @@ public sealed class CustomRulesTests
     [Fact]
     public void WithoutTheServersQuickPlayRulesTheDefaultsStandIn()
     {
-        var rules = new LobbyRules(CustomRules.Defaults.Values.ToDictionary(p => p.Key, p => p.Value));
+        var rules = new LobbyRules(CustomRules.Defaults.Values.ToDictionary(p => p.Key, p => p.Value), HostRules.DefaultStatPack);
         Assert.Equal("", CustomRules.Summary(rules, null));
-        var five = new LobbyRules(rules.Values.ToDictionary(p => p.Key, p => p.Key == "laps" ? 5 : p.Value));
+        var five = rules with { Values = rules.Values.ToDictionary(p => p.Key, p => p.Key == "laps" ? 5 : p.Value) };
         Assert.Equal("5 laps", CustomRules.Summary(five, null));
+        Assert.Equal("stock stats", CustomRules.Summary(rules with { StatPack = null }, null));   // (the default is a pack: stock is news)
         Assert.Equal(HostRules.LatencyLimit.Default, CustomRules.Value(null, "latency-limit", null));
+    }
+
+    /// <summary>The owner's two settings in the panel: the stats row starts on the default and Stock is a choice; a mode
+    /// that states stats, either way, takes the row away and says what is raced; a list of machines is said.</summary>
+    [Fact]
+    public void TheStatsRowStartsOnTheDefaultAndAModeThatStatesItTakesTheRow()
+    {
+        string[] Shown(LobbyRulesEditor e) => [.. e.RuleGroups.SelectMany(g => g.Rows).Select(r => r.Label)];
+        var start = new LobbyRulesEditor(null, null, [], "Friday");
+        Assert.Equal(HostRules.DefaultStatPack, start.Rules.StatPack);   // (no word from a server yet: still the default)
+        Assert.Equal("Same as Quick Play", start.SummaryShown);
+        var row = Assert.IsType<PackRule>(start.Rule(HostRules.StatPack.Name));
+        row.Selected = 0;
+        Assert.Null(start.Rules.StatPack);
+        Assert.Equal("stock stats", start.Summary);
+
+        LobbyMode Mode(string? pack) => new(new string('a', 64), "AAAAAAAA", "M", 1, Pack: pack, Machines: [6]);
+        foreach (var (pack, raced) in new[] { ("", HostRuleRows.Stock), ("GX+", "GX+") })
+        {
+            var rules = new LobbyRules(new Dictionary<string, int>(), HostRules.DefaultStatPack, Mode: Mode(pack));
+            Assert.DoesNotContain(HostRules.StatPack.Label, Shown(new LobbyRulesEditor(rules, null, [], "Friday", editing: true)));
+            var all = CustomRules.AllRules(rules, null).SelectMany(g => g.Rows).OfType<ValueRule>().ToList();
+            Assert.Equal(raced, all.Single(r => r.Label == HostRules.StatPack.Label).Value);
+            Assert.Equal("Blue Falcon only", all.Single(r => r.Label == "Machines").Value);
+        }
+        var open = new LobbyRules(new Dictionary<string, int>(), HostRules.DefaultStatPack, Mode: Mode(null));
+        Assert.Contains(HostRules.StatPack.Label, Shown(new LobbyRulesEditor(open, null, [], "Friday", editing: true)));
+        Assert.Equal("M · Blue Falcon only", CustomRules.Summary(open, null));
+        Assert.Equal("", CustomRules.MachinesLine(null));
+        Assert.Equal("", CustomRules.MachinesLine([.. Enumerable.Range(0, Machines.Names.Count)]));
+        Assert.Equal("2 machines", CustomRules.MachinesLine([2, 6]));
+    }
+
+    [Fact]
+    public void APracticeStartsOnTheDefaultAndKeepsAPlayersStock()
+    {
+        Assert.Equal(HostRules.DefaultStatPack, PracticeSetup.Default.StatPack);
+        Assert.Equal(HostRules.DefaultStatPack, PracticeSetup.Default.Kept().StatPack);
+        Assert.Null((PracticeSetup.Default with { StatPack = null }).Kept().StatPack);
     }
 
     [Fact]
@@ -60,7 +100,7 @@ public sealed class CustomRulesTests
         Assert.All(HostRules.Race, rule => Assert.Equal(RaceRules.QuickPlay.Value(rule), rules.Value(rule)));
         Assert.Equal((10, 40, 10), (rules.Value(HostRules.VoteSeconds), rules.Value(HostRules.ChooseSeconds),
             rules.Value(HostRules.VotingMinimum)));
-        Assert.Equal("", CustomRules.Summary(new(new Dictionary<string, int> { ["vote-seconds"] = 10, ["choose-seconds"] = 40 }), null));
+        Assert.Equal("", CustomRules.Summary(new(new Dictionary<string, int> { ["vote-seconds"] = 10, ["choose-seconds"] = 40 }, HostRules.DefaultStatPack), null));
     }
 
     [Fact]

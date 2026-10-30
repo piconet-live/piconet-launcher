@@ -63,8 +63,14 @@ public static class CustomRules
         // (a game mode first, by its name: "Overdrive · 5 laps")
         return string.Join(" · ", rules.Differing(against).Select(name => Said(name, rules, against))
             .Prepend(ParamsLine(rules.Mode?.Params, rules.Mode?.Values)).Prepend(rules.Mode?.Name ?? "")
-            .Append(TeamsLine(rules)).Where(s => s.Length > 0));
+            .Append(TeamsLine(rules)).Append(MachinesLine(rules.Mode?.Machines)).Where(s => s.Length > 0));
     }
+
+    /// <summary>A list of allowed machines in words: "Blue Falcon only", "12 machines"; "" for none or all.</summary>
+    public static string MachinesLine(IReadOnlyList<int>? machines) =>
+        machines is null or { Count: 0 } || machines.Count >= Machines.Names.Count ? ""
+        : machines.Count == 1 && Machines.Has(machines[0]) ? Machines.Names[machines[0]] + " only"
+        : N($"{machines.Count} machines");
 
     /// <summary>A mode's settings the host moved from their defaults, as the summary says them: "Cut every 15 s"; "" for none.</summary>
     public static string ParamsLine(IReadOnlyList<ModeParam>? declared, IReadOnlyList<int>? values) =>
@@ -152,7 +158,8 @@ public static class CustomRules
         return rules?.Mode is { } mode
             ? [new RuleGroup([new ValueRule("Mode", mode.Name) { Marked = true, Note = mode.About },
                 .. rules.Value(LobbyRules.TeamsKey) is > 0 and var teams ? [new ValueRule("Teams", N($"{teams}")) { Marked = true }] : (RuleRow[])[],
-                .. ParamValues(mode)]) { Heading = "Mode" },
+                .. ParamValues(mode),
+                .. MachinesLine(mode.Machines) is { Length: > 0 } machines ? [new ValueRule("Machines", machines) { Marked = true }] : (RuleRow[])[]]) { Heading = "Mode" },
                .. groups.Select(g => g with { Later = true })]
             : groups;
     }

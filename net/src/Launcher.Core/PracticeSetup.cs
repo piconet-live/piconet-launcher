@@ -34,8 +34,9 @@ public sealed record PracticeSetup(int Course, int Machine, string? StatPack, in
     /// <summary>How far a rewind reaches, in seconds (the game's rolling buffer).</summary>
     public const int RewindSeconds = 60;
 
-    /// <summary>The first course, the first machine, the disc's stats and Quick Play's rules.</summary>
-    public static PracticeSetup Default { get; } = new(1, 0, null, HostRules.MachineSetting.Default, HostRules.Laps.Default,
+    /// <summary>The first course, the first machine, the default stat pack and Quick Play's rules. (A practice saved on
+    /// the disc's stats, null, stays there: that was its player's choice.)</summary>
+    public static PracticeSetup Default { get; } = new(1, 0, HostRules.DefaultStatPack, HostRules.MachineSetting.Default, HostRules.Laps.Default,
         HostRules.Restore.Default != 0, HostRules.BoostStart.Default != 0, HostRules.MinesReturn.Default);
 
     /// <summary>The race's rules the game applies (a match's <c>setup.rules</c>): the set-up's; no CPUs, no finish

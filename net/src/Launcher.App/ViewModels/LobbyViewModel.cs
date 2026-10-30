@@ -481,9 +481,7 @@ public sealed partial class LobbyViewModel : ViewModelBase
 
     /// <summary>The machines a server allows, when not all: "Blue Falcon only", "12 machines"; null: all.</summary>
     private static string? Allowed(ServerRules r) =>
-        r.AllowedMachines.Count >= Machines.Names.Count ? null
-        : r.AllowedMachines.Count == 1 && r.AllowedMachines[0] is var only && Machines.Has(only) ? Machines.Names[only] + " only"
-        : $"{r.AllowedMachines.Count} machines";
+        CustomRules.MachinesLine(r.AllowedMachines) is { Length: > 0 } line ? line : null;
 
     /// <summary>Quick Play's mines' rule (the server's default, the rule's own: <see cref="HostRules.MinesReturn"/>):
     /// the rules line says nothing of it.</summary>

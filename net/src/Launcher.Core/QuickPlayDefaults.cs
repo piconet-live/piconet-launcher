@@ -29,7 +29,7 @@ public static class QuickPlayDefaults
         CourseSelectMode.Vote, null, [.. Enumerable.Range(0, Machines.Names.Count)], SettingRange.QuickPlay, RaceRules.QuickPlay);
 
     /// <summary>Quick Play's rules whole, as a server's lobby list carries them (<see cref="LobbyList.QuickPlay"/>), the
-    /// disc's own stats; <paramref name="votingMinimum"/>: a server's own, where its operator set one.</summary>
+    /// default stat pack; <paramref name="votingMinimum"/>: a server's own, where its operator set one.</summary>
     public static LobbyRules Whole(int votingMinimum = VotingMinimum) => new(LobbyRules.Settable.Where(r => r.Kind != RuleKind.Pack)
         .Select(r => KeyValuePair.Create(r.Name, r.Name switch
         {
@@ -40,5 +40,5 @@ public static class QuickPlayDefaults
             _ => r.Default,
         }))
         .Append(KeyValuePair.Create(LobbyRules.SettingHighKey, SettingRange.QuickPlay.High))
-        .ToDictionary(p => p.Key, p => p.Value));
+        .ToDictionary(p => p.Key, p => p.Value), HostRules.DefaultStatPack);
 }
