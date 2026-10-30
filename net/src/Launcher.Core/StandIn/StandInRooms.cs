@@ -73,12 +73,12 @@ internal sealed class StandInRooms(string name, Action<ServerMessage> send, Canc
     private readonly Lock _gate = new();
     private readonly List<StandInRoom> _rooms =
     [
-        new("stand-in-room-1", "Big Blue nights", "stand-in-2", "JODY", Whole(new(new Dictionary<string, int> { ["laps"] = 5 }, HostRules.DefaultStatPack)), null, Of(1, 0, 3)),
+        new("stand-in-room-1", "Big Blue nights", "stand-in-2", "JODY", Whole(new(new Dictionary<string, int> { ["laps"] = 5 })), null, Of(1, 0, 3)),
         new("stand-in-room-2", "Friday cup", "stand-in-3", "ZOE",
-            Whole(new(new Dictionary<string, int> { ["racers"] = 12, ["latency-limit"] = 150, ["cpu-fill"] = (int)CpuFillMode.Never }, HostRules.DefaultStatPack)),
+            Whole(new(new Dictionary<string, int> { ["racers"] = 12, ["latency-limit"] = 150, ["cpu-fill"] = (int)CpuFillMode.Never })),
             Password, Of(2, 4)),
         new("stand-in-room-3", "Mines stay gone", "stand-in-5", "PICO",
-            Whole(new(new Dictionary<string, int> { ["mine-regen"] = 0, ["boost-start"] = 1 }, HostRules.DefaultStatPack)), null, Of(4, 1, 2, 3), LobbyState.Racing),
+            Whole(new(new Dictionary<string, int> { ["mine-regen"] = 0, ["boost-start"] = 1 })), null, Of(4, 1, 2, 3), LobbyState.Racing),
     ];
 
     private bool _browsing;

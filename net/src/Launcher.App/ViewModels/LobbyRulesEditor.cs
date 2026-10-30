@@ -39,8 +39,7 @@ public sealed partial class LobbyRulesEditor : ObservableObject
         (_quickPlay, Editing, _file) = (quickPlay, editing, file);
         // Quick Play's own pack is offered whatever this launcher holds; a new lobby opens on Quick Play's rules
         // whole, its pack too (no pack is the disc's own stats, not Quick Play's)
-        // (no word from the server yet: the default, so a new lobby never starts on Stock for want of a list)
-        _packs = (quickPlay ?? CustomRules.Defaults).StatPack is { } served && !packs.Contains(served) ? [served, .. packs] : packs;
+        _packs = quickPlay?.StatPack is { } served && !packs.Contains(served) ? [served, .. packs] : packs;
         _start = start ?? QuickPlayStart;
         NameRow = new TextRule("Name", "Lobby name", CustomLobby.MaxName) { Text = name };
         PasswordRow = editing
@@ -48,7 +47,7 @@ public sealed partial class LobbyRulesEditor : ObservableObject
             : new TextRule("Password", "None", CustomLobby.MaxPassword) { Secret = true };
         LockedRow = new SwitchRule("Password", locked);
         Presets = [QuickPlayPreset, .. _packs.Select(p => p + " stats")];
-        PresetRow = new PresetRule("Preset", Presets, _start.StatPack is { } pack && pack != (quickPlay ?? CustomRules.Defaults).StatPack && _packs.Contains(pack)
+        PresetRow = new PresetRule("Preset", Presets, _start.StatPack is { } pack && pack != quickPlay?.StatPack && _packs.Contains(pack)
             ? _packs.ToList().IndexOf(pack) + 1 : 0) { Toggles = !editing };
         PresetRow.PropertyChanged += (_, e) =>
         {
@@ -157,7 +156,7 @@ public sealed partial class LobbyRulesEditor : ObservableObject
     public partial IReadOnlyList<RuleGroup> RuleGroups { get; private set; } = [];
 
     /// <summary>Quick Play's rules as a new lobby starts on them: none of the host's own, Quick Play's pack.</summary>
-    private LobbyRules QuickPlayStart => new(new Dictionary<string, int>(), (_quickPlay ?? CustomRules.Defaults).StatPack);
+    private LobbyRules QuickPlayStart => new(new Dictionary<string, int>(), _quickPlay?.StatPack);
 
     /// <summary>The rules as the rows hold them now: only those that differ from Quick Play's, and the stat pack
     /// always (none: the disc's own stats).</summary>
@@ -251,7 +250,7 @@ public sealed partial class LobbyRulesEditor : ObservableObject
         _applying = true;
         try
         {
-            var pack = preset > 0 && preset <= _packs.Count ? _packs[preset - 1] : (_quickPlay ?? CustomRules.Defaults).StatPack;
+            var pack = preset > 0 && preset <= _packs.Count ? _packs[preset - 1] : _quickPlay?.StatPack;
             RuleGroups = Build(new LobbyRules(new Dictionary<string, int>(), pack));
             Changed();
         }

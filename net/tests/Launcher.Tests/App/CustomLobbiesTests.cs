@@ -247,7 +247,7 @@ public sealed class CustomLobbiesTests : IDisposable
             Assert.Equal(("l1", "pw", 6, new Rgb(1, 2, 3)), server.Of<JoinLobby>()[0] is var j ? (j.LobbyId, j.Password, j.Machine, j.Color) : default);
 
             // BEN hosts: his mark, no host controls for ANA
-            var rules = new LobbyRules(new Dictionary<string, int> { ["laps"] = 4 }, HostRules.DefaultStatPack);
+            var rules = new LobbyRules(new Dictionary<string, int> { ["laps"] = 4 });
             server.SendAsync(LedServer.Lobby(LobbyState.Forming) with { Custom = true, HostId = "p2", Rules = rules, Name = "BEN's lobby" })
                 .GetAwaiter().GetResult();
             main.Current = main.Lobby;
@@ -390,7 +390,7 @@ public sealed class CustomLobbiesTests : IDisposable
     public void TheLobbysModeIsKeptUnlessChangedAndShownFirst()
     {
         var mode = new LobbyMode(new string('a', 64), "AAAAAAAA", "Overdrive", 1, "OVERDRIVE", "Speed locked and rising.");
-        var rules = new LobbyRules(new Dictionary<string, int> { ["laps"] = 5 }, HostRules.DefaultStatPack, Mode: mode);
+        var rules = new LobbyRules(new Dictionary<string, int> { ["laps"] = 5 }, Mode: mode);
         var editor = new LobbyRulesEditor(rules, null, [], "Friday", editing: true);
         Assert.Equal([GameModeRule.NoMode, "Overdrive"], editor.ModeRow.Options);
         Assert.Equal((mode, (string?)null), (editor.Rules.Mode, editor.Rules.ModeFile));
@@ -466,7 +466,7 @@ public sealed class CustomLobbiesTests : IDisposable
         {
             main.Current = main.Practice;
             Dispatcher.UIThread.RunJobs();
-            Assert.Equal(HostRules.DefaultStatPack, main.Practice.Setup.StatPack);
+            Assert.Equal(PracticeSetup.FreshStatPack, main.Practice.Setup.StatPack);
             PumpFor(200, state);
             Shot(window, state, "stats-default-practice");
 
@@ -475,7 +475,7 @@ public sealed class CustomLobbiesTests : IDisposable
             var view = Page<CustomLobbiesView>(window);
             Click(window, Named<Button>(view, "CreateButton"));
             var editor = main.Lobbies.Editor!;
-            Assert.Equal(HostRules.DefaultStatPack, editor.Rules.StatPack);
+            Assert.Null(editor.Rules.StatPack);   // (the stand-in is a bare server: it names no pack, and the launcher adds none)
             editor.PresetRow.RulesShown = true;
             PumpFor(200, state);
             Shot(window, state, "stats-default-create");

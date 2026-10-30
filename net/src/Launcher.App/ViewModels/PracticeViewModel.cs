@@ -31,7 +31,7 @@ public sealed partial class PracticeViewModel : ViewModelBase
     /// <param name="start">Starts the game on a set-up: null when it started, else the notice; null: nothing to
     /// start.</param>
     /// <param name="last">The practice last started (the settings'): the page opens on its course and rules; null:
-    /// <see cref="PracticeSetup.Default"/>.</param>
+    /// <see cref="PracticeSetup.Fresh"/>.</param>
     public PracticeViewModel(Func<RacedMachine> machine, Action garage, IReadOnlyList<string> packs, Func<PracticeSetup, string?>? start = null,
                              PracticeSetup? last = null)
     {
@@ -39,7 +39,7 @@ public sealed partial class PracticeViewModel : ViewModelBase
         ArgumentNullException.ThrowIfNull(packs);
         _machineOf = machine;
         _start = start;
-        var opened = (last ?? PracticeSetup.Default).Kept();
+        var opened = (last ?? PracticeSetup.Fresh(packs)).Kept();
         Courses = new CoursePickerModel(PickMode.One, [opened.Course]);
         _machine = new MachineRule("Machine", NameOf(machine()), garage);
         _rules = HostRules.Alone.ToDictionary(r => r.Name, r => HostRuleRows.For(r, ValueOf(r, opened), packs, opened.StatPack));
