@@ -143,6 +143,8 @@ public sealed partial class CoordinatorClient : ICoordinatorConnection
 
     public Task KickPlayerAsync(string playerId, CancellationToken cancel = default) => SendAsync(new KickPlayer(playerId), cancel);
 
+    public Task ChooseTeamAsync(int? team, string? playerId, CancellationToken cancel = default) => SendAsync(new ChooseTeam(team, playerId), cancel);
+
     public Task StartLobbyRaceAsync(CancellationToken cancel = default) => SendAsync(new StartLobbyRace(), cancel);
 
     public Task LeaveLobbyAsync(CancellationToken cancel = default) => SendAsync(new LeaveLobby(), cancel);

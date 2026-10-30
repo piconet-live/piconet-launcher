@@ -281,14 +281,20 @@ public static class ServerMessages
     {
         ShareCode = Text(m.ShareCode, MaxNameLength), Name = Text(m.Name, MaxNameLength), Badge = Text(m.Badge, MaxNameLength),
         About = Text(m.About, MaxAboutLength),
+        Terms = m.Terms is { Count: <= MostModeTerms } ? m.Terms : null,
+        Pack = m.Pack is null ? null : Text(m.Pack, MaxNameLength),
     };
+
+    /// <summary>The most rules a mode can own (a server that sends more is sending something else).</summary>
+    private const int MostModeTerms = 64;
 
     /// <summary>A race's mode as the game can be given it: a package no longer than a package can be (as base64), a
     /// content hash that is one, and parameters; the game checks the rest (formats.md 9). A start with a mode that is
     /// not one is dropped, never raced without it: the other games would run it.</summary>
     private static bool Sound(ModeStart? mode) => mode is null ||
         (mode.Package is { Length: > 0 and <= (ModeWords.PackageBytes + 2) / 3 * 4 } && mode.Hash is { Length: 64 } hash &&
-         hash.All(char.IsAsciiHexDigitLower) && mode.Params is { Count: <= 256 });
+         hash.All(char.IsAsciiHexDigitLower) && mode.Params is { Count: <= 256 } &&
+         (mode.Teams is null || (mode.Teams.Count <= GameFacts.Limits.Seats && mode.Teams.All(t => t is >= 0 and < ModeWords.Teams))));
 
     /// <summary>A pack's name as a label can show it: a name a pack can have, and a fingerprint that is one.</summary>
     private static bool PackName(StatPackName? pack) =>

@@ -17,7 +17,7 @@ public static class CustomRules
     /// the first.</summary>
     private static readonly (string Heading, string[] Names)[] Grouped =
     [
-        ("Race", ["course-select", "laps", "racers", "cpu-fill", "cpu-level", "boost-start", "restore", "finish-limit", "mine-regen"]),
+        ("Race", ["course-select", "laps", "racers", "cpu-fill", "cpu-level", "boost-start", "finish-limit", "mine-regen"]),
         ("Machines", ["machine-setting", "stat-pack", "mixed-packs"]),
         ("Lobby", ["vote-seconds", "choose-seconds", "voting-minimum"]),
         ("Connection", ["latency-limit"]),
@@ -43,8 +43,13 @@ public static class CustomRules
     public static int Value(LobbyRules? rules, string key, LobbyRules? quickPlay) =>
         rules?.Value(key) ?? quickPlay?.Value(key) ?? Defaults.Value(key) ?? 0;
 
-    /// <summary>The stat pack of <paramref name="rules"/> (null: stock), else Quick Play's.</summary>
-    private static string? Pack(LobbyRules? rules) => rules?.StatPack;
+    /// <summary>The value as it is raced: what the lobby's mode owns (<see cref="LobbyMode.Terms"/>), else
+    /// <see cref="Value"/>. (A row of the host's holds their own value, which comes back without the mode.)</summary>
+    public static int Raced(LobbyRules? rules, string key, LobbyRules? quickPlay) =>
+        rules?.Mode?.Terms is { } terms && terms.TryGetValue(key, out var owned) ? owned : Value(rules, key, quickPlay);
+
+    /// <summary>The stat pack as it is raced: the mode's when it names one ("": stock), else the lobby's (null: stock).</summary>
+    private static string? Pack(LobbyRules? rules) => rules?.Mode?.Pack is { } pack ? pack.Length == 0 ? null : pack : rules?.StatPack;
 
     /// <summary>The rules that differ from Quick Play's, as one short line: "5 laps · GX+ · ping limit 150 ms";
     /// "" when none does.</summary>
@@ -57,8 +62,11 @@ public static class CustomRules
         var against = quickPlay ?? Defaults;
         // (a game mode first, by its name: "Overdrive · 5 laps")
         return string.Join(" · ", rules.Differing(against).Select(name => Said(name, rules, against)).Prepend(rules.Mode?.Name ?? "")
-            .Where(s => s.Length > 0));
+            .Append(TeamsLine(rules)).Where(s => s.Length > 0));
     }
+
+    /// <summary>The lobby's teams in the summary: "3 teams"; "" for none.</summary>
+    private static string TeamsLine(LobbyRules rules) => rules.Mode is not null && rules.Value(LobbyRules.TeamsKey) is > 0 and var teams ? N($"{teams} teams") : "";
 
     /// <summary>A rule as the summary line says it.</summary>
     public static string Said(string name, LobbyRules rules, LobbyRules? quickPlay)
@@ -84,7 +92,6 @@ public static class CustomRules
                 _ => "course vote",
             },
             "boost-start" => v != 0 ? "boost from the start" : "no boost on lap 1",
-            "restore" => v != 0 ? "machines come back" : "no restore",
             "finish-limit" => v == 0 ? "no finish limit" : N($"finish limit {v} s"),
             "mine-regen" => LobbyViewModel.MinesRule(v) ?? "mines back after 0.2 s",
             "machine-setting" => LobbyViewModel.SettingRule(Range(rules, quickPlay)) ?? "setting 100",
@@ -102,16 +109,17 @@ public static class CustomRules
     public static string ValueText(HostRule rule, LobbyRules? rules, LobbyRules? quickPlay)
     {
         ArgumentNullException.ThrowIfNull(rule);
-        var v = Value(rules, rule.Name, quickPlay);
+        var v = Raced(rules, rule.Name, quickPlay);
         return rule.Name switch
         {
+            "laps" when v == ModeTerms.LapsByCourse => "By course",
             "laps" when v == 0 => "Unlimited",
             "cpu-level" => LanViewModel.CpuLevels[Math.Clamp(v, 0, LanViewModel.CpuLevels.Count - 1)],
             "cpu-fill" => ((CpuFillMode)v).ToString(),
             "course-select" => (CourseSelectMode)v == CourseSelectMode.Fixed
-                ? Courses.Name(Value(rules, LobbyRules.FixedCourseKey, quickPlay)) : ((CourseSelectMode)v).ToString(),
+                ? Courses.Name(Raced(rules, LobbyRules.FixedCourseKey, quickPlay)) : ((CourseSelectMode)v).ToString(),
             "finish-limit" => v == 0 ? "Off" : N($"{v} s"),
-            "machine-setting" => Range(rules, quickPlay).Text,
+            "machine-setting" => new SettingRange(Raced(rules, HostRules.MachineSetting.Name, quickPlay), Raced(rules, LobbyRules.SettingHighKey, quickPlay)).Text,
             "stat-pack" => Pack(rules) ?? HostRuleRows.Stock,
             "vote-seconds" or "choose-seconds" => N($"{v} s"),
             "latency-limit" => N($"{v} ms"),
@@ -136,7 +144,8 @@ public static class CustomRules
         })];
         // a game mode: its own group first, its name and what it changes
         return rules?.Mode is { } mode
-            ? [new RuleGroup([new ValueRule("Mode", mode.Name) { Marked = true, Note = mode.About }]) { Heading = "Mode" },
+            ? [new RuleGroup([new ValueRule("Mode", mode.Name) { Marked = true, Note = mode.About },
+                .. rules.Value(LobbyRules.TeamsKey) is > 0 and var teams ? [new ValueRule("Teams", N($"{teams}")) { Marked = true }] : (RuleRow[])[]]) { Heading = "Mode" },
                .. groups.Select(g => g with { Later = true })]
             : groups;
     }

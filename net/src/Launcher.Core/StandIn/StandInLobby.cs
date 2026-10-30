@@ -82,6 +82,7 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
     /// <summary>Quick Play's rotation (the service's mode files, <see cref="StandInService.Rotation"/>); a custom lobby
     /// and a rotation that did not load have none: their vote is of courses alone.</summary>
     private readonly QuickPlayRotation? _rotation = room is null ? StandInService.Rotation : null;
+    private IReadOnlyList<int>? _machines;
     private int[] _votes = [];
     private readonly HashSet<string> _voted = [];
     private readonly HashSet<string> _chosen = [];
@@ -175,8 +176,58 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
             {
                 return false;
             }
+            // (as the service: a mode is never raced on fewer racers or teams than it says)
+            if (room.Terms is { } terms)
+            {
+                var teams = ModeTeams.Assign([.. Players.Select(p => p.Team)], room.Teams);
+                if (terms.Refusal(Players.Count, teams?.Distinct().Count() ?? 0) is { } refusal)
+                {
+                    send(new ErrorMessage(CustomLobby.ModeRefuses, refusal));
+                    return true;
+                }
+            }
             StartMatch();
             return true;
+        }
+    }
+
+    /// <summary>A seat's team, as the service takes it: the player's own or (the host's) another's, while the lobby
+    /// forms, inside its teams. A refusal's code and words; null: taken.</summary>
+    public (string Code, string Message)? ChooseTeam(int? team, string? playerId)
+    {
+        lock (_gate)
+        {
+            if (room is null)
+            {
+                return null;
+            }
+            if (playerId is not null && playerId != You && room.HostId != You)
+            {
+                return (CustomLobby.NotHost, "the host gives other players their teams");
+            }
+            if (_stage != LobbyState.Forming)
+            {
+                return (CustomLobby.RulesLocked, "teams change while the lobby waits");
+            }
+            if (team is { } t && (t < 0 || t >= room.Teams))
+            {
+                return (CustomLobby.BadRules, $"this lobby has {room.Teams} teams");
+            }
+            if (playerId is null || playerId == You)
+            {
+                _me = _me! with { Team = team };
+            }
+            else
+            {
+                var at = _others.FindIndex(p => p.Id == playerId);
+                if (at < 0)
+                {
+                    return ("not_in_lobby", "no such member");
+                }
+                _others[at] = _others[at] with { Team = team };
+            }
+            SendState();
+            return null;
         }
     }
 
@@ -193,13 +244,20 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
             {
                 return (CustomLobby.RulesLocked, "Rules can change only while the lobby waits");
             }
-            var (mode, refusal) = StandInService.ModeOf(change.Rules, room.Rules.Mode);
+            if (StandInService.BadRule(change.Rules) is { } bad)
+            {
+                return (CustomLobby.BadRules, bad);
+            }
+            var (mode, terms, refusal) = StandInService.ModeOf(change.Rules, room.Rules.Mode, room.Terms);
             if (refusal is not null)
             {
                 return (CustomLobby.BadMode, refusal);   // (the compiler's line, as the service says it)
             }
             room.Name = change.Name is { Length: > 0 } named ? named.Trim() : room.Name;
-            room.Rules = StandInRooms.Whole(change.Rules, mode);
+            room.Terms = terms;
+            room.Rules = StandInRooms.Whole(change.Rules, mode, terms);
+            var kept = room.Teams;
+            _me = _me is { Team: { } mine } && mine >= kept ? _me with { Team = null } : _me;
             room.Password = change.ClearPassword ? null : change.Password ?? room.Password;
             SendState();
             return null;
@@ -276,6 +334,18 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
         _match++;
         _stage = LobbyState.Starting;
         _startsAt = null;
+        // a mode that pins its course has no vote, as the service
+        if (room?.Terms?.Course is { } pinned)
+        {
+            _cards = null;
+            _options = [];
+            _votes = [];
+            _voted.Clear();
+            _chosen.Clear();
+            SendState();
+            ChoosingOn(_match, pinned);
+            return;
+        }
         _cards = _rotation?.Vote(Courses.Pool, Random.Shared.Next);
         _options = _cards is { } cards ? [.. cards.Select(c => c.Course)]
             : [.. Courses.Pool.OrderBy(_ => Random.Shared.Next()).Take(5), CourseVote.RandomCourse];
@@ -353,9 +423,14 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
                 : _cards?[winner];
             course = drawn?.Course ?? (_options[winner] == CourseVote.RandomCourse ? Courses.Pool[Random.Shared.Next(Courses.Pool.Count)] : _options[winner]);
             send(new CourseChosen(MatchId, _options, [.. _votes], winner, course, drawn?.Card));
+            _machines = drawn?.Mode.Terms.Machines;
         }
-        Later(DrawMs, () =>
-        {
+        Later(DrawMs, () => ChoosingOn(match, course));
+    }
+
+    /// <summary>The machine stage of a match on its course: the machines the race's mode allows.</summary>
+    private void ChoosingOn(int match, int course)
+    {
             lock (_gate)
             {
                 if (match != _match || _stage != LobbyState.Starting)
@@ -364,7 +439,8 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
                 }
                 _stage = LobbyState.Choosing;
                 SendState();
-                send(new ChooseMachine(MatchId, course, QuickPlayDefaults.Rules.AllowedMachines, ChooseMs));
+                var machines = room?.Terms?.Machines ?? _machines;
+                send(new ChooseMachine(MatchId, course, machines is { Count: > 0 } ? machines : QuickPlayDefaults.Rules.AllowedMachines, ChooseMs));
             }
             foreach (var (other, i) in _others.ToList().Select((p, i) => (p, i)))
             {
@@ -390,7 +466,6 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
                     }
                 }
             });
-        });
     }
 
     public void Choose(string matchId, int machine, Rgb color, int? stockColor)
@@ -472,13 +547,14 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
             return;
         }
         var choosing = _stage == LobbyState.Choosing;
-        var players = Players.Select(p => p with { Chosen = choosing && _chosen.Contains(p.Id) }).ToList();
+        var teams = room?.Teams ?? 0;
+        var players = Players.Select(p => p with { Chosen = choosing && _chosen.Contains(p.Id), Team = teams > 0 ? p.Team : null }).ToList();
         send(new LobbyState(_id, players, room?.Capacity ?? Capacity,
-            VotingMinimum: room?.Rules.Value(HostRules.VotingMinimum) ?? VotingMinimum, VotingOpen: _stage == LobbyState.Forming,
+            VotingMinimum: Math.Min(room?.Rules.Value(HostRules.VotingMinimum) ?? VotingMinimum, room?.Capacity ?? Capacity), VotingOpen: _stage == LobbyState.Forming,
             StartVotes, _votedCpu ? 1 : 0, _stage, Custom: room is not null, HostId: room?.HostId, Rules: room?.Rules,
             Name: room?.Name, Locked: room?.Password is not null,
             StartsInMs: _startsAt is { } at ? (int)Math.Max(0, Math.Ceiling((at - DateTimeOffset.UtcNow).TotalMilliseconds)) : null,
-            NoCpuVote: _rotation is { CpusAllowed: false }));
+            NoCpuVote: room?.Terms is { CpusAllowed: false } || _rotation is { CpusAllowed: false }));
     }
 
     /// <summary>A line from the stand-in at this place among the lobby's others (round the list), when there is one.</summary>

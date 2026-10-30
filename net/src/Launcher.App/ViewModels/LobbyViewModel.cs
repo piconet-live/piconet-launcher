@@ -405,7 +405,7 @@ public sealed partial class LobbyViewModel : ViewModelBase
                 p.Tag)
             {
                 Id = p.Id, Host = lobby.Custom && p.Id == lobby.HostId, Kickable = session.IsHost && p.Id != session.PlayerId,
-            });
+            }.OnTeam(p, TeamsOf(lobby), TeamChanges(session, lobby, p)));
         }
         var racers = rows.Count;
         var empty = CpuFill(session, lobby) == CpuFillMode.Never ? "" : "CPU";
@@ -468,6 +468,12 @@ public sealed partial class LobbyViewModel : ViewModelBase
 
     /// <summary>How the empty seats are filled: never when the lobby's modes allow no CPUs (no vote then), else a
     /// custom lobby's rule, else the server's (a vote where it names none).</summary>
+    /// <summary>The teams of a lobby's next race; 0: none.</summary>
+    private static bool TeamChanges(QuickPlaySession session, LobbyState lobby, PlayerInfo p) =>
+        lobby.Stage == LobbyState.Forming && (session.IsHost || p.Id == session.PlayerId);
+
+    private static int TeamsOf(LobbyState lobby) => lobby.Rules is { Mode: not null } rules ? rules.Value(LobbyRules.TeamsKey) ?? 0 : 0;
+
     private static CpuFillMode CpuFill(QuickPlaySession session, LobbyState? lobby) => lobby is { NoCpuVote: true } ? CpuFillMode.Never
         : lobby is { Custom: true, Rules: { } rules }
         ? (CpuFillMode)CustomRules.Value(rules, HostRules.CpuFill.Name, session.QuickPlayRules)
@@ -516,10 +522,6 @@ public sealed partial class LobbyViewModel : ViewModelBase
         if (r.Race.BoostFromStart)
         {
             parts.Add("boost from the start");
-        }
-        if (r.Race.Restore)
-        {
-            parts.Add("machines come back");
         }
         // the mines' rule only when it is not Quick Play's 0.2 s
         if (MinesRule(r.Race.MineRegenMs) is { } mines)

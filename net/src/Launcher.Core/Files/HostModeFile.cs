@@ -11,7 +11,7 @@ namespace Launcher.Core;
 /// to every member with the race. The launcher compiles it first (<see cref="ModeCompiler"/>), so a file that does not
 /// compile is said at once, beside the rule, with its line.
 /// </summary>
-public sealed record HostModeFile(string Name, string Badge, string Text)
+public sealed record HostModeFile(string Name, string Badge, string Text, ModeTerms Terms)
 {
     /// <summary>The extension of a mode file.</summary>
     public const string Extension = ".fzmode";
@@ -55,7 +55,7 @@ public sealed record HostModeFile(string Name, string Badge, string Text)
         }
         var compiled = ModeCompiler.Compile(text);
         return compiled.Mode is { } mode
-            ? (new HostModeFile(mode.Name, mode.Badge, text), null)
+            ? (new HostModeFile(mode.Name, mode.Badge, text, ModeTerms.Of(mode)), null)
             : (null, $"Not a mode: {compiled.Errors[0]}");
     }
 

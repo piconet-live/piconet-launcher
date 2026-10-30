@@ -18,6 +18,24 @@ public sealed record SeatRow(string Number, string Name, string ColorHex, string
 
     /// <summary>The host may remove this player (the host's own page, another's row).</summary>
     public bool Kickable { get; init; }
+
+    /// <summary>The seat's team (0 on); null: none yet.</summary>
+    public int? Team { get; init; }
+
+    /// <summary>The lobby's teams; 0: a lobby without teams.</summary>
+    public int Teams { get; init; }
+
+    /// <summary>The player may change this seat's team (their own, or the host's for anyone, while the lobby forms).</summary>
+    public bool TeamChanges { get; init; }
+
+    public string TeamText => Team is { } team ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $"Team {team + 1}") : "No team";
+
+    public bool TeamShown => Teams > 0 && !TeamChanges;
+
+    public bool TeamButton => Teams > 0 && TeamChanges;
+
+    /// <summary>The row with its player's team, in a lobby of so many teams.</summary>
+    public SeatRow OnTeam(PlayerInfo player, int teams, bool changes) => this with { Team = player.Team, Teams = teams, TeamChanges = changes };
 }
 
 /// <summary>A column of the racers' list (the seats run down the columns).</summary>

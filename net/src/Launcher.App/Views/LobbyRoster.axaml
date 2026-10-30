@@ -93,6 +93,12 @@
                       <Button DockPanel.Dock="Right" Name="Kick" Classes="link kick" Content="Kick" Margin="8,0,0,0"
                               IsVisible="{Binding Kickable}" AutomationProperties.Name="{Binding Name, StringFormat='Kick {0}'}"
                               Command="{Binding #Root.((vm:LobbyViewModel)DataContext).KickCommand}" CommandParameter="{Binding}" />
+                      <!-- the seat's team: pressed for the next by its player or the host, shown to the others -->
+                      <Button DockPanel.Dock="Right" Name="TeamChoice" Classes="link" Content="{Binding TeamText}" Margin="8,0,0,0"
+                              IsVisible="{Binding TeamButton}" AutomationProperties.Name="{Binding Name, StringFormat='Team of {0}'}"
+                              Command="{Binding #Root.((vm:LobbyViewModel)DataContext).NextTeamCommand}" CommandParameter="{Binding}" />
+                      <TextBlock DockPanel.Dock="Right" Name="TeamLabel" Classes="dim" Text="{Binding TeamText}" Margin="8,0,0,0"
+                                 IsVisible="{Binding TeamShown}" FontSize="{StaticResource Size13}" VerticalAlignment="Center" />
                       <TextBlock Classes="dim machine" Text="{Binding Machine}" VerticalAlignment="Center" Margin="8,0,0,0"
                                  FontSize="{StaticResource Size13}" TextTrimming="CharacterEllipsis" />
                     </DockPanel>

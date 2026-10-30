@@ -74,20 +74,35 @@ public static class StandInService
         }
     }
 
+    /// <summary>Why the service would refuse a host's rules for a key it takes no value under (restore among them); null: none.</summary>
+    public static string? BadRule(LobbyRules rules)
+    {
+        ArgumentNullException.ThrowIfNull(rules);
+        return rules.Values.Keys.FirstOrDefault(k => !LobbyRules.Keys.Contains(k)) is { } key ? $"no rule {key}" : null;
+    }
+
     /// <summary>The mode a host's rules give a stand-in lobby, as the service takes it: a mode file compiled (its first error
-    /// refused, <see cref="CustomLobby.BadMode"/>), the mode the lobby has named again (kept), or none.</summary>
-    public static (LobbyMode? Mode, string? Refusal) ModeOf(LobbyRules rules, LobbyMode? had)
+    /// refused, <see cref="CustomLobby.BadMode"/>, as a word this "server" cannot honour: it has no stat packs), the mode
+    /// the lobby has named again (kept), or none.</summary>
+    public static (LobbyMode? Mode, ModeTerms? Terms, string? Refusal) ModeOf(LobbyRules rules, LobbyMode? had, ModeTerms? hadTerms)
     {
         ArgumentNullException.ThrowIfNull(rules);
         if (rules.ModeFile is { } text)
         {
             var compiled = text.Length > LobbyRules.MostModeFile ? null : ModeCompiler.Compile(text);
-            return compiled?.Mode is { } m
-                ? (new LobbyMode(compiled.Hash!, compiled.ShareCode!, m.Name, m.Api, m.Badge, m.About), null)
-                : (null, compiled?.Errors[0] ?? "the mode file is too long");
+            if (compiled?.Mode is not { } m)
+            {
+                return (null, null, compiled?.Errors[0] ?? "the mode file is too long");
+            }
+            var terms = ModeTerms.Of(m);
+            if (terms.Pack is { Length: > 0 } || terms.MixedPacks == true)
+            {
+                return (null, null, "this mode's stats: this server has no stat packs");
+            }
+            return (new LobbyMode(compiled.Hash!, compiled.ShareCode!, m.Name, m.Api, m.Badge, m.About, terms.Rules(), terms.Pack), terms, null);
         }
-        return rules.Mode is null ? (null, null)
-            : rules.Mode.Hash == had?.Hash ? (had, null)
-            : (null, "the lobby holds no such mode");
+        return rules.Mode is null ? (null, null, null)
+            : rules.Mode.Hash == had?.Hash ? (had, hadTerms, null)
+            : (null, null, "the lobby holds no such mode");
     }
 }

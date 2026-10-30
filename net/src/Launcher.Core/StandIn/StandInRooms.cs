@@ -17,6 +17,9 @@ internal sealed class StandInRoom(string id, string name, string hostId, string 
 
     public LobbyRules Rules { get; set; } = rules;
 
+    /// <summary>What the room's mode states (<see cref="ModeTerms"/>); null: no mode.</summary>
+    public ModeTerms? Terms { get; set; }
+
     public string? Password { get; set; } = password;
 
     public List<PlayerInfo> Members { get; } = members;
@@ -25,7 +28,10 @@ internal sealed class StandInRoom(string id, string name, string hostId, string 
     public string Stage { get; } = stage;
 
     /// <summary>The racers rule: the lobby's room.</summary>
-    public int Capacity => Rules.Value(HostRules.Racers) ?? StandInLobby.Capacity;
+    public int Capacity => Terms?.Racers?.Most ?? Rules.Value(HostRules.Racers) ?? StandInLobby.Capacity;
+
+    /// <summary>The teams of the room's next race: its rule under its mode's word; 0: none.</summary>
+    public int Teams => Terms is { } terms ? terms.TeamCount(ModeTeams.Kept(Rules.Value(LobbyRules.TeamsKey) ?? 0)) : 0;
 
     /// <summary>The player's lobby here while they are in it.</summary>
     public StandInLobby? Lobby { get; set; }
@@ -48,12 +54,16 @@ internal sealed class StandInRooms(string name, Action<ServerMessage> send, Canc
     public static LobbyRules QuickPlay { get; } = QuickPlayDefaults.Whole(StandInLobby.VotingMinimum);
 
     /// <summary>Rules whole: the host's values over Quick Play's.</summary>
-    public static LobbyRules Whole(LobbyRules rules, LobbyMode? mode = null)
+    public static LobbyRules Whole(LobbyRules rules, LobbyMode? mode = null, ModeTerms? terms = null)
     {
         var values = QuickPlay.Values.ToDictionary(p => p.Key, p => p.Value);
         foreach (var (key, value) in rules?.Values ?? new Dictionary<string, int>())
         {
             values[key] = value;
+        }
+        if (terms?.TeamCount(ModeTeams.Kept(values.GetValueOrDefault(LobbyRules.TeamsKey))) is > 0 and var teams)
+        {
+            values[LobbyRules.TeamsKey] = teams;
         }
         return new LobbyRules(values, rules?.StatPack, Mode: mode);
     }
@@ -111,7 +121,12 @@ internal sealed class StandInRooms(string name, Action<ServerMessage> send, Canc
 
     public void Create(CreateLobby request, string playerName)
     {
-        var (mode, refusal) = StandInService.ModeOf(request.Rules, null);
+        if (StandInService.BadRule(request.Rules) is { } bad)
+        {
+            send(new ErrorMessage(CustomLobby.BadRules, bad));
+            return;
+        }
+        var (mode, terms, refusal) = StandInService.ModeOf(request.Rules, null, null);
         if (refusal is not null)
         {
             send(new ErrorMessage(CustomLobby.BadMode, refusal));
@@ -123,7 +138,7 @@ internal sealed class StandInRooms(string name, Action<ServerMessage> send, Canc
         {
             _made++;
             room = new StandInRoom(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"stand-in-mine-{_made}"),
-                request.Name.Trim(), StandInLobby.You, playerName, Whole(request.Rules, mode), string.IsNullOrEmpty(request.Password) ? null : request.Password, []);
+                request.Name.Trim(), StandInLobby.You, playerName, Whole(request.Rules, mode, terms), string.IsNullOrEmpty(request.Password) ? null : request.Password, []) { Terms = terms };
             _rooms.Add(room);
         }
         Enter(room, request.Machine, request.Color, request.StockColor);
@@ -199,6 +214,14 @@ internal sealed class StandInRooms(string name, Action<ServerMessage> send, Canc
         if (Current?.StartRace() == false)
         {
             send(new ErrorMessage(CustomLobby.NotHost, "Only the host can do that"));
+        }
+    }
+
+    public void ChooseTeam(int? team, string? playerId)
+    {
+        if (Current?.ChooseTeam(team, playerId) is { } refused)
+        {
+            send(new ErrorMessage(refused.Code, refused.Message));
         }
     }
 

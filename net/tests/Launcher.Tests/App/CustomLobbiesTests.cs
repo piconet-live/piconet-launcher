@@ -451,4 +451,101 @@ public sealed class CustomLobbiesTests : IDisposable
             Assert.Equal(50, server.Of<MachineChoice>()[0].Setting);
         });
     }
+
+    // the overhaul: restore gone, what a mode owns, teams
+
+    [Fact]
+    public void RestoreIsNoRowOfALobby()
+    {
+        var editor = new LobbyRulesEditor(null, null, [], "Friday");
+        var labels = editor.RuleGroups.SelectMany(g => g.Rows).Select(r => r.Label).ToList();
+        Assert.DoesNotContain("Restore", labels);
+        Assert.DoesNotContain(CustomRules.Groups.SelectMany(g => g.Rules), r => r.Name == "restore");
+        Assert.DoesNotContain(editor.Rules.Values.Keys, k => k == "restore");
+        Assert.DoesNotContain(CustomRules.AllRules(new LobbyRules(new Dictionary<string, int>()), null).SelectMany(g => g.Rows), r => r.Label == "Restore");
+    }
+
+    /// <summary>A mode's words win: the rows it owns leave the host's panel (their values kept for when the mode goes),
+    /// the whole list says what is raced, and the rules line does not repeat them.</summary>
+    [Fact]
+    public void WhatTheModeOwnsLeavesThePanelAndTheListSaysIt()
+    {
+        var terms = ModeTerms.Of(ModeCompiler.Compile("mode \"M\" { api 1; }\nlaps 2;\nracers 2..6;\n").Mode!);
+        var mode = new LobbyMode(new string('a', 64), "AAAAAAAA", "M", 1, Terms: terms.Rules());
+        var rules = new LobbyRules(new Dictionary<string, int> { ["laps"] = 5, ["finish-limit"] = 200 }, Mode: mode);
+        var editor = new LobbyRulesEditor(rules, null, [], "Friday", editing: true);
+        string[] Shown() => [.. editor.RuleGroups.SelectMany(g => g.Rows).Select(r => r.Label)];
+        foreach (var owned in new[] { "Laps", "Racers", "CPU racers", "Finish limit" })
+        {
+            Assert.DoesNotContain(owned, Shown());
+        }
+        Assert.Contains("Mines return", Shown());
+        Assert.Contains("Teams", editor.LobbyGroups.SelectMany(g => g.Rows).Select(r => r.Label));
+        Assert.Equal(5, editor.Rules.Value("laps"));                   // (the host's value, kept)
+        editor.ModeRow.Selected = 0;
+        Assert.Contains("Laps", Shown());
+        Assert.Contains("Finish limit", Shown());
+        Assert.DoesNotContain("Teams", editor.LobbyGroups.SelectMany(g => g.Rows).Select(r => r.Label));
+
+        var all = CustomRules.AllRules(rules, null).SelectMany(g => g.Rows).OfType<ValueRule>().ToList();
+        Assert.Equal("2", all.Single(r => r.Label == "Laps").Value);
+        Assert.Equal("Off", all.Single(r => r.Label == "Finish limit").Value);
+        Assert.Equal("M", CustomRules.Summary(rules, new LobbyRules(new Dictionary<string, int> { ["laps"] = 3, ["finish-limit"] = 90 })));
+    }
+
+    [Fact]
+    public void TheTeamsRowFollowsTheModesWordAndGoesWithTheRules()
+    {
+        var path = Path.Combine(_dir, "teams.fzmode");
+        File.WriteAllText(path, "mode \"Duel\" { api 1; }\nteams 2..4;\n");
+        var editor = new LobbyRulesEditor(null, null, [], "Friday");
+        Assert.DoesNotContain("Teams", editor.LobbyGroups.SelectMany(g => g.Rows).Select(r => r.Label));
+        editor.ModeRow.Load(path);
+        Assert.Equal(["2", "3", "4"], editor.TeamsRow.Options);
+        Assert.Contains(editor.TeamsRow, editor.LobbyGroups.SelectMany(g => g.Rows));
+        editor.TeamsRow.Selected = 1;
+        Assert.Equal(3, editor.Rules.Value(LobbyRules.TeamsKey));
+
+        var free = new LobbyRulesEditor(new LobbyRules(new Dictionary<string, int>(), Mode: new LobbyMode(new string('a', 64), "A", "M", 1)), null, [], "F", editing: true);
+        Assert.Equal(("None", 30), (free.TeamsRow.Options[0], free.TeamsRow.Options.Count));
+        Assert.Null(free.Rules.Value(LobbyRules.TeamsKey));
+    }
+
+    /// <summary>A lobby with teams on the stand-in: the host's panel with a mode and its teams, each seat's team, the
+    /// player's own pressed for the next. LOBBY_SHOTS keeps them.</summary>
+    [Fact]
+    public async Task TeamsShowOnTheSeatsAndTheHostPressesThem()
+    {
+        var path = Path.Combine(_dir, "duel.fzmode");
+        File.WriteAllText(path, "mode \"Duel\" { api 1; badge \"DUEL\"; about \"Two teams.\"; }\nteams 2..4;\nlaps 5;\nracers 2..12;\n");
+        var state = State(standIn: true);
+        await InTheWindow(state, (window, main) =>
+        {
+            var joining = state.JoinAsync(new Uri(StandInService.Address), custom: true);
+            PumpTelling(state, () => joining.IsCompleted && state.Session?.PlayerId is not null);
+            main.Current = main.Lobbies;
+            PumpFor(200, state);
+            var view = Page<CustomLobbiesView>(window);
+            Click(window, Named<Button>(view, "CreateButton"));
+            var editor = main.Lobbies.Editor!;
+            editor.ModeRow.Load(path);
+            Dispatcher.UIThread.RunJobs();
+            editor.TeamsRow.Selected = 1;
+            Dispatcher.UIThread.RunJobs();
+            Assert.Contains(view.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "Teams" && t.IsEffectivelyVisible);
+            Shot(window, state, "create-mode-teams");
+
+            Click(window, Named<Button>(Named<RulesPanel>(view, "CreatePanel"), "ActionButton"));
+            PumpTelling(state, () => state.Session?.Lobby is { Custom: true }, "no lobby came");
+            PumpTelling(state, () => main.Lobby.SeatColumns.SelectMany(c => c.Seats).Count(s => s.Id is not null) >= 3, "the stand-ins did not come");
+            var mine = main.Lobby.SeatColumns.SelectMany(c => c.Seats).Single(s => s.You);
+            Assert.Equal(("No team", true), (mine.TeamText, mine.TeamButton));
+            main.Lobby.NextTeamCommand.Execute(mine);
+            PumpTelling(state, () => main.Lobby.SeatColumns.SelectMany(c => c.Seats).Single(s => s.You).Team == 0, "the team did not change");
+            var other = main.Lobby.SeatColumns.SelectMany(c => c.Seats).First(s => s is { You: false, Id: not null });
+            main.Lobby.NextTeamCommand.Execute(other);
+            PumpTelling(state, () => main.Lobby.SeatColumns.SelectMany(c => c.Seats).First(s => s.Id == other.Id).Team == 0, "the host did not change another's team");
+            Shot(window, state, "lobby-teams");
+        });
+    }
 }

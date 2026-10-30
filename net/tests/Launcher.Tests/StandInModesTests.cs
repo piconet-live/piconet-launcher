@@ -70,12 +70,12 @@ public sealed class StandInModesTests
         StandInService.UseQuickPlay(RepositoryFolder.Protocol("protocol", "quickplay"));
         try
         {
-            Assert.StartsWith("knockout.fzmode line 15: ", StandInService.RotationRefusal, StringComparison.Ordinal);
+            Assert.StartsWith("knockout.fzmode line 43: ", StandInService.RotationRefusal, StringComparison.Ordinal);
             var (link, got) = await Connected();
             await using (link)
             {
                 var said = await Next<ChatMessage>(got, c => c.NoticeId == "stand-in-modes");
-                Assert.Contains("knockout.fzmode line 15", said.Text, StringComparison.Ordinal);
+                Assert.Contains("knockout.fzmode line 43", said.Text, StringComparison.Ordinal);
                 await link.EnterQuickPlayAsync(6, new Rgb(1, 2, 3), cancel: TestContext.Current.CancellationToken);
                 await link.VoteStartAsync(true, TestContext.Current.CancellationToken);
                 Assert.Null((await Next<CourseVote>(got)).Cards);
@@ -92,14 +92,113 @@ public sealed class StandInModesTests
     {
         var good = File.ReadAllText(Path.Combine(Vectors, "overdrive.fzmode"));
         var rules = new LobbyRules(new Dictionary<string, int>(), ModeFile: good);
-        var (mode, refusal) = StandInService.ModeOf(rules, null);
+        var (mode, _, refusal) = StandInService.ModeOf(rules, null, null);
         Assert.Null(refusal);
         Assert.Equal(("Overdrive", "OVERDRIVE", ModeCompiler.Compile(good).Hash), (mode!.Name, mode.Badge, mode.Hash));
         // named again without the file: kept; another hash: refused; none: no mode
-        Assert.Equal((mode, (string?)null), StandInService.ModeOf(new LobbyRules(new Dictionary<string, int>(), Mode: mode), mode));
-        Assert.Equal("the lobby holds no such mode", StandInService.ModeOf(new LobbyRules(new Dictionary<string, int>(), Mode: mode), null).Refusal);
-        Assert.Equal((null, (string?)null), StandInService.ModeOf(new LobbyRules(new Dictionary<string, int>()), mode));
+        Assert.Same(mode, StandInService.ModeOf(new LobbyRules(new Dictionary<string, int>(), Mode: mode), mode, null).Mode);
+        Assert.Equal("the lobby holds no such mode", StandInService.ModeOf(new LobbyRules(new Dictionary<string, int>(), Mode: mode), null, null).Refusal);
+        Assert.Null(StandInService.ModeOf(new LobbyRules(new Dictionary<string, int>()), mode, null).Mode);
         Assert.StartsWith("line 5: ", StandInService.ModeOf(new LobbyRules(new Dictionary<string, int>(),
-            ModeFile: "mode \"Broken\" {\n  api 1;\n}\n\nlaps 100;\n"), null).Refusal, StringComparison.Ordinal);
+            ModeFile: "mode \"Broken\" {\n  api 1;\n}\n\nlaps 100;\n"), null, null).Refusal, StringComparison.Ordinal);
+    }
+
+    // the overhaul: the stand-in takes a mode's words and a lobby's teams as the service does (the service's GameModeTests)
+
+    private const string Head = "mode \"M\" { api 1; }\n";
+
+    private static readonly Rgb Paint = new(1, 2, 3);
+
+    private static async Task<LobbyState> Created((ICoordinatorConnection Link, ConcurrentQueue<ServerMessage> Got) c, string body, Dictionary<string, int>? values = null)
+    {
+        await c.Link.CreateLobbyAsync(new CreateLobby("F", new LobbyRules(values ?? new Dictionary<string, int>(), ModeFile: Head + body), null, 6, Paint), TestContext.Current.CancellationToken);
+        return await Next<LobbyState>(c.Got, s => s.Custom);
+    }
+
+    [Fact]
+    public async Task RestoreIsRefusedAsTheServiceRefusesIt()
+    {
+        var c = await Connected();
+        await using (c.Link)
+        {
+            await c.Link.CreateLobbyAsync(new CreateLobby("F", new LobbyRules(new Dictionary<string, int> { ["restore"] = 1 }), null, 6, Paint), TestContext.Current.CancellationToken);
+            var refused = await Next<ErrorMessage>(c.Got);
+            Assert.Equal((CustomLobby.BadRules, "no rule restore"), (refused.Code, refused.Message));
+        }
+    }
+
+    [Fact]
+    public async Task AModesWordsSetTheLobbyAsOnTheService()
+    {
+        var c = await Connected();
+        await using (c.Link)
+        {
+            var state = await Created(c, "racers 2..6;\nlaps 2;");
+            Assert.Equal(6, state.Capacity);
+            Assert.True(state.NoCpuVote);                        // (no `cpus allowed`)
+            Assert.Equal(0, state.Rules!.Mode!.Terms!["finish-limit"]);
+            Assert.Equal(2, state.Rules.Mode.Terms["laps"]);
+            Assert.Equal((int)CpuFillMode.Never, state.Rules.Mode.Terms["cpu-fill"]);
+        }
+        var d = await Connected();
+        await using (d.Link)
+        {
+            Assert.False((await Created(d, "cpus allowed;")).NoCpuVote);
+        }
+    }
+
+    [Fact]
+    public async Task AWordTheStandInCannotHonourRefusesTheMode()
+    {
+        var c = await Connected();
+        await using (c.Link)
+        {
+            await c.Link.CreateLobbyAsync(new CreateLobby("F", new LobbyRules(new Dictionary<string, int>(), ModeFile: Head + "stats \"Nope\";"), null, 6, Paint), TestContext.Current.CancellationToken);
+            Assert.Equal(CustomLobby.BadMode, (await Next<ErrorMessage>(c.Got)).Code);
+        }
+    }
+
+    [Fact]
+    public async Task APinnedCourseHasNoVoteAndTheModesMachinesAreOffered()
+    {
+        var c = await Connected();
+        await using (c.Link)
+        {
+            await Created(c, "course \"Lightning: Loop Cross\";\nmachines [\"Blue Falcon\"];");
+            await c.Link.StartLobbyRaceAsync(TestContext.Current.CancellationToken);
+            var choose = await Next<ChooseMachine>(c.Got);
+            Assert.Equal((8, 6), (choose.Course, Assert.Single(choose.Machines)));
+            Assert.Empty(c.Got.OfType<CourseVote>());
+        }
+    }
+
+    [Fact]
+    public async Task BelowItsRacersAModeRefusesTheRace()
+    {
+        var c = await Connected();
+        await using (c.Link)
+        {
+            await Created(c, "racers 20..30;");
+            await c.Link.StartLobbyRaceAsync(TestContext.Current.CancellationToken);
+            var refused = await Next<ErrorMessage>(c.Got);
+            Assert.Equal(CustomLobby.ModeRefuses, refused.Code);
+            Assert.Contains("at least 20 racers", refused.Message, StringComparison.Ordinal);
+        }
+    }
+
+    [Fact]
+    public async Task TeamsAreChosenAndCheckedAsOnTheService()
+    {
+        var c = await Connected();
+        await using (c.Link)
+        {
+            var state = await Created(c, "teams 2..3;", new Dictionary<string, int> { [LobbyRules.TeamsKey] = 9 });
+            Assert.Equal(3, state.Rules!.Value(LobbyRules.TeamsKey));   // (within the mode's word)
+            await c.Link.ChooseTeamAsync(1, null, TestContext.Current.CancellationToken);
+            var mine = await Next<LobbyState>(c.Got, s => s.Players.Any(p => p.Team == 1));
+            Assert.Single(mine.Players, p => p.Team == 1);
+            await c.Link.ChooseTeamAsync(3, null, TestContext.Current.CancellationToken);
+            Assert.Equal(CustomLobby.BadRules, (await Next<ErrorMessage>(c.Got)).Code);
+        }
     }
 }

@@ -57,11 +57,44 @@ public sealed partial class LobbyRulesEditor : ObservableObject
         };
         ModeRow = new GameModeRule("Mode", _start.Mode);
         ModeRow.PropertyChanged += OnRowChanged;
+        TeamsRow = NewTeamsRow(_start.Value(LobbyRules.TeamsKey) ?? 0);
         RuleGroups = Build(_start);
         PresetRow.Note = SummaryShown;
-        LobbyGroups = editing
-            ? RuleGroup.Of([NameRow, LockedRow, PasswordRow], [ModeRow, PresetRow])
-            : RuleGroup.Of([NameRow, PasswordRow], [ModeRow, PresetRow]);
+        LobbyGroups = MakeLobbyGroups();
+    }
+
+    /// <summary>The name, the password, and the mode with its teams and the preset.</summary>
+    private IReadOnlyList<RuleGroup> MakeLobbyGroups()
+    {
+        RuleRow[] first = Editing ? [NameRow, LockedRow, PasswordRow] : [NameRow, PasswordRow];
+        return ModeChosen ? RuleGroup.Of(first, [ModeRow, TeamsRow, PresetRow]) : RuleGroup.Of(first, [ModeRow, PresetRow]);
+    }
+
+    /// <summary>The lobby's teams under its mode: None, or a number the mode's word allows.</summary>
+    public ChoiceRule TeamsRow { get; private set; }
+
+    /// <summary>A mode is the choice (the host's file, or the one the lobby has).</summary>
+    private bool ModeChosen => ModeRow.FileChosen || ModeRow.ServedChosen;
+
+    private ChoiceRule NewTeamsRow(int value)
+    {
+        var limit = ModeRow.FileChosen ? ModeRow.File!.Terms.Teams : null;
+        var numbers = Enumerable.Range(limit?.Least ?? ModeTeams.Least, (limit?.Most ?? ModeTeams.Most) - (limit?.Least ?? ModeTeams.Least) + 1)
+            .Select(n => n.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        string[] options = limit is null ? [NoTeams, .. numbers] : [.. numbers];
+        var row = new ChoiceRule("Teams", options, Math.Max(0, Array.IndexOf(options, value.ToString(System.Globalization.CultureInfo.InvariantCulture))));
+        row.PropertyChanged += OnRowChanged;
+        return row;
+    }
+
+    private const string NoTeams = "None";
+
+    /// <summary>The rules the chosen mode owns, by their keys: their rows do not show.</summary>
+    private HashSet<string> Owned()
+    {
+        var owned = ModeRow.FileChosen ? ModeRow.File!.Terms.Rules().Keys : ModeRow.ServedChosen ? ModeRow.Served!.Terms?.Keys : null;
+        var pack = ModeRow.FileChosen ? ModeRow.File!.Terms.Pack : ModeRow.ServedChosen ? ModeRow.Served!.Pack : null;
+        return new HashSet<string>([.. owned ?? [], .. pack is null ? [] : new[] { HostRules.StatPack.Name }], StringComparer.Ordinal);
     }
 
     /// <summary>The host's own lobby: the password row changes it (empty: kept), the switch clears it.</summary>
@@ -88,8 +121,9 @@ public sealed partial class LobbyRulesEditor : ObservableObject
 
     public IReadOnlyList<string> Presets { get; }
 
-    /// <summary>The name, the password and the preset.</summary>
-    public IReadOnlyList<RuleGroup> LobbyGroups { get; }
+    /// <summary>The name, the password, the mode and the preset.</summary>
+    [ObservableProperty]
+    public partial IReadOnlyList<RuleGroup> LobbyGroups { get; private set; } = [];
 
     /// <summary>Every rule, in its groups (with headings).</summary>
     [ObservableProperty]
@@ -121,6 +155,10 @@ public sealed partial class LobbyRulesEditor : ObservableObject
             {
                 (differing[HostRules.CourseSelect.Name], differing[LobbyRules.FixedCourseKey]) = ((int)CourseSelectMode.Fixed, course);
             }
+            if (ModeChosen && int.TryParse(TeamsRow.Chosen, System.Globalization.CultureInfo.InvariantCulture, out var teams))
+            {
+                differing[LobbyRules.TeamsKey] = teams;
+            }
             var pack = _rows[HostRules.StatPack.Name];
             // the mode: a new file's text, or the lobby's as the server named it (kept), or none
             return new LobbyRules(differing, HostRuleRows.Pack(pack), HostRuleRows.PackFile(pack),
@@ -142,7 +180,7 @@ public sealed partial class LobbyRulesEditor : ObservableObject
     /// <summary>The name can be sent.</summary>
     public bool NameValid => Name.Length is > 0 and <= CustomLobby.MaxName;
 
-    private IReadOnlyList<RuleGroup> Build(LobbyRules? rules)
+    private List<RuleGroup> Build(LobbyRules? rules)
     {
         foreach (var row in _rows.Values)
         {
@@ -161,11 +199,19 @@ public sealed partial class LobbyRulesEditor : ObservableObject
         }
         OnPropertyChanged(nameof(CourseRow));
         OnPropertyChanged(nameof(Picking));
-        return [.. CustomRules.Groups.Select((g, i) => new RuleGroup([.. g.Rules.Select(r => _rows[r.Name])])
-        {
-            Later = i > 0,
-            Heading = g.Heading,
-        })];
+        return Shown();
+    }
+
+    /// <summary>The rows in their groups, but those the mode owns.</summary>
+    private List<RuleGroup> Shown()
+    {
+        var owned = Owned();
+        return [.. CustomRules.Groups.Select(g => (g.Heading, Rows: g.Rules.Where(r => !owned.Contains(r.Name)).Select(r => _rows[r.Name]).ToList()))
+            .Where(g => g.Rows.Count > 0).Select((g, i) => new RuleGroup(g.Rows)
+            {
+                Later = i > 0,
+                Heading = g.Heading,
+            })];
     }
 
     /// <summary>A preset chosen: every rule back to Quick Play's, with the preset's stat pack.</summary>
@@ -194,6 +240,14 @@ public sealed partial class LobbyRulesEditor : ObservableObject
         {
             OnPropertyChanged(nameof(Picking));
             return;
+        }
+        if (sender == ModeRow && e.PropertyName is nameof(GameModeRule.Selected) or nameof(GameModeRule.Options))
+        {
+            // the mode's rows go, its teams' range comes, the teams' row shows only with a mode
+            TeamsRow.PropertyChanged -= OnRowChanged;
+            TeamsRow = NewTeamsRow(int.TryParse(TeamsRow.Chosen, System.Globalization.CultureInfo.InvariantCulture, out var teams) ? teams : 0);
+            RuleGroups = Shown();
+            LobbyGroups = MakeLobbyGroups();
         }
         Changed();
     }
