@@ -39,6 +39,10 @@
          net/Directory.Build.props), as the service's image has them, in the folder packs beside the program. -->
     <None Include="$(ProtocolPacks)*.fzstats" Link="packs/%(Filename)%(Extension)"
           CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <!-- Quick Play's rotation (ProtocolQuickPlay), which the stand-in service (dev mode) races as the service does, in
+         the folder quickplay beside the program. -->
+    <None Include="$(ProtocolQuickPlay)quickplay.toml;$(ProtocolQuickPlay)*.fzmode" Link="quickplay/%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- The build players see in the sidebar (BuildInfo.cs): the commit's short hash, as a player copy's name has it,

@@ -335,6 +335,74 @@ public sealed class CustomLobbiesTests : IDisposable
         });
     }
 
+    /// <summary>The host's own game mode: the Mode row's Choose file takes a .fzmode file, compiled first: one that
+    /// does not compile is said under the row with its line and leaves the choice as it was; one that does is offered
+    /// by its mode's name, leads the rules' summary, and CREATE sends its text whole. LOBBY_SHOTS keeps both.</summary>
+    [Fact]
+    public async Task AHostsOwnModeFileIsCompiledFirstAndGoesWithTheCreate()
+    {
+        var good = File.ReadAllText(TestSupport.RepositoryFolder.Protocol("protocol", "tests", "vectors", "quickplay", "overdrive.fzmode"));
+        var goodFile = Path.Combine(_dir, "overdrive.fzmode");
+        File.WriteAllText(goodFile, good);
+        var badFile = Path.Combine(_dir, "broken.fzmode");
+        File.WriteAllText(badFile, "mode \"Broken\" {\n  api 1;\n}\n\nlaps 100;\n");
+        var state = State(standIn: false);
+        await using var server = new LedServer();
+        await InTheWindow(state, (window, main) =>
+        {
+            var joining = state.JoinAsync(server.Address, custom: true);
+            Pump(() => server.Of<Hello>().Count == 1, "the launcher did not connect");
+            Assert.Equal(ModeWords.Api, server.Of<Hello>()[0].Modes);   // (the hello says the mode api its game runs)
+            server.SendAsync(LedServer.Welcome()).GetAwaiter().GetResult();
+            PumpTelling(state, () => joining.IsCompleted && state.Session?.PlayerId is not null);
+            main.Current = main.Lobbies;
+            PumpFor(200, state);
+            var view = Page<CustomLobbiesView>(window);
+            Click(window, Named<Button>(view, "CreateButton"));
+            var row = main.Lobbies.Editor!.ModeRow;
+            Assert.Equal([GameModeRule.NoMode], row.Options);
+            var choose = view.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "ModeFile" && b.IsEffectivelyVisible);
+            Assert.Equal(("Choose file", row), (choose.Content, choose.DataContext));
+
+            row.Load(badFile);   // (what Choose file does with the file the system's picker gives)
+            Dispatcher.UIThread.RunJobs();
+            Assert.StartsWith("Not a mode: line 5: ", row.Note, StringComparison.Ordinal);
+            Assert.Equal((0, false), (row.Selected, row.FileChosen));
+            Shot(window, state, "create-mode-error");
+
+            row.Load(goodFile);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(("", "Overdrive"), (row.Note, row.Options[row.Selected]));
+            Assert.StartsWith("Overdrive", main.Lobbies.Editor.SummaryShown, StringComparison.Ordinal);
+            Shot(window, state, "create-mode-file");
+
+            Click(window, Named<Button>(Named<RulesPanel>(view, "CreatePanel"), "ActionButton"));
+            Pump(() => server.Of<CreateLobby>().Count == 1, "CREATE sent nothing");
+            var sent = server.Of<CreateLobby>()[0].Rules;
+            Assert.Equal((good, (LobbyMode?)null), (sent.ModeFile, sent.Mode));
+        });
+    }
+
+    /// <summary>The lobby's mode as the server names it (<see cref="LobbyRules.Mode"/>): the host's rules open on it,
+    /// and saving them without a new file sends it back to keep it (no file); None clears it. A member sees it at the
+    /// head of the lobby's rules.</summary>
+    [Fact]
+    public void TheLobbysModeIsKeptUnlessChangedAndShownFirst()
+    {
+        var mode = new LobbyMode(new string('a', 64), "AAAAAAAA", "Overdrive", 1, "OVERDRIVE", "Speed locked and rising.");
+        var rules = new LobbyRules(new Dictionary<string, int> { ["laps"] = 5 }, Mode: mode);
+        var editor = new LobbyRulesEditor(rules, null, [], "Friday", editing: true);
+        Assert.Equal([GameModeRule.NoMode, "Overdrive"], editor.ModeRow.Options);
+        Assert.Equal((mode, (string?)null), (editor.Rules.Mode, editor.Rules.ModeFile));
+        Assert.Equal("Overdrive · 5 laps", editor.Summary);
+        editor.ModeRow.Selected = 0;
+        Assert.Equal((null, (string?)null), (editor.Rules.Mode, editor.Rules.ModeFile));
+
+        var all = CustomRules.AllRules(rules, null);
+        var first = Assert.IsType<ValueRule>(Assert.Single(all[0].Rows));
+        Assert.Equal(("Mode", "Overdrive", "Speed locked and rising."), (first.Label, first.Value, first.Note));
+    }
+
     /// <summary>A custom lobby's own machine setting rules the Garage and the choice, not the server's Quick Play one
     /// (100 for everyone): a 0 lobby fixes the slider at 0, a lobby of each player's own frees it; the join and the
     /// choice carry the player's own setting, which the server brings into the lobby's range. The lobby's whole list
@@ -381,6 +449,378 @@ public sealed class CustomLobbiesTests : IDisposable
             session.ChooseMachineAsync(6).GetAwaiter().GetResult();
             Pump(() => server.Of<MachineChoice>().Count == 1, "the choice was not sent");
             Assert.Equal(50, server.Of<MachineChoice>()[0].Setting);
+        });
+    }
+
+    // the overhaul: restore gone, what a mode owns, teams
+
+    /// <summary>A mode's list reaches the Garage from the lobby's rules, before the machine choice opens: the lobby's
+    /// machines alone, and with "All 41" the others greyed. LOBBY_SHOTS keeps the panel and the Garage.</summary>
+    [Fact]
+    public async Task AModesListsAndStatsShowInTheEditorTheLobbyAndTheGarage()
+    {
+        var state = State(standIn: true);
+        var path = Path.Combine(_dir, "two.fzmode");
+        File.WriteAllText(path, "mode \"Two Machines\" { api 1; }\nstats stock;\nmachines [\"Blue Falcon\", \"Golden Fox\"];\n");
+        await InTheWindow(state, (window, main) =>
+        {
+            main.Current = main.Practice;
+            Dispatcher.UIThread.RunJobs();
+            Assert.Null(main.Practice.Setup.StatPack);
+            PumpFor(200, state);
+            Shot(window, state, "stats-default-practice");
+
+            main.Current = main.Lobbies;
+            PumpTelling(state, () => main.Lobbies.Rows.Count == 3, "the browser listed nothing");
+            var view = Page<CustomLobbiesView>(window);
+            Click(window, Named<Button>(view, "CreateButton"));
+            var editor = main.Lobbies.Editor!;
+            Assert.Null(editor.Rules.StatPack);   // (the stand-in is a bare server: it names no pack, and the launcher adds none)
+            editor.PresetRow.RulesShown = true;
+            PumpFor(200, state);
+            Shot(window, state, "stats-default-create");
+
+            editor.ModeRow.Load(path);
+            Dispatcher.UIThread.RunJobs();
+            Assert.DoesNotContain(editor.RuleGroups.SelectMany(g => g.Rows), r => r.Label == HostRules.StatPack.Label);
+            Assert.Contains("2 machines", editor.Summary, StringComparison.Ordinal);
+            PumpFor(200, state);
+            Shot(window, state, "stats-enforced-create");
+
+            Click(window, Named<Button>(Named<RulesPanel>(view, "CreatePanel"), "ActionButton"));
+            PumpTelling(state, () => state.Session?.Lobby is { Custom: true }, "no lobby came");
+            Assert.Equal([2, 6], state.Session!.Lobby!.Rules!.Mode!.Machines);
+            PumpFor(300, state);
+            main.Lobby.ToggleAllRulesCommand.Execute(null);
+            PumpFor(300, state);
+            Shot(window, state, "machines-lobby-all-rules");
+            main.Lobby.ToggleAllRulesCommand.Execute(null);
+
+            PumpTelling(state, () => main.Lobby.Garage.Offer is not null, "the Garage did not take the mode's list");
+            Assert.Equal([2, 6], main.Lobby.Garage.Offer);
+            Assert.True(main.Lobby.Garage.OfferLimited);
+            main.Lobby.GarageShown = true;
+            PumpFor(400, state);
+            Shot(window, state, "machines-garage");
+            main.Lobby.Garage.ShowAll = true;
+            PumpFor(400, state);
+            Shot(window, state, "machines-garage-all");
+        });
+    }
+
+    /// <summary>A mode with <c>customs off</c>: the summary and the panel say so, the Garage greys its Custom shelf and
+    /// shows none on Favourites, the choice opens without the custom machine, and the player's saved one stays saved.
+    /// With a list, both hold. Without the word, nothing changes. LOBBY_SHOTS keeps the Garage.</summary>
+    [Theory]
+    [InlineData("customs off;\n", true, null)]
+    [InlineData("machines [\"Blue Falcon\", \"Golden Fox\"];\ncustoms off;\n", true, 2)]
+    [InlineData("machines [\"Blue Falcon\", \"Golden Fox\"];\n", false, 2)]
+    [InlineData("", false, null)]
+    public async Task CustomsOffGreysTheCustomShelfAndSaysSo(string words, bool off, int? listed)
+    {
+        var state = State(standIn: true);
+        var built = CustomBuild.First;
+        state.Update(s => s with { Racer = s.Racer with { Customs = [built with { Favourite = true }], Custom = new CustomMachine(built.Body, built.Cockpit, built.Booster, built.Pilot) } });
+        var saved = state.Settings.Racer.Custom;
+        var path = Path.Combine(_dir, "customs.fzmode");
+        File.WriteAllText(path, "mode \"Stock Only\" { api 1; }\nstats stock;\n" + words);
+        await InTheWindow(state, (window, main) =>
+        {
+            main.Current = main.Lobbies;
+            PumpTelling(state, () => main.Lobbies.Rows.Count == 3, "the browser listed nothing");
+            var view = Page<CustomLobbiesView>(window);
+            Click(window, Named<Button>(view, "CreateButton"));
+            var editor = main.Lobbies.Editor!;
+            editor.ModeRow.Load(path);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(off, editor.Summary.Contains(CustomRules.NoCustoms, StringComparison.Ordinal));
+            Click(window, Named<Button>(Named<RulesPanel>(view, "CreatePanel"), "ActionButton"));
+            PumpTelling(state, () => state.Session?.Lobby is { Custom: true }, "no lobby came");
+            var rules = state.Session!.Lobby!.Rules!;
+            Assert.Equal(off, rules.Mode!.CustomsOff);
+            Assert.Equal(listed, rules.Mode.Machines?.Count);
+            Assert.Equal(off, CustomRules.Summary(rules, null).Contains(CustomRules.NoCustoms, StringComparison.Ordinal));
+            Assert.Equal(off, CustomRules.AllRules(rules, null).SelectMany(g => g.Rows).Any(r => r.Label == "Custom machines"));
+
+            PumpTelling(state, () => main.Lobby.Garage.CustomsOff == off && (listed is null || main.Lobby.Garage.Offer is not null), "the Garage did not take the mode");
+            var garage = main.Lobby.Garage;
+            main.Lobby.GarageShown = true;
+            PumpFor(300, state);
+            garage.ShowShelfCommand.Execute(GarageViewModel.CustomShelf);
+            Assert.Equal(off ? GarageViewModel.StockShelf : GarageViewModel.CustomShelf, garage.Shelf);
+            Assert.Equal(!off, Named<Button>(Page<GarageView>(window), "ShelfCustom").IsEffectivelyEnabled);
+            garage.ShowShelfCommand.Execute(GarageViewModel.FavouritesShelf);
+            Assert.Equal(off ? 0 : 1, garage.ShelfCustoms.Count);
+            garage.ShowShelfCommand.Execute(GarageViewModel.StockShelf);
+            if (off)
+            {
+                PumpFor(400, state);
+                Shot(window, state, listed is null ? "customs-off-garage" : "customs-off-list-garage");
+            }
+            Assert.Equal(saved, state.Settings.Racer.Custom);
+            PumpTelling(state, () => (main.ShownCustom is null) == off, "the column names the wrong machine");
+        });
+    }
+
+    /// <summary>The choice under <c>customs off</c>, for a player whose machine is custom: nothing sent unasked (they
+    /// are not called ready), a pick goes without the parts, and the next choice that takes customs tells them again.</summary>
+    [Fact]
+    public async Task UnderCustomsOffTheChoiceSendsNoCustomMachine()
+    {
+        var state = State(standIn: false);
+        var parts = new CustomMachine(1, 26, 52, 0);
+        state.Update(s => s with { Racer = s.Racer with { Custom = parts } });
+        await using var server = new LedServer();
+        await InTheWindow(state, (window, main) =>
+        {
+            var joining = state.JoinAsync(server.Address, custom: true);
+            Pump(() => server.Of<Hello>().Count == 1, "the launcher did not connect");
+            server.SendAsync(LedServer.Welcome()).GetAwaiter().GetResult();
+            PumpTelling(state, () => joining.IsCompleted && state.Session?.PlayerId is not null);
+            var session = state.Session!;
+            session.JoinLobbyAsync("l1", null).GetAwaiter().GetResult();
+            Pump(() => server.Of<JoinLobby>().Count == 1, "the join was not sent");
+            Assert.Equal(parts, server.Of<JoinLobby>()[0].Custom);
+            var all = Enumerable.Range(0, GameMachines.Count).ToList();
+
+            server.SendAsync(new ChooseMachine("m1", 1, all, 40_000, CustomsOff: true)).GetAwaiter().GetResult();
+            PumpTelling(state, () => session.Choice is not null, "no choice came");
+            Assert.True(session.CustomsOff);
+            PumpFor(100, state);
+            Assert.Empty(server.Of<MachineChoice>());
+            session.ChooseMachineAsync(6).GetAwaiter().GetResult();
+            Pump(() => server.Of<MachineChoice>().Count == 1, "the choice was not sent");
+            Assert.Null(server.Of<MachineChoice>()[0].Custom);
+            Assert.Equal(parts, state.Settings.Racer.Custom);
+
+            server.SendAsync(new ChooseMachine("m2", 1, all, 40_000)).GetAwaiter().GetResult();
+            PumpTelling(state, () => session.Choice?.Choose.MatchId == "m2", "no second choice came");
+            Pump(() => server.Of<MachineChoice>().Count == 2, "the custom machine was not told again");
+            Assert.Equal(parts, server.Of<MachineChoice>()[1].Custom);
+        });
+    }
+
+    [Fact]
+    public void RestoreIsNoRowOfALobby()
+    {
+        var editor = new LobbyRulesEditor(null, null, [], "Friday");
+        var labels = editor.RuleGroups.SelectMany(g => g.Rows).Select(r => r.Label).ToList();
+        Assert.DoesNotContain("Restore", labels);
+        Assert.DoesNotContain(CustomRules.Groups.SelectMany(g => g.Rules), r => r.Name == "restore");
+        Assert.DoesNotContain(editor.Rules.Values.Keys, k => k == "restore");
+        Assert.DoesNotContain(CustomRules.AllRules(new LobbyRules(new Dictionary<string, int>()), null).SelectMany(g => g.Rows), r => r.Label == "Restore");
+    }
+
+    /// <summary>A mode's words win: the rows it owns leave the host's panel (their values kept for when the mode goes),
+    /// the whole list says what is raced, and the rules line does not repeat them.</summary>
+    [Fact]
+    public void WhatTheModeOwnsLeavesThePanelAndTheListSaysIt()
+    {
+        var terms = ModeTerms.Of(ModeCompiler.Compile("mode \"M\" { api 1; }\nlaps 2;\nracers 2..6;\n").Mode!);
+        var mode = new LobbyMode(new string('a', 64), "AAAAAAAA", "M", 1, Terms: terms.Rules());
+        var rules = new LobbyRules(new Dictionary<string, int> { ["laps"] = 5, ["finish-limit"] = 200 }, Mode: mode);
+        var editor = new LobbyRulesEditor(rules, null, [], "Friday", editing: true);
+        string[] Shown() => [.. editor.RuleGroups.SelectMany(g => g.Rows).Select(r => r.Label)];
+        foreach (var owned in new[] { "Laps", "Racers", "CPU racers", "Finish limit" })
+        {
+            Assert.DoesNotContain(owned, Shown());
+        }
+        Assert.Contains("Mines return", Shown());
+        Assert.Contains("Teams", editor.LobbyGroups.SelectMany(g => g.Rows).Select(r => r.Label));
+        Assert.Equal(5, editor.Rules.Value("laps"));                   // (the host's value, kept)
+        editor.ModeRow.Selected = 0;
+        Assert.Contains("Laps", Shown());
+        Assert.Contains("Finish limit", Shown());
+        Assert.DoesNotContain("Teams", editor.LobbyGroups.SelectMany(g => g.Rows).Select(r => r.Label));
+
+        var all = CustomRules.AllRules(rules, null).SelectMany(g => g.Rows).OfType<ValueRule>().ToList();
+        Assert.Equal("2", all.Single(r => r.Label == "Laps").Value);
+        Assert.Equal("Off", all.Single(r => r.Label == "Finish limit").Value);
+        Assert.Equal("M", CustomRules.Summary(rules, new LobbyRules(new Dictionary<string, int> { ["laps"] = 3, ["finish-limit"] = 90 })));
+    }
+
+    [Fact]
+    public void TheTeamsRowFollowsTheModesWordAndGoesWithTheRules()
+    {
+        var path = Path.Combine(_dir, "teams.fzmode");
+        File.WriteAllText(path, "mode \"Duel\" { api 1; }\nteams 2..4;\n");
+        var editor = new LobbyRulesEditor(null, null, [], "Friday");
+        Assert.DoesNotContain("Teams", editor.LobbyGroups.SelectMany(g => g.Rows).Select(r => r.Label));
+        editor.ModeRow.Load(path);
+        Assert.Equal(["2", "3", "4"], editor.TeamsRow.Options);
+        Assert.Contains(editor.TeamsRow, editor.LobbyGroups.SelectMany(g => g.Rows));
+        editor.TeamsRow.Selected = 1;
+        Assert.Equal(3, editor.Rules.Value(LobbyRules.TeamsKey));
+
+        var free = new LobbyRulesEditor(new LobbyRules(new Dictionary<string, int>(), Mode: new LobbyMode(new string('a', 64), "A", "M", 1)), null, [], "F", editing: true);
+        Assert.Equal(("None", 30), (free.TeamsRow.Options[0], free.TeamsRow.Options.Count));
+        Assert.Null(free.Rules.Value(LobbyRules.TeamsKey));
+    }
+
+    /// <summary>A lobby with teams on the stand-in: the host's panel with a mode and its teams, each seat's team, the
+    /// player's own pressed for the next. LOBBY_SHOTS keeps them.</summary>
+    [Fact]
+    public async Task TeamsShowOnTheSeatsAndTheHostPressesThem()
+    {
+        var path = Path.Combine(_dir, "duel.fzmode");
+        File.WriteAllText(path, "mode \"Duel\" { api 1; badge \"DUEL\"; about \"Two teams.\"; }\nteams 2..4;\nlaps 5;\nracers 2..12;\n");
+        var state = State(standIn: true);
+        await InTheWindow(state, (window, main) =>
+        {
+            var joining = state.JoinAsync(new Uri(StandInService.Address), custom: true);
+            PumpTelling(state, () => joining.IsCompleted && state.Session?.PlayerId is not null);
+            main.Current = main.Lobbies;
+            PumpFor(200, state);
+            var view = Page<CustomLobbiesView>(window);
+            Click(window, Named<Button>(view, "CreateButton"));
+            var editor = main.Lobbies.Editor!;
+            editor.ModeRow.Load(path);
+            Dispatcher.UIThread.RunJobs();
+            editor.TeamsRow.Selected = 1;
+            Dispatcher.UIThread.RunJobs();
+            Assert.Contains(view.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "Teams" && t.IsEffectivelyVisible);
+            Shot(window, state, "create-mode-teams");
+
+            Click(window, Named<Button>(Named<RulesPanel>(view, "CreatePanel"), "ActionButton"));
+            PumpTelling(state, () => state.Session?.Lobby is { Custom: true }, "no lobby came");
+            PumpTelling(state, () => main.Lobby.SeatColumns.SelectMany(c => c.Seats).Count(s => s.Id is not null) >= 3, "the stand-ins did not come");
+            var mine = main.Lobby.SeatColumns.SelectMany(c => c.Seats).Single(s => s.You);
+            Assert.Equal(("No team", true), (mine.TeamText, mine.TeamButton));
+            main.Lobby.NextTeamCommand.Execute(mine);
+            PumpTelling(state, () => main.Lobby.SeatColumns.SelectMany(c => c.Seats).Single(s => s.You).Team == 0, "the team did not change");
+            var other = main.Lobby.SeatColumns.SelectMany(c => c.Seats).First(s => s is { You: false, Id: not null });
+            main.Lobby.NextTeamCommand.Execute(other);
+            PumpTelling(state, () => main.Lobby.SeatColumns.SelectMany(c => c.Seats).First(s => s.Id == other.Id).Team == 0, "the host did not change another's team");
+            PumpTelling(state, () => main.Lobby.SeatColumns.SelectMany(c => c.Seats).Single(s => s.You).Machine.Length > 0, "no machine");
+            // the host's seat, both marks on it: the machine has its whole name
+            var seat = window.GetVisualDescendants().OfType<Grid>().First(g => g.Classes.Contains("seat") && g.DataContext is SeatRow { You: true });
+            var machine = seat.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Classes.Contains("machine"));
+            machine.Measure(Avalonia.Size.Infinity);
+            Assert.True(machine.Bounds.Width >= machine.DesiredSize.Width - 0.5, $"the machine {machine.Text} is cut: {machine.Bounds.Width} of {machine.DesiredSize.Width}");
+            Shot(window, state, "lobby-teams");
+        });
+    }
+
+    private const string WithParams = """
+        mode "Cutter" { api 1; about "The last racer is out."; }
+        param interval "Cut every" delay 10s..120s step 5s default 30s;
+        param keep "Racers left" number 1..29 default 1;
+        param rate "Speed rate" number 0.5..2.0 default 1.0;
+        param loud "Warnings" switch default on;
+        param shape "Order" choice ["Distance", "Time"] default "Time";
+        laps 5;
+        teams 2..4;
+        """;
+
+    /// <summary>A mode's parameters are the lobby's controls, from the compiled package: each kind its row on its
+    /// default, what the host moves goes in the rules in the package's order, into the summary, and comes back kept
+    /// from the mode the lobby has; another mode, or none, takes the rows away.</summary>
+    [Fact]
+    public void AModesParametersAreRowsThatGoWithTheRules()
+    {
+        var path = Path.Combine(_dir, "cutter.fzmode");
+        File.WriteAllText(path, WithParams);
+        var editor = new LobbyRulesEditor(null, null, [], "Friday");
+        Assert.Null(editor.Rules.ModeValues);
+        editor.ModeRow.Load(path);
+        var rows = editor.ParamRows;
+        Assert.Equal(["Cut every", "Racers left", "Speed rate", "Warnings", "Order"], rows.Select(r => r.Row.Label));
+        Assert.All(rows, r => Assert.Contains(r.Row, editor.LobbyGroups.SelectMany(g => g.Rows)));
+        Assert.Equal(rows.Select(r => r.Param.Default), editor.Rules.ModeValues!);
+        var cut = Assert.IsType<ChoiceRule>(rows[0].Row);
+        Assert.Equal(("10 s", "120 s", 23, "30 s"), (cut.Options[0], cut.Options[^1], cut.Options.Count, cut.Chosen));
+        Assert.IsType<StepperRule>(rows[1].Row);
+        Assert.Equal("1", Assert.IsType<ChoiceRule>(rows[2].Row).Chosen);
+        Assert.True(Assert.IsType<SwitchRule>(rows[3].Row).On);
+        Assert.Equal("Time", Assert.IsType<ChoiceRule>(rows[4].Row).Chosen);
+
+        cut.Selected = cut.Options.ToList().IndexOf("15 s");
+        ((StepperRule)rows[1].Row).Value = 4;
+        Assert.Equal(900, editor.Rules.ModeValues![0]);
+        Assert.Equal(4, editor.Rules.ModeValues![1]);
+        Assert.Contains("Cut every 15 s · Racers left 4", editor.SummaryShown, StringComparison.Ordinal);
+
+        var package = ModeCompiler.Compile(WithParams).Mode!;
+        Assert.Null(package.ValuesRefusal(editor.Rules.ModeValues!));
+        var named = new LobbyMode(new string('a', 64), "A", "Cutter", 1, Params: package.Params, Values: editor.Rules.ModeValues);
+        var again = new LobbyRulesEditor(new LobbyRules(new Dictionary<string, int>(), Mode: named), null, [], "F", editing: true);
+        Assert.Equal(editor.Rules.ModeValues, again.Rules.ModeValues!);
+        Assert.Equal(editor.Rules.ModeValues, again.Rules.Mode!.Values!);
+        again.ModeRow.Selected = 0;
+        Assert.Empty(again.ParamRows);
+        Assert.Null(again.Rules.ModeValues);
+
+        var all = CustomRules.AllRules(new LobbyRules(new Dictionary<string, int>(), Mode: named), null).SelectMany(g => g.Rows).OfType<ValueRule>().ToList();
+        Assert.Equal(("15 s", true), (all.Single(r => r.Label == "Cut every").Value, all.Single(r => r.Label == "Cut every").Marked));
+        Assert.Equal(("Time", false), (all.Single(r => r.Label == "Order").Value, all.Single(r => r.Label == "Order").Marked));
+    }
+
+    [Fact]
+    public void AStepperOnStepsKeepsATypedValueOnThem()
+    {
+        var row = new StepperRule("N", 4, 2, 9) { Step = 2 };
+        row.Value = 5;
+        Assert.True(row.Value is 4 or 6);
+        row.Value = 100;
+        Assert.Equal(8, row.Value);
+    }
+
+    /// <summary>A value a server sends outside the declaration is no control and no value; a seat's teams likewise.</summary>
+    [Fact]
+    public void AModesParametersFromAServerAreCheckedBeforeTheyAreShown()
+    {
+        var package = ModeCompiler.Compile(WithParams).Mode!;
+        LobbyMode Mode(params int[] values) => new(new string('a', 64), "A", "Cutter", 1, Params: package.Params, Values: values);
+        LobbyState Of(LobbyMode mode) => LedServer.Lobby(LobbyState.Forming) with { Rules = new LobbyRules(new Dictionary<string, int>(), Mode: mode) };
+        var good = package.Params.Select(p => p.Default).ToArray();
+        Assert.Equal(good, Assert.IsType<LobbyState>(ServerMessages.Checked(Of(Mode(good)))).Rules!.Mode!.Values!);
+        var bad = (int[])good.Clone();
+        bad[0] = 1;
+        Assert.Null(Assert.IsType<LobbyState>(ServerMessages.Checked(Of(Mode(bad)))).Rules!.Mode!.Params);
+        Assert.Null(Assert.IsType<LobbyState>(ServerMessages.Checked(Of(Mode(4)))).Rules!.Mode!.Values);
+
+        var race = new LobbyRace("m", 1, 3, [], DateTimeOffset.UnixEpoch, Teams: [0, 1]);
+        LobbyState Raced(LobbyRace r) => LedServer.Lobby(LobbyState.Racing) with { Race = r };
+        Assert.Equal([0, 1], Assert.IsType<LobbyState>(ServerMessages.Checked(Raced(race))).Race!.Teams!);
+        Assert.Null(Assert.IsType<LobbyState>(ServerMessages.Checked(Raced(race with { Teams = [0, 99] }))).Race!.Teams);
+    }
+
+    /// <summary>The Create page with a mode's settings, and a lobby with them in All rules. LOBBY_SHOTS keeps them.</summary>
+    [Fact]
+    public async Task AModesSettingsShowInThePanelAndInTheLobbysRules()
+    {
+        var path = Path.Combine(_dir, "cutter.fzmode");
+        File.WriteAllText(path, WithParams);
+        var state = State(standIn: true);
+        await InTheWindow(state, (window, main) =>
+        {
+            var joining = state.JoinAsync(new Uri(StandInService.Address), custom: true);
+            PumpTelling(state, () => joining.IsCompleted && state.Session?.PlayerId is not null);
+            main.Current = main.Lobbies;
+            PumpFor(200, state);
+            var view = Page<CustomLobbiesView>(window);
+            Click(window, Named<Button>(view, "CreateButton"));
+            var editor = main.Lobbies.Editor!;
+            editor.ModeRow.Load(path);
+            Dispatcher.UIThread.RunJobs();
+            var cut = (ChoiceRule)editor.ParamRows[0].Row;
+            cut.Selected = cut.Options.ToList().IndexOf("15 s");
+            Dispatcher.UIThread.RunJobs();
+            foreach (var label in (string[])["Cut every", "Racers left", "Speed rate", "Warnings", "Order"])
+            {
+                Assert.Contains(view.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == label && t.IsEffectivelyVisible);
+            }
+            Shot(window, state, "create-mode-params");
+
+            Click(window, Named<Button>(Named<RulesPanel>(view, "CreatePanel"), "ActionButton"));
+            PumpTelling(state, () => state.Session?.Lobby is { Custom: true }, "no lobby came");
+            var mode = state.Session!.Lobby!.Rules!.Mode!;
+            Assert.Equal(900, mode.Values![0]);
+            PumpFor(300, state);
+            Shot(window, state, "lobby-params");
+            main.Lobby.ToggleAllRulesCommand.Execute(null);
+            PumpFor(300, state);
+            Shot(window, state, "lobby-params-all-rules");
         });
     }
 }

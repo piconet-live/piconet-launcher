@@ -79,7 +79,8 @@ public static class ReplayFile
             return new ReplayInfo(path, recorded, setup.GetProperty("course").GetInt32(), setup.GetProperty("laps").GetInt32(),
                 players, you, TimeSpan.FromSeconds(steps / 60.0), racers.GetValueOrDefault(seat),
                 results is { } block ? Results(block, racers) : null, pack, packProblem,
-                h.TryGetProperty(ReplayFormat.Header.Practice, out var practice) && practice.ValueKind == JsonValueKind.True);
+                h.TryGetProperty(ReplayFormat.Header.Practice, out var practice) && practice.ValueKind == JsonValueKind.True,
+                TeamsOf(setup));
         }
         catch (Exception e) when (Unreadable(e))
         {
@@ -91,6 +92,26 @@ public static class ReplayFile
     /// would not play the file for it. Format 3 is a race with a pack and format 2 one without: the game refuses a
     /// file where the two disagree, and a pack that is none or holds a value outside its ranges, which the launcher
     /// judges by the same rows (<see cref="StatPack.FromWire"/>). So the list says it, and no game is started for it.</summary>
+    /// <summary>Each seat's team in a mode's race with teams (<c>setup.mode.teams</c>); null: none, or not a list of teams.</summary>
+    private static List<int>? TeamsOf(JsonElement setup)
+    {
+        if (!setup.TryGetProperty("mode", out var mode) || mode.ValueKind != JsonValueKind.Object ||
+            !mode.TryGetProperty("teams", out var teams) || teams.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+        var list = new List<int>();
+        foreach (var team in teams.EnumerateArray())
+        {
+            if (team.ValueKind != JsonValueKind.Number || !team.TryGetInt32(out var t) || t is < 0 or >= ModeWords.Teams || list.Count >= ModeWords.Seats)
+            {
+                return null;
+            }
+            list.Add(t);
+        }
+        return list;
+    }
+
     private static (string? Name, string? Problem) PackOf(int version, JsonElement setup)
     {
         if (!setup.TryGetProperty("stats", out var stats) || stats.ValueKind == JsonValueKind.Null)

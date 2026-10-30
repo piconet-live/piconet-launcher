@@ -306,7 +306,7 @@ public sealed partial class RaceViewModel : ViewModelBase
             var row = new StandingRow(r.Seat, r.State == RacerLive.Out ? "-" : (++place).ToString(CultureInfo.InvariantCulture),
                 RacerName(s, r.Seat), MachineName(s),
                 Rgb.Hex(SeatColor(s)), detail, r.BestLapMs is { } b ? Time(b) : "", r.Seat == mySeat, r.State == RacerLive.Out,
-                r.Seat == Followed, Phase(r, s, open));
+                r.Seat == Followed, Phase(r, s, open), ModeTeams.Said(RaceTeams(), r.Seat));
             if (i == Standings.Count)
             {
                 Standings.Add(row);
@@ -321,6 +321,9 @@ public sealed partial class RaceViewModel : ViewModelBase
             Standings.RemoveAt(Standings.Count - 1);
         }
     }
+
+    /// <summary>Each seat's team in the race the page shows, from the lobby's race or the player's own match start.</summary>
+    private IReadOnlyList<int>? RaceTeams() => _session?.Lobby?.Race?.Teams ?? _session?.Race?.Start?.Setup.Mode?.Teams;
 
     private static string RacerName(SeatSetup? s, int seat) => s?.Name ?? $"Racer {seat + 1}";
 
@@ -360,8 +363,11 @@ public sealed partial class RaceViewModel : ViewModelBase
 /// <summary>A line of the standings: its racer's seat (which line is which across refreshes), and whether the map
 /// follows them.</summary>
 public sealed record StandingRow(int Seat, string Rank, string Name, string Machine, string ColorHex, string Detail,
-    string Best, bool You, bool Out, bool Followed, string Phase = "")
+    string Best, bool You, bool Out, bool Followed, string Phase = "", string Team = "")
 {
+    /// <summary>The race is a mode's with teams.</summary>
+    public bool HasTeam => Team.Length > 0;
+
     /// <summary>The player's race is run and their game is still open: the lobby waits for it.</summary>
     public bool GameOpen => Phase == "Game open";
 }

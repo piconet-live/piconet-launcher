@@ -173,8 +173,10 @@
                     <Border Grid.Column="1" Classes="chip" HorizontalAlignment="Left"
                             Background="{Binding ColorHex, Converter={x:Static v:HexToBrush.Instance}}" />
                     <TextBlock Grid.Column="2" Text="{Binding Name}" Classes.strong="{Binding You}" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Grid.Column="3" Classes="figure detail" Text="{Binding Detail}" Margin="8,0,0,0" FontSize="{StaticResource Size15}"
-                               Classes.ko="{Binding Out}" />
+                    <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="8" Margin="8,0,0,0">
+                      <TextBlock Classes="dim" Text="{Binding Team}" FontSize="{StaticResource Size12}" VerticalAlignment="Center" IsVisible="{Binding HasTeam}" />
+                      <TextBlock Classes="figure detail" Text="{Binding Detail}" FontSize="{StaticResource Size15}" Classes.ko="{Binding Out}" />
+                    </StackPanel>
                   </Grid>
                 </Border>
               </DataTemplate>

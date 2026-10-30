@@ -339,7 +339,7 @@ public sealed partial class HomeViewModel : ViewModelBase
     private void RefreshStandings()
     {
         var all = Lobby.Race.Standings;
-        Replace(Standings, [.. all.Take(Shown).Select(s => new HomeStanding(s.Rank, s.Name, s.ColorHex, s.Detail, s.You, s.Out))]);
+        Replace(Standings, [.. all.Take(Shown).Select(s => new HomeStanding(s.Rank, s.Name, s.ColorHex, s.Detail, s.You, s.Out, s.Team))]);
         var more = Math.Max(0, all.Count(s => !s.Out) - Standings.Count(s => s.Place != "-"));
         var gone = all.Count(s => s.Out);
         StandingsFoot = string.Join(" · ", new[] { more > 0 ? $"{more} more" : "", gone > 0 ? $"{gone} KO" : "" }.Where(t => t.Length > 0));
