@@ -140,8 +140,12 @@ public sealed partial class ReplaysViewModel : ViewModelBase
     {
         _state = state;
         _now = now ?? (() => DateTimeOffset.Now);
+        Race = RaceViewModel.ForPlayback(state);
         Refresh();
     }
+
+    /// <summary>The race of the replay the game plays, shown over the list when its mode has lines.</summary>
+    public RaceViewModel Race { get; }
 
     /// <summary>The list as the page draws it: each group's heading (<see cref="ReplayGroup"/>), then its replays
     /// (<see cref="ReplayItem"/>).</summary>

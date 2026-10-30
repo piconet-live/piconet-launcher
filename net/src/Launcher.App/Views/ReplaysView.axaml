@@ -108,6 +108,14 @@
         </ItemsControl.ItemTemplate>
       </ItemsControl>
     </Border>
+    <!-- the race of the replay the game plays, when its mode has lines: the race page's own parts -->
+    <Grid Name="PlaybackRace" ColumnDefinitions="*,16,Auto" Margin="0,0,0,16" DataContext="{Binding Race}" IsVisible="{Binding HasMode}">
+      <StackPanel Spacing="16">
+        <TextBlock Classes="head" Text="{Binding Course}" />
+        <v:RaceModeLines IsVisible="{Binding HasModeFigures}" />
+      </StackPanel>
+      <v:StandingsTable Grid.Column="2" />
+    </Grid>
     <Grid Name="Notice" Classes="warnline" ColumnDefinitions="Auto,*" Margin="0,0,0,4"
           IsVisible="{Binding Notice, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
       <Path Classes="warnmark" />

@@ -32,6 +32,7 @@ The few tests of what only `Launcher.App`'s own code does, run without a window 
   ("Practice", the time, no Results); the header's word that makes a replay a practice run; "•••" open on one row
   at a time, and a row deleted leaving the others as they were; the rows under their date headings (Today, then
   each month), in the tab shown.
+- `RaceModeBoardTests.cs`: a mode's `board` lines on the race page (the race's, a racer's as columns, a team's), none for a mode without, none for a player with no game; a replay the game plays, from a status board, until its game ends. With `LOBBY_SHOTS` the pages as PNGs.
 - `Headless.cs`: what the newer tests share: a press with the headless window's mouse, a key, waiting for the page, a
   window with the toolkit's layer for menus.
 - `CustomLobbiesTests.cs`: custom lobbies pressed in the launcher's window: on the stand-in the browser, a locked

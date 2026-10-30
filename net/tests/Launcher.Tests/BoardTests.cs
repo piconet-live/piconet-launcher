@@ -61,6 +61,140 @@ public sealed unsafe class BoardTests : IDisposable
         }
     }
 
+    /// <summary>What the protocol's own vector would put on the board, every scope and type, written by its generated writer.</summary>
+    private static BoardModeHead ModeHead(params (BoardModeBoardScope Scope, BoardModeBoardType Type, ushort Column, string Label, string[] Words)[] lines)
+    {
+        var head = ModeBoardHead.Blank();
+        head.Serial = 1;
+        head.NameLength = 5;
+        head.Count = (uint)lines.Length;
+        "Board"u8.CopyTo(head.Name);
+        head.Hash = [1, 2, 3, 4, 5, 6, 7, 0xAB];
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var label = System.Text.Encoding.UTF8.GetBytes(lines[i].Label);
+            ref var line = ref head.Lines[i];
+            line.Scope = lines[i].Scope;
+            line.Type = lines[i].Type;
+            line.Column = lines[i].Column;
+            line.LabelLength = (uint)label.Length;
+            line.WordCount = (uint)lines[i].Words.Length;
+            label.CopyTo(line.Label, 0);
+            for (var w = 0; w < lines[i].Words.Length; w++)
+            {
+                var word = System.Text.Encoding.UTF8.GetBytes(lines[i].Words[w]);
+                head.Words[(i * 16) + w].Length = (uint)word.Length;
+                word.CopyTo(head.Words[(i * 16) + w].Text, 0);
+            }
+        }
+        return head;
+    }
+
+    [Fact]
+    public void AModesHeadAndValuesAreReadFromTheBoardByTheirLines()
+    {
+        using var board = GameBoard.Create(_folder);
+        using var game = new FakeGame(board.Path);
+        board.Look(S(0));
+        Assert.Null(board.Mode);   // no mode: nothing
+
+        game.View.WriteModeHead(ModeHead(
+            (BoardModeBoardScope.Global, BoardModeBoardType.Int, 0, "Next cut", []),
+            (BoardModeBoardScope.Global, BoardModeBoardType.Real, 1, "Pace", []),
+            (BoardModeBoardScope.Global, BoardModeBoardType.Bool, 2, "Armed", []),
+            (BoardModeBoardScope.Global, BoardModeBoardType.Seat, 3, "Leader", []),
+            (BoardModeBoardScope.Global, BoardModeBoardType.Seats, 4, "Alive", []),
+            (BoardModeBoardScope.Seat, BoardModeBoardType.Int, 0, "Lives", []),
+            (BoardModeBoardScope.Seat, BoardModeBoardType.Int, 1, "State", ["", "Sûr", "Out"]),
+            (BoardModeBoardScope.Team, BoardModeBoardType.Int, 0, "Tank", [])));
+        board.Look(S(1));
+        Assert.Null(board.Mode);   // the head alone: no values yet
+
+        var values = new BoardModeValues { Serial = 9, Frame = 1260 };
+        values.Globals[0].Value = 7;
+        values.Globals[1].Value = BitConverter.SingleToInt32Bits(1.5f);
+        values.Globals[2].Value = 1;
+        values.Globals[3].Value = 2;
+        values.Globals[4].Value = 0b101;
+        values.Seats[(2 * 8) + 0].Value = 3;   // Seats[seat * 8 + Column]
+        values.Seats[(2 * 8) + 1].Value = 1;
+        values.Seats[(3 * 8) + 1].Value = 2;
+        values.Seats[(4 * 8) + 1].Value = 0;
+        values.Seats[(5 * 8) + 1].Value = 16;  // past its words: the number
+        values.Teams[(6 * 8) + 0].Value = 80;  // Teams[team * 8 + Column]
+        game.View.WriteModeValues(values);
+        board.Look(S(2));
+
+        var now = Assert.IsType<ModeBoardNow>(board.Mode);
+        Assert.Equal(1260u, now.Frame);
+        Assert.Equal("Board", now.Head.Name);
+        Assert.Equal("01020304050607ab", now.Head.Hash);
+        var rows = ModeBoardRows.Of(now, [2, 3, 4, 5], [6, 6, 6, 6, 6, 6], seat => $"Racer {seat}");
+        Assert.Equal([new("Next cut", "7"), new("Pace", "1.5"), new("Armed", "Yes"), new("Leader", "Racer 2"), new("Alive", "Racer 0, Racer 2")],
+            (IEnumerable<ModeFigure>)rows.Globals);
+        Assert.Equal(["Lives", "State"], rows.SeatHeads);
+        Assert.Equal(["3", "Sûr"], rows.SeatCells[2]);
+        Assert.Equal(["0", "Out"], rows.SeatCells[3]);
+        Assert.Equal(["0", ""], rows.SeatCells[4]);   // Length 0: a blank cell
+        Assert.Equal(["0", "16"], rows.SeatCells[5]);
+        var team = Assert.Single(rows.Teams);
+        Assert.Equal("Team 7", team.Team);
+        Assert.Equal(new ModeFigure("Tank", "80"), Assert.Single(team.Lines));
+
+        values.Globals[0].Value = 8;
+        game.View.WriteModeValues(values);
+        board.Look(S(3));
+        Assert.Same(now, board.Mode);   // the same serial: no new values
+        values.Serial = 10;
+        game.View.WriteModeValues(values);
+        board.Look(S(4));
+        Assert.Equal(8, board.Mode!.Global(now.Head.Lines[0]));
+    }
+
+    [Fact]
+    public void AModesLinesReadByTheirType()
+    {
+        static string Text(BoardModeBoardType type, int value, params string[] words) =>
+            new ShownModeLine(BoardModeBoardScope.Global, type, 0, "L", words).Text(value, seat => $"S{seat}");
+        Assert.Equal("-3", Text(BoardModeBoardType.Int, -3));
+        Assert.Equal("-3", Text(BoardModeBoardType.Int, -3, "a"));          // a negative is no word
+        Assert.Equal("a", Text(BoardModeBoardType.Int, 0, "a", "b"));
+        Assert.Equal("2", Text(BoardModeBoardType.Int, 2, "a", "b"));       // WordCount is past the last word
+        Assert.Equal("", Text(BoardModeBoardType.Int, 1, "a", ""));
+        Assert.Equal("0", Text(BoardModeBoardType.Real, 0));
+        Assert.Equal("0", Text(BoardModeBoardType.Real, BitConverter.SingleToInt32Bits(-0.001f)));
+        Assert.Equal("-", Text(BoardModeBoardType.Real, BitConverter.SingleToInt32Bits(float.NaN)));
+        Assert.Equal("No", Text(BoardModeBoardType.Bool, 0));
+        Assert.Equal("-", Text(BoardModeBoardType.Seat, -1));
+        Assert.Equal("S29", Text(BoardModeBoardType.Seat, 29));
+        Assert.Equal("30", Text(BoardModeBoardType.Seat, 30));
+        Assert.Equal("-", Text(BoardModeBoardType.Seats, 0));
+    }
+
+    [Fact]
+    public void AModeOfNoLinesOrAHeadWrittenBadlyShowsNothingItCannotRead()
+    {
+        Assert.Null(ModeBoardHead.Of(ModeBoardHead.Blank()));   // serial 0: no mode
+        var head = ModeHead(
+            (BoardModeBoardScope.Seat, BoardModeBoardType.Int, 8, "Column past the eighth", []),
+            ((BoardModeBoardScope)9, BoardModeBoardType.Int, 0, "No scope", []),
+            (BoardModeBoardScope.Seat, (BoardModeBoardType)9, 0, "No type", []),
+            (BoardModeBoardScope.Seat, BoardModeBoardType.Int, 1, "Good", ["a"]));
+        head.NameLength = uint.MaxValue;
+        head.Lines[3].LabelLength = 400;
+        head.Lines[3].WordCount = 4000;
+        head.Words[(3 * 16) + 0].Length = 400;
+        head.Count = 4000;
+        var read = Assert.IsType<ModeBoardHead>(ModeBoardHead.Of(head));
+        Assert.Equal(64, System.Text.Encoding.UTF8.GetByteCount(read.Name));
+        Assert.Equal(21, read.Lines.Count);   // of the head's 24, the three that read as nothing left out
+        var line = read.Lines[0];
+        Assert.Equal(16, line.Words.Count);
+        Assert.Equal(32, System.Text.Encoding.UTF8.GetByteCount(line.Label));
+        Assert.False(ModeBoardRows.Of(null, [0], null, s => "").Any);
+        Assert.False(ModeBoardRows.Of(new ModeBoardNow(new ModeBoardHead("M", "", []), 0, new int[8], new int[240], new int[240]), [0], null, s => "").Any);
+    }
+
     private static BoardSnapshot Race(uint serial, params BoardRacer[] racers)
     {
         var s = new BoardSnapshot { Serial = serial, Frame = 1260, LocalSeat = 1, Count = (uint)racers.Length };

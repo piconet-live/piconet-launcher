@@ -15,7 +15,10 @@ namespace Launcher.App.ViewModels;
 /// The race page: the lobby's race as it runs, then its results. While the player races, from
 /// their own game (<see cref="AppState.LiveReceived"/>, every frame); while they wait in a racing lobby,
 /// from a racer's game through the coordinator (<see cref="QuickPlaySession.Live"/>). Shows the player's own numbers,
-/// the standings and the 3D track map; laid out for a narrow window beside the game too.
+/// the standings and the 3D track map; laid out for a narrow window beside the game too. A mode's <c>board</c> lines
+/// come from the game this launcher runs (<see cref="GameBoard.Mode"/>), a spectator's too; a player waiting in the lobby
+/// with no game has none, and the page shows the race without them. A second page of this kind follows a replay
+/// (<see cref="ForPlayback"/>).
 /// </summary>
 public sealed partial class RaceViewModel : ViewModelBase
 {
@@ -26,17 +29,43 @@ public sealed partial class RaceViewModel : ViewModelBase
     private string? _shownMatch;
     private long _shown;
     private long? _lostAt;
+    // the mode's values last read from this launcher's own game for the race shown (kept for the results once it closed)
+    private ModeBoardNow? _mode;
+    private ModeBoardRows _shownMode = ModeBoardRows.None;
+    private IReadOnlyList<int>? _playbackTeams;
 
     /// <summary>How long the map stays on a followed racer's last place once it is knocked out or gone, before going
     /// back to the whole course: long enough to see where it happened.</summary>
     private const long LostMs = 2000;
 
-    public RaceViewModel(AppState state)
+    public RaceViewModel(AppState state) : this(state, attach: true)
+    {
+    }
+
+    private RaceViewModel(AppState state, bool attach)
     {
         _state = state;
-        state.LiveReceived += s => OnUi(() => FromGame(s));
-        state.Changed += () => OnUi(Attach);
-        Attach();
+        if (attach)
+        {
+            state.LiveReceived += s => OnUi(() => FromGame(s, state.Board?.Mode));
+            state.Changed += () => OnUi(Attach);
+            Attach();
+        }
+    }
+
+    private void FollowPlayback()
+    {
+        _state.PlaybackLive += (s, mode) => OnUi(() => FromPlayback(s, mode));
+        _state.Changed += () => OnUi(PlaybackEnded);
+    }
+
+    /// <summary>The page of the replay the game plays (<see cref="AppState.PlaybackLive"/>), until its game ends.</summary>
+    public static RaceViewModel ForPlayback(AppState state)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        var page = new RaceViewModel(state, attach: false);
+        page.FollowPlayback();
+        return page;
     }
 
     [ObservableProperty]
@@ -93,6 +122,32 @@ public sealed partial class RaceViewModel : ViewModelBase
 
     public ObservableCollection<StandingRow> Standings { get; } = [];
 
+    /// <summary>The mode's lines for the race, which are drawn beside the player's own numbers.</summary>
+    [ObservableProperty]
+    public partial IReadOnlyList<ModeFigure> ModeGlobals { get; set; } = [];
+
+    /// <summary>The mode's lines for each team.</summary>
+    [ObservableProperty]
+    public partial IReadOnlyList<ModeTeamFigures> TeamFigures { get; set; } = [];
+
+    /// <summary>The headings of the standings' columns for the mode's lines for each racer.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StandingsWidth))]
+    public partial IReadOnlyList<string> ModeSeatHeads { get; set; } = [];
+
+    /// <summary>The mode has lines to show.</summary>
+    [ObservableProperty]
+    public partial bool HasMode { get; set; }
+
+    /// <summary>The mode has lines for the race or a team, under the player's own numbers.</summary>
+    [ObservableProperty]
+    public partial bool HasModeFigures { get; set; }
+
+    /// <summary>The standings' width: their own and a column for each of the mode's lines for a racer.</summary>
+    public double StandingsWidth => 268 + (ModeSeatHeads.Count * ModeColumn);
+
+    private const double ModeColumn = 56;
+
     /// <summary>The racer the map follows, by seat (a racer pressed in the standings is followed), or
     /// null for the whole course.</summary>
     [ObservableProperty]
@@ -139,13 +194,40 @@ public sealed partial class RaceViewModel : ViewModelBase
         FromSession();
     }
 
-    /// <summary>The player's own game: the race as it runs here.</summary>
-    private void FromGame(RaceSnapshot snapshot)
+    /// <summary>The player's own game: the race as it runs here, with the mode's values at that moment.</summary>
+    public void FromGame(RaceSnapshot snapshot, ModeBoardNow? mode)
     {
         if (Setup() is { } setup)
         {
             Begin(setup);
+            _mode = mode ?? _mode;
             Show(snapshot, setup.Seats, setup.Course, setup.Laps, snapshot.LocalSeat, watching: false);
+        }
+    }
+
+    /// <summary>The game plays a replay: the race as the file has it, with the mode's values at that moment.</summary>
+    private void FromPlayback(RaceSnapshot snapshot, ModeBoardNow? mode)
+    {
+        if (_state.Playback is not { Racers: { } racers } info)
+        {
+            return;
+        }
+        var seats = racers.Select(r => new SeatSetup(r.Seat, r.IsPlayer ? r.Name : null, r.Name, r.Machine, r.Color, Custom: r.Custom)).ToList();
+        Begin((info.Path, seats, info.Course, info.Laps));
+        _mode = mode ?? _mode;
+        _playbackTeams = info.Teams;
+        Show(snapshot, seats, info.Course, info.Laps, snapshot.LocalSeat, watching: false);
+    }
+
+    /// <summary>The replay's game ended: its page goes.</summary>
+    private void PlaybackEnded()
+    {
+        if (_state.Playback is null && _shownMatch is not null)
+        {
+            _shownMatch = null;
+            _playbackTeams = null;
+            Standings.Clear();
+            ShowMode(ModeBoardRows.None);
         }
     }
 
@@ -218,6 +300,8 @@ public sealed partial class RaceViewModel : ViewModelBase
         Stage = _session?.Racing == true ? "Racing" : "Watching";
         MapRacers = [];
         Standings.Clear();
+        _mode = null;
+        ShowMode(ModeBoardRows.None);
         LapText = "";
         TimeText = "";
         HasYou = false;
@@ -293,6 +377,9 @@ public sealed partial class RaceViewModel : ViewModelBase
         // only the lines that changed, not every line rebuilt 10 times a second
         var open = GamesOpen();
         var place = 0;
+        var teams = RaceTeams();
+        var mode = ModeBoardRows.Of(_mode, racers.Select(r => r.Seat), teams, seat => RacerName(seat < seats.Count ? seats[seat] : null, seat));
+        ShowMode(mode);
         for (var i = 0; i < ordered.Count; i++)
         {
             var r = ordered[i];
@@ -306,7 +393,12 @@ public sealed partial class RaceViewModel : ViewModelBase
             var row = new StandingRow(r.Seat, r.State == RacerLive.Out ? "-" : (++place).ToString(CultureInfo.InvariantCulture),
                 RacerName(s, r.Seat), MachineName(s),
                 Rgb.Hex(SeatColor(s)), detail, r.BestLapMs is { } b ? Time(b) : "", r.Seat == mySeat, r.State == RacerLive.Out,
-                r.Seat == Followed, Phase(r, s, open), ModeTeams.Said(RaceTeams(), r.Seat));
+                r.Seat == Followed, Phase(r, s, open), ModeTeams.Said(teams, r.Seat), mode.SeatCells.GetValueOrDefault(r.Seat));
+            // (a list is equal only to itself: an unchanged line keeps its own)
+            if (i < Standings.Count && Standings[i].Cells is { } cells && row.Cells is { } read && cells.SequenceEqual(read))
+            {
+                row = row with { Cells = cells };
+            }
             if (i == Standings.Count)
             {
                 Standings.Add(row);
@@ -322,8 +414,23 @@ public sealed partial class RaceViewModel : ViewModelBase
         }
     }
 
-    /// <summary>Each seat's team in the race the page shows, from the lobby's race or the player's own match start.</summary>
-    private IReadOnlyList<int>? RaceTeams() => _session?.Lobby?.Race?.Teams ?? _session?.Race?.Start?.Setup.Mode?.Teams;
+    /// <summary>The mode's lines as they stand now; nothing is told when nothing moved.</summary>
+    private void ShowMode(ModeBoardRows rows)
+    {
+        if (_shownMode.Same(rows))
+        {
+            return;
+        }
+        _shownMode = rows;
+        ModeGlobals = rows.Globals;
+        TeamFigures = rows.Teams;
+        ModeSeatHeads = rows.SeatHeads;
+        HasMode = rows.Any;
+        HasModeFigures = rows.Globals.Count > 0 || rows.Teams.Count > 0;
+    }
+
+    /// <summary>Each seat's team in the race the page shows, from the replay, the lobby's race or the player's own match start.</summary>
+    private IReadOnlyList<int>? RaceTeams() => _playbackTeams ?? _session?.Lobby?.Race?.Teams ?? _session?.Race?.Start?.Setup.Mode?.Teams;
 
     private static string RacerName(SeatSetup? s, int seat) => s?.Name ?? $"Racer {seat + 1}";
 
@@ -363,7 +470,7 @@ public sealed partial class RaceViewModel : ViewModelBase
 /// <summary>A line of the standings: its racer's seat (which line is which across refreshes), and whether the map
 /// follows them.</summary>
 public sealed record StandingRow(int Seat, string Rank, string Name, string Machine, string ColorHex, string Detail,
-    string Best, bool You, bool Out, bool Followed, string Phase = "", string Team = "")
+    string Best, bool You, bool Out, bool Followed, string Phase = "", string Team = "", IReadOnlyList<string>? Cells = null)
 {
     /// <summary>The race is a mode's with teams.</summary>
     public bool HasTeam => Team.Length > 0;
