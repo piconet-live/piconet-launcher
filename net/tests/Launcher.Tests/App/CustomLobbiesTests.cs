@@ -335,6 +335,74 @@ public sealed class CustomLobbiesTests : IDisposable
         });
     }
 
+    /// <summary>The host's own game mode: the Mode row's Choose file takes a .fzmode file, compiled first: one that
+    /// does not compile is said under the row with its line and leaves the choice as it was; one that does is offered
+    /// by its mode's name, leads the rules' summary, and CREATE sends its text whole. LOBBY_SHOTS keeps both.</summary>
+    [Fact]
+    public async Task AHostsOwnModeFileIsCompiledFirstAndGoesWithTheCreate()
+    {
+        var good = File.ReadAllText(TestSupport.RepositoryFolder.Protocol("protocol", "tests", "vectors", "quickplay", "overdrive.fzmode"));
+        var goodFile = Path.Combine(_dir, "overdrive.fzmode");
+        File.WriteAllText(goodFile, good);
+        var badFile = Path.Combine(_dir, "broken.fzmode");
+        File.WriteAllText(badFile, "mode \"Broken\" {\n  api 1;\n}\n\nlaps 100;\n");
+        var state = State(standIn: false);
+        await using var server = new LedServer();
+        await InTheWindow(state, (window, main) =>
+        {
+            var joining = state.JoinAsync(server.Address, custom: true);
+            Pump(() => server.Of<Hello>().Count == 1, "the launcher did not connect");
+            Assert.Equal(ModeWords.Api, server.Of<Hello>()[0].Modes);   // (the hello says the mode api its game runs)
+            server.SendAsync(LedServer.Welcome()).GetAwaiter().GetResult();
+            PumpTelling(state, () => joining.IsCompleted && state.Session?.PlayerId is not null);
+            main.Current = main.Lobbies;
+            PumpFor(200, state);
+            var view = Page<CustomLobbiesView>(window);
+            Click(window, Named<Button>(view, "CreateButton"));
+            var row = main.Lobbies.Editor!.ModeRow;
+            Assert.Equal([GameModeRule.NoMode], row.Options);
+            var choose = view.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "ModeFile" && b.IsEffectivelyVisible);
+            Assert.Equal(("Choose file", row), (choose.Content, choose.DataContext));
+
+            row.Load(badFile);   // (what Choose file does with the file the system's picker gives)
+            Dispatcher.UIThread.RunJobs();
+            Assert.StartsWith("Not a mode: line 5: ", row.Note, StringComparison.Ordinal);
+            Assert.Equal((0, false), (row.Selected, row.FileChosen));
+            Shot(window, state, "create-mode-error");
+
+            row.Load(goodFile);
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(("", "Overdrive"), (row.Note, row.Options[row.Selected]));
+            Assert.StartsWith("Overdrive", main.Lobbies.Editor.SummaryShown, StringComparison.Ordinal);
+            Shot(window, state, "create-mode-file");
+
+            Click(window, Named<Button>(Named<RulesPanel>(view, "CreatePanel"), "ActionButton"));
+            Pump(() => server.Of<CreateLobby>().Count == 1, "CREATE sent nothing");
+            var sent = server.Of<CreateLobby>()[0].Rules;
+            Assert.Equal((good, (LobbyMode?)null), (sent.ModeFile, sent.Mode));
+        });
+    }
+
+    /// <summary>The lobby's mode as the server names it (<see cref="LobbyRules.Mode"/>): the host's rules open on it,
+    /// and saving them without a new file sends it back to keep it (no file); None clears it. A member sees it at the
+    /// head of the lobby's rules.</summary>
+    [Fact]
+    public void TheLobbysModeIsKeptUnlessChangedAndShownFirst()
+    {
+        var mode = new LobbyMode(new string('a', 64), "AAAAAAAA", "Overdrive", 1, "OVERDRIVE", "Speed locked and rising.");
+        var rules = new LobbyRules(new Dictionary<string, int> { ["laps"] = 5 }, Mode: mode);
+        var editor = new LobbyRulesEditor(rules, null, [], "Friday", editing: true);
+        Assert.Equal([GameModeRule.NoMode, "Overdrive"], editor.ModeRow.Options);
+        Assert.Equal((mode, (string?)null), (editor.Rules.Mode, editor.Rules.ModeFile));
+        Assert.Equal("Overdrive · 5 laps", editor.Summary);
+        editor.ModeRow.Selected = 0;
+        Assert.Equal((null, (string?)null), (editor.Rules.Mode, editor.Rules.ModeFile));
+
+        var all = CustomRules.AllRules(rules, null);
+        var first = Assert.IsType<ValueRule>(Assert.Single(all[0].Rows));
+        Assert.Equal(("Mode", "Overdrive", "Speed locked and rising."), (first.Label, first.Value, first.Note));
+    }
+
     /// <summary>A custom lobby's own machine setting rules the Garage and the choice, not the server's Quick Play one
     /// (100 for everyone): a 0 lobby fixes the slider at 0, a lobby of each player's own frees it; the join and the
     /// choice carry the player's own setting, which the server brings into the lobby's range. The lobby's whole list

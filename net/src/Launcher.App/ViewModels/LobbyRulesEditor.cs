@@ -55,11 +55,13 @@ public sealed partial class LobbyRulesEditor : ObservableObject
                 Apply(PresetRow.Selected);
             }
         };
+        ModeRow = new GameModeRule("Mode", _start.Mode);
+        ModeRow.PropertyChanged += OnRowChanged;
         RuleGroups = Build(_start);
         PresetRow.Note = SummaryShown;
         LobbyGroups = editing
-            ? RuleGroup.Of([NameRow, LockedRow, PasswordRow], [PresetRow])
-            : RuleGroup.Of([NameRow, PasswordRow], [PresetRow]);
+            ? RuleGroup.Of([NameRow, LockedRow, PasswordRow], [ModeRow, PresetRow])
+            : RuleGroup.Of([NameRow, PasswordRow], [ModeRow, PresetRow]);
     }
 
     /// <summary>The host's own lobby: the password row changes it (empty: kept), the switch clears it.</summary>
@@ -74,6 +76,9 @@ public sealed partial class LobbyRulesEditor : ObservableObject
 
     /// <summary>The preset, with the rules' line under it and (a new lobby) the toggle that shows every rule.</summary>
     public PresetRule PresetRow { get; }
+
+    /// <summary>The lobby's game mode: none, the one it has, or the host's own file (Choose file).</summary>
+    public GameModeRule ModeRow { get; }
 
     /// <summary>How the course is chosen, with the fixed course and its picker.</summary>
     public CourseRule CourseRow => (CourseRule)_rows[HostRules.CourseSelect.Name];
@@ -117,12 +122,16 @@ public sealed partial class LobbyRulesEditor : ObservableObject
                 (differing[HostRules.CourseSelect.Name], differing[LobbyRules.FixedCourseKey]) = ((int)CourseSelectMode.Fixed, course);
             }
             var pack = _rows[HostRules.StatPack.Name];
-            return new LobbyRules(differing, HostRuleRows.Pack(pack), HostRuleRows.PackFile(pack));
+            // the mode: a new file's text, or the lobby's as the server named it (kept), or none
+            return new LobbyRules(differing, HostRuleRows.Pack(pack), HostRuleRows.PackFile(pack),
+                ModeRow.ServedChosen ? ModeRow.Served : null, ModeRow.FileChosen ? ModeRow.File!.Text : null);
         }
     }
 
-    /// <summary>The rules that differ from Quick Play's, in one line ("" for Quick Play's own).</summary>
-    public string Summary => CustomRules.Summary(Rules, _quickPlay);
+    /// <summary>The rules that differ from Quick Play's, in one line ("" for Quick Play's own), the mode first.</summary>
+    public string Summary => ModeRow.FileChosen && ModeRow.File is { } file
+        ? string.Join(" · ", new[] { file.Name, CustomRules.Summary(Rules with { Mode = null }, _quickPlay) }.Where(s => s.Length > 0))
+        : CustomRules.Summary(Rules, _quickPlay);
 
     /// <summary>The line under the preset: the differing rules, or that they are Quick Play's.</summary>
     public string SummaryShown => Summary is { Length: > 0 } s ? s : "Same as Quick Play";

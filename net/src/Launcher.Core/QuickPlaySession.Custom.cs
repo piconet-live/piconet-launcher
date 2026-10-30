@@ -13,7 +13,7 @@ public sealed partial class QuickPlaySession
     public static IReadOnlySet<string> CustomLobbyRefusals { get; } = new HashSet<string>(StringComparer.Ordinal)
     {
         CustomLobby.BadPassword, CustomLobby.NotHost, CustomLobby.NoSuchLobby, CustomLobby.LobbyFull, CustomLobby.LobbyClosed,
-        CustomLobby.BadRules, CustomLobby.RulesLocked, CustomLobby.BadName,
+        CustomLobby.BadRules, CustomLobby.RulesLocked, CustomLobby.BadName, CustomLobby.BadMode,
     };
 
     /// <summary>A visit to the custom lobbies: after the welcome the player is in no lobby and not queued, and sees

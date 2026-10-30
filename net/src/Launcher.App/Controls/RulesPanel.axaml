@@ -68,6 +68,15 @@
                 AutomationProperties.Name="Choose a stat pack file" />
       </StackPanel>
     </DataTemplate>
+    <!-- a custom lobby's game mode: none, the lobby's, the host's own file last; Choose file opens the file picker -->
+    <DataTemplate DataType="vm:GameModeRule">
+      <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+        <ComboBox Classes="field" MinWidth="150" ItemsSource="{Binding Options}" SelectedIndex="{Binding Selected}"
+                  AutomationProperties.Name="{Binding Label}" />
+        <Button Name="ModeFile" Classes="link" Content="Choose file" VerticalAlignment="Center"
+                AutomationProperties.Name="Choose a mode file" />
+      </StackPanel>
+    </DataTemplate>
     <!-- the preset, and beside it the toggle that shows every rule (Create) -->
     <DataTemplate DataType="vm:PresetRule">
       <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">

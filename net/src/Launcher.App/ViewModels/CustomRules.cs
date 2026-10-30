@@ -55,7 +55,9 @@ public static class CustomRules
             return "";
         }
         var against = quickPlay ?? Defaults;
-        return string.Join(" · ", rules.Differing(against).Select(name => Said(name, rules, against)).Where(s => s.Length > 0));
+        // (a game mode first, by its name: "Overdrive · 5 laps")
+        return string.Join(" · ", rules.Differing(against).Select(name => Said(name, rules, against)).Prepend(rules.Mode?.Name ?? "")
+            .Where(s => s.Length > 0));
     }
 
     /// <summary>A rule as the summary line says it.</summary>
@@ -126,12 +128,17 @@ public static class CustomRules
     public static IReadOnlyList<RuleGroup> AllRules(LobbyRules? rules, LobbyRules? quickPlay)
     {
         var differing = rules?.Differing(quickPlay ?? Defaults).ToHashSet(StringComparer.Ordinal) ?? [];
-        return [.. Groups.Select((g, i) => new RuleGroup([.. g.Rules.Select(r =>
+        IReadOnlyList<RuleGroup> groups = [.. Groups.Select((g, i) => new RuleGroup([.. g.Rules.Select(r =>
             (RuleRow)new ValueRule(r.Label, ValueText(r, rules, quickPlay)) { Marked = differing.Contains(r.Name) })])
         {
             Later = i > 0,
             Heading = g.Heading,
         })];
+        // a game mode: its own group first, its name and what it changes
+        return rules?.Mode is { } mode
+            ? [new RuleGroup([new ValueRule("Mode", mode.Name) { Marked = true, Note = mode.About }]) { Heading = "Mode" },
+               .. groups.Select(g => g with { Later = true })]
+            : groups;
     }
 
     /// <summary>The machine setting's range of a lobby's rules.</summary>
