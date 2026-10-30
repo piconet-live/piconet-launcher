@@ -244,7 +244,7 @@ public sealed class MachineModel
                 BinaryPrimitives.ReadSingleBigEndian(fmi.AsSpan(at + 12)), BinaryPrimitives.ReadSingleBigEndian(fmi.AsSpan(at + 16)));
             if (end >= 0 && float.IsFinite(point.X) && float.IsFinite(point.Y) && float.IsFinite(point.Z))
             {
-                places[System.Text.Encoding.ASCII.GetString(fmi, (int)name, end - (int)name)] = point;
+                places.TryAdd(System.Text.Encoding.ASCII.GetString(fmi, (int)name, end - (int)name), point);
             }
         }
         return places;
