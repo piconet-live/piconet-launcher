@@ -158,6 +158,7 @@ public static class ServerMessages
             .Select(r => r with
             {
                 Name = Text(r.Name, MaxNameLength), Color = r.Color is { Length: <= 9 } ? r.Color : null, Tag = Tag(r.Tag),
+                Custom = CustomMachine.Checked(r.Custom),
             })];
 
     private static IReadOnlyList<int> Counts(IReadOnlyList<int> votes) => [.. votes.Select(n => Math.Clamp(n, 0, MaxPlayers))];
@@ -226,6 +227,8 @@ public static class ServerMessages
             {
                 Id = p.Id ?? "", Name = Text(p.Name, MaxNameLength), Color = p.Color ?? NoColor, Tag = Tag(p.Tag),
                 Pack = p.Pack is null ? null : Text(p.Pack, Online.Protocol.StatPack.MostName),
+                // another member's garage-built machine, named and drawn from its parts: only one the game can build
+                Custom = CustomMachine.Checked(p.Custom),
             })],
         Race = l.Race is { MatchId: not null, Seats: not null } race ? race with { Seats = Seats(race.Seats) } : null,
         // the counts are added up for the lobby's notice: one no service has (none, less than none, more than
