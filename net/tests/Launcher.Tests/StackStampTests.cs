@@ -30,10 +30,10 @@ public sealed class StackStampTests
     {
         var test = StackStamp.From("B", B, "test");
         Assert.Equal(("B", B, true), (test.Name, test.Server, test.Test));
-        Assert.Equal(("test server B", "TEST BUILD"), (test.ServerLabel, test.Mark));
+        Assert.Equal(("Test Server", "TEST BUILD"), (test.ServerLabel, test.Mark));
         var players = StackStamp.From(" B ", $" {B} ", "public");
         Assert.Equal(("B", B, false), (players.Name, players.Server, players.Test));
-        Assert.Equal(("official server B", null), (players.ServerLabel, players.Mark));
+        Assert.Equal(("Official Server", null), (players.ServerLabel, players.Mark));
     }
 
     /// <summary>Only the word "public" makes a stamped build the players' one: a slip is a test build.</summary>

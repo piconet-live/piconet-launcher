@@ -56,9 +56,9 @@ public sealed record StackStamp(string? Name, string? Server, bool Test)
         string.IsNullOrWhiteSpace(name) || !SettingsCheck.IsServer(server) ? new(null, null, false)
             : new(name.Trim(), server!.Trim(), !string.Equals(kind?.Trim(), "public", StringComparison.Ordinal));
 
-    /// <summary>The connection box's word for this build's official server: with the stack's name, "test server" on a
+    /// <summary>The connection box's word for this build's official server, "Test Server" on a
     /// test build; "no official server" on a build that names no stack (whose box shows no server).</summary>
-    public string ServerLabel => Name is null ? "no official server" : Test ? $"test server {Name}" : $"official server {Name}";
+    public string ServerLabel => Name is null ? "no official server" : Test ? "Test Server" : "Official Server";
 
     /// <summary>What marks a test build wherever the build is named (the connection box, the window's title); null
     /// on any other.</summary>
