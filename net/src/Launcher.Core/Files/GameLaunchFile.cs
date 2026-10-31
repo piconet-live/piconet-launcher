@@ -75,6 +75,7 @@ public sealed record TaskbarGroup(string Id, string Program, string Name)
 /// <param name="ShowFrameRate">The strip shows the frame rate (<c>"showFrameRate"</c>).</param>
 /// <param name="ShowInputs">A controller over the picture shows the inputs (<c>"showInputs"</c>).</param>
 /// <param name="ModernHud">Piconet's own HUD instead of the game's (<c>"modernHud"</c>).</param>
+/// <param name="HudMeter">That HUD's energy meter by name (<c>"hudMeter"</c>).</param>
 /// <param name="HudLayout">Its layout file (<c>"hudLayout"</c>); a missing file is the default layout.</param>
 /// <param name="NamePicture">The name as the launcher's own title bar draws it, in the game's lettering from the
 /// player's disc (<c>"windowNamePicture"</c>: the game draws it in place of the name's text); null: the text.</param>
@@ -100,7 +101,7 @@ public sealed record TaskbarGroup(string Id, string Program, string Name)
 /// view: a runner from before the key refuses it). 0: the game's own.</param>
 public sealed record GameWindow(string Title, string? Name = null, bool ShowFrameRate = false, Picture? NamePicture = null,
     TaskbarGroup? Taskbar = null, string? Present = null, bool VerticalSync = false, string? FullScreen = null,
-    string? Board = null, string? RefreshRate = null, bool Rumble = true, int Camera = 0, bool ShowInputs = false, bool ModernHud = false, string? HudLayout = null)
+    string? Board = null, string? RefreshRate = null, bool Rumble = true, int Camera = 0, bool ShowInputs = false, bool ModernHud = false, string? HudLayout = null, string? HudMeter = null)
 {
     /// <summary>The largest name picture the game's reader takes.</summary>
     public const int MostPictureWidth = LaunchFormat.WindowNamePictureWidthHigh, MostPictureHeight = LaunchFormat.WindowNamePictureHeightHigh;
@@ -118,6 +119,7 @@ public sealed record GameWindow(string Title, string? Name = null, bool ShowFram
         ShowInputs = ShowInputs,
         ModernHud = ModernHud,
         HudLayout = HudLayout,
+        HudMeter = HudMeter,
         // written only when off: the game's default is on, and a runner from before the key (0.3.0) refuses a file with it
         Rumble = Rumble,
         // the game's own ways are left out: the console's moment, 60 a second

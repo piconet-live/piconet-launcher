@@ -21,5 +21,6 @@ public sealed partial class AppState
             NamePicture: null, TaskbarGroup,
             Settings.GamePresent, Settings.VerticalSync, Settings.GameFullScreen, RefreshRate: Settings.GameRefreshRate,
             Rumble: Settings.Rumble, Camera: Settings.StartCamera, ShowInputs: Settings.ShowInputs,
-            ModernHud: Settings.ModernHud, HudLayout: Settings.ModernHud ? Path.Combine(DataFolder, "hud-layout.json") : null);
+            ModernHud: Settings.ModernHud, HudLayout: Settings.ModernHud ? Path.Combine(DataFolder, "hud-layout.json") : null,
+            HudMeter: Settings.HudMeter == LauncherSettings.HudMeters[0].Name ? null : Settings.HudMeter);
 }

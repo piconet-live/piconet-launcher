@@ -195,6 +195,14 @@ public sealed record LauncherSettings
     /// <c>"modernHud"</c>, written only when on). A mode with <c>hud modern</c> asks for it whatever this says.</summary>
     public bool ModernHud { get; init; }
 
+    /// <summary>The modern HUD's energy meter by its name (the launch file's <c>"hudMeter"</c>): one of
+    /// <see cref="HudMeters"/>; anything else draws the first.</summary>
+    public string HudMeter { get; init; } = HudMeters[0].Name;
+
+    /// <summary>The energy meters of the modern HUD, the default first: the name the game knows it by, the words in Settings.
+    /// A new meter is one more line here and one in the runner's table (hud_layout.h).</summary>
+    public static IReadOnlyList<(string Name, string Words)> HudMeters { get; } = [("blade", "Blade"), ("rev", "Rev cells")];
+
     /// <summary>The controllers rumble in the game (the Settings page's "Rumble", Game; on by default).
     /// Off reaches the game's launch file as <c>"rumble": false</c> (on is the game's default, and a runner
     /// from before the key refuses the member), and the game then holds every motor still.
