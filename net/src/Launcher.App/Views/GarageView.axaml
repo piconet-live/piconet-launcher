@@ -425,7 +425,8 @@
                       Value="{Binding ShownSetting}" TickFrequency="5" IsSnapToTickEnabled="True" IsEnabled="{Binding SettingFree}"
                       VerticalAlignment="Center" AutomationProperties.Name="Machine setting, from acceleration to top speed" />
               <TextBlock Grid.Column="2" Classes="dim" Text="Max speed" VerticalAlignment="Center" />
-              <TextBlock Grid.Column="3" Classes="figure" Text="{Binding SettingText}" VerticalAlignment="Center" MinWidth="32" TextAlignment="Right" />
+              <c:NumberBox Grid.Column="3" Name="SettingNumber" Value="{Binding ShownSetting}" Minimum="{Binding SettingLeast}" Maximum="{Binding SettingMost}"
+                           IsEnabled="{Binding SettingFree}" AutomationProperties.Name="Machine setting number" />
               <TextBlock Grid.Column="4" Name="SettingLimit" Classes="colhead" Text="{Binding SettingLimit}" VerticalAlignment="Center" Margin="8,0,0,0"
                          IsVisible="{Binding SettingLimited}" />
             </Grid>

@@ -125,4 +125,4 @@ The Piconet logo by Emarcee.
 ## Licence
 
 GPL-3.0-or-later (`LICENSE`). The Saira fonts in `net/src/Launcher.App/Assets/Fonts/` are under the SIL Open Font
-Licence 1.1 (`OFL.txt` beside them).
+Licence 1.1 (`OFL.txt` beside them). The controller pictures in `net/src/Launcher.App/Assets/PadOverlay/` are m-overlay's, under the MIT licence (`THIRD-PARTY-NOTICES.md`).

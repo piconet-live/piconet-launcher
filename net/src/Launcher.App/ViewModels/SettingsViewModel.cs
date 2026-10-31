@@ -41,6 +41,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         HideSwearWords = s.HideSwearWords;
         WidescreenIndex = Enum.IsDefined(s.Widescreen) ? (int)s.Widescreen : (int)WidescreenMode.Game;
         ShowFrameRate = s.ShowFrameRate || FrameRateAlwaysShown;
+        ShowInputs = s.ShowInputs;
         Rumble = s.Rumble;
         InputDelayIndex = s.RaceInputDelay;
         VerticalSyncIndex = s.VerticalSync ? 1 : 0;
@@ -77,10 +78,8 @@ public sealed partial class SettingsViewModel : ViewModelBase
     /// <summary>The interface scale on the slider, in percent: nothing changes until Apply (a scale applied while
     /// the slider is dragged would move the slider under the pointer).</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(PendingScaleText), nameof(CanApplyScale))]
+    [NotifyPropertyChangedFor(nameof(CanApplyScale))]
     public partial int PendingScale { get; set; }
-
-    public string PendingScaleText => $"{PendingScale}%";
 
     public bool CanApplyScale => Applied(PendingScale) != _scale;
 
@@ -98,6 +97,10 @@ public sealed partial class SettingsViewModel : ViewModelBase
     private static int Applied(int value) =>
         Math.Clamp((int)Math.Round(value / (double)LauncherSettings.InterfaceScaleStep) * LauncherSettings.InterfaceScaleStep,
             LauncherSettings.LeastInterfaceScale, LauncherSettings.MostInterfaceScale);
+
+    public static int LeastScaleWhole => LauncherSettings.LeastInterfaceScale;
+
+    public static int MostScaleWhole => LauncherSettings.MostInterfaceScale;
 
     public static double LeastScale => LauncherSettings.LeastInterfaceScale;
 
@@ -191,6 +194,9 @@ public sealed partial class SettingsViewModel : ViewModelBase
     /// <summary>The game window's strip shows the frame rate.</summary>
     [ObservableProperty]
     public partial bool ShowFrameRate { get; set; }
+
+    [ObservableProperty]
+    public partial bool ShowInputs { get; set; }
 
     /// <summary>A test build shows the frame rate whatever the setting says (<see cref="LauncherSettings.FrameRateShown"/>):
     /// its box is ticked and cannot be changed, and the file keeps the player's own value.</summary>
@@ -323,6 +329,8 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
     partial void OnShowFrameRateChanged(bool value) => Save();
 
+    partial void OnShowInputsChanged(bool value) => Save();
+
     partial void OnRumbleChanged(bool value) => Save();
 
     partial void OnInputDelayIndexChanged(int value) => Save();
@@ -399,6 +407,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
             HideSwearWords = HideSwearWords,
             Widescreen = (WidescreenMode)Math.Clamp(WidescreenIndex, 0, WidescreenChoices.Count - 1),
             ShowFrameRate = FrameRateAlwaysShown ? s.ShowFrameRate : ShowFrameRate,
+            ShowInputs = ShowInputs,
             Rumble = Rumble,
             // (a list with nothing selected says -1: the setting stays what it is)
             InputDelay = InputDelayIndex is >= 0 and <= LauncherSettings.PlayersInputDelay ? InputDelayIndex : s.RaceInputDelay,

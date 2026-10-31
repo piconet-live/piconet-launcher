@@ -75,8 +75,8 @@ public sealed class VolumeSettingsTests : IDisposable
 
                 // the game's volume: 100 as the game was, the number beside the slider
                 var volume = Named<Slider>(view, "GameVolume");
-                var number = Named<TextBlock>(view, "GameVolumeNumber");
-                Assert.Equal((100, "100", 100), (volume.Value, number.Text, state.Settings.GameVolume));
+                var number = Named<Launcher.App.Controls.NumberBox>(view, "GameVolumeNumber");
+                Assert.Equal((100, 100, 100), (volume.Value, number.Value, state.Settings.GameVolume));
                 // pressed in its left half with the mouse, then finer with the arrow keys
                 var at = volume.TranslatePoint(new Point(volume.Bounds.Width * 0.25, volume.Bounds.Height / 2), window)!.Value;
                 window.MouseDown(at, MouseButton.Left);
@@ -96,7 +96,7 @@ public sealed class VolumeSettingsTests : IDisposable
                         Press(window, Key.Right, PhysicalKey.ArrowRight);
                     }
                 }
-                Assert.Equal((35, "35", 35), (volume.Value, number.Text, state.Settings.GameVolume));
+                Assert.Equal((35, 35, 35), (volume.Value, number.Value, state.Settings.GameVolume));
                 Assert.Empty(heard);                                                    // (the game's volume makes no sound here)
 
                 // a start of the game: the emulator's own volume in the game's settings is the slider's

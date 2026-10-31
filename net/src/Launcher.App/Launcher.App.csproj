@@ -24,10 +24,10 @@
 
   <ItemGroup>
     <!-- Saira (SIL OFL, Assets/Fonts/OFL.txt), the web editor's type.
-         What is carried is named: the fonts with their licence, and the icon. Nothing else that stands in Assets
+         What is carried is named: the fonts with their licence, the icon, and the Controller page's pad (m-overlay's art, MIT, with its licence). Nothing else that stands in Assets
          goes into the launcher (the artwork the icon is made from, the script that makes it, what Python leaves
          beside a script it ran). -->
-    <AvaloniaResource Include="Assets/Fonts/*.ttf;Assets/Fonts/OFL.txt;Assets/Icon/app.ico" />
+    <AvaloniaResource Include="Assets/Fonts/*.ttf;Assets/Fonts/OFL.txt;Assets/Icon/app.ico;Assets/PadOverlay/*.png;Assets/PadOverlay/LICENSE.txt" />
   </ItemGroup>
 
   <ItemGroup>
