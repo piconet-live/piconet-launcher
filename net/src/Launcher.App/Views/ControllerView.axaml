@@ -43,12 +43,12 @@
   </UserControl.Styles>
   <Grid Name="Page" Classes.running="{Binding !Enabled}" ColumnDefinitions="*,16,320" RowDefinitions="Auto,Auto,Auto"
         MaxWidth="860" HorizontalAlignment="Left">
-    <ListBox Grid.ColumnSpan="3" Classes="seg tall" ItemsSource="{x:Static vm:ControllerViewModel.PortNames}"
+    <ListBox Classes="seg tall" ItemsSource="{x:Static vm:ControllerViewModel.PortNames}"
              SelectedIndex="{Binding PortIndex}" AutomationProperties.Name="Controller port" Margin="0,0,0,14" />
 
     <Grid Grid.Row="1" Classes="form" ColumnDefinitions="84,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
           IsEnabled="{Binding Enabled}" VerticalAlignment="Top" MinWidth="336">
-        <TextBlock Classes="label" Text="Plugged in" />
+        <TextBlock Classes="label" Text="Input" />
         <ListBox Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:ControllerViewModel.KindNames}"
                  SelectedIndex="{Binding KindIndex}" AutomationProperties.Name="What is plugged into the port" />
         <TextBlock Grid.Row="1" Grid.Column="1" Classes="note" IsVisible="{Binding OtherKind}" TextWrapping="Wrap"
@@ -140,9 +140,8 @@
     </StackPanel>
 
     <!-- the test: what the game reads from this port now -->
+    <TextBlock Grid.Column="2" Classes="head" Text="{Binding PortTitle}" VerticalAlignment="Center" Margin="0,0,0,14" />
     <StackPanel Grid.Row="1" Grid.Column="2">
-      <TextBlock Classes="head" Text="{Binding PortTitle}" />
-      <TextBlock Classes="note" Text="Test" Margin="0,2,0,10" />
       <Border Classes="well pad" Classes.dim="{Binding PadDim}" Padding="0,10,0,8">
         <c:PadOverlay Pad="{Binding Pad}" />
       </Border>
