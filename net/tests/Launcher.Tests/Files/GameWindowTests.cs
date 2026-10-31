@@ -90,8 +90,8 @@ public sealed class GameWindowTests : IDisposable
     public void ATestBuildAndATestGameAlwaysShowTheFrameRate()
     {
         const string server = "wss://example.test/ws";
-        var (test, review, players, unstamped) = (StackStamp.From("A", server, "test"), StackStamp.From("B", server, null),
-            StackStamp.From("B", server, "public"), StackStamp.From(null, null, null));
+        var (test, review, players, unstamped) = (StackStamp.From("test", server, "test"), StackStamp.From("test", server, null),
+            StackStamp.From("live", server, "public"), StackStamp.From(null, null, null));
         var (off, on) = (new LauncherSettings(), new LauncherSettings { ShowFrameRate = true });
         Assert.True(off.FrameRateShown(test, testGame: false));
         Assert.True(off.FrameRateShown(review, testGame: false));
