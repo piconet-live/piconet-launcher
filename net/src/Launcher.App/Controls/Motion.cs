@@ -36,7 +36,7 @@ public static class Motion
         {
             if (e.NewValue is true && popup.Child is { } child)
             {
-                Enter(child, 0, -6, 0.98, Quick);
+                Enter(child, 0, -6, 1, Quick);
             }
         });
         Install();
@@ -58,6 +58,11 @@ public static class Motion
 
     public static event Action? ReducedChanged;
 
+    /// <summary>Slow motion, to look at a move part way (PICONET_MOTION_SLOW in the environment, or a check): 10 is ten
+    /// times slower. 1 otherwise.</summary>
+    public static double Slow { get; set; } =
+        double.TryParse(Environment.GetEnvironmentVariable("PICONET_MOTION_SLOW"), out var slow) && slow >= 1 ? slow : 1;
+
     public static TimeSpan Quick => Asked("Quick", TimeSpan.FromMilliseconds(120));
 
     public static TimeSpan Standard => Asked("Standard", TimeSpan.FromMilliseconds(200));
@@ -71,7 +76,12 @@ public static class Motion
     private static T Asked<T>(string key, T fallback) =>
         Application.Current is { } app && app.TryFindResource(key, out var value) && value is T found ? found : fallback;
 
-    private static Clock Time => _clock ??= new Clock();
+    /// <summary>The clock of the running application: its timer and frames die with that application's dispatcher.</summary>
+    private static readonly Stopwatch Watch = Stopwatch.StartNew();
+
+    private static TimeSpan Now => Watch.Elapsed / Slow;
+
+    private static Clock Time => _clock is { } clock && clock.App == Application.Current ? clock : _clock = new Clock();
 
     /// <summary>Runs <paramref name="step"/> with 0 to 1 until the time is up; a new move of the same target and
     /// channel takes over from it. Under <see cref="Reduced"/> it ends at once.</summary>
@@ -130,7 +140,7 @@ public static class Motion
 
     /// <summary>Lists attached in the next moment arrive row by row. A list attached at any other time (a seat changed,
     /// so its column was made again) just stands.</summary>
-    public static void OpenListWindow() => _listWindowEnds = Time.Now + ListWindow;
+    public static void OpenListWindow() => _listWindowEnds = Now + ListWindow;
 
     /// <summary>A short wash over a control that rests at opacity 0.</summary>
     public static void Flash(Visual target, double peak = 0.6)
@@ -250,10 +260,10 @@ public static class Motion
         list.PropertyChanged += (_, change) =>
         {
             if (change.Property == ItemsControl.ItemCountProperty && change.OldValue is 0 && change.NewValue is > 0
-                && Time.Now - lastRefill > RefillGap)
+                && Now - lastRefill > RefillGap)
             {
-                lastRefill = Time.Now;
-                burstEnds = Time.Now + BurstLength;
+                lastRefill = Now;
+                burstEnds = Now + BurstLength;
             }
         };
         list.ContainerPrepared += (_, e) =>
@@ -261,12 +271,12 @@ public static class Motion
             if (fresh)
             {
                 fresh = false;
-                if (Time.Now < _listWindowEnds)
+                if (Now < _listWindowEnds)
                 {
-                    burstEnds = Time.Now + BurstLength;
+                    burstEnds = Now + BurstLength;
                 }
             }
-            if (Time.Now < burstEnds)
+            if (Now < burstEnds)
             {
                 Enter(e.Container, 0, RowRise, 1, Quick, StaggerStep * Math.Min(e.Index, MostStaggered));
             }
@@ -283,7 +293,6 @@ public static class Motion
     private sealed class Clock
     {
         private static readonly TimeSpan Late = TimeSpan.FromMilliseconds(50);
-        private readonly Stopwatch _watch = Stopwatch.StartNew();
         private readonly List<Run> _runs = [];
         private readonly DispatcherTimer _behind;
         private TimeSpan _lastFrame;
@@ -302,7 +311,7 @@ public static class Motion
             };
         }
 
-        public TimeSpan Now => _watch.Elapsed;
+        public Application? App { get; } = Application.Current;
 
         public void Cancel(Visual target, string channel) => _runs.RemoveAll(r => r.Target == target && r.Channel == channel);
 

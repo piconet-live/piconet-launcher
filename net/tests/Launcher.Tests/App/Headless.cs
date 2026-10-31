@@ -31,6 +31,14 @@ internal static class Headless
         Dispatcher.UIThread.RunJobs();
     }
 
+    /// <summary>What a real window does while time passes: a frame, then the thread's work. A headless window draws
+    /// none by itself, and the launcher's moves (Controls/Motion.cs) run on frames.</summary>
+    public static void Frame()
+    {
+        Avalonia.Headless.AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+        Dispatcher.UIThread.RunJobs();
+    }
+
     /// <summary>Lets the window's thread work until <paramref name="done"/>, ten seconds at most.</summary>
     public static void Pump(Func<bool> done, string what = "the page did not get there in ten seconds")
     {
@@ -39,7 +47,7 @@ internal static class Headless
         while (!done() && DateTime.UtcNow < limit)
         {
             Thread.Sleep(10);
-            Dispatcher.UIThread.RunJobs();
+            Frame();
         }
         Assert.True(done(), what);
     }
@@ -55,7 +63,7 @@ internal static class Headless
         {
             Thread.Sleep(20);
             state.Update(s => s);
-            Dispatcher.UIThread.RunJobs();
+            Frame();
         }
         Assert.True(done(), what);
     }
@@ -68,7 +76,7 @@ internal static class Headless
         {
             Thread.Sleep(10);
             telling?.Update(s => s);
-            Dispatcher.UIThread.RunJobs();
+            Frame();
         }
     }
 
