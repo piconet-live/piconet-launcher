@@ -245,7 +245,7 @@ public static class Motion
     {
         var fresh = true;
         var burstEnds = TimeSpan.Zero;
-        var lastRefill = TimeSpan.MinValue;
+        var lastRefill = -RefillGap - RefillGap;
         list.AttachedToVisualTree += (_, _) => fresh = true;
         list.PropertyChanged += (_, change) =>
         {
