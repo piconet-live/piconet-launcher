@@ -140,7 +140,6 @@
     </StackPanel>
 
     <!-- the test: what the game reads from this port now -->
-    <TextBlock Grid.Column="2" Classes="head" Text="{Binding PortTitle}" VerticalAlignment="Center" Margin="0,0,0,14" />
     <StackPanel Grid.Row="1" Grid.Column="2">
       <Border Classes="well pad" Classes.dim="{Binding PadDim}" Padding="0,10,0,8">
         <c:PadOverlay Pad="{Binding Pad}" />
@@ -150,13 +149,15 @@
         <Path Classes="warnmark" />
         <TextBlock Grid.Column="1" Text="{Binding PadNote}" />
       </Grid>
-      <Button Classes="secondary" Content="Test rumble" Command="{Binding RumbleCommand}" IsVisible="{Binding CanRumble}"
-              IsEnabled="{Binding Enabled}" HorizontalAlignment="Left" Margin="0,12,0,0" AutomationProperties.Name="Test rumble" />
-      <!-- what this page cannot set: the game's own controller options (calibration, button settings, rumble). The
-           game starts on them and closes when the player leaves them; off, with the reason, while it cannot start -->
-      <Button x:Name="SetUpInGameButton" Classes="secondary" Content="Set up in the game" Command="{Binding SetUpInGameCommand}"
-              IsEnabled="{Binding CanSetUpInGame}" HorizontalAlignment="Left" Margin="0,16,0,0"
-              AutomationProperties.Name="Set up in the game" />
+      <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,12,0,0">
+        <Button Classes="secondary" Content="Test rumble" Command="{Binding RumbleCommand}" IsVisible="{Binding CanRumble}"
+                IsEnabled="{Binding Enabled}" HorizontalAlignment="Left" AutomationProperties.Name="Test rumble" />
+        <!-- what this page cannot set: the game's own controller options (calibration, button settings, rumble). The
+             game starts on them and closes when the player leaves them; off, with the reason, while it cannot start -->
+        <Button x:Name="SetUpInGameButton" Classes="secondary" Content="Set up in the game" Command="{Binding SetUpInGameCommand}"
+                IsEnabled="{Binding CanSetUpInGame}" HorizontalAlignment="Left"
+                AutomationProperties.Name="Set up in the game" />
+      </StackPanel>
       <TextBlock x:Name="SetUpInGameNote" Classes="note" Text="{Binding SetUpInGameNote}" Margin="0,6,0,0"
                  IsVisible="{Binding SetUpInGameNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
     </StackPanel>
