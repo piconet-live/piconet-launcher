@@ -39,7 +39,7 @@ public sealed record SeatRow(string Number, string Name, string ColorHex, string
 }
 
 /// <summary>A column of the racers' list (the seats run down the columns).</summary>
-public sealed record SeatColumn(IReadOnlyList<SeatRow> Seats);
+public sealed record SeatColumn(System.Collections.ObjectModel.ObservableCollection<SeatRow> Seats);
 
 /// <summary>A line of the lobby's chat: who said it (their paint beside the name) and what. The paint can change
 /// while the line stands (the speaker repaints, or leaves): it changes in place, and the line stays the line it is

@@ -384,6 +384,25 @@ public sealed partial class LobbyViewModel : ViewModelBase
     /// them), in columns. Ticked: has voted for a course, or is ready with a machine. A watcher has no seat: where
     /// the server takes spectators, the watchers stand in a list of their own beside the seats, and the title counts
     /// them ("Racers 5 of 30 · Watching 1"); the player's own row moves between the two as they watch or race.</summary>
+    private static void PutSeats(System.Collections.ObjectModel.ObservableCollection<SeatRow> shown, List<SeatRow> wanted)
+    {
+        for (var i = 0; i < Math.Min(shown.Count, wanted.Count); i++)
+        {
+            if (shown[i] != wanted[i])
+            {
+                shown[i] = wanted[i];
+            }
+        }
+        while (shown.Count > wanted.Count)
+        {
+            shown.RemoveAt(shown.Count - 1);
+        }
+        foreach (var row in wanted.Skip(shown.Count).ToList())
+        {
+            shown.Add(row);
+        }
+    }
+
     private void ShowSeats(QuickPlaySession session, LobbyState? lobby)
     {
         if (lobby is null)
@@ -423,10 +442,18 @@ public sealed partial class LobbyViewModel : ViewModelBase
         }
         var columns = Gathering || Narrow ? 2 : 3;
         var each = (rows.Count + columns - 1) / columns;
-        var seats = Enumerable.Range(0, columns).Select(c => new SeatColumn([.. rows.Skip(c * each).Take(each)])).ToList();
-        if (SeatColumns.Count != seats.Count || !SeatColumns.Zip(seats).All(pair => pair.First.Seats.SequenceEqual(pair.Second.Seats)))
+        var seats = Enumerable.Range(0, columns).Select(c => rows.Skip(c * each).Take(each).ToList()).ToList();
+        if (SeatColumns.Count != columns)
         {
-            SeatColumns = seats;
+            SeatColumns = [.. seats.Select(column => new SeatColumn([.. column]))];
+        }
+        else
+        {
+            // the seats that changed, one by one: a tick or a ping is not thirty rows made again
+            foreach (var (column, wanted) in SeatColumns.Zip(seats))
+            {
+                PutSeats(column.Seats, wanted);
+            }
         }
         if (!WatchingRows.SequenceEqual(watching))
         {

@@ -134,13 +134,13 @@
           <Border Classes="rowhead">
             <Grid ColumnDefinitions="92,*"><TextBlock Classes="colhead" Text="CONTROL" LetterSpacing="1" /><TextBlock Grid.Column="1" Classes="colhead" Text="SET TO" LetterSpacing="1" /></Grid>
           </Border>
-          <ItemsControl ItemsSource="{Binding LeftRows}" ItemTemplate="{StaticResource Row}" />
+          <ItemsControl c:Paced.Items="{Binding LeftRows}" ItemTemplate="{StaticResource Row}" />
         </StackPanel>
         <StackPanel Grid.Column="2">
           <Border Classes="rowhead">
             <Grid ColumnDefinitions="92,*"><TextBlock Classes="colhead" Text="CONTROL" LetterSpacing="1" /><TextBlock Grid.Column="1" Classes="colhead" Text="SET TO" LetterSpacing="1" /></Grid>
           </Border>
-          <ItemsControl ItemsSource="{Binding RightRows}" ItemTemplate="{StaticResource Row}" />
+          <ItemsControl c:Paced.Items="{Binding RightRows}" ItemTemplate="{StaticResource Row}" />
         </StackPanel>
       </Grid>
       <!-- back to the device's standard mapping; a device with none has nothing to go back to -->

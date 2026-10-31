@@ -74,7 +74,7 @@
         </ItemsControl.ItemTemplate>
       </ItemsControl>
     </DockPanel>
-    <ItemsControl ItemsSource="{Binding Shown}" Name="Cards" c:Motion.Stagger="True" Margin="0,0,-8,0">
+    <ItemsControl c:Paced.Items="{Binding Shown}" Name="Cards" c:Motion.Stagger="True" Margin="0,0,-8,0">
       <ItemsControl.ItemsPanel>
         <ItemsPanelTemplate><UniformGrid Columns="6" /></ItemsPanelTemplate>
       </ItemsControl.ItemsPanel>

@@ -71,7 +71,7 @@
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:SeatColumn">
-            <ItemsControl ItemsSource="{Binding Seats}" c:Motion.Stagger="True" Margin="0,0,16,0">
+            <ItemsControl c:Paced.Items="{Binding Seats}" c:Motion.Stagger="True" Margin="0,0,16,0">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:SeatRow">
                   <!-- the number, the paint, the name with its tick right after it (has voted, is ready), the machine

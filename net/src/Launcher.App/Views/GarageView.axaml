@@ -127,7 +127,7 @@
     <Panel Name="RosterPlace" IsVisible="{Binding Selecting}">
       <!-- the tiles, then the shelf's word under them: "No match" under the Custom shelf's New machine, never behind it -->
       <StackPanel VerticalAlignment="Top">
-        <ItemsControl Name="Roster" c:Motion.Stagger="True" ItemsSource="{Binding Roster}" HorizontalAlignment="Left" VerticalAlignment="Top">
+        <ItemsControl Name="Roster" c:Motion.Stagger="True" c:Paced.Items="{Binding Roster}" HorizontalAlignment="Left" VerticalAlignment="Top">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
               <c:RosterTiles Columns="{Binding #Root.RosterColumns}" TileWidth="{Binding #Root.TileWidth}" TileHeight="{Binding #Root.TileHeight}" Gap="8" />

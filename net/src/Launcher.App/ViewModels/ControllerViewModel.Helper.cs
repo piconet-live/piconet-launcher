@@ -31,7 +31,7 @@ public sealed partial class ControllerViewModel
         ShowPort();
         _ = LookAtTheFiles().ContinueWith(look => OnUi(() =>
         {
-            if (showing == _showing && _shown)
+            if (showing == _showing && _shown && look.IsCompletedSuccessfully)
             {
                 Take(look.Result);
                 StartHelper();
@@ -53,7 +53,9 @@ public sealed partial class ControllerViewModel
     private Task<FilesLook> LookAtTheFiles()
     {
         var (folder, userFolder, disc) = (UserFolder, _state.Settings.UserFolder, _state.Settings.DiscPath);
-        return Task.Run(() =>
+        // in turn with the page's writes: what it reads is what was last changed, and two looks never make the folder
+        // at once
+        var look = _state.ControllerWrites.ContinueWith(_ =>
         {
             string? problem = null;
             try
@@ -68,7 +70,9 @@ public sealed partial class ControllerViewModel
             var files = RecompLaunch.Problem(paths);
             return new FilesLook(problem, ControllerFiles.Read(folder), ControllerFiles.GamepadProfile(paths.Runner), files,
                 DiscCheck.Check(disc) != DiscStatus.Ok ? "No disc image" : files);
-        });
+        }, CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default);
+        _state.ControllerWrites = look;
+        return look;
     }
 
     /// <summary>What <see cref="LookAtTheFiles"/> found, on the window's thread.</summary>
@@ -102,7 +106,7 @@ public sealed partial class ControllerViewModel
             var showing = _showing;
             _ = LookAtTheFiles().ContinueWith(look => OnUi(() =>
             {
-                if (showing == _showing && MayRun && _helper is null && !_starting)
+                if (showing == _showing && MayRun && _helper is null && !_starting && look.IsCompletedSuccessfully)
                 {
                     Take(look.Result);
                     StartHelper();
