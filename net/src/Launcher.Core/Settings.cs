@@ -191,6 +191,10 @@ public sealed record LauncherSettings
     /// the launch file's <c>"showInputs"</c>, written only when on).</summary>
     public bool ShowInputs { get; init; }
 
+    /// <summary>The game's HUD is Piconet's own instead of the game's (off by default, Classic; the launch file's
+    /// <c>"modernHud"</c>, written only when on). A mode with <c>hud modern</c> asks for it whatever this says.</summary>
+    public bool ModernHud { get; init; }
+
     /// <summary>The controllers rumble in the game (the Settings page's "Rumble", Game; on by default).
     /// Off reaches the game's launch file as <c>"rumble": false</c> (on is the game's default, and a runner
     /// from before the key refuses the member), and the game then holds every motor still.
