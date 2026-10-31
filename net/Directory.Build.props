@@ -21,7 +21,7 @@
 
   <!-- Package metadata; the version is bumped deliberately, see CHANGELOG.md. -->
   <PropertyGroup>
-    <VersionPrefix>0.5.2</VersionPrefix>
+    <VersionPrefix>0.5.3</VersionPrefix>
     <!-- The product's name, never a person's: an assembly's company is in every program and library a player is
          handed (their properties in Explorer, and their text). The launcher's AssemblyNamesTests holds it equal to
          the name players see; port/build/package.py refuses a copy that names anybody. -->
