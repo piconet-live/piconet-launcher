@@ -157,13 +157,13 @@ public sealed record LauncherSettings
     /// (<see cref="StackStamp"/>); null for a build that names none, which has no official server.</summary>
     public static string? OnlineServer => StackStamp.Current.Server;
 
-    /// <summary>Saved values that mean "the official server": the official address itself (written by launchers
-    /// that stored the default; they knew the first official server only, so on a build made for another stack that
-    /// address still means "this build's official server"); it loads as blank. The early local default
+    /// <summary>Saved values that mean "the official server": the official address itself, and each one a
+    /// launcher had before (written by launchers that stored the default: on any later build they still mean "this
+    /// build's official server"); it loads as blank. The early local default
     /// (ws://127.0.0.1:47810/ws) is not one of them: a local address must never become the live service without the
     /// player's word, so it stays what the file says, a server of the player's own.</summary>
     public static readonly IReadOnlyList<string> FormerDefaultServers =
-        [.. new[] { StackStamp.FirstServer, OnlineServer }.OfType<string>().Distinct()];
+        [.. new[] { StackStamp.FirstServer, StackStamp.SecondServer, OnlineServer }.OfType<string>().Distinct()];
 
     /// <summary>Online races are recorded (by default). Practice runs are <see cref="RecordPractice"/>'s.</summary>
     public bool RecordReplays { get; init; } = true;
