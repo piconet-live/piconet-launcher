@@ -353,12 +353,7 @@
         <Panel Name="Root" Background="Transparent">
           <Border Name="Face" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                   BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}"
-                  ClipToBounds="True" RenderTransform="translateY(0px)">
-            <Border.Transitions>
-              <Transitions>
-                <TransformOperationsTransition Property="RenderTransform" Duration="{StaticResource Standard}" Easing="{StaticResource EaseOut}" />
-              </Transitions>
-            </Border.Transitions>
+                  ClipToBounds="True">
             <ContentPresenter Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
                               HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
           </Border>

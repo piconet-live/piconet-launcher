@@ -26,4 +26,51 @@
   <Style Selector="ListBox.seg:disabled /template/ c|TravelHost#Travel">
     <Setter Property="Fill" Value="{StaticResource HoverBrush}" />
   </Style>
+  <!-- Press: a face settles to 97% and springs back; a card lifts a little under the pointer. A row on no box of its own
+       never reacts here (no hover flash on unboxed rows): only what has a face. -->
+  <Style Selector="Button /template/ :is(Control)#Face">
+    <Setter Property="RenderTransform" Value="none" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <TransformOperationsTransition Property="RenderTransform" Duration="{StaticResource Quick}" Easing="{StaticResource Spring}" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Button.cell:pointerover /template/ :is(Control)#Face, Button.votecard:pointerover /template/ :is(Control)#Face, Button.tile:pointerover /template/ :is(Control)#Face, Button.lobbybox:pointerover /template/ :is(Control)#Face">
+    <Setter Property="RenderTransform" Value="translateY(-2px)" />
+  </Style>
+  <Style Selector="Button:pressed /template/ :is(Control)#Face">
+    <Setter Property="RenderTransform" Value="scale(0.97)" />
+  </Style>
+  <Style Selector="Button.chrome:pressed /template/ :is(Control)#Face">
+    <Setter Property="RenderTransform" Value="none" />
+  </Style>
+  <Style Selector=".still Button /template/ :is(Control)#Face, .still Button:pointerover /template/ :is(Control)#Face, .still Button:pressed /template/ :is(Control)#Face">
+    <Setter Property="RenderTransform" Value="none" />
+    <Setter Property="Transitions" Value="{x:Null}" />
+  </Style>
+  <!-- A value's bar glides to the new value -->
+  <Style Selector="Border.bar > Border">
+    <Setter Property="Transitions">
+      <Transitions>
+        <TransformOperationsTransition Property="RenderTransform" Duration="{StaticResource Standard}" Easing="{StaticResource EaseOut}" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector=".still Border.bar > Border">
+    <Setter Property="Transitions" Value="{x:Null}" />
+  </Style>
+  <!-- The course drawn: a swell and a green wash. -->
+  <Style Selector="Border.card.won">
+    <Setter Property="c:Motion.PulseOn" Value="True" />
+  </Style>
+  <Style Selector="Border.wash">
+    <Setter Property="Background" Value="{StaticResource AccentBrush}" />
+    <Setter Property="CornerRadius" Value="{DynamicResource StaticLargeCornerRadius}" />
+    <Setter Property="Opacity" Value="0" />
+    <Setter Property="IsHitTestVisible" Value="False" />
+  </Style>
+  <Style Selector="Border.wash.on">
+    <Setter Property="c:Motion.FlashOn" Value="True" />
+  </Style>
 </Styles>
