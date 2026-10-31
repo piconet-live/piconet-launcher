@@ -187,6 +187,10 @@ public sealed record LauncherSettings
     /// a test game show it whatever this says: <see cref="FrameRateShown"/>.</summary>
     public bool ShowFrameRate { get; init; }
 
+    /// <summary>A controller drawn in the game's picture shows the inputs of the racer in view (off by default;
+    /// the launch file's <c>"showInputs"</c>, written only when on).</summary>
+    public bool ShowInputs { get; init; }
+
     /// <summary>The controllers rumble in the game (the Settings page's "Rumble", Game; on by default).
     /// Off reaches the game's launch file as <c>"rumble": false</c> (on is the game's default, and a runner
     /// from before the key refuses the member), and the game then holds every motor still.

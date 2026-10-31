@@ -73,6 +73,7 @@ public sealed record TaskbarGroup(string Id, string Program, string Name)
 /// <param name="Title">The window's title, the runner's <c>--title</c>.</param>
 /// <param name="Name">The name in the strip (the launch file's <c>"windowName"</c>); null: none.</param>
 /// <param name="ShowFrameRate">The strip shows the frame rate (<c>"showFrameRate"</c>).</param>
+/// <param name="ShowInputs">A controller over the picture shows the inputs (<c>"showInputs"</c>).</param>
 /// <param name="NamePicture">The name as the launcher's own title bar draws it, in the game's lettering from the
 /// player's disc (<c>"windowNamePicture"</c>: the game draws it in place of the name's text); null: the text.</param>
 /// <param name="Taskbar">The launcher's taskbar button, which the game's window joins (<c>"taskbar"</c>); null: the
@@ -97,7 +98,7 @@ public sealed record TaskbarGroup(string Id, string Program, string Name)
 /// view: a runner from before the key refuses it). 0: the game's own.</param>
 public sealed record GameWindow(string Title, string? Name = null, bool ShowFrameRate = false, Picture? NamePicture = null,
     TaskbarGroup? Taskbar = null, string? Present = null, bool VerticalSync = false, string? FullScreen = null,
-    string? Board = null, string? RefreshRate = null, bool Rumble = true, int Camera = 0)
+    string? Board = null, string? RefreshRate = null, bool Rumble = true, int Camera = 0, bool ShowInputs = false)
 {
     /// <summary>The largest name picture the game's reader takes.</summary>
     public const int MostPictureWidth = LaunchFormat.WindowNamePictureWidthHigh, MostPictureHeight = LaunchFormat.WindowNamePictureHeightHigh;
@@ -112,6 +113,7 @@ public sealed record GameWindow(string Title, string? Name = null, bool ShowFram
             ? new LaunchNamePicture(picture.Width, picture.Height, Convert.ToBase64String(picture.Rgba))
             : null,
         ShowFrameRate = ShowFrameRate,
+        ShowInputs = ShowInputs,
         // written only when off: the game's default is on, and a runner from before the key (0.3.0) refuses a file with it
         Rumble = Rumble,
         // the game's own ways are left out: the console's moment, 60 a second

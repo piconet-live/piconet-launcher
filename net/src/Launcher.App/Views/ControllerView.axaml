@@ -144,7 +144,7 @@
       <TextBlock Classes="head" Text="{Binding PortTitle}" />
       <TextBlock Classes="note" Text="Test" Margin="0,2,0,10" />
       <Border Classes="well pad" Classes.dim="{Binding PadDim}" Padding="0,10,0,8">
-        <c:PadPicture Pad="{Binding Pad}" HorizontalAlignment="Center" />
+        <c:PadOverlay Pad="{Binding Pad}" />
       </Border>
       <Grid Classes="warnline" ColumnDefinitions="Auto,*" Margin="0,8,0,0"
             IsVisible="{Binding PadNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">

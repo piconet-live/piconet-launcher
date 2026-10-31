@@ -4,7 +4,7 @@
   with the two it takes in at its end: Buttons.axaml
   (everything that is pressed) and Forms.axaml (tables, inputs, forms). A page uses these resources and classes; it
   sets no colour, size or duration of its own. Every colour is here, the accent once (AccentColor): the controls drawn
-  in code (PadMark, PadPicture) read theirs from this dictionary.
+  in code (PadMark) read theirs from this dictionary.
 
   GRID      8 px: gaps 8 · 16 · 24, padding 16 or 24, nothing else. Window: a 32 px title bar; under it a 240 px
             left column (who you are, where you go, whether you are online) and the content. Table rows 32 px.

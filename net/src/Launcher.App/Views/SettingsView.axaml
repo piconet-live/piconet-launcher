@@ -23,7 +23,7 @@
   <Panel>
     <!-- Game: the game's picture, sound and rumble -->
     <Grid Name="GamePage" Classes="form" ColumnDefinitions="196,*" MaxWidth="900" HorizontalAlignment="Left"
-          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" IsVisible="{Binding OnGame}">
+          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" IsVisible="{Binding OnGame}">
       <!-- the game's picture: Normal, the game's own 16:9, or true widescreen (16:9 with Normal's whole height) -->
       <TextBlock Classes="label" Text="Widescreen" />
       <ListBox Grid.Column="1" Classes="seg tall" Name="Widescreen"
@@ -62,6 +62,10 @@
       <TextBlock Grid.Row="7" Classes="label" Text="Rumble" />
       <ToggleSwitch Grid.Row="7" Grid.Column="1" Name="Rumble" IsChecked="{Binding Rumble}" OnContent="" OffContent=""
                     HorizontalAlignment="Left" AutomationProperties.Name="Rumble" />
+      <!-- the launch file's "showInputs": a controller over the picture, the inputs of the racer in view -->
+      <TextBlock Grid.Row="8" Classes="label" Text="Show inputs" />
+      <ToggleSwitch Grid.Row="8" Grid.Column="1" Name="ShowInputs" IsChecked="{Binding ShowInputs}" OnContent="" OffContent=""
+                    HorizontalAlignment="Left" AutomationProperties.Name="Show inputs" />
     </Grid>
 
     <!-- Online: the input delay first (what players change most), the server, the account -->
