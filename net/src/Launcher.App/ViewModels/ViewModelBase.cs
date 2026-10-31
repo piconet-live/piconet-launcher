@@ -15,5 +15,13 @@ public abstract class ViewModelBase : ObservableObject
     /// without a window for each test, and a page of a test that is over, still told of its state's changes, put its
     /// work on the next test's thread, where it touched its own controls from the wrong thread ("a different thread
     /// owns it").</summary>
-    protected void OnUi(Action action) => Dispatcher.FromThread(_ui)?.Post(action);
+    protected void OnUi(Action action) => Dispatcher.FromThread(_ui)?.Post(Launcher.Core.StallWatch.On ? Named(action) : action);
+
+    /// <summary>The job says what it is, for the stall watch's lines.</summary>
+    private static Action Named(Action action) => () =>
+    {
+        Launcher.Core.StallWatch.Doing($"{action.Method.DeclaringType?.Name}.{action.Method.Name}");
+        action();
+        Launcher.Core.StallWatch.Doing("");
+    };
 }

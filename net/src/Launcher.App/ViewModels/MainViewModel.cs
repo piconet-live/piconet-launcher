@@ -265,6 +265,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         {
             LoadTrace.Note($"tab {tab} asked");
         }
+        StallWatch.Doing($"tab {tab}");
         Current = TabPage(tab);
     }
 
@@ -286,6 +287,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
 
     partial void OnCurrentChanged(ViewModelBase oldValue, ViewModelBase newValue)
     {
+        StallWatch.Doing($"page {newValue.GetType().Name}");
         // the browser asks for the custom lobbies' list while it shows (and ends a visit in no lobby when left)
         if (oldValue is CustomLobbiesViewModel && newValue is not CustomLobbiesViewModel)
         {

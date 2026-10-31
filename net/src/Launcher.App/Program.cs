@@ -293,6 +293,32 @@ internal static class Program
     /// itself: the window, the player's data folder, no test setting).</summary>
     public static CommandLine Line { get; private set; } = new();
 
+    /// <summary>The stall watch (<see cref="Launcher.Core.StallWatch"/>) on the window's thread, when the environment
+    /// asks for it: its lines in the data folder's file, one run after another. Called once the thread has its
+    /// dispatcher. Null: not asked for.</summary>
+    public static Launcher.Core.StallWatch? WatchStalls(string dataFolder)
+    {
+        if (Environment.GetEnvironmentVariable(Launcher.Core.StallWatch.EnvironmentName) is not { Length: > 0 } asked || asked == "0")
+        {
+            return null;
+        }
+        var file = Path.Combine(dataFolder, Launcher.Core.StallWatch.LogFileName);
+        void Write(string line)
+        {
+            try
+            {
+                Launcher.Core.LogFiles.Append(file, line + Environment.NewLine);
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+            {
+                // a check's log is not worth a load
+            }
+        }
+        Write($"==== a start, {BuildInfo.Text}, {DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss}");
+        var window = Avalonia.Threading.Dispatcher.UIThread;
+        return new Launcher.Core.StallWatch(job => window.Post(job, Avalonia.Threading.DispatcherPriority.Send), Write);
+    }
+
     /// <summary>The launcher's log file's name, in the data folder.</summary>
     public const string LogFileName = "launcher.log";
 

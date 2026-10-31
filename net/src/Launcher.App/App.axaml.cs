@@ -38,6 +38,7 @@ public sealed partial class App : Application
             // (nor in dev mode, on the stand-in service)
             var updates = ReferenceEquals(state.Debug, Launcher.Core.DebugSettings.Off) && !state.StandIn
                 ? new Updates(() => state.Racing, line => Program.Faults?.Note(line)) : null;
+            var stalls = Program.WatchStalls(state.DataFolder);
             var main = Pages(state, updates);
             var window = new MainWindow { DataContext = main };
             ForTests(window, main, state.Debug);
@@ -46,6 +47,7 @@ public sealed partial class App : Application
             Relaunch.Close = window.Close;
             desktop.ShutdownRequested += (_, _) =>
             {
+                stalls?.Dispose();
                 updates?.Dispose();
                 main.Dispose();
                 state.Shutdown();
