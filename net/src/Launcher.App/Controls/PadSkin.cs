@@ -66,7 +66,7 @@ public static class PadSkin
     }
 
     /// <summary>A clamped trigger into the skin's 0 to 1 (<c>core.translateTriggers</c>).</summary>
-    public static float Trigger(int clamped) => Math.Min(1, clamped / 125f);
+    public static float Trigger(int clamped) => Math.Min(1, clamped / 150f);
 
     /// <summary>The stick's cell, leaning away the further it is pushed: top left, top right, bottom right, bottom
     /// left, in the skin's units.</summary>
