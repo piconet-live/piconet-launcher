@@ -102,7 +102,7 @@
                AutomationProperties.Name="{Binding Label}" />
     </DataTemplate>
     <DataTemplate DataType="vm:StepperRule">
-      <c:Stepper Value="{Binding Value}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Step="{Binding Step}" Typed="True"
+      <c:Stepper Value="{Binding Value}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Step="{Binding Step}"
                  AutomationProperties.Name="{Binding Label}" />
     </DataTemplate>
     <!-- the stepper at the row's right edge, over the switches of the rows under it, so that the pad's down goes
@@ -111,7 +111,7 @@
       <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
         <ToggleSwitch IsChecked="{Binding Unlimited}" OnContent="" OffContent="" AutomationProperties.Name="Unlimited" />
         <TextBlock Classes="dim" Text="Unlimited" VerticalAlignment="Center" />
-        <c:Stepper Value="{Binding Value}" Minimum="1" Maximum="{Binding Maximum}" Typed="True"
+        <c:Stepper Value="{Binding Value}" Minimum="1" Maximum="{Binding Maximum}"
                    IsVisible="{Binding Counted}" AutomationProperties.Name="{Binding Label}" />
       </StackPanel>
     </DataTemplate>
@@ -121,8 +121,7 @@
       <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
         <ToggleSwitch IsChecked="{Binding On}" OnContent="" OffContent="" AutomationProperties.Name="{Binding Label}" />
         <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" IsEnabled="{Binding On}">
-          <c:Stepper Value="{Binding Value}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Step="{Binding Step}"
-                     Typed="True" AutomationProperties.Name="Delay" />
+          <c:Stepper Value="{Binding Value}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Step="{Binding Step}" AutomationProperties.Name="Delay" />
           <TextBlock Classes="dim" Text="ms" VerticalAlignment="Center" />
         </StackPanel>
       </StackPanel>
@@ -147,10 +146,10 @@
     </DataTemplate>
     <DataTemplate DataType="vm:RangeRule">
       <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-        <c:Stepper Value="{Binding Low}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Typed="True"
+        <c:Stepper Value="{Binding Low}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}"
                    AutomationProperties.Name="Lowest" />
         <TextBlock Classes="dim" Text="to" VerticalAlignment="Center" Margin="2,0" />
-        <c:Stepper Value="{Binding High}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Typed="True"
+        <c:Stepper Value="{Binding High}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}"
                    AutomationProperties.Name="Highest" />
       </StackPanel>
     </DataTemplate>

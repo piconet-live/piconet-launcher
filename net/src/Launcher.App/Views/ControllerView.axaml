@@ -54,7 +54,7 @@
         <TextBlock Grid.Row="1" Grid.Column="1" Classes="note" IsVisible="{Binding OtherKind}" TextWrapping="Wrap"
                    Text="Other device" />
 
-        <!-- a controller: its device, its layout, the sticks' dead zones -->
+        <!-- a controller: its device, the sticks' dead zones -->
         <TextBlock Grid.Row="2" Classes="label" Text="Device" IsVisible="{Binding IsController}" />
         <ComboBox Grid.Row="2" Grid.Column="1" Classes="field" Classes.missing="{Binding DeviceMissing}"
                   ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}" PlaceholderText="Choose a controller"
@@ -63,13 +63,6 @@
           <Path Classes="warnmark" />
           <TextBlock Grid.Column="1" Text="Not plugged in" />
         </Grid>
-        <TextBlock Grid.Row="4" Classes="label top" Text="Layout" IsVisible="{Binding IsController}" />
-        <StackPanel Grid.Row="4" Grid.Column="1" IsVisible="{Binding IsController}">
-          <Button Classes="secondary" Content="Use the standard layout" Command="{Binding UseStandardLayoutCommand}"
-                  IsEnabled="{Binding HasStandardLayout}" HorizontalAlignment="Left"
-                  AutomationProperties.Name="Use the standard layout" />
-          <TextBlock Classes="faint" Text="{Binding LayoutNote}" Margin="0,4,0,0" />
-        </StackPanel>
         <TextBlock Grid.Row="5" Classes="label" Text="Dead zone" IsVisible="{Binding IsController}" />
         <Grid Grid.Row="5" Grid.Column="1" ColumnDefinitions="56,Auto,8,Auto" RowDefinitions="Auto,4,Auto" IsVisible="{Binding IsController}">
           <TextBlock Classes="dim" Text="Stick" VerticalAlignment="Center" />
@@ -137,6 +130,10 @@
           <ItemsControl ItemsSource="{Binding RightRows}" ItemTemplate="{StaticResource Row}" />
         </StackPanel>
       </Grid>
+      <!-- back to the device's standard mapping; a device with none has nothing to go back to -->
+      <Button Classes="secondary" Content="Reset" Command="{Binding ResetLayoutCommand}" Margin="0,10,0,0"
+              IsVisible="{Binding HasStandardLayout}" IsEnabled="{Binding CanResetLayout}" HorizontalAlignment="Left"
+              AutomationProperties.Name="Reset the button mappings" />
     </StackPanel>
 
     <!-- the test: what the game reads from this port now -->

@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Launcher.App.Controls"
              xmlns:vm="using:Launcher.App.ViewModels"
              xmlns:app="using:Launcher.App"
              x:Class="Launcher.App.Views.SettingsView"
@@ -52,7 +53,7 @@
       <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal" Spacing="12">
         <Slider Name="GameVolume" Classes="bar" Width="220" Minimum="0" Maximum="100" Value="{Binding GameVolume}" TickFrequency="5"
                 IsSnapToTickEnabled="True" VerticalAlignment="Center" AutomationProperties.Name="Game volume" />
-        <TextBlock Name="GameVolumeNumber" Classes="figure" Text="{Binding GameVolume}" MinWidth="30" VerticalAlignment="Center" />
+        <c:NumberBox Name="GameVolumeNumber" Value="{Binding GameVolume}" AutomationProperties.Name="Game volume number" />
       </StackPanel>
       <TextBlock Grid.Row="6" Classes="label" Text="Other racers' sounds" />
       <ListBox Grid.Row="6" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.OtherSoundsChoices}"
@@ -143,7 +144,8 @@
         <Slider Name="SoundVolume" Classes="bar" Width="220" Minimum="0" Maximum="100" Value="{Binding SoundVolume}" TickFrequency="5"
                 IsSnapToTickEnabled="True" IsEnabled="{Binding !SoundMuted}" VerticalAlignment="Center"
                 AutomationProperties.Name="Launcher sounds volume" />
-        <TextBlock Classes="figure" Text="{Binding SoundVolume}" MinWidth="30" VerticalAlignment="Center" />
+        <c:NumberBox Name="SoundVolumeNumber" Value="{Binding SoundVolume}" IsEnabled="{Binding !SoundMuted}"
+                     AutomationProperties.Name="Launcher sounds volume number" />
         <CheckBox Name="SoundMuted" Classes="box" Content="Mute" IsChecked="{Binding SoundMuted}" />
       </StackPanel>
       <!-- the game's cursor and cancel for the pad's and the keyboard's moves; never the mouse's (off by default) -->
@@ -161,8 +163,11 @@
                 Maximum="{x:Static vm:SettingsViewModel.MostScale}" Value="{Binding PendingScale}"
                 TickFrequency="{x:Static vm:SettingsViewModel.ScaleStep}" IsSnapToTickEnabled="True"
                 VerticalAlignment="Center" AutomationProperties.Name="Interface scale" />
-        <TextBlock Name="InterfaceScaleNumber" Classes="figure" Text="{Binding PendingScaleText}" MinWidth="44"
-                   VerticalAlignment="Center" />
+        <StackPanel Orientation="Horizontal" Spacing="4">
+          <c:NumberBox Name="InterfaceScaleNumber" Value="{Binding PendingScale}" Minimum="{x:Static vm:SettingsViewModel.LeastScaleWhole}"
+                       Maximum="{x:Static vm:SettingsViewModel.MostScaleWhole}" AutomationProperties.Name="Interface scale number" />
+          <TextBlock Classes="dim" Text="%" VerticalAlignment="Center" />
+        </StackPanel>
         <Button Name="ApplyScale" Classes="secondary" Content="Apply" Command="{Binding ApplyScaleCommand}"
                 IsEnabled="{Binding CanApplyScale}" AutomationProperties.Name="Apply the interface scale" />
       </StackPanel>

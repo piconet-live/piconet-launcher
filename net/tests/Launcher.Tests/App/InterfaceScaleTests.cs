@@ -132,8 +132,8 @@ public sealed class InterfaceScaleTests : IDisposable
         Dispatcher.UIThread.RunJobs();
         var slider = Named<Slider>(window, "InterfaceScale");
         var apply = Named<Button>(window, "ApplyScale");
-        var number = Named<TextBlock>(window, "InterfaceScaleNumber");
-        Assert.Equal((100, "100%", false), ((int)slider.Value, number.Text, apply.IsEffectivelyEnabled));
+        var number = Named<Launcher.App.Controls.NumberBox>(window, "InterfaceScaleNumber");
+        Assert.Equal((100, 100, false), ((int)slider.Value, number.Value, apply.IsEffectivelyEnabled));
         Assert.Equal(1, Drawn(slider, window), 3);
 
         // dragged towards the high end with the mouse: the number follows, nothing else changes
@@ -148,7 +148,7 @@ public sealed class InterfaceScaleTests : IDisposable
         var pending = (int)slider.Value;
         Assert.InRange(pending, 160, 210);
         Assert.Equal(0, pending % 10);
-        Assert.Equal($"{pending}%", number.Text);
+        Assert.Equal(pending, number.Value);
         Assert.Equal((100, 1.0), (Now(main).InterfaceScale, main.Scale));
         Assert.Equal(1, Drawn(slider, window), 3);
         Assert.True(apply.IsEffectivelyEnabled);
@@ -184,7 +184,7 @@ public sealed class InterfaceScaleTests : IDisposable
         Press(window, Key.OemPlus, PhysicalKey.Equal, RawInputModifiers.Control);
         Assert.Equal((110, 1.1), (Now(main).InterfaceScale, main.Scale));
         Assert.Equal(110, AppState.Load(Data).Settings.InterfaceScale);
-        Assert.Equal("110%", Named<TextBlock>(window, "InterfaceScaleNumber").Text);    // the slider shows it
+        Assert.Equal(110, Named<Launcher.App.Controls.NumberBox>(window, "InterfaceScaleNumber").Value);    // the slider shows it
         Assert.Equal("", box.Text ?? "");                                                // and nothing was typed
         Press(window, Key.Add, PhysicalKey.NumPadAdd, RawInputModifiers.Control);
         Assert.Equal(120, Now(main).InterfaceScale);

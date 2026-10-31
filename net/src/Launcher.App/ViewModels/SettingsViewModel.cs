@@ -78,10 +78,8 @@ public sealed partial class SettingsViewModel : ViewModelBase
     /// <summary>The interface scale on the slider, in percent: nothing changes until Apply (a scale applied while
     /// the slider is dragged would move the slider under the pointer).</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(PendingScaleText), nameof(CanApplyScale))]
+    [NotifyPropertyChangedFor(nameof(CanApplyScale))]
     public partial int PendingScale { get; set; }
-
-    public string PendingScaleText => $"{PendingScale}%";
 
     public bool CanApplyScale => Applied(PendingScale) != _scale;
 
@@ -99,6 +97,10 @@ public sealed partial class SettingsViewModel : ViewModelBase
     private static int Applied(int value) =>
         Math.Clamp((int)Math.Round(value / (double)LauncherSettings.InterfaceScaleStep) * LauncherSettings.InterfaceScaleStep,
             LauncherSettings.LeastInterfaceScale, LauncherSettings.MostInterfaceScale);
+
+    public static int LeastScaleWhole => LauncherSettings.LeastInterfaceScale;
+
+    public static int MostScaleWhole => LauncherSettings.MostInterfaceScale;
 
     public static double LeastScale => LauncherSettings.LeastInterfaceScale;
 

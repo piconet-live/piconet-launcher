@@ -76,9 +76,9 @@ public sealed partial class ControllerViewModel : ViewModelBase
     [ObservableProperty]
     public partial bool HasStandardLayout { get; set; }
 
-    /// <summary>What "Use the standard layout" gives for the device chosen.</summary>
+    /// <summary>The port's mapping differs from its device's standard one.</summary>
     [ObservableProperty]
-    public partial string LayoutNote { get; set; } = "";
+    public partial bool CanResetLayout { get; set; }
 
     [ObservableProperty]
     public partial int StickDeadZone { get; set; }
@@ -208,7 +208,7 @@ public sealed partial class ControllerViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void UseStandardLayout()
+    private void ResetLayout()
     {
         if (SelectedDevice?.Device is { } device && StandardLayouts.For(device) is not null)
         {
@@ -352,7 +352,7 @@ public sealed partial class ControllerViewModel : ViewModelBase
         DeviceMissing = port.Kind == PortKind.Controller && port.Device.Length > 0 && !plugged && _helper is not null;
         var device = SelectedDevice?.Device;
         HasStandardLayout = device is not null && StandardLayouts.For(device) is not null;
-        LayoutNote = ControllerWords.Layout(port, device, GamepadProfile());
+        CanResetLayout = HasStandardLayout && !StandardLayouts.IsStandard(port, device!, GamepadProfile());
         CanRumble = port.Kind == PortKind.Adapter
             || (port.Kind == PortKind.Controller && device is { Rumble: true } && port.Map.ContainsKey(PadControls.Rumble));
     }

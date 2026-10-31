@@ -119,14 +119,12 @@ public sealed partial class GarageViewModel : ViewModelBase
     public partial IReadOnlyList<StockSwatch> Swatches { get; set; } = [];
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(SettingText), nameof(ShownSetting))]
+    [NotifyPropertyChangedFor(nameof(ShownSetting))]
     public partial int Setting { get; set; } = 100;
 
     public string MachineName => Machines.Names[Math.Clamp(MachineIndex, 0, Machines.Names.Count - 1)];
 
     public bool ColorValid => Rgb.Parse(ColorHex) is not null;
-
-    public string SettingText => ShownSetting.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
     // the paint this machine had or was given, kept while a stock colour is chosen so it can be picked again
     private Rgb? _paint;
