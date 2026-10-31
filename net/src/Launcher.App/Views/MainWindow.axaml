@@ -209,14 +209,14 @@
         </ScrollViewer>
 
         <!-- The bell's list, over the page under the bell. -->
-        <Panel Grid.Row="1" IsVisible="{Binding Notices.ListOpen}" HorizontalAlignment="Right" c:PadNav.Scope="True"
+        <Panel Grid.Row="1" c:Motion.Reveal="True" IsVisible="{Binding Notices.ListOpen}" HorizontalAlignment="Right" c:PadNav.Scope="True"
                VerticalAlignment="Top" Width="380" MaxHeight="440" Margin="0,4,16,0">
           <v:NoticesList Name="Notices" DataContext="{Binding Notices}" />
         </Panel>
       </Grid>
 
       <!-- The question before leaving a lobby for the game, over the page. -->
-      <Panel Grid.ColumnSpan="2" IsVisible="{Binding Control.Asking}" c:PadNav.Scope="True">
+      <Panel Grid.ColumnSpan="2" c:Motion.Reveal="True" IsVisible="{Binding Control.Asking}" c:PadNav.Scope="True">
         <Panel.Styles>
           <Style Selector="Button.leave">
             <Setter Property="Background" Value="{StaticResource HoverBrush}" />

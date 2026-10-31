@@ -134,7 +134,7 @@
     </Border>
     <!-- the replays in their groups by date (a group's heading, then its rows); only the rows on the screen are drawn,
          so thousands of replays scroll as a few do -->
-    <ItemsControl Name="ReplayList" ItemsSource="{Binding Rows}">
+    <ItemsControl Name="ReplayList" ItemsSource="{Binding Rows}" c:Motion.Stagger="True">
       <ItemsControl.ItemsPanel>
         <ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate>
       </ItemsControl.ItemsPanel>

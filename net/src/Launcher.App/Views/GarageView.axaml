@@ -20,7 +20,7 @@
       <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,0,14,0">
         <TextBlock Classes="colhead" Text="{Binding Label}"
                    IsVisible="{Binding Label, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-        <TextBlock Classes="figure" Text="{Binding Value}" VerticalAlignment="Center" />
+        <c:RollingText Classes="figure" Text="{Binding Value}" VerticalAlignment="Center" />
       </StackPanel>
     </DataTemplate>
   </UserControl.Resources>
@@ -127,7 +127,7 @@
     <Panel Name="RosterPlace" IsVisible="{Binding Selecting}">
       <!-- the tiles, then the shelf's word under them: "No match" under the Custom shelf's New machine, never behind it -->
       <StackPanel VerticalAlignment="Top">
-        <ItemsControl Name="Roster" ItemsSource="{Binding Roster}" HorizontalAlignment="Left" VerticalAlignment="Top">
+        <ItemsControl Name="Roster" c:Motion.Stagger="True" ItemsSource="{Binding Roster}" HorizontalAlignment="Left" VerticalAlignment="Top">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
               <c:RosterTiles Columns="{Binding #Root.RosterColumns}" TileWidth="{Binding #Root.TileWidth}" TileHeight="{Binding #Root.TileHeight}" Gap="8" />
@@ -366,7 +366,7 @@
                           <!-- the value; a green dot before it when the stat pack changes it -->
                           <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
                             <Ellipse Classes="changed" IsVisible="{Binding Changed}" />
-                            <TextBlock Classes="figure" FontSize="{StaticResource Size14}" Text="{Binding Value}"
+                            <c:RollingText Classes="figure" FontSize="{StaticResource Size14}" Text="{Binding Value}"
                                        MinWidth="52" TextAlignment="Right" VerticalAlignment="Center" />
                           </StackPanel>
                           <!-- the stock value beside it, only where the pack changes it -->
@@ -392,7 +392,7 @@
                       <TextBlock Classes="dim" Text="{Binding Label}" VerticalAlignment="Center" />
                       <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
                         <Ellipse Classes="changed" IsVisible="{Binding Changed}" />
-                        <TextBlock Classes="figure" FontSize="{StaticResource Size14}" Text="{Binding Value}" VerticalAlignment="Center" />
+                        <c:RollingText Classes="figure" FontSize="{StaticResource Size14}" Text="{Binding Value}" VerticalAlignment="Center" />
                       </StackPanel>
                       <TextBlock Grid.Column="2" Classes="faint" FontSize="{StaticResource Size12}" Text="{Binding Stock}" Width="62"
                                  TextAlignment="Right" VerticalAlignment="Center"
@@ -443,8 +443,9 @@
             <!-- the phase's one primary: USE THIS MACHINE, the machine raced from now on, and SELECT again (a custom machine
                  changed is saved first). In a lobby's machine stage READY on the lobby's line is the primary: none here. -->
             <Panel Grid.Row="4" Height="48" Margin="0,8,0,0">
-              <Button Name="Use" Classes="go" Height="48" Content="USE THIS MACHINE" Command="{Binding UseMachineCommand}"
+              <Button Name="Use" Classes="go" Height="48" Content="USE THIS MACHINE" Command="{Binding UseMachineCommand}" Click="OnUseFlash"
                       IsVisible="{Binding UseShown}" c:PadNav.Main="True" AutomationProperties.Name="Use this machine" />
+              <c:Plate Name="UseFlash" Shape="Lean" Background="{StaticResource TextBrush}" Opacity="0" IsHitTestVisible="False" />
             </Panel>
           </Grid>
         </Border>
@@ -455,7 +456,7 @@
   <!-- Sort & filter, floating over SELECT's roster (SortFilterPanel); a press outside it closes it -->
   <Panel Name="SortFilterLayer" IsVisible="{Binding SortFilterOpen}">
     <Border Name="SortFilterDismiss" Background="Transparent" />
-    <v:SortFilterPanel Name="SortFilterPanel" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,80,0,0" c:PadNav.Scope="True" />
+    <v:SortFilterPanel Name="SortFilterPanel" c:Motion.Reveal="True" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,80,0,0" c:PadNav.Scope="True" />
   </Panel>
   </Panel>
 </UserControl>
