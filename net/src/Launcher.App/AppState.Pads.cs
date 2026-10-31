@@ -54,16 +54,22 @@ public sealed partial class AppState
     }
 
     /// <summary>The Controller page starts its helper (true) or has ended it (false). Before the page's starts, the
-    /// reader's has gone: the two never hold the GameCube adapter at once.</summary>
+    /// reader's goes: the page waits for <see cref="PadsEnding"/>, off the window's thread, so that the two never
+    /// hold the GameCube adapter at once.</summary>
     public void PageHelperRuns(bool runs)
     {
         PageHelper = runs;
         PadsChanged();
-        if (runs && PadsMade is { } pads)
-        {
-            pads.Ending.Wait(TimeSpan.FromSeconds(3));
-        }
     }
+
+    /// <summary>Done when the reader's helper has gone.</summary>
+    public Task PadsEnding => PadsMade?.Ending ?? Task.CompletedTask;
+
+    /// <summary>The Controller page's helper, started off the window's thread; none while a game starts or runs
+    /// (<see cref="ControllerHelper.Held"/>) or while the check before a start asks: the two would contend for a
+    /// device.</summary>
+    public ControllerHelper? StartPageHelper() =>
+        ControllerHelper.Start(GamePaths, () => !CheckingController && !_closed.Task.IsCompleted);
 
     /// <summary>The conditions for reading the pads, as they stand now, given to the reader.</summary>
     public void PadsChanged() =>

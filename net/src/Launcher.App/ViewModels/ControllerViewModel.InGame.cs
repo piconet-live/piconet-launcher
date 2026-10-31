@@ -69,15 +69,6 @@ public sealed partial class ControllerViewModel
         ShowSetUpInGame();
     }
 
-    /// <summary>The page shows: whether the game could be started at all (a disc image, the game's files).</summary>
-    private void LookForTheGame()
-    {
-        _startProblem = "";
-        _filesProblem = RecompLaunch.Problem(_state.GamePaths);
-        _cannotStart = DiscCheck.Check(_state.Settings.DiscPath) != DiscStatus.Ok ? "No disc image" : _filesProblem;
-        ShowSetUpInGame();
-    }
-
     /// <summary>Why the game cannot be started on its controller options at this moment, from the launcher's state
     /// as it stands; null: it can.</summary>
     private string? WhyNot()

@@ -8,8 +8,17 @@ public sealed partial class AppState
     private Task<string?>? _controllerCheck;
     private readonly TaskCompletionSource _closed = new(TaskCreationOptions.RunContinuationsAsynchronously);   // set by Shutdown
 
-    /// <summary>Where the game is, as the settings and the launcher's places have it.</summary>
+    /// <summary>Where the game is, as the settings and the launcher's places have it. **Looks at the prepared game's
+    /// files (thousands in a player copy): never on the window's thread.** The user folder alone:
+    /// <see cref="ControllerFolder"/>.</summary>
     public RecompPaths GamePaths => PathsOf(Settings.Recomp);
+
+    /// <summary>The game's user folder, where the controller files are; from the settings alone.</summary>
+    public string ControllerFolder => RecompLaunch.UserFolderOf(Settings.Recomp, dataFolder);
+
+    /// <summary>The Controller page's writes of the controller files, in turn; the check before a start reads them
+    /// after these.</summary>
+    public Task ControllerWrites { get; set; } = Task.CompletedTask;
 
     /// <summary>What the player is told when a start could not write the game's volume into the game's settings.</summary>
     public const string VolumeNotSetText = "Volume not set";
@@ -29,15 +38,26 @@ public sealed partial class AppState
         {
             return running;
         }
-        var paths = GamePaths;
-        if (Racing || _closed.Task.IsCompleted || RecompLaunch.Problem(paths) is not null)
+        if (Racing || _closed.Task.IsCompleted)
         {
             return Task.FromResult<string?>(null);
         }
-        // The Controller page's helper may hold the adapter: it goes first, and the page runs none while the check
-        // asks (CheckingController) nor while a game starts or runs; it hears when it may again (Changed).
-        ControllerHelper.StopAll();
-        var check = _controllerCheck = CheckUntilClosedAsync(paths);
+        // Everything that touches the disk or waits for a program is off the window's thread; CheckingController
+        // is true from here on, so no helper of the page starts from now until the check is over.
+        var writes = ControllerWrites;
+        var check = _controllerCheck = Task.Run<string?>(async () =>
+        {
+            await writes.ConfigureAwait(false);
+            var paths = GamePaths;
+            if (RecompLaunch.Problem(paths) is not null)
+            {
+                return null;
+            }
+            // The Controller page's helper may hold the adapter: it goes first, and the page runs none while the
+            // check asks nor while a game starts or runs; it hears when it may again (Changed).
+            ControllerHelper.StopAll();
+            return await CheckUntilClosedAsync(paths).ConfigureAwait(false);
+        });
         Changed?.Invoke();
         _ = AfterCheckAsync(check);
         return check;

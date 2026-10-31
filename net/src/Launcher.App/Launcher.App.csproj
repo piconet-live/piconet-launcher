@@ -6,6 +6,8 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <!-- a published launcher runs compiled code from its first moment: a page's first open is not spent compiling -->
+    <PublishReadyToRun Condition="'$(RuntimeIdentifier)' != ''">true</PublishReadyToRun>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- The app's icon (Assets/Icon): the program file's, in Explorer and on the taskbar. The window's is the same
          file, named in Views/MainWindow.axaml. -->

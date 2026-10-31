@@ -73,9 +73,13 @@ public static partial class RecompLaunch
             settings?.Runner ?? Path.Combine(beside, RunnerFileName),
             settings?.Module ?? Path.Combine(beside, ModuleFileName),
             game ?? (playerCopy ? DiscPrep.GameFolder(dataFolder, pins) : Path.Combine(beside, CarriedGame)),
-            settings?.UserFolder ?? Path.Combine(dataFolder, "recomp-user"),
+            UserFolderOf(settings, dataFolder),
             bundle, playerCopy, NoGame: playerCopy && game is null);
     }
+
+    /// <summary>The game's user folder for these settings (nothing is looked at on disk).</summary>
+    public static string UserFolderOf(RecompSettings? settings, string dataFolder) =>
+        settings?.UserFolder ?? Path.Combine(dataFolder, "recomp-user");
 
     /// <summary>The game's files beside the game's program, in a launcher that is no player copy.</summary>
     public const string CarriedGame = "game";

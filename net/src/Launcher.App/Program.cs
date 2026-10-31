@@ -56,6 +56,10 @@ internal static class Program
         Line = line;
         Faults = InstallLastResort(AppState.DataFolderOf(line.DataFolder));
         Gpu.GpuDebug.Use(line.Debug.GpuLog, line.Debug.GpuTurn);
+        if (Environment.GetEnvironmentVariable(Launcher.Core.StallWatch.EnvironmentName) == "2")
+        {
+            Launcher.Core.StallWatch.AskToolkit();
+        }
         if (line.Debug.LoadTrace)
         {
             UseLoadTrace(Path.Combine(AppState.DataFolderOf(line.DataFolder), "load-trace.log"));
@@ -293,12 +297,15 @@ internal static class Program
     /// itself: the window, the player's data folder, no test setting).</summary>
     public static CommandLine Line { get; private set; } = new();
 
+    private static bool StallsAsked =>
+        Environment.GetEnvironmentVariable(Launcher.Core.StallWatch.EnvironmentName) is { Length: > 0 } asked && asked != "0";
+
     /// <summary>The stall watch (<see cref="Launcher.Core.StallWatch"/>) on the window's thread, when the environment
     /// asks for it: its lines in the data folder's file, one run after another. Called once the thread has its
     /// dispatcher. Null: not asked for.</summary>
     public static Launcher.Core.StallWatch? WatchStalls(string dataFolder)
     {
-        if (Environment.GetEnvironmentVariable(Launcher.Core.StallWatch.EnvironmentName) is not { Length: > 0 } asked || asked == "0")
+        if (!StallsAsked)
         {
             return null;
         }

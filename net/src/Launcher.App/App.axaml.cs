@@ -40,6 +40,7 @@ public sealed partial class App : Application
                 ? new Updates(() => state.Racing, line => Program.Faults?.Note(line)) : null;
             var stalls = Program.WatchStalls(state.DataFolder);
             var main = Pages(state, updates);
+            new ViewLocator().Prebuild(main.AllPages);
             var window = new MainWindow { DataContext = main };
             ForTests(window, main, state.Debug);
             desktop.MainWindow = window;

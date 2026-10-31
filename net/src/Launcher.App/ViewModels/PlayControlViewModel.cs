@@ -127,7 +127,7 @@ public sealed partial class PlayControlViewModel : ViewModelBase
     public partial string StayText { get; set; } = "Stay in the lobby";
 
     /// <summary>(In dev mode RACE needs no disc: the stand-in starts no race, <see cref="AppState.StandIn"/>.)</summary>
-    private bool HasDisc => _state.StandIn || DiscCheck.Check(_state.Settings.DiscPath) == DiscStatus.Ok;
+    private bool HasDisc => _state.StandIn || _state.HasDisc;
 
     /// <summary>RACE cannot be pressed: the game could not be started (<see cref="AppState.RaceProblem"/>, said
     /// under the button).</summary>

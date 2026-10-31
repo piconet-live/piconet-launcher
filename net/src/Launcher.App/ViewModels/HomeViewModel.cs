@@ -35,6 +35,7 @@ public sealed partial class HomeViewModel : ViewModelBase
     private QuickPlaySession? _session;
     private long _news = Environment.TickCount64;
     private string _replaysOf = "";
+    private bool _lookingForRecent;
     private string _askedFor = "";
 
     public HomeViewModel(AppState state, ServerStatusFeed feed, LobbyViewModel lobby, Action showLobby, Action showReplays,
@@ -198,7 +199,7 @@ public sealed partial class HomeViewModel : ViewModelBase
         var session = _state.InQuickPlay && _state.Session is { Custom: false } ? _state.Session : null;
         var status = _feed.Latest;
         ShowMotd(status?.Motd);
-        NoDisc = DiscCheck.Check(_state.Settings.DiscPath) != DiscStatus.Ok;
+        NoDisc = !_state.HasDisc;
         RulesLine = session?.Rules is { } rules ? Rules(rules) : "";
         Stale = false;
         if (session is null)

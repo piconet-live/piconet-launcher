@@ -91,7 +91,9 @@ public sealed class ControllerHelper : IDisposable
 
     /// <summary>Starts the helper on the game's user folder; null when the runner is not there or did not start, and
     /// while a game of this launcher is starting or running (<see cref="Held"/>).</summary>
-    public static ControllerHelper? Start(RecompPaths paths)
+    /// <param name="mayStart">Asked at the moment of the start (a start made off the window's thread can come after
+    /// the reason for it went).</param>
+    public static ControllerHelper? Start(RecompPaths paths, Func<bool>? mayStart = null)
     {
         ArgumentNullException.ThrowIfNull(paths);
         var info = RecompLaunch.StartInfo(paths, Arguments(paths.UserFolder));
@@ -101,7 +103,7 @@ public sealed class ControllerHelper : IDisposable
         info.StandardInputEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);   // no mark before the first line
         lock (Starting)
         {
-            if (Held)
+            if (Held || mayStart?.Invoke() == false)
             {
                 return null;
             }

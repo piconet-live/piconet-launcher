@@ -74,10 +74,21 @@ public sealed partial class ReplayItem : ObservableObject
 
     public IReadOnlyList<ReplayResultLine> StatsRight => [.. Results().Skip(StatsColumn)];
 
-    private IReadOnlyList<ReplayResultLine> Results()
+    private IReadOnlyList<ReplayResultLine> Results() => _info is null ? [] : ReplayWords.Results(_info);
+
+    /// <summary>The results open: the file is read off the window's thread the first time, and they fill in.</summary>
+    partial void OnShowingStatsChanged(bool value)
     {
-        _info ??= ReplayFile.Read(Path);
-        return _info is null ? [] : ReplayWords.Results(_info);
+        if (value && _info is null)
+        {
+            var path = Path;
+            _ = Task.Run(() => ReplayFile.Read(path)).ContinueWith(read => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                _info = read.IsCompletedSuccessfully ? read.Result : null;
+                OnPropertyChanged(nameof(StatsLeft));
+                OnPropertyChanged(nameof(StatsRight));
+            }), TaskScheduler.Default);
+        }
     }
 
     /// <summary>The row's results are open under it.</summary>

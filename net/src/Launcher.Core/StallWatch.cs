@@ -15,7 +15,8 @@ namespace Launcher.Core;
 /// </summary>
 public sealed class StallWatch : IDisposable
 {
-    /// <summary>Set to anything but 0: the launcher writes <see cref="LogFileName"/> in its data folder.</summary>
+    /// <summary>Set to 1: the launcher writes <see cref="LogFileName"/> in its data folder. Set to 2: the lines also
+    /// name the toolkit's work (<see cref="AskToolkit"/>).</summary>
     public const string EnvironmentName = "PICONET_STALL_LOG";
 
     public const string LogFileName = "ui-stalls.log";
@@ -62,6 +63,10 @@ public sealed class StallWatch : IDisposable
         _thread = new Thread(Watch) { IsBackground = true, Name = "stall watch", Priority = ThreadPriority.AboveNormal };
         _thread.Start();
     }
+
+    /// <summary>Before the toolkit starts: its activities are on (they name layouts and handlers in the lines, and
+    /// make layouts two to four times slower while they do: for finding what a stall is, not how long).</summary>
+    public static void AskToolkit() => AppContext.SetSwitch("Avalonia.Diagnostics.Diagnostic.IsEnabled", true);
 
     /// <summary>Whether a watch runs (what is said to <see cref="Doing"/> costs nothing otherwise).</summary>
     public static bool On => _running is not null;

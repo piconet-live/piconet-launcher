@@ -37,3 +37,53 @@ public static class DiscCheck
     /// <see cref="Check"/> is <see cref="DiscStatus.Ok"/>.</summary>
     public static string? Problem(string? path) => DiscPrep.Refusal(path)?.Message;
 }
+
+/// <summary>The disc check's answers for the pages, which ask at every refresh on the window's thread: an answer
+/// known is given at once and looked at again off that thread when it is some seconds old (<paramref name="changed"/>
+/// is called, on another thread, when it came out different). A path never asked about is read there and then, once:
+/// the launcher asks for its own disc before its window shows.</summary>
+public sealed class DiscAnswers(Action changed)
+{
+    private const long OldMs = 5000;
+
+    private readonly Lock _gate = new();
+    private readonly Dictionary<string, (DiscStatus Status, long At, bool Looking)> _answers = new(StringComparer.Ordinal);
+
+    public DiscStatus Known(string? path)
+    {
+        var key = path ?? "";
+        lock (_gate)
+        {
+            if (_answers.TryGetValue(key, out var answer))
+            {
+                if (!answer.Looking && Environment.TickCount64 - answer.At >= OldMs)
+                {
+                    _answers[key] = answer with { Looking = true };
+                    _ = Task.Run(() => LookAgain(key));
+                }
+                return answer.Status;
+            }
+        }
+        var status = DiscCheck.Check(path);
+        lock (_gate)
+        {
+            _answers[key] = (status, Environment.TickCount64, false);
+        }
+        return status;
+    }
+
+    private void LookAgain(string key)
+    {
+        var status = DiscCheck.Check(key);
+        bool different;
+        lock (_gate)
+        {
+            different = _answers[key].Status != status;
+            _answers[key] = (status, Environment.TickCount64, false);
+        }
+        if (different)
+        {
+            changed();
+        }
+    }
+}

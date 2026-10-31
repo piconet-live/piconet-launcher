@@ -29,7 +29,7 @@ public sealed partial class AppState
     /// to the AI.</summary>
     /// (In dev mode neither: the stand-in starts no race, <see cref="StandIn"/>.)
     public string? WhyNotJoin => Racing ? GameOpenText : Joining ? "" : StandIn ? null
-        : DiscCheck.Check(Settings.DiscPath) != DiscStatus.Ok ? NoDiscText : RaceProblem;
+        : !HasDisc ? NoDiscText : RaceProblem;
 
     public const string NoDiscText = "No disc image";
 

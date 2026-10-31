@@ -147,7 +147,6 @@ public sealed partial class SettingsViewModel : ViewModelBase
         [LauncherSettings.RefreshAsTheGame, LauncherSettings.Refresh120, LauncherSettings.Refresh240, LauncherSettings.RefreshAsTheDisplay];
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(DiscStatusText), nameof(DiscProblem))]
     public partial string DiscPath { get; set; }
 
     [ObservableProperty]
@@ -261,14 +260,34 @@ public sealed partial class SettingsViewModel : ViewModelBase
     public partial string FolderNotice { get; set; } = "";
 
     /// <summary>The disc image is not the game's (or there is none): the line under it is a notice.</summary>
-    public bool DiscProblem => DiscCheck.Check(DiscPath.Trim()) != DiscStatus.Ok;
+    [ObservableProperty]
+    public partial bool DiscProblem { get; set; }
 
-    public string DiscStatusText => DiscWords.Of(DiscPath);
+    [ObservableProperty]
+    public partial string DiscStatusText { get; set; } = "";
+
+    /// <summary>The line under the disc image: the file is looked at off the window's thread (a drive that sleeps, a
+    /// network path), and a path that was typed further meanwhile is not answered.</summary>
+    private void LookAtTheDisc()
+    {
+        var path = DiscPath;
+        _ = Task.Run(() => (Problem: DiscCheck.Check(path.Trim()) != DiscStatus.Ok, Words: DiscWords.Of(path))).ContinueWith(look => OnUi(() =>
+        {
+            if (path == DiscPath && look.IsCompletedSuccessfully)
+            {
+                (DiscProblem, DiscStatusText) = look.Result;
+            }
+        }), TaskScheduler.Default);
+    }
 
     /// <summary>What is typed is no server address: it is not saved, and the line under it says what one is.</summary>
     public bool ServerProblem => Server.Trim().Length > 0 && !SettingsCheck.IsServer(Server.Trim());
 
-    partial void OnDiscPathChanged(string value) => Save();
+    partial void OnDiscPathChanged(string value)
+    {
+        LookAtTheDisc();
+        Save();
+    }
 
     /// <summary>The box holds something that is not set yet (an address, or a blank that would mean no server):
     /// the row under it has the button that sets it.</summary>

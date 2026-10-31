@@ -21,7 +21,6 @@ public sealed partial class ControllerViewModel : ViewModelBase
     private bool _loading;
     private MapRow? _listening;
     private IReadOnlyDictionary<string, string>? _profile;
-    private bool _profileRead;
     private int _captureId;   // the helper's answer to a listening that was ended meanwhile is not this one's
 
     public ControllerViewModel(AppState state)
@@ -144,7 +143,7 @@ public sealed partial class ControllerViewModel : ViewModelBase
         set => _ports[PortIndex] = value;
     }
 
-    private string UserFolder => _state.GamePaths.UserFolder;
+    private string UserFolder => _state.ControllerFolder;
 
     partial void OnPortIndexChanged(int value)
     {
@@ -280,10 +279,9 @@ public sealed partial class ControllerViewModel : ViewModelBase
         Save();
     }
 
-    /// <summary>The settings as the files have them.</summary>
-    private void Load()
+    /// <summary>The settings as the files had them.</summary>
+    private void Took(ControllerFileSet read)
     {
-        var read = ControllerFiles.Read(UserFolder);
         for (var i = 0; i < _ports.Length; i++)
         {
             _ports[i] = read.Ports[i];
@@ -296,17 +294,23 @@ public sealed partial class ControllerViewModel : ViewModelBase
     private void Save()
     {
         CancelCapture();   // a listening for the device or the port as it was is over
-        try
+        var (folder, index, port) = (UserFolder, PortIndex, Port);
+        ShowPort();
+        // (the page shows the change at once; the helper reads the files when they are written. A write's failure
+        // is said when it is known.)
+        Written(() =>
         {
-            ControllerFiles.Write(UserFolder, PortIndex, Port);
+            ControllerFiles.Write(folder, index, port);
+            return true;
+        }, _ =>
+        {
             Notice = "";
-        }
-        catch (Exception e) when (ControllerFiles.Failed(e))
+            Reloaded();
+        }, e =>
         {
             Notice = $"Change not saved · {e.Message}";
-        }
-        ShowPort();
-        Reloaded();
+            Reloaded();
+        });
     }
 
     /// <summary>The page's controls set from the port showing.</summary>
@@ -357,15 +361,9 @@ public sealed partial class ControllerViewModel : ViewModelBase
             || (port.Kind == PortKind.Controller && device is { Rumble: true } && port.Map.ContainsKey(PadControls.Rumble));
     }
 
-    /// <summary>The runner's own gamepad profile, read once (null: not there; the launcher's copy of it is used).</summary>
-    private IReadOnlyDictionary<string, string>? GamepadProfile()
-    {
-        if (!_profileRead)
-        {
-            (_profile, _profileRead) = (ControllerFiles.GamepadProfile(_state.GamePaths.Runner), true);
-        }
-        return _profile;
-    }
+    /// <summary>The runner's own gamepad profile, as the page's look read it (null: not there, or not read yet; the
+    /// launcher's copy of it is used).</summary>
+    private IReadOnlyDictionary<string, string>? GamepadProfile() => _profile;
 
     // (no game program, which lists and tests the controllers, or a game running: the left column says so, once;
     // the test says nothing of it)

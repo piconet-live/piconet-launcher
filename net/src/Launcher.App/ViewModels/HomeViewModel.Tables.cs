@@ -63,29 +63,44 @@ public sealed partial class HomeViewModel
         }
     }
 
-    /// <summary>The last three races from the replay folder (read again only when the folder's files changed).</summary>
+    /// <summary>The last three races from the replay folder, looked at off the window's thread (the files are read
+    /// again only when the folder's files changed), one look at a time: what changes meanwhile is seen by the next.</summary>
     private void RefreshRecent()
     {
-        var folder = _state.Settings.ReplayFolder;
-        string stamp;
+        if (_lookingForRecent)
+        {
+            return;
+        }
+        _lookingForRecent = true;
+        var (folder, before) = (_state.Settings.ReplayFolder, _replaysOf);
+        _ = Task.Run(() =>
+        {
+            var stamp = RecentStamp(folder);
+            return (Stamp: stamp, All: stamp == before ? null : stamp.Length == 0 ? [] : ReplayFile.List(folder));
+        }).ContinueWith(look => OnUi(() =>
+        {
+            _lookingForRecent = false;
+            if (look.IsCompletedSuccessfully && look.Result.All is { } all)
+            {
+                _replaysOf = look.Result.Stamp;
+                Replace(Recent, [.. all.Take(3).Select(Row)]);
+                HasRecent = Recent.Count > 0;
+                AllReplays = all.Count == 1 ? "The 1 replay" : $"All {all.Count} replays";
+            }
+        }), TaskScheduler.Default);
+    }
+
+    private static string RecentStamp(string? folder)
+    {
         try
         {
-            stamp = folder is not null && Directory.Exists(folder)
+            return folder is not null && Directory.Exists(folder)
                 ? $"{folder}|{Directory.GetLastWriteTimeUtc(folder).Ticks}|{Directory.EnumerateFiles(folder).Count()}" : "";
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException)
         {
-            stamp = "";
+            return "";
         }
-        if (stamp == _replaysOf)
-        {
-            return;
-        }
-        _replaysOf = stamp;
-        var all = stamp.Length == 0 ? [] : ReplayFile.List(folder);
-        Replace(Recent, [.. all.Take(3).Select(Row)]);
-        HasRecent = Recent.Count > 0;
-        AllReplays = all.Count == 1 ? "The 1 replay" : $"All {all.Count} replays";
     }
 
     private static RecentRace Row(ReplayInfo info)

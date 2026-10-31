@@ -185,6 +185,7 @@ public static partial class GameSkin
             }
             // and the machines' stats (two files, tens of milliseconds): the garage shows and sorts by them
             _stats = Task.Run(() => Quietly(() => art.MachineStats()));
+            Prewarm(art);
         }
     }
 
@@ -324,11 +325,20 @@ public static partial class GameSkin
     /// <summary>A course's model from the course-select screen, the track map; null without the disc.</summary>
     public static CourseModel? Course(int course)
     {
+        DiscArt? art;
         lock (Gate)
         {
-            if (!Courses3D.TryGetValue(course, out var model))
+            if (Courses3D.TryGetValue(course, out var known))
             {
-                model = _art?.Course(course);
+                return known;
+            }
+            art = _art;
+        }
+        var model = art?.Course(course);
+        lock (Gate)
+        {
+            if (art == _art)
+            {
                 Courses3D[course] = model;
             }
             return model;
@@ -382,18 +392,52 @@ public static partial class GameSkin
         }
     }
 
+    /// <summary>A picture, read once. The read is outside the gate: a page's question for another picture is not held
+    /// up by it. The pictures the pages ask for on the window's thread are read before that (<see cref="Prewarm"/>).</summary>
     private static Bitmap? Get(string name, Func<DiscArt, Picture?> picture)
     {
+        DiscArt? art;
         lock (Gate)
         {
-            if (!Cache.TryGetValue(name, out var bitmap))
+            if (Cache.TryGetValue(name, out var known))
             {
-                bitmap = _art is not null && picture(_art) is { } p ? ToBitmap(p) : null;
-                Cache[name] = bitmap;
+                return known;
             }
+            art = _art;
+        }
+        var bitmap = art is not null && picture(art) is { } p ? ToBitmap(p) : null;
+        lock (Gate)
+        {
+            if (art != _art)
+            {
+                return bitmap;   // another disc came meanwhile: not kept for it
+            }
+            if (Cache.TryGetValue(name, out var first))
+            {
+                bitmap?.Dispose();   // read twice at once
+                return first;
+            }
+            Cache[name] = bitmap;
             return bitmap;
         }
     }
+
+    /// <summary>What the pages ask for on the window's thread (a course's picture in the vote, the lists and the
+    /// choice; its map in a race) is read beforehand, one after another, on a worker thread, so that those questions
+    /// find it there.</summary>
+    private static void Prewarm(DiscArt art) => _ = Task.Run(() => Quietly<object>(() =>
+    {
+        var courses = Courses.Pool.Append(Online.Protocol.CourseVote.RandomCourse);
+        foreach (var course in courses.TakeWhile(_ => art == _art))
+        {
+            _ = Venue(course);
+            if (course != Online.Protocol.CourseVote.RandomCourse)
+            {
+                _ = Course(course);
+            }
+        }
+        return null;
+    }));
 
     private static Bitmap ToBitmap(Picture p)
     {

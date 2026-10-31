@@ -62,6 +62,12 @@ public sealed partial class AppState
         }
     }
 
+    private DiscAnswers? _discAnswers;
+
+    /// <summary>The disc image in the settings is the game's: the latest answer, at once
+    /// (<see cref="DiscAnswers"/>; for the window's thread, which asks at every refresh).</summary>
+    public bool HasDisc => (_discAnswers ??= new DiscAnswers(() => Changed?.Invoke())).Known(Settings.DiscPath) == DiscStatus.Ok;
+
     /// <summary>What is missing to start the game, in the player's words; null: nothing. The newest look's answer:
     /// the buttons that start a game show it, and a start itself looks again.</summary>
     public string? GameProblem => Game.Problem;

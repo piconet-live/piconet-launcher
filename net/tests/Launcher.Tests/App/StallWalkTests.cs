@@ -32,6 +32,10 @@ public sealed class StallWalkTests : IDisposable
         {
             return;
         }
+        if (Environment.GetEnvironmentVariable("STALL_WALK_NAMES") is { Length: > 0 })
+        {
+            StallWatch.AskToolkit();   // (slows layouts: for finding what a stall is, not how long)
+        }
         var cancel = TestContext.Current.CancellationToken;
         var disc = Environment.GetEnvironmentVariable("STALL_WALK_DISC") ?? new SyntheticDisc().Write(_dir, "gx.iso");
         var data = Path.Combine(_dir, "data");
@@ -52,7 +56,16 @@ public sealed class StallWalkTests : IDisposable
                 var thread = Dispatcher.UIThread;
                 using var stop = new CancellationTokenSource();
                 _watch = new StallWatch(job => thread.Post(job, DispatcherPriority.Send), _ => { });
-                var frames = new DispatcherTimer(TimeSpan.FromMilliseconds(16), DispatcherPriority.Render, (_, _) => AvaloniaHeadlessPlatform.ForceRenderTimerTick());
+                // frames tick on a thread of their own, as a real window's timer does: the drawing (software here)
+                // is not the window thread's work
+                var frames = new Thread(() =>
+                {
+                    while (!stop.IsCancellationRequested)
+                    {
+                        AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+                        Thread.Sleep(16);
+                    }
+                }) { IsBackground = true };
                 frames.Start();
                 Exception? failed = null;
                 thread.Post(async () =>
@@ -68,7 +81,7 @@ public sealed class StallWalkTests : IDisposable
                     await stop.CancelAsync();
                 });
                 thread.MainLoop(stop.Token);
-                frames.Stop();
+                frames.Join();
                 _watch.Dispose();
                 Assert.Null(failed);
             }, cancel);
@@ -87,7 +100,14 @@ public sealed class StallWalkTests : IDisposable
         MainViewModel main = null!;
         MainWindow window = null!;
         await Step("the disc's look read at the start", () => { _ = state.LookForTheGame(); GameSkin.Load(disc); });
-        await Step("pages made", () => main = new MainViewModel(state));
+        await Step("pages made", () =>
+        {
+            main = new MainViewModel(state);
+            if (Environment.GetEnvironmentVariable("STALL_WALK_NO_PREBUILD") is not { Length: > 0 })
+            {
+                Prebuild(main);
+            }
+        });
         await Step("window opened on Home", () =>
         {
             window = new MainWindow { DataContext = main, Width = 1280, Height = 800 };
@@ -137,6 +157,11 @@ public sealed class StallWalkTests : IDisposable
         window.Close();
         main.Dispose();
     }
+
+    private static void Prebuild(MainViewModel main) =>
+
+        new ViewLocator().Prebuild(main.AllPages);
+
 
     /// <summary>A full lobby of thirty, as a big one tells it.</summary>
     private static LobbyState Full(string stage) => LedServer.Lobby(stage) with

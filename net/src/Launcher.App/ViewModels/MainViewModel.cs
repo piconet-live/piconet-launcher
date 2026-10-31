@@ -257,6 +257,9 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         }
     }
 
+    /// <summary>Every page there is, for their views to be made ahead (<see cref="ViewLocator.Prebuild"/>).</summary>
+    public IEnumerable<object> AllPages => [Home, Garage, Lobby, Lobby.Garage, Lan, Practice, Lobbies, Settings, Controller, Replays];
+
     /// <summary>A tab pressed: its page, the one last shown there.</summary>
     [RelayCommand]
     private void ShowTab(string tab)

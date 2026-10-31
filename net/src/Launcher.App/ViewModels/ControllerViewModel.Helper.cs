@@ -16,33 +16,73 @@ public sealed partial class ControllerViewModel
     private bool _helperAdapter;   // a port was the adapter's when the helper started (it sets up its devices by that)
     private int _quickEnds;
     private DateTimeOffset _started;
+    private int _showing;          // each showing's number: a look that lands after the page was left is dropped
+    private int _starts;           // each helper start's number: one that lands after it was called off is ended
+    private bool _starting;        // a start is on its way
 
-    /// <summary>The page shows: the settings as they are on disk, and the helper started.</summary>
+    /// <summary>The page shows at once, with the ports it last knew; everything that needs the disk or the game's
+    /// program comes after, off the window's thread (<see cref="LookAtTheFiles"/>, <see cref="StartHelper"/>).</summary>
     public void Shown()
     {
         _shown = true;
         _quickEnds = 0;
         Enabled = !_state.Racing;
-        try
+        var showing = ++_showing;
+        ShowPort();
+        _ = LookAtTheFiles().ContinueWith(look => OnUi(() =>
         {
-            // the game's own settings file is made as a game start makes it; the controller files only by a change here
-            RecompLaunch.PrepareUserFolder(UserFolder, _state.Settings.UserFolder);
-        }
-        catch (Exception e) when (ControllerFiles.Failed(e))
-        {
-            Notice = $"Settings folder not made · {e.Message}";
-        }
-        Load();
-        StartHelper();
-        LookForTheGame();
+            if (showing == _showing && _shown)
+            {
+                Take(look.Result);
+                StartHelper();
+            }
+        }), TaskScheduler.Default);
     }
 
     /// <summary>The page is left: the helper ends, and every device is free again.</summary>
     public void Hidden()
     {
         _shown = false;
+        _showing++;   // what the page's look finds when it lands is no one's now
         StopHelper();
     }
+
+    /// <summary>What the page reads off the window's thread: the game's own settings file made as a game start
+    /// makes it (the controller files only by a change here), the ports, the runner's gamepad profile, and whether
+    /// the game could be started.</summary>
+    private Task<FilesLook> LookAtTheFiles()
+    {
+        var (folder, userFolder, disc) = (UserFolder, _state.Settings.UserFolder, _state.Settings.DiscPath);
+        return Task.Run(() =>
+        {
+            string? problem = null;
+            try
+            {
+                RecompLaunch.PrepareUserFolder(folder, userFolder);
+            }
+            catch (Exception e) when (ControllerFiles.Failed(e))
+            {
+                problem = $"Settings folder not made · {e.Message}";
+            }
+            var paths = _state.GamePaths;
+            var files = RecompLaunch.Problem(paths);
+            return new FilesLook(problem, ControllerFiles.Read(folder), ControllerFiles.GamepadProfile(paths.Runner), files,
+                DiscCheck.Check(disc) != DiscStatus.Ok ? "No disc image" : files);
+        });
+    }
+
+    /// <summary>What <see cref="LookAtTheFiles"/> found, on the window's thread.</summary>
+    private void Take(FilesLook look)
+    {
+        _profile = look.Profile;
+        Notice = look.Problem ?? Notice;
+        Took(look.Ports);
+        (_startProblem, _filesProblem, _cannotStart) = ("", look.FilesProblem, look.CannotStart);
+        ShowSetUpInGame();
+    }
+
+    private sealed record FilesLook(string? Problem, ControllerFileSet Ports, IReadOnlyDictionary<string, string>? Profile,
+        string? FilesProblem, string? CannotStart);
 
     /// <summary>The page may run its helper: it shows, the window is in front (no device is held for a program the
     /// player went to; a page shown with no window that says so, as a test's, runs it), and no game of this
@@ -57,12 +97,19 @@ public sealed partial class ControllerViewModel
     {
         Enabled = !_state.Racing;
         ShowSetUpInGame();
-        if (MayRun && _helper is null)
+        if (MayRun && _helper is null && !_starting)
         {
-            Load();
-            StartHelper();
+            var showing = _showing;
+            _ = LookAtTheFiles().ContinueWith(look => OnUi(() =>
+            {
+                if (showing == _showing && MayRun && _helper is null && !_starting)
+                {
+                    Take(look.Result);
+                    StartHelper();
+                }
+            }), TaskScheduler.Default);
         }
-        else if (!MayRun && _helper is not null)
+        else if (!MayRun && (_helper is not null || _starting))
         {
             StopHelper();
             ShowPort();
@@ -77,11 +124,43 @@ public sealed partial class ControllerViewModel
         {
             return;
         }
-        // the pad reader's helper goes first (PageHelperRuns waits for it); null: the runner is not there, or did not
-        // start, and the reader may run its own again
+        // the pad reader's helper goes first (it may hold the adapter): waited for, and the start made, off the
+        // window's thread; the page goes on showing meanwhile
+        var start = ++_starts;
+        _starting = true;
         _state.PageHelperRuns(true);
-        if (ControllerHelper.Start(_state.GamePaths) is not { } helper)
+        var ending = _state.PadsEnding;
+        _ = Task.Run(async () =>
         {
+            await Task.WhenAny(ending, Task.Delay(TimeSpan.FromSeconds(3))).ConfigureAwait(false);
+            return _state.StartPageHelper();
+        }).ContinueWith(made =>
+        {
+            var helper = made.IsCompletedSuccessfully ? made.Result : null;
+            OnUi(() => Started(start, helper));
+        }, TaskScheduler.Default);
+    }
+
+    /// <summary>The start is done: it is the page's if the page still wants it. One called off meanwhile (the page
+    /// was left, a game is starting) is ended at once. Null: the runner is not there, or did not start, and the
+    /// reader may run its own again.</summary>
+    private void Started(int start, ControllerHelper? helper)
+    {
+        if (start != _starts)
+        {
+            if (helper is not null)
+            {
+                _ = Task.Run(helper.Dispose);
+            }
+            return;
+        }
+        _starting = false;
+        if (helper is null || !MayRun)
+        {
+            if (helper is not null)
+            {
+                _ = Task.Run(helper.Dispose);
+            }
             _state.PageHelperRuns(false);
             ShowPort();
             return;
@@ -122,10 +201,16 @@ public sealed partial class ControllerViewModel
         _helper = null;
         _adapter = null;
         Pad = null;
+        var wasStarting = _starting;
+        _starting = false;
+        _starts++;   // a start on its way is called off (Started ends what it made)
         // ending it waits for the program to go: off the window's thread
         if (helper is not null)
         {
             _ = Task.Run(helper.Dispose);
+        }
+        if (helper is not null || wasStarting)
+        {
             _state.PageHelperRuns(false);
         }
     }
@@ -154,7 +239,7 @@ public sealed partial class ControllerViewModel
         }
         DispatcherTimer.RunOnce(() =>
         {
-            if (MayRun && _helper is null)
+            if (MayRun && _helper is null && !_starting)
             {
                 StartHelper();
             }
@@ -199,22 +284,38 @@ public sealed partial class ControllerViewModel
     }
 
     /// <summary>A game with no controller settings at all gets its first ones here too, as before a start
-    /// (<see cref="ControllerStart"/>): the page then shows a port 1 that works.</summary>
+    /// (<see cref="ControllerStart"/>): the page then shows a port 1 that works. Off the window's thread, in turn
+    /// with the page's other writes.</summary>
     private void FirstStart()
     {
-        try
+        var (first, folder) = (StandardLayouts.FirstStart(_devices, GamepadProfile()), UserFolder);
+        Written(() => ControllerFiles.WriteFirstStart(folder, first) ? ControllerFiles.Read(folder) : null, read =>
         {
-            var first = StandardLayouts.FirstStart(_devices, GamepadProfile());
-            if (ControllerFiles.WriteFirstStart(UserFolder, first))
+            if (read is not null)
             {
-                Load();
+                Took(read);
                 Reloaded();
             }
-        }
-        catch (Exception e) when (ControllerFiles.Failed(e))
+        }, e => Notice = $"Controller settings not written · {e.Message}");
+    }
+
+    /// <summary>One write of the controller files after the one before it, off the window's thread (the check
+    /// before a start waits for them: <see cref="AppState.ControllerWrites"/>), and what it gave back on the
+    /// window's thread.</summary>
+    private void Written<T>(Func<T> write, Action<T> done, Action<Exception> failed)
+    {
+        _state.ControllerWrites = _state.ControllerWrites.ContinueWith(_ =>
         {
-            Notice = $"Controller settings not written · {e.Message}";
-        }
+            try
+            {
+                var result = write();
+                OnUi(() => done(result));
+            }
+            catch (Exception e) when (ControllerFiles.Failed(e))
+            {
+                OnUi(() => failed(e));
+            }
+        }, CancellationToken.None, TaskContinuationOptions.None, TaskScheduler.Default);
     }
 
     /// <summary>The files changed: the helper reads them again. It set its devices up by whether a port is the
