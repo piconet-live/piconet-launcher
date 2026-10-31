@@ -13,7 +13,7 @@ public sealed partial class QuickPlaySession
     public static IReadOnlySet<string> CustomLobbyRefusals { get; } = new HashSet<string>(StringComparer.Ordinal)
     {
         CustomLobby.BadPassword, CustomLobby.NotHost, CustomLobby.NoSuchLobby, CustomLobby.LobbyFull, CustomLobby.LobbyClosed,
-        CustomLobby.BadRules, CustomLobby.RulesLocked, CustomLobby.BadName,
+        CustomLobby.BadRules, CustomLobby.RulesLocked, CustomLobby.BadName, CustomLobby.BadMode, CustomLobby.ModeRefuses,
     };
 
     /// <summary>A visit to the custom lobbies: after the welcome the player is in no lobby and not queued, and sees
@@ -122,6 +122,9 @@ public sealed partial class QuickPlaySession
     }
 
     public Task KickAsync(string playerId) => Client.KickPlayerAsync(playerId);
+
+    /// <summary>The team of the player, or of another member (the host's); null: none.</summary>
+    public Task ChooseTeamAsync(int? team, string? playerId = null) => Client.ChooseTeamAsync(team, playerId);
 
     public Task StartLobbyRaceAsync() => Client.StartLobbyRaceAsync();
 

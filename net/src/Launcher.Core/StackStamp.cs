@@ -3,24 +3,29 @@ using System.Reflection;
 namespace Launcher.Core;
 
 /// <summary>
-/// The server stack this build belongs to (two stacks, A and B; a build is made for one of
-/// them and its official server is that stack's coordinator). It is stamped when a copy is made, as three build
-/// properties of this project: <c>-p:ServerStack=B -p:StackServer=wss://HOST/ws -p:StackKind=test</c> (or
+/// The server stack this build belongs to (two stacks, live and test; a build is made for one
+/// of them and its official server is that stack's coordinator). It is stamped when a copy is made, as three build
+/// properties of this project: <c>-p:ServerStack=test -p:StackServer=wss://HOST/ws -p:StackKind=test</c> (or
 /// <c>public</c>); the private release path passes them for a stack (piconet-runner's <c>package.sh</c>, STACK,
 /// STACK_ADDRESS and KIND). A build that names no stack has **no official server** (the
 /// public source names none; a build from it connects only where its player points it): its players see the "No
 /// server" line and the way to Settings, as after settings that could not be read.
 /// </summary>
-/// <param name="Name">The stack's name as the operators say it ("A", "B"); null: none stamped.</param>
+/// <param name="Name">The stack's name as the operators say it ("live", "test"); null: none stamped.</param>
 /// <param name="Server">The stack's coordinator: this build's official server; null: none (no stack stamped).</param>
 /// <param name="Test">A test build: made for testers, not for the players. Whatever is not stamped "public" on a
 /// stamped build is one, so a slip never passes a test build off as the players' one.</param>
 public sealed record StackStamp(string? Name, string? Server, bool Test)
 {
-    /// <summary>The first official coordinator (stack A's), which launchers up to 0.4.0 had built in and wrote into
+    /// <summary>The first official coordinator's address, which launchers up to 0.4.0 had built in and wrote into
     /// their settings as "the official server": a settings file that names it loads as blank, this build's official
-    /// server (<see cref="LauncherSettings.FormerDefaultServers"/>). No build takes it as its own.</summary>
+    /// server (<see cref="LauncherSettings.FormerDefaultServers"/>). No build takes it as its own. The players' server
+    /// now has another address, stamped when a release is made.</summary>
     public const string FirstServer = "wss://piconet-coordinator.fly.dev/ws";
+
+    /// <summary>The second official coordinator's address, of launchers from 0.5.0 to 0.5.3: as
+    /// <see cref="FirstServer"/>, it loads as blank. That server no longer exists.</summary>
+    public const string SecondServer = "wss://piconet-b-coordinator.fly.dev/ws";
 
     /// <summary>This build's (in tests: the one they name, <see cref="ForTests"/>, else <see cref="ForAllTests"/>).</summary>
     public static StackStamp Current => InFlow.Value ?? _allTests ?? Built;
@@ -56,9 +61,9 @@ public sealed record StackStamp(string? Name, string? Server, bool Test)
         string.IsNullOrWhiteSpace(name) || !SettingsCheck.IsServer(server) ? new(null, null, false)
             : new(name.Trim(), server!.Trim(), !string.Equals(kind?.Trim(), "public", StringComparison.Ordinal));
 
-    /// <summary>The connection box's word for this build's official server: with the stack's name, "test server" on a
+    /// <summary>The connection box's word for this build's official server, "Test Server" on a
     /// test build; "no official server" on a build that names no stack (whose box shows no server).</summary>
-    public string ServerLabel => Name is null ? "no official server" : Test ? $"test server {Name}" : $"official server {Name}";
+    public string ServerLabel => Name is null ? "no official server" : Test ? "Test Server" : "Official Server";
 
     /// <summary>What marks a test build wherever the build is named (the connection box, the window's title); null
     /// on any other.</summary>

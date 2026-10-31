@@ -76,10 +76,12 @@ public static class ReplayFile
                 ? t
                 : new DateTimeOffset(File.GetLastWriteTimeUtc(path));
             var (pack, packProblem) = PackOf(file.RaceVersion, setup);
+            var (mode, modeProblem) = ModeOf(file.RaceVersion, setup);
             return new ReplayInfo(path, recorded, setup.GetProperty("course").GetInt32(), setup.GetProperty("laps").GetInt32(),
                 players, you, TimeSpan.FromSeconds(steps / 60.0), racers.GetValueOrDefault(seat),
                 results is { } block ? Results(block, racers) : null, pack, packProblem,
-                h.TryGetProperty(ReplayFormat.Header.Practice, out var practice) && practice.ValueKind == JsonValueKind.True);
+                h.TryGetProperty(ReplayFormat.Header.Practice, out var practice) && practice.ValueKind == JsonValueKind.True,
+                TeamsOf(setup), [.. racers.Values.OrderBy(racer => racer.Seat)], mode, modeProblem);
         }
         catch (Exception e) when (Unreadable(e))
         {
@@ -91,6 +93,64 @@ public static class ReplayFile
     /// would not play the file for it. Format 3 is a race with a pack and format 2 one without: the game refuses a
     /// file where the two disagree, and a pack that is none or holds a value outside its ranges, which the launcher
     /// judges by the same rows (<see cref="StatPack.FromWire"/>). So the list says it, and no game is started for it.</summary>
+    /// <summary>Each seat's team in a mode's race with teams (<c>setup.mode.teams</c>); null: none, or not a list of teams.</summary>
+    private static List<int>? TeamsOf(JsonElement setup)
+    {
+        if (!setup.TryGetProperty("mode", out var mode) || mode.ValueKind != JsonValueKind.Object ||
+            !mode.TryGetProperty("teams", out var teams) || teams.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+        var list = new List<int>();
+        foreach (var team in teams.EnumerateArray())
+        {
+            if (team.ValueKind != JsonValueKind.Number || !team.TryGetInt32(out var t) || t is < 0 or >= ModeWords.Teams || list.Count >= ModeWords.Seats)
+            {
+                return null;
+            }
+            list.Add(t);
+        }
+        return list;
+    }
+
+    /// <summary>The game mode of a replay's race (its header's <c>match.setup.mode</c>): its name, and why the game would
+    /// not play the file for it, by the game's own tests (the runner's files_mode.cpp and files_replay.cpp): a newer api,
+    /// a hash that is not the package's, a package that does not read, or a version other than 9.</summary>
+    private static (string? Name, string? Problem) ModeOf(int version, JsonElement setup)
+    {
+        if (!setup.TryGetProperty("mode", out var mode) || mode.ValueKind == JsonValueKind.Null)
+        {
+            return (null, null);
+        }
+        if (mode.ValueKind != JsonValueKind.Object || !mode.TryGetProperty("package", out var text) || text.ValueKind != JsonValueKind.String ||
+            !mode.TryGetProperty("hash", out var hash) || hash.ValueKind != JsonValueKind.String)
+        {
+            return (null, ModeDamaged);
+        }
+        if (mode.TryGetProperty("api", out var api) && api.ValueKind == JsonValueKind.Number && api.TryGetInt32(out var number) && number > ModeWords.Api)
+        {
+            return (null, ModeNewer);
+        }
+        try
+        {
+            var package = Convert.FromBase64String(text.GetString()!);
+            if (ModePackage.Hash(package) != hash.GetString())
+            {
+                return (null, ModeDamaged);
+            }
+            var read = ModePackage.Read(package);
+            return (ReplayWords.Name(read.Name), version == ModeFormatVersion ? null : ModeDamaged);
+        }
+        catch (Exception e) when (e is FormatException or InvalidDataException or ArgumentException or EndOfStreamException or InvalidOperationException)
+        {
+            return (null, ModeDamaged);
+        }
+    }
+
+    public const string ModeNewer = "This replay's mode needs a newer version of the game.";
+
+    public const string ModeDamaged = "This replay's mode is damaged: the game does not play it.";
+
     private static (string? Name, string? Problem) PackOf(int version, JsonElement setup)
     {
         if (!setup.TryGetProperty("stats", out var stats) || stats.ValueKind == JsonValueKind.Null)
@@ -104,7 +164,7 @@ public static class ReplayFile
         {
             return (null, "This replay's stat pack is not one this launcher takes: " + refusal);
         }
-        return (pack.Name, version is StatsFormatVersion or CustomFormatVersion or MinesFormatVersion or SeatsFormatVersion or GridFormatVersion ? null
+        return (pack.Name, version is StatsFormatVersion or CustomFormatVersion or MinesFormatVersion or SeatsFormatVersion or GridFormatVersion or ModeFormatVersion ? null
             : "This replay holds a stat pack in the format of races without one: the game does not play it.");
     }
 
@@ -152,6 +212,11 @@ public static class ReplayFile
     /// the race from the game's own grid.</summary>
     public const int GridFormatVersion = ReplayFormat.VersionGrid;
 
+    /// <summary>Version 9: 0.6's set-up, a race on the simulation's own generator, a game mode or not (every race and
+    /// practice from 0.6): the same file under another number, whatever else the race holds, so that a game program from
+    /// before refuses it.</summary>
+    public const int ModeFormatVersion = ReplayFormat.VersionMode;
+
     /// <summary>The steps after which a mine of the replay's race came back, as the game reads its header's rule
     /// (the race block's word, <see cref="RaceWords"/>: the protocol's rules.toml); 0 when the header names none, as
     /// every recording made before the rule.</summary>
@@ -169,7 +234,8 @@ public static class ReplayFile
     public const string Incomplete = "Replay file incomplete";
 
     /// <summary>Why a replay file cannot be played, in the player's words; null when the file is whole and this
-    /// game's: a stat pack the game or this launcher would not take (<see cref="ReplayInfo.StatPackProblem"/>),
+    /// game's: a stat pack the game or this launcher would not take (<see cref="ReplayInfo.StatPackProblem"/>), a game
+    /// mode the game would not take (<see cref="ReplayInfo.ModeProblem"/>),
     /// another format version (another version of the game program wrote it), another game than
     /// <see cref="DiscCheck.GameId"/> (a header that names none is the fork's, which ran only this one), or a file
     /// that ends early (a header, a lineup or a step cut off, or no step at all: every file the game closed ends on
@@ -213,7 +279,7 @@ public static class ReplayFile
             {
                 return $"Replay of another version of F-Zero GX · {id}";
             }
-            if (file.RaceVersion is not (SeatsFormatVersion or GridFormatVersion) && (file.RaceVersion == MinesFormatVersion) != (MineRegenSteps(doc.RootElement) != 0))
+            if (file.RaceVersion is not (SeatsFormatVersion or GridFormatVersion or ModeFormatVersion) && (file.RaceVersion == MinesFormatVersion) != (MineRegenSteps(doc.RootElement) != 0))
             {
                 return MinesDisagree;
             }
@@ -231,7 +297,7 @@ public static class ReplayFile
         {
             return Incomplete;
         }
-        return Listed(path, file) is not { } listed ? NotAReplay : listed.StatPackProblem;
+        return Listed(path, file) is not { } listed ? NotAReplay : listed.StatPackProblem ?? listed.ModeProblem;
     }
 
     /// <summary>What recorded a replay, from its header: the engine that ran the game (<c>engine</c>: the recompiled

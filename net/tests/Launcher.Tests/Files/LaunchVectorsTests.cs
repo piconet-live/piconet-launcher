@@ -38,9 +38,9 @@ public sealed class LaunchVectorsTests
         yield return ("race-spectator", GameLaunchFile.Race("b", Match.Replace("\"relayHost\"", "\"spectate\": true, \"relayHost\"", StringComparison.Ordinal),
             WidescreenMode.TrueWide));
         yield return ("race-debug", GameLaunchFile.Race("b", Match, record: "race.fzrp", debug: debug));
-        yield return ("practice", GameLaunchFile.Race("b", PracticeMatch.Build(PracticeSetup.Default, "P", null, DateTimeOffset.UnixEpoch),
+        yield return ("practice", GameLaunchFile.Race("b", PracticeMatch.Build(PracticeSetup.Default with { Laps = 3 }, "P", null, DateTimeOffset.UnixEpoch),
             record: "practice.fzrp"));
-        yield return ("practice-camera", GameLaunchFile.Race("b", PracticeMatch.Build(PracticeSetup.Default, "P", null, DateTimeOffset.UnixEpoch),
+        yield return ("practice-camera", GameLaunchFile.Race("b", PracticeMatch.Build(PracticeSetup.Default with { Laps = 3 }, "P", null, DateTimeOffset.UnixEpoch),
             record: "practice.fzrp", window: new GameWindow("F-Zero GX", Camera: 2)));
         yield return ("window-plain", GameLaunchFile.Offline(null, window: new GameWindow("Port test")));
         yield return ("window-every-member", GameLaunchFile.Offline("b", window: new GameWindow("F-Zero GX", "Piconet", true, picture,

@@ -235,6 +235,13 @@ public sealed partial class LobbyViewModel : ViewModelBase
     [RelayCommand]
     private void Rejoin() => _state.Rejoin();
 
+    /// <summary>The player's game left a race whose mode has no rejoin: Watch stands where Rejoin would.</summary>
+    [ObservableProperty]
+    public partial bool CanWatchLeftRace { get; set; }
+
+    [RelayCommand]
+    private Task WatchLeftRaceAsync() => _session?.WatchLeftRaceAsync() ?? Task.CompletedTask;
+
     /// <summary>The server takes spectators: the player may watch the lobby's races instead of racing.</summary>
     [ObservableProperty]
     public partial bool CanWatch { get; set; }
@@ -315,7 +322,8 @@ public sealed partial class LobbyViewModel : ViewModelBase
         Clock(_session);
         LeaveText = lobby is null ? "Leave the queue" : "Leave the lobby";
         CanRejoin = _session.CanRejoin && !_state.Racing;
-        CanWatch = _session.CanWatch && _session.Race is null;
+        CanWatchLeftRace = _session.CanWatchLeftRace && !_state.Racing;
+        CanWatch = _session.CanWatch && _session.Race is null && !CanWatchLeftRace;
         WatchText = _session.Watching ? "Race" : "Watch";
         Watching = _session.Watching;
         ShowNotice(_session, lobby);
@@ -399,12 +407,13 @@ public sealed partial class LobbyViewModel : ViewModelBase
             }
             var ticked = lobby.Stage == LobbyState.Starting ? voted?.Contains(p.Id) == true : lobby.Stage == LobbyState.Choosing && p.Chosen;
             rows.Add(new SeatRow((rows.Count + 1).ToString(System.Globalization.CultureInfo.InvariantCulture), p.Name,
-                Rgb.Hex(p.Color), MachineWithPack(p, session), p.Id == session.PlayerId, false, ticked,
+                Rgb.Hex(p.Color), SeatMachine(p, session, lobby),
+                p.Id == session.PlayerId, false, ticked,
                 session.Pings.TryGetValue(p.Id, out var ms) ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{ms} ms") : "",
                 p.Tag)
             {
                 Id = p.Id, Host = lobby.Custom && p.Id == lobby.HostId, Kickable = session.IsHost && p.Id != session.PlayerId,
-            });
+            }.OnTeam(p, TeamsOf(lobby), TeamChanges(session, lobby, p)));
         }
         var racers = rows.Count;
         var empty = CpuFill(session, lobby) == CpuFillMode.Never ? "" : "CPU";
@@ -429,12 +438,15 @@ public sealed partial class LobbyViewModel : ViewModelBase
 
     private void ShowNotice(QuickPlaySession session, LobbyState? lobby)
     {
-        var (label, values, whole) = CustomNotice(session) is { } custom ? custom
+        var (label, values, whole) = session.RejoinRefused is { } noRejoin ? ("Can't rejoin", [], noRejoin)
+            : CustomNotice(session) is { } custom ? custom
             : session.LastError is { Code: "machine_not_allowed" } error
             ? ("Machine not allowed", session.Rules is { } rules ? [new NoticeValue("allowed", Allowed(rules) ?? "any")] : [], error.Message)
             // (until a race starts, the lobby is left or its pack changes)
             : lobby is not null && session.StatPackProblem is { } refused
                 ? ("Stat pack not taken", LobbyScreens.PackLabel(lobby.StatPack) is { Length: > 0 } pack ? [new NoticeValue("pack", pack)] : [], refused)
+            : lobby?.CannotRace?.Contains(session.PlayerId ?? "") == true
+                ? ("Can't race this mode", ModeValues(lobby), "This lobby races a game mode your launcher can't run. Update the launcher to race it.")
             : lobby is { Stage: LobbyState.Forming, OtherBuilds: { Count: > 0 } others } ? Others(session.Build, others)
             : ("", (IReadOnlyList<NoticeValue>)[], "");
         (Notice, NoticeWhole) = (label, whole);
@@ -451,16 +463,34 @@ public sealed partial class LobbyViewModel : ViewModelBase
     }
 
 
-    /// <summary>How the empty seats are filled: a custom lobby's rule, else the server's (a vote where it names none).</summary>
-    private static CpuFillMode CpuFill(QuickPlaySession session, LobbyState? lobby) => lobby is { Custom: true, Rules: { } rules }
+    /// <summary>A member's seat whose launcher cannot run the lobby's mode (<see cref="LobbyState.CannotRace"/>): they
+    /// watch its races.</summary>
+    public const string CannotRaceText = "Can't race this mode";
+
+    /// <summary>A seat's machine as its row says it, or that its player cannot race the lobby's mode.</summary>
+    private string SeatMachine(PlayerInfo p, QuickPlaySession session, LobbyState lobby) =>
+        lobby.CannotRace?.Contains(p.Id) == true ? CannotRaceText : MachineWithPack(p, session);
+
+    /// <summary>The lobby's mode, as a notice's value; none when it names none.</summary>
+    private static IReadOnlyList<NoticeValue> ModeValues(LobbyState lobby) =>
+        lobby.Rules?.Mode is { } mode ? [new NoticeValue("mode", mode.Name)] : [];
+
+    /// <summary>How the empty seats are filled: never when the lobby's modes allow no CPUs (no vote then), else a
+    /// custom lobby's rule, else the server's (a vote where it names none).</summary>
+    /// <summary>The teams of a lobby's next race; 0: none.</summary>
+    private static bool TeamChanges(QuickPlaySession session, LobbyState lobby, PlayerInfo p) =>
+        lobby.Stage == LobbyState.Forming && (session.IsHost || p.Id == session.PlayerId);
+
+    private static int TeamsOf(LobbyState lobby) => lobby.Rules is { Mode: not null } rules ? rules.Value(LobbyRules.TeamsKey) ?? 0 : 0;
+
+    private static CpuFillMode CpuFill(QuickPlaySession session, LobbyState? lobby) => lobby is { NoCpuVote: true } ? CpuFillMode.Never
+        : lobby is { Custom: true, Rules: { } rules }
         ? (CpuFillMode)CustomRules.Value(rules, HostRules.CpuFill.Name, session.QuickPlayRules)
         : session.Rules?.CpuFill ?? CpuFillMode.Vote;
 
     /// <summary>The machines a server allows, when not all: "Blue Falcon only", "12 machines"; null: all.</summary>
     private static string? Allowed(ServerRules r) =>
-        r.AllowedMachines.Count >= Machines.Names.Count ? null
-        : r.AllowedMachines.Count == 1 && r.AllowedMachines[0] is var only && Machines.Has(only) ? Machines.Names[only] + " only"
-        : $"{r.AllowedMachines.Count} machines";
+        CustomRules.MachinesLine(r.AllowedMachines) is { Length: > 0 } line ? line : null;
 
     /// <summary>Quick Play's mines' rule (the server's default, the rule's own: <see cref="HostRules.MinesReturn"/>):
     /// the rules line says nothing of it.</summary>
@@ -499,10 +529,6 @@ public sealed partial class LobbyViewModel : ViewModelBase
         if (r.Race.BoostFromStart)
         {
             parts.Add("boost from the start");
-        }
-        if (r.Race.Restore)
-        {
-            parts.Add("machines come back");
         }
         // the mines' rule only when it is not Quick Play's 0.2 s
         if (MinesRule(r.Race.MineRegenMs) is { } mines)

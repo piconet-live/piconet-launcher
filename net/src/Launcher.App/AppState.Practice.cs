@@ -28,6 +28,11 @@ public sealed partial class AppState
         {
             return "Stat pack not found";
         }
+        var mode = PracticeMode.Start(Path.Combine(AppContext.BaseDirectory, "quickplay"), setup.Restore, setup.Kept().Laps, out var problem);
+        if (mode is null)
+        {
+            return problem;
+        }
         // the page opens on this practice next time (its course and rules)
         // (the machine is the Garage's at each start: the custom machine is not kept with the set-up)
         var kept = setup.Kept() with { Custom = null };
@@ -35,7 +40,7 @@ public sealed partial class AppState
         {
             Update(s => s with { Practice = kept });
         }
-        PracticeMatch.Write(file, setup, racer.Name, racer.LookOf(setup.Machine), DateTimeOffset.Now, pack);
+        PracticeMatch.Write(file, setup, racer.Name, racer.LookOf(setup.Machine), DateTimeOffset.Now, pack, mode);
         return PlayMatch(file, run: GameRun.Practice, course: setup.Kept().Course, record: Settings.RecordPractice);
     }
 }

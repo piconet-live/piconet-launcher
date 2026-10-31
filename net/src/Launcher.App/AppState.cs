@@ -352,12 +352,41 @@ public sealed partial class AppState(SettingsStore store, string dataFolder)
         {
             return problem;
         }
-        Fork = RecompLaunch.StartPlayback(paths, WindowWithBoard(), Path.GetFullPath(replayFile), s.OtherSounds, s.Widescreen,
+        var window = WindowWithBoard();
+        Fork = RecompLaunch.StartPlayback(paths, window, Path.GetFullPath(replayFile), s.OtherSounds, s.Widescreen,
             s.UserFolder, Debug.RunnerArguments, GameDebug.From(Debug), Volume);
         Running(GameRun.Replay);
+        if (Board is { } board && ReplayFile.Read(replayFile) is { } info)
+        {
+            WatchPlayback(board, info);
+        }
+        Fork.EnableRaisingEvents = true;
+        Fork.Exited += (_, _) => PlaybackOver();
         Watch(Fork, sayError: true);
         Changed?.Invoke();
         return null;
+    }
+
+    /// <summary>The replay a game plays now (null: none): the race page's seats, course and laps for it.</summary>
+    public ReplayInfo? Playback { get; private set; }
+
+    /// <summary>A new moment of the replay the game plays, from its status board, with the mode's values (on the
+    /// board's thread).</summary>
+    public event Action<Online.Protocol.RaceSnapshot, ModeBoardNow?>? PlaybackLive;
+
+    /// <summary>The replay's race, from the board of the game that plays it.</summary>
+    public void WatchPlayback(GameBoard board, ReplayInfo info)
+    {
+        ArgumentNullException.ThrowIfNull(board);
+        Playback = info;
+        board.Received += snapshot => PlaybackLive?.Invoke(snapshot, board.Mode);
+    }
+
+    /// <summary>The replay's game ended: the page's race goes with it.</summary>
+    public void PlaybackOver()
+    {
+        Playback = null;
+        Changed?.Invoke();
     }
 
     /// <summary>The last removal of an empty replay (<see cref="RemoveEmptyReplay"/>), which a launcher that closes

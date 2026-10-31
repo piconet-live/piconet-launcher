@@ -34,11 +34,11 @@ public sealed class ReplayTabsTests : IDisposable
         """;
 
     /// <summary>A replay of one racer, with results; <paramref name="practice"/>: the header's word, as written.</summary>
-    private void Write(string name, string recorded, string? practice)
+    private void Write(string name, string recorded, string? practice, string mode = "")
     {
         var header = $$$"""
             {"match": {"matchId": "x", "seat": 0, "setup": {"course": 5, "laps": 3, "seats": [
-              {"seat": 0, "playerId": "p1", "name": "ANA", "machine": 1}]}},
+              {"seat": 0, "playerId": "p1", "name": "ANA", "machine": 1}]{{{mode}}}}},
              "seat": 0, "mask": 1, "delay": 2, "recorded": "{{{recorded}}}"{{{(practice is null ? "" : ", \"practice\": " + practice)}}}}
             """;
         Directory.CreateDirectory(Replays);
@@ -88,6 +88,60 @@ public sealed class ReplayTabsTests : IDisposable
         }
         Assert.False(page.Loading, "the replays were not read in 10 s");
         Dispatcher.UIThread.RunJobs();
+    }
+
+    /// <summary>A mode's race with teams: each racer's team in the results; anything but a list of teams: none.</summary>
+    [Theory]
+    [InlineData(", \"mode\": {\"teams\": [1, 0]}", "Team 2")]
+    [InlineData(", \"mode\": {\"teams\": []}", "Team 1")]   // (a seat past the list: its own number)
+    [InlineData(", \"mode\": {\"teams\": [\"x\"]}", "")]
+    [InlineData(", \"mode\": {\"teams\": 3}", "")]
+    [InlineData(", \"mode\": {}", "")]
+    [InlineData("", "")]
+    public void AReplaysResultsSayEachRacersTeam(string mode, string says)
+    {
+        Write("t.fzrp", "2026-10-18T10:00:00+00:00", null, mode);
+        Assert.Equal(says, ReplayWords.Results(Assert.Single(ReplayFile.List(Replays))).Single().Team);
+    }
+
+    /// <summary>The Results of a row, drawn with the racer's team. LOBBY_SHOTS keeps it.</summary>
+    [Fact]
+    public async Task TheResultsShowTheTeam()
+    {
+        Write("t.fzrp", DateTimeOffset.Now.ToString("o"), null, ", \"mode\": {\"teams\": [1]}");
+        var state = State();
+        var ui = HeadlessUnitTestSession.StartNew(typeof(GameSkinTests));
+        try
+        {
+            await ui.Dispatch(() =>
+            {
+                GameSkin.Load(null);
+                var page = new ReplaysViewModel(state, () => DateTimeOffset.Now);
+                var window = new Window { Content = new ReplaysView { DataContext = page }, Width = 1100, Height = 700 };
+                window.Show();
+                try
+                {
+                    Loaded(page);
+                    Click(window, window.GetVisualDescendants().OfType<Button>().First(b => AutomationProperties.GetName(b) == "Results" && b.IsEffectivelyVisible));
+                    Dispatcher.UIThread.RunJobs();
+                    Assert.Contains("Team 2", window.GetVisualDescendants().OfType<TextBlock>().Where(t => t.IsEffectivelyVisible).Select(t => t.Text));
+                    if (Environment.GetEnvironmentVariable("LOBBY_SHOTS") is { Length: > 0 } folder)
+                    {
+                        Avalonia.Headless.AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+                        window.CaptureRenderedFrame()?.Save(Path.Combine(folder, "replay-results-teams.png"), new Avalonia.Media.Imaging.PngBitmapEncoderOptions());
+                    }
+                }
+                finally
+                {
+                    window.Close();
+                }
+            }, TestContext.Current.CancellationToken);
+        }
+        finally
+        {
+            await ui.DisposeAsync();
+            state.Shutdown();
+        }
     }
 
     [Fact]

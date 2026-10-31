@@ -3,8 +3,11 @@ using System.Globalization;
 namespace Launcher.Core;
 
 /// <summary>One racer's line in a replay's results, as the Replays page shows it.</summary>
-public sealed record ReplayResultLine(string Place, string Name, string Machine, string ColorHex, string Time, string BestLap, bool Focused)
+public sealed record ReplayResultLine(string Place, string Name, string Machine, string ColorHex, string Time, string BestLap, bool Focused, string Team = "")
 {
+    /// <summary>The race was a mode's with teams.</summary>
+    public bool HasTeam => Team.Length > 0;
+
     /// <summary>Knocked out: the time's place says <see cref="ReplayWords.Out"/>, in red.</summary>
     public bool Out => Time == ReplayWords.Out;
 
@@ -111,7 +114,7 @@ public static class ReplayWords
             Machine(r.Racer.Machine), Hex(r.Racer.Color),
             r.Out ? Out : Time(r),
             r.BestLap is { } b ? Clock(b) : "",
-            r.Racer.Seat == info.Recorder?.Seat))];
+            r.Racer.Seat == info.Recorder?.Seat, Online.Protocol.ModeTeams.Said(info.Teams, r.Racer.Seat)))];
     }
 
     /// <summary>A racer's name in the results: a player's own; a CPU's with "(CPU)", or just that without a name.</summary>

@@ -157,13 +157,13 @@ public sealed record LauncherSettings
     /// (<see cref="StackStamp"/>); null for a build that names none, which has no official server.</summary>
     public static string? OnlineServer => StackStamp.Current.Server;
 
-    /// <summary>Saved values that mean "the official server": the official address itself (written by launchers
-    /// that stored the default; they knew the first official server only, so on a build made for another stack that
-    /// address still means "this build's official server"); it loads as blank. The early local default
+    /// <summary>Saved values that mean "the official server": the official address itself, and each one a
+    /// launcher had before (written by launchers that stored the default: on any later build they still mean "this
+    /// build's official server"); it loads as blank. The early local default
     /// (ws://127.0.0.1:47810/ws) is not one of them: a local address must never become the live service without the
     /// player's word, so it stays what the file says, a server of the player's own.</summary>
     public static readonly IReadOnlyList<string> FormerDefaultServers =
-        [.. new[] { StackStamp.FirstServer, OnlineServer }.OfType<string>().Distinct()];
+        [.. new[] { StackStamp.FirstServer, StackStamp.SecondServer, OnlineServer }.OfType<string>().Distinct()];
 
     /// <summary>Online races are recorded (by default). Practice runs are <see cref="RecordPractice"/>'s.</summary>
     public bool RecordReplays { get; init; } = true;
@@ -195,13 +195,13 @@ public sealed record LauncherSettings
     /// "Set up in the game") still applies: off there is off too.</summary>
     public bool Rumble { get; init; } = true;
 
-    /// <summary>The chase camera view (1 to 3) the player last raced in: the game says each view chosen with the
+    /// <summary>The chase camera view (1 to 3, 4 first person) the player last raced in: the game says each view chosen with the
     /// camera button on its status board (<see cref="Board.BoardEventKind.Camera"/>), and the next race starts in it
     /// (the launch file's <c>match.camera</c>). 0: none yet, and the game starts in its own. The player's picture
     /// only: no other game of the race sees it.</summary>
     public int RaceCamera { get; init; }
 
-    /// <summary>The view a race starts in: <see cref="RaceCamera"/> when it is one the game takes (1 to 3), else 0
+    /// <summary>The view a race starts in: <see cref="RaceCamera"/> when it is one the game takes (1 to 3, 4 first person), else 0
     /// (the game's own, and the launch file holds no <c>match.camera</c>).</summary>
     public int StartCamera => RaceCamera is >= LaunchFormat.MatchCameraLow and <= LaunchFormat.MatchCameraHigh ? RaceCamera : 0;
 
@@ -216,7 +216,7 @@ public sealed record LauncherSettings
     }
 
     /// <summary>The practice last started (Play's Practice, START PRACTICE): its course and rules, which the page
-    /// opens on; null: the first course and Quick Play's rules (<see cref="PracticeSetup.Default"/>). Its machine
+    /// opens on; null: the first course and Quick Play's rules (<see cref="PracticeSetup.Fresh"/>). Its machine
     /// is not read back: the page's machine is the Garage's.</summary>
     [JsonConverter(typeof(SettingAsWritten.Whole<PracticeSetup>))]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

@@ -150,11 +150,12 @@ internal static class Program
         }
         state.BoardMade += board => Launcher.Core.BoardLines.Follow(board, Write);
         var script = new Launcher.Core.QuickPlayScript(new Launcher.Core.QuickPlayScriptOptions(
-            visit.Races, visit.StartWith, visit.VoteCourse, Watch: visit.Watch), Write);
+            visit.Races, visit.StartWith, visit.VoteCourse, Watch: visit.Watch, Custom: visit.Custom, AfterLeave: visit.AfterLeave,
+            Rejoin: state.Rejoin), Write);
         Launcher.Core.QuickPlaySession session;
         try
         {
-            session = state.JoinAsync(new Uri(url)).GetAwaiter().GetResult();
+            session = state.JoinAsync(new Uri(url), visit.Custom is not null).GetAwaiter().GetResult();
         }
         catch (Exception e) when (e is System.Net.WebSockets.WebSocketException or UriFormatException or IOException)
         {
@@ -235,6 +236,7 @@ internal static class Program
                     $"place {own.Place} of {r.Results!.Count}, {(own.Time is { } t ? t.ToString("m\\:ss\\.fff", System.Globalization.CultureInfo.InvariantCulture) : own.Out ? "out" : "disqualified")}"),
                 "players " + Launcher.Core.Replays.Racers(r.Players),
                 r.StatPackLabel.Length > 0 ? "stat pack: " + r.StatPackLabel : "original stats",
+                r.ModeLabel.Length > 0 ? "mode: " + r.ModeLabel : "no mode",
                 $"recorded by {engine ?? "?"} {(module is null ? "?" : module[..8])}",
                 Launcher.Core.ReplayFile.Problem(r.Path) ?? "whole"));
         }

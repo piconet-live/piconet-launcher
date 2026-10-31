@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Online.Protocol;
 
 namespace Launcher.App.ViewModels;
 
@@ -148,6 +149,70 @@ public sealed partial class PackRule : RuleRow
     private IReadOnlyList<string> Offered() => File is { } file ? [.. _served, file.Name] : _served;
 }
 
+/// <summary>
+/// A custom lobby's game mode, dropped down as the stat pack is: None, the lobby's mode as the server named it, and
+/// the host's own file by its mode's name once one is chosen (Choose file beside it: Controls/RulesPanel hands the
+/// path to <see cref="Load"/>). A file that does not compile keeps the choice as it was and says why, with its line,
+/// under the row.
+/// </summary>
+public sealed partial class GameModeRule : RuleRow
+{
+    /// <summary>The choice for none: the lobby races Quick Play's rules.</summary>
+    public const string NoMode = "None";
+
+    /// <param name="served">The lobby's mode as the server named it (null: none).</param>
+    public GameModeRule(string label, LobbyMode? served) : base(label)
+    {
+        Served = served;
+        Options = Offered();
+        Selected = served is null ? 0 : 1;
+    }
+
+    /// <summary>The lobby's mode as the server named it: sent again as it is, to keep it.</summary>
+    public LobbyMode? Served { get; }
+
+    /// <summary>The host's own mode file (null: none chosen while this panel is open).</summary>
+    public Launcher.Core.HostModeFile? File { get; private set; }
+
+    [ObservableProperty]
+    public partial IReadOnlyList<string> Options { get; private set; }
+
+    [ObservableProperty]
+    public partial int Selected { get; set; }
+
+    /// <summary>The host's file is the choice.</summary>
+    public bool FileChosen => File is not null && Selected == Options.Count - 1;
+
+    /// <summary>The lobby's mode as the server named it is the choice.</summary>
+    public bool ServedChosen => Served is not null && Selected == 1 && !FileChosen;
+
+    partial void OnSelectedChanged(int value)
+    {
+        if (value < 0 || value >= Options.Count)
+        {
+            Selected = Math.Clamp(value, 0, Math.Max(0, Options.Count - 1));
+        }
+    }
+
+    /// <summary>The file at <paramref name="path"/> as the choice; a file that does not compile is said under the row.</summary>
+    public void Load(string path)
+    {
+        var (file, problem) = Launcher.Core.HostModeFile.Read(path);
+        if (file is null)
+        {
+            Note = problem ?? "";
+            return;
+        }
+        Note = "";
+        File = file;
+        Options = Offered();
+        Selected = Options.Count - 1;
+    }
+
+    private IReadOnlyList<string> Offered() =>
+        [NoMode, .. Served is { } served ? [served.Name] : (string[])[], .. File is { } file ? [file.Name] : (string[])[]];
+}
+
 /// <summary>One of a few, side by side.</summary>
 public sealed partial class SegmentedRule(string label, IReadOnlyList<string> options, int selected = 0) : RuleRow(label)
 {
@@ -164,14 +229,23 @@ public sealed partial class StepperRule(string label, int value, int minimum, in
 
     public int Maximum { get; } = maximum;
 
+    /// <summary>How much a press changes it; a typed value goes to the nearest step from the least.</summary>
+    public int Step { get; init; } = 1;
+
     [ObservableProperty]
     public partial int Value { get; set; } = Math.Clamp(value, minimum, maximum);
 
     partial void OnValueChanged(int value)
     {
-        if (value < Minimum || value > Maximum)
+        var kept = Math.Clamp(value, Minimum, Maximum);
+        if (Step > 1)
         {
-            Value = Math.Clamp(value, Minimum, Maximum);
+            var steps = (int)Math.Round((kept - (double)Minimum) / Step);
+            kept = Minimum + (Math.Min(steps, (Maximum - Minimum) / Step) * Step);
+        }
+        if (kept != value)
+        {
+            Value = kept;
         }
     }
 }

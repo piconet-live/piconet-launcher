@@ -62,7 +62,7 @@
     <!-- a racer's line of the results: place, paint and name, machine, finish time, best lap -->
     <DataTemplate x:Key="ResultLine" x:DataType="core:ReplayResultLine">
       <Border Classes="result" Classes.focused="{Binding Focused}">
-        <Grid ColumnDefinitions="34,16,*,Auto,Auto,Auto">
+        <Grid ColumnDefinitions="34,16,*,Auto,Auto,Auto,Auto">
           <TextBlock Classes="figure" FontSize="{StaticResource Size14}" Text="{Binding Place}" VerticalAlignment="Center" />
           <Border Grid.Column="1" Classes="chip" HorizontalAlignment="Left"
                   Background="{Binding ColorHex, Converter={x:Static v:HexToBrush.Instance}}" />
@@ -70,10 +70,12 @@
                      TextTrimming="CharacterEllipsis" />
           <TextBlock Grid.Column="3" Classes="note extra" Text="{Binding Machine}" Width="104" TextWrapping="NoWrap"
                      TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="8,0,0,0" />
-          <TextBlock Grid.Column="4" Classes="figure" Classes.out="{Binding Out}" Classes.dq="{Binding Disqualified}"
+          <TextBlock Grid.Column="4" Classes="note" Text="{Binding Team}" TextWrapping="NoWrap" VerticalAlignment="Center" Margin="8,0,0,0"
+                     IsVisible="{Binding HasTeam}" />
+          <TextBlock Grid.Column="5" Classes="figure" Classes.out="{Binding Out}" Classes.dq="{Binding Disqualified}"
                      FontSize="{StaticResource Size14}" Text="{Binding Time}" MinWidth="62"
                      TextAlignment="Right" VerticalAlignment="Center" />
-          <TextBlock Grid.Column="5" Classes="figure dim" FontSize="{StaticResource Size14}" Text="{Binding BestLap}" Width="62"
+          <TextBlock Grid.Column="6" Classes="figure dim" FontSize="{StaticResource Size14}" Text="{Binding BestLap}" Width="62"
                      TextAlignment="Right" VerticalAlignment="Center" />
         </Grid>
       </Border>
@@ -106,6 +108,14 @@
         </ItemsControl.ItemTemplate>
       </ItemsControl>
     </Border>
+    <!-- the race of the replay the game plays, when its mode has lines: the race page's own parts -->
+    <Grid Name="PlaybackRace" ColumnDefinitions="*,16,Auto" Margin="0,0,0,16" DataContext="{Binding Race}" IsVisible="{Binding HasMode}">
+      <StackPanel Spacing="16">
+        <TextBlock Classes="head" Text="{Binding Course}" />
+        <v:RaceModeLines IsVisible="{Binding HasModeFigures}" />
+      </StackPanel>
+      <v:StandingsTable Grid.Column="2" />
+    </Grid>
     <Grid Name="Notice" Classes="warnline" ColumnDefinitions="Auto,*" Margin="0,0,0,4"
           IsVisible="{Binding Notice, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
       <Path Classes="warnmark" />

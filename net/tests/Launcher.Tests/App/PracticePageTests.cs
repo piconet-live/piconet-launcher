@@ -155,7 +155,7 @@ public sealed class PracticePageTests : IDisposable
         Assert.Same(main.Practice, main.Current);
         Assert.Single(window.GetVisualDescendants().OfType<PracticeView>());
         Assert.Equal("play", main.Tab);
-        // the set-up as it opens: the first course, the Garage's machine, stock stats, 100, three laps
+        // the set-up as it opens: the first course, the Garage's machine, stock stats, 100, unlimited laps
         Assert.Equal(PracticeSetup.Default with { Machine = main.Garage.MachineIndex }, main.Practice.Setup);
         var labels = window.GetVisualDescendants().OfType<Grid>().Where(g => g.Classes.Contains("rule"))
             .Select(g => g.Children.OfType<TextBlock>().Single().Text);
@@ -179,11 +179,18 @@ public sealed class PracticePageTests : IDisposable
         Assert.Contains("picked", cards[1].Classes);
         Assert.DoesNotContain("picked", cards[0].Classes);
 
-        // laps: one more; typed, and never past the lap counter's two figures; Unlimited: the game's free run
+        // laps: Unlimited as it opens, the game's free run; off, a count: one more; typed, and never past the lap
+        // counter's two figures
         var laps = RowOf(window, "Laps");
+        var unlimited = laps.GetVisualDescendants().OfType<ToggleSwitch>().Single(t => t.IsEffectivelyVisible);
+        Assert.True(unlimited.IsChecked);
+        Assert.Equal(PracticeSetup.Unlimited, main.Practice.Setup.Laps);
+        unlimited.IsChecked = false;
+        Dispatcher.UIThread.RunJobs();
+        Assert.Equal(1, main.Practice.Setup.Laps);
         var more = Named<Button>(laps, "More");
         Click(window, more);
-        Assert.Equal(4, main.Practice.Setup.Laps);
+        Assert.Equal(2, main.Practice.Setup.Laps);
         var typed = Named<TextBox>(laps, "Typed");
         typed.Focus();
         typed.Text = "250";
@@ -196,8 +203,6 @@ public sealed class PracticePageTests : IDisposable
         typed.Text = "12";
         window.KeyPressQwerty(Avalonia.Input.PhysicalKey.Enter, Avalonia.Input.RawInputModifiers.None);
         Assert.Equal(12, main.Practice.Setup.Laps);
-        // (Unlimited: a free run, which plays back as the race, as every replay does)
-        Assert.Contains(laps.GetVisualDescendants().OfType<ToggleSwitch>(), t => t.IsEffectivelyVisible);
 
         // Restore: off as it opens, the game's rule when on
         Assert.False(main.Practice.Setup.Restore);

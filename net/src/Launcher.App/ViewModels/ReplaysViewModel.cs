@@ -21,7 +21,7 @@ public sealed partial class ReplayItem : ObservableObject
         Listing = listing;
         var (venue, track) = ReplayWords.Course(listing.CourseName);
         (Venue, Track) = (venue, track);
-        Under = string.Join(" · ", new[] { venue, ReplayWords.Laps(listing.Laps), listing.StatPackLabel }.Where(word => word.Length > 0));
+        Under = string.Join(" · ", new[] { venue, ReplayWords.Laps(listing.Laps), listing.ModeLabel, listing.StatPackLabel }.Where(word => word.Length > 0));
         RacerMachine = listing.Raced is { } raced ? Theme.GameSkin.NameOf(raced) : "";
         When = ReplayDates.When(listing.Recorded, now ?? DateTimeOffset.Now);
     }
@@ -42,7 +42,7 @@ public sealed partial class ReplayItem : ObservableObject
 
     public string Track { get; }
 
-    /// <summary>Under the track: the venue, the laps, and the race's stat pack when it had one.</summary>
+    /// <summary>Under the track: the venue, the laps, and the race's mode and stat pack when it had them.</summary>
     public string Under { get; }
 
     public string RacerName => Listing.Racer;
@@ -140,8 +140,12 @@ public sealed partial class ReplaysViewModel : ViewModelBase
     {
         _state = state;
         _now = now ?? (() => DateTimeOffset.Now);
+        Race = RaceViewModel.ForPlayback(state);
         Refresh();
     }
+
+    /// <summary>The race of the replay the game plays, shown over the list when its mode has lines.</summary>
+    public RaceViewModel Race { get; }
 
     /// <summary>The list as the page draws it: each group's heading (<see cref="ReplayGroup"/>), then its replays
     /// (<see cref="ReplayItem"/>).</summary>

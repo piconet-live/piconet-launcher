@@ -177,6 +177,18 @@ public sealed partial class LobbyViewModel
     private Task KickAsync(SeatRow row) =>
         _session is { IsHost: true } session && row is { Id: { } id } && id != session.PlayerId ? session.KickAsync(id) : Task.CompletedTask;
 
+    /// <summary>A seat's team pressed: the next team, past the last none (the race gives one then).</summary>
+    [RelayCommand]
+    private Task NextTeamAsync(SeatRow row)
+    {
+        if (_session is not { } session || row is not { Id: { } id, TeamChanges: true } || row.Teams == 0)
+        {
+            return Task.CompletedTask;
+        }
+        int? next = row.Team is { } team ? team + 1 < row.Teams ? team + 1 : null : 0;
+        return session.ChooseTeamAsync(next, id == session.PlayerId ? null : id);
+    }
+
     /// <summary>A refusal of the host's or of the lobby's (rules locked, not the host), in the notice's place.</summary>
     private static (string, IReadOnlyList<NoticeValue>, string)? CustomNotice(QuickPlaySession session) =>
         session.InCustomLobby && session.LobbyRefusal is { } refusal

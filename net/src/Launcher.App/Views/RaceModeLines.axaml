@@ -1,0 +1,49 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:core="using:Launcher.Core"
+             xmlns:v="using:Launcher.App.Views"
+             x:Class="Launcher.App.Views.RaceModeLines"
+             x:DataType="vm:RaceViewModel">
+  <!-- The mode's lines for the race, as the player's own numbers are drawn; then each team's. -->
+  <StackPanel Spacing="12">
+    <TextBlock Name="ModeFaultLine" Text="{Binding ModeFault}" TextWrapping="Wrap" IsVisible="{Binding HasModeFault}" />
+    <ItemsControl Name="ModeGlobals" ItemsSource="{Binding ModeGlobals}"
+                  IsVisible="{Binding !!ModeGlobals.Count}">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="core:ModeFigure">
+          <StackPanel Margin="0,0,24,4" MinWidth="72">
+            <TextBlock Classes="colhead" Text="{Binding Label, Converter={x:Static v:UpperText.Instance}}" />
+            <TextBlock Name="ModeGlobalValue" Classes="head" Text="{Binding Value}" FontFeatures="tnum" />
+          </StackPanel>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+    <ItemsControl Name="ModeTeams" ItemsSource="{Binding TeamFigures}"
+                  IsVisible="{Binding !!TeamFigures.Count}">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="core:ModeTeamFigures">
+          <StackPanel Margin="0,0,24,4" MinWidth="72">
+            <TextBlock Classes="colhead" Text="{Binding Team, Converter={x:Static v:UpperText.Instance}}" />
+            <ItemsControl ItemsSource="{Binding Lines}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="core:ModeFigure">
+                  <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Classes="dim" Text="{Binding Label}" />
+                    <TextBlock Name="ModeTeamValue" Classes="figure" Text="{Binding Value}" />
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+  </StackPanel>
+</UserControl>

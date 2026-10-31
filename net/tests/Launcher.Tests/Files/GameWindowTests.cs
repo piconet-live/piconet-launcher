@@ -71,13 +71,16 @@ public sealed class GameWindowTests : IDisposable
         var store = new SettingsStore(file);
         store.Save(new LauncherSettings { RaceCamera = 3 });
         Assert.Equal(3, new SettingsStore(file).Load().StartCamera);
+        File.WriteAllText(file, """{"raceCamera": 4}""");
+        Assert.Equal(4, new SettingsStore(file).Load().RaceCamera);
         File.WriteAllText(file, """{"raceCamera": 7}""");
         Assert.Equal(0, new SettingsStore(file).Load().RaceCamera);
         var three = new GameWindow("F-Zero GX", Camera: 3);
         Assert.Equal(3, (int)JsonNode.Parse(GameLaunchFile.Race("b", Match, window: three))!["match"]!["camera"]!);
         Assert.Null(JsonNode.Parse(GameLaunchFile.Playback("b", "r.fzrp", window: three))!["replay"]!["camera"]);
         Assert.DoesNotContain("camera", GameLaunchFile.Offline("b", window: three), StringComparison.Ordinal);
-        foreach (var none in new[] { 0, 4, -1 })
+        Assert.Equal(4, (int)JsonNode.Parse(GameLaunchFile.Race("b", Match, window: new GameWindow("F-Zero GX", Camera: 4)))!["match"]!["camera"]!);   // first person
+        foreach (var none in new[] { 0, 5, -1 })
         {
             Assert.Null(JsonNode.Parse(GameLaunchFile.Race("b", Match, window: new GameWindow("F-Zero GX", Camera: none)))!["match"]!["camera"]);
         }
@@ -112,8 +115,8 @@ public sealed class GameWindowTests : IDisposable
     public void ATestBuildAndATestGameAlwaysShowTheFrameRate()
     {
         const string server = "wss://example.test/ws";
-        var (test, review, players, unstamped) = (StackStamp.From("A", server, "test"), StackStamp.From("B", server, null),
-            StackStamp.From("B", server, "public"), StackStamp.From(null, null, null));
+        var (test, review, players, unstamped) = (StackStamp.From("test", server, "test"), StackStamp.From("test", server, null),
+            StackStamp.From("live", server, "public"), StackStamp.From(null, null, null));
         var (off, on) = (new LauncherSettings(), new LauncherSettings { ShowFrameRate = true });
         Assert.True(off.FrameRateShown(test, testGame: false));
         Assert.True(off.FrameRateShown(review, testGame: false));

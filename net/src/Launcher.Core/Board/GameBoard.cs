@@ -26,10 +26,14 @@ public sealed class GameBoard : IDisposable
     private readonly BoardStatus _status = new();
     private readonly BoardSnapshot _snapshot = new();
     private readonly BoardMailbox _mail = new();
+    private readonly BoardModeHead _modeHead = new BoardModeHead();
+    private readonly BoardModeValues _modeValues = new();
     private readonly CancellationTokenSource _stop = new();
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private readonly object _writing = new();
     private uint _serial;
+    private uint _modeSerial;
+    private ModeBoardHead? _mode;
     private ulong _nextEvent;
     private int _disposed;
 
@@ -74,6 +78,10 @@ public sealed class GameBoard : IDisposable
 
     /// <summary>The newest race snapshot that can be shown (null before the first).</summary>
     public RaceSnapshot? Latest { get; private set; }
+
+    /// <summary>The race's mode values at the newest picture (null: no mode, no <c>board</c> line, or none written yet).
+    /// Picture only, as the snapshot is: rollback can correct them a moment later.</summary>
+    public ModeBoardNow? Mode { get; private set; }
 
     /// <summary>Why the game was asked to stop, first ask (None: not asked).</summary>
     public BoardStopReason StopReason { get; private set; }
@@ -165,6 +173,7 @@ public sealed class GameBoard : IDisposable
             var frozen = _judge.Frozen;
             told.Add(() => FrozenChanged?.Invoke(frozen));
         }
+        LookAtMode();
         if (_view.TryReadSnapshot(_snapshot) && _snapshot.Serial != _serial && _snapshot.Serial != 0)
         {
             _serial = _snapshot.Serial;
@@ -199,6 +208,21 @@ public sealed class GameBoard : IDisposable
             var before = lost;
             told.Add(() => EventRead?.Invoke(e, before));
             lost = 0;
+        }
+    }
+
+    /// <summary>The mode's head until the game has written it (once, at its first picture), then each new set of values:
+    /// before the race's snapshot, so a snapshot told comes with the values of its picture or a newer one.</summary>
+    private void LookAtMode()
+    {
+        if (_mode is null && _view.TryReadModeHead(_modeHead))
+        {
+            _mode = ModeBoardHead.Of(_modeHead);
+        }
+        if (_mode is { } head && _view.TryReadModeValues(_modeValues) && _modeValues.Serial != 0 && _modeValues.Serial != _modeSerial)
+        {
+            _modeSerial = _modeValues.Serial;
+            Mode = ModeBoardNow.Of(head, _modeValues);
         }
     }
 

@@ -68,6 +68,15 @@
                 AutomationProperties.Name="Choose a stat pack file" />
       </StackPanel>
     </DataTemplate>
+    <!-- a custom lobby's game mode: none, the lobby's, the host's own file last; Choose file opens the file picker -->
+    <DataTemplate DataType="vm:GameModeRule">
+      <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+        <ComboBox Classes="field" MinWidth="150" ItemsSource="{Binding Options}" SelectedIndex="{Binding Selected}"
+                  AutomationProperties.Name="{Binding Label}" />
+        <Button Name="ModeFile" Classes="link" Content="Choose file" VerticalAlignment="Center"
+                AutomationProperties.Name="Choose a mode file" />
+      </StackPanel>
+    </DataTemplate>
     <!-- the preset, and beside it the toggle that shows every rule (Create) -->
     <DataTemplate DataType="vm:PresetRule">
       <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
@@ -93,17 +102,17 @@
                AutomationProperties.Name="{Binding Label}" />
     </DataTemplate>
     <DataTemplate DataType="vm:StepperRule">
-      <c:Stepper Value="{Binding Value}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Typed="True"
+      <c:Stepper Value="{Binding Value}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Step="{Binding Step}" Typed="True"
                  AutomationProperties.Name="{Binding Label}" />
     </DataTemplate>
     <!-- the stepper at the row's right edge, over the switches of the rows under it, so that the pad's down goes
-         to the next row (Boost from the start) and not past it; Unlimited's switch to its left -->
+         to the next row (Boost from the start) and not past it; Unlimited's switch to its left. Unlimited: no stepper, the switch comes over the rows under it, so down stops here -->
     <DataTemplate DataType="vm:LapsRule">
       <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
         <ToggleSwitch IsChecked="{Binding Unlimited}" OnContent="" OffContent="" AutomationProperties.Name="Unlimited" />
         <TextBlock Classes="dim" Text="Unlimited" VerticalAlignment="Center" />
         <c:Stepper Value="{Binding Value}" Minimum="1" Maximum="{Binding Maximum}" Typed="True"
-                   IsEnabled="{Binding Counted}" AutomationProperties.Name="{Binding Label}" />
+                   IsVisible="{Binding Counted}" AutomationProperties.Name="{Binding Label}" />
       </StackPanel>
     </DataTemplate>
     <!-- the switch first: the pad's right turns it on, then moves on to the delay; no "On" beside it (the row is
