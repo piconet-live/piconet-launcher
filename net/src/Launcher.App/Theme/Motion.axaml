@@ -1,7 +1,29 @@
 <!-- The launcher's look (Theme.axaml): what moves. Press and lift move a button's face, inside a root that stays still
      and takes the pointer, so a press at the very edge still counts. Under the window's class "still" (Reduced motion)
-     they stand. -->
+     they stand. Selectors that travel: a lit control leaves its fill to the mark its host draws (TravelHost). -->
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:c="using:Launcher.App.Controls">
+  <!-- the mode tabs: the green plate is the host's; the left column: the raised tone is the host's -->
+  <Style Selector="c|TravelHost Button.section.on, c|TravelHost Button.section.on:pointerover, c|TravelHost Button.tab.on, c|TravelHost Button.tab.on:pointerover, c|TravelHost Button.quiet.on, c|TravelHost Button.quiet.on:pointerover">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="c:TravelHost.Lit" Value="True" />
+  </Style>
+  <!-- the shelves: the ring and its tone are the host's -->
+  <Style Selector="c|TravelHost Button.chip.on, c|TravelHost Button.chip.on:pointerover">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+    <Setter Property="c:TravelHost.Lit" Value="True" />
+  </Style>
+  <!-- segmented controls and the ports: the host stands in the list's own template -->
+  <Style Selector="ListBox.seg ListBoxItem:selected, ListBox.seg ListBoxItem:selected:pointerover">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="c:TravelHost.Lit" Value="True" />
+  </Style>
+  <Style Selector="ListBox.seg:disabled ListBoxItem:selected">
+    <Setter Property="Background" Value="Transparent" />
+  </Style>
+  <Style Selector="ListBox.seg:disabled /template/ c|TravelHost#Travel">
+    <Setter Property="Fill" Value="{StaticResource HoverBrush}" />
+  </Style>
 </Styles>

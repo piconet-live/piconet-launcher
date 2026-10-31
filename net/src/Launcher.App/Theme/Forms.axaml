@@ -1,7 +1,8 @@
 <!-- The launcher's look (Theme.axaml, which takes this file in and holds its colours and sizes): tables, inputs,
      choices and forms. -->
 <Styles xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="using:Launcher.App.Controls">
   <!-- Tables: a header of column names, then rows with a line above each. -->
   <Style Selector="Border.rowhead">
     <Setter Property="Height" Value="{StaticResource RowHeadHeight}" />
@@ -89,7 +90,9 @@
     <Setter Property="Template">
       <ControlTemplate>
         <Border Background="{StaticResource RaisedBrush}" HorizontalAlignment="Left" CornerRadius="{DynamicResource StaticMediumCornerRadius}">
-          <ItemsPresenter Name="PART_ItemsPresenter" ItemsPanel="{TemplateBinding ItemsPanel}" Margin="{TemplateBinding Padding}" />
+          <c:TravelHost Name="Travel" Fill="{StaticResource AccentBrush}">
+            <ItemsPresenter Name="PART_ItemsPresenter" ItemsPanel="{TemplateBinding ItemsPanel}" Margin="{TemplateBinding Padding}" />
+          </c:TravelHost>
         </Border>
       </ControlTemplate>
     </Setter>

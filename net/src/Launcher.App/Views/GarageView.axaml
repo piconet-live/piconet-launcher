@@ -49,6 +49,7 @@
               IsVisible="{Binding Previewing}" AutomationProperties.Name="Back to the machines" />
       <!-- the shelves as chips with their counts ("12 / 41" in a lobby that offers twelve) -->
       <Panel Name="Shelves" IsVisible="{Binding Selecting}" HorizontalAlignment="Left">
+          <c:TravelHost Fill="{StaticResource RaisedBrush}" Stroke="{StaticResource AccentBrush}" Shape="Ring">
           <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
             <Button Name="ShelfFavourites" Classes="chip" Classes.on="{Binding ShelfTabs[0].On}" Command="{Binding ShowShelfCommand}"
                     CommandParameter="{x:Static vm:GarageViewModel.FavouritesShelf}" AutomationProperties.Name="Favourites">
@@ -73,6 +74,7 @@
               </StackPanel>
             </Button>
           </StackPanel>
+        </c:TravelHost>
       </Panel>
     </DockPanel>
 
@@ -258,7 +260,7 @@
                 CornerRadius="{DynamicResource StaticExtraLargeCornerRadius}"
                 BoxShadow="{StaticResource FloatShadow}" VerticalAlignment="Top">
           <Grid Name="Side" Width="360" RowDefinitions="Auto,*,Auto,Auto,Auto" VerticalAlignment="Top">
-            <ItemsControl Name="Sections" ItemsSource="{Binding Sections}" Margin="0,0,0,8" AutomationProperties.Name="Parts, colour or stats">
+            <c:TravelHost Fill="{StaticResource AccentBrush}" Shape="Lean" Margin="0,0,0,8"><ItemsControl Name="Sections" ItemsSource="{Binding Sections}" AutomationProperties.Name="Parts, colour or stats">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
               </ItemsControl.ItemsPanel>
@@ -271,7 +273,7 @@
                   </Button>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
-            </ItemsControl>
+            </ItemsControl></c:TravelHost>
 
             <!-- Colour, a stock machine's: its four stock colours and the player's paint; the wheel and the box paint it. -->
             <StackPanel Grid.Row="1" IsVisible="{Binding ColourShown}">
