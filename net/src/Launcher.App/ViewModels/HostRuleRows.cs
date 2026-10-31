@@ -65,8 +65,9 @@ public static class HostRuleRows
     /// the others as <see cref="For"/> gives them.</summary>
     /// <param name="file">The host's own pack file, the pack's row's last choice; it is the choice when the rules name
     /// its pack and none of the server's is the same by name.</param>
+    /// <param name="courses">The chosen mode's list of courses: the course row's fixed course is one of them.</param>
     public static RuleRow ForLobby(HostRule rule, LobbyRules? rules, LobbyRules? quickPlay, IReadOnlyList<string>? packs,
-        HostPackFile? file = null)
+        HostPackFile? file = null, IReadOnlyCollection<int>? courses = null)
     {
         ArgumentNullException.ThrowIfNull(rule);
         var value = CustomRules.Value(rules, rule.Name, quickPlay);
@@ -74,7 +75,7 @@ public static class HostRuleRows
         {
             RuleKind.Range => new RangeRule(rule.Label, value, CustomRules.Value(rules, LobbyRules.SettingHighKey, quickPlay), rule.Least, rule.Most),
             RuleKind.Choice when rule == HostRules.CpuFill => new SegmentedRule(rule.Label, CpuFillChoices, value),
-            RuleKind.Course => new CourseRule(rule.Label, value, CustomRules.Value(rules, LobbyRules.FixedCourseKey, quickPlay)),
+            RuleKind.Course => new CourseRule(rule.Label, value, CustomRules.Value(rules, LobbyRules.FixedCourseKey, quickPlay), courses),
             RuleKind.Text => new StepperRule(rule.Label, value, rule.Least, rule.Most),
             RuleKind.Pack => PackRow(rule, rules?.StatPack, packs ?? [], file),
             _ => For(rule, value, packs),

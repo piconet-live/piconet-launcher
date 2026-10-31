@@ -110,7 +110,8 @@ public static class StandInService
             }
             return (new LobbyMode(compiled.Hash!, compiled.ShareCode!, m.Name, m.Api, m.Badge, m.About, terms.Rules(), terms.Pack,
                 m.Params.Count > 0 ? m.Params : null, m.Params.Count > 0 ? rules.ModeValues ?? [.. m.Params.Select(p => p.Default)] : null,
-                terms.Machines is { Count: > 0 } machines ? machines : null, terms.CustomsOff), terms, null);
+                terms.Machines is { Count: > 0 } machines ? machines : null, terms.CustomsOff,
+                terms.Courses is { Count: > 0 } courses ? courses : null), terms, null);
         }
         if (rules.Mode is null)
         {

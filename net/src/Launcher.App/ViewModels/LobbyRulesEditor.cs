@@ -184,6 +184,23 @@ public sealed partial class LobbyRulesEditor : ObservableObject
         return new HashSet<string>([.. owned ?? [], .. pack is null ? [] : new[] { HostRules.StatPack.Name }], StringComparer.Ordinal);
     }
 
+    /// <summary>The courses the chosen mode lists; null: it lists none (or says <c>courses all</c>), and the row offers every course.</summary>
+    private IReadOnlyList<int>? ModeCourses =>
+        (ModeRow.FileChosen ? ModeRow.File!.Terms.Courses : ModeRow.ServedChosen ? ModeRow.Served!.Courses : null) is { Count: > 0 } list ? list : null;
+
+    /// <summary>The course row again, for the mode chosen now: a fixed course outside its list moves to the list's first.</summary>
+    private void NewCourseRow()
+    {
+        var name = HostRules.CourseSelect.Name;
+        var old = CourseRow;
+        old.PropertyChanged -= OnRowChanged;
+        var row = new CourseRule(old.Label, old.Selected, old.Course, ModeCourses);
+        row.PropertyChanged += OnRowChanged;
+        _rows[name] = row;
+        OnPropertyChanged(nameof(CourseRow));
+        OnPropertyChanged(nameof(Picking));
+    }
+
     /// <summary>The host's own lobby: the password row changes it (empty: kept), the switch clears it.</summary>
     public bool Editing { get; }
 
@@ -255,7 +272,7 @@ public sealed partial class LobbyRulesEditor : ObservableObject
 
     /// <summary>The rules that differ from Quick Play's, in one line ("" for Quick Play's own), the mode first.</summary>
     public string Summary => ModeRow.FileChosen && ModeRow.File is { } file
-        ? string.Join(" · ", new[] { file.Name, CustomRules.ParamsLine(file.Params, ModeValues), CustomRules.MachinesLine(file.Terms.Machines), CustomRules.CustomsLine(file.Terms.CustomsOff), CustomRules.Summary(Rules with { Mode = null, ModeValues = null }, _quickPlay) }.Where(s => s.Length > 0))
+        ? string.Join(" · ", new[] { file.Name, CustomRules.ParamsLine(file.Params, ModeValues), CustomRules.CoursesLine(file.Terms.Courses), CustomRules.MachinesLine(file.Terms.Machines), CustomRules.CustomsLine(file.Terms.CustomsOff), CustomRules.Summary(Rules with { Mode = null, ModeValues = null }, _quickPlay) }.Where(s => s.Length > 0))
         : CustomRules.Summary(Rules, _quickPlay);
 
     /// <summary>The line under the preset: the differing rules, or that they are Quick Play's.</summary>
@@ -280,7 +297,7 @@ public sealed partial class LobbyRulesEditor : ObservableObject
         _rows.Clear();
         foreach (var rule in LobbyRules.Settable)
         {
-            var row = HostRuleRows.ForLobby(rule, rules, _quickPlay, _packs, _file);
+            var row = HostRuleRows.ForLobby(rule, rules, _quickPlay, _packs, _file, ModeCourses);
             row.PropertyChanged += OnRowChanged;
             _rows[rule.Name] = row;
         }
@@ -335,6 +352,7 @@ public sealed partial class LobbyRulesEditor : ObservableObject
             TeamsRow = NewTeamsRow(int.TryParse(TeamsRow.Chosen, System.Globalization.CultureInfo.InvariantCulture, out var teams) ? teams : 0);
             _params = NewParamRows();
             NewModePresetRow();
+            NewCourseRow();
             RuleGroups = Shown();
             LobbyGroups = MakeLobbyGroups();
         }

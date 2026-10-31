@@ -444,7 +444,7 @@ public sealed partial class PresetRule(string label, IReadOnlyList<string> optio
 /// <summary>
 /// How a custom lobby's course is chosen: Vote, Random or Fixed side by side; Fixed names its one course, chosen in
 /// the course picker (one course, as Practice picks it). Choosing Fixed opens the picker; a course pressed there is
-/// the lobby's and closes it.
+/// the lobby's and closes it. Under a mode's list of courses the picker offers those alone.
 /// </summary>
 public sealed partial class CourseRule : RuleRow
 {
@@ -453,10 +453,10 @@ public sealed partial class CourseRule : RuleRow
 
     public const int Fixed = 2;
 
-    public CourseRule(string label, int selected, int course) : base(label)
+    public CourseRule(string label, int selected, int course, IReadOnlyCollection<int>? only = null) : base(label)
     {
         Selected = Math.Clamp(selected, 0, Choices.Count - 1);
-        Picker = new CoursePickerModel(PickMode.One, [course]);
+        Picker = new CoursePickerModel(PickMode.One, [course], only);
         Picker.Changed += () =>
         {
             OnPropertyChanged(nameof(Course));

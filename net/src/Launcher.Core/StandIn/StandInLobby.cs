@@ -328,6 +328,9 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
         }
     }
 
+    /// <summary>What the vote and Random draw from: the room's mode's list, else the pool.</summary>
+    private IReadOnlyList<int> CoursePool => room?.Terms?.Courses is { Count: > 0 } listed ? listed : Courses.Pool;
+
     /// <summary>(Under the lock.) The match forms: the course vote, five courses of the pool and Random course; with
     /// Quick Play's rotation, five cards of it (one spicy) and Random, as the service's vote.</summary>
     private void StartMatch()
@@ -347,9 +350,9 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
             ChoosingOn(_match, pinned);
             return;
         }
-        _cards = _rotation?.Vote(Courses.Pool, Random.Shared.Next);
+        _cards = _rotation?.Vote(CoursePool, Random.Shared.Next);
         _options = _cards is { } cards ? [.. cards.Select(c => c.Course)]
-            : [.. Courses.Pool.OrderBy(_ => Random.Shared.Next()).Take(5), CourseVote.RandomCourse];
+            : [.. CoursePool.OrderBy(_ => Random.Shared.Next()).Take(5), CourseVote.RandomCourse];
         _votes = new int[_options.Count];
         _voted.Clear();
         _chosen.Clear();
@@ -420,9 +423,9 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
                 }
             }
             // (Random course with the rotation draws a mode too: now and then a spicy one)
-            var drawn = _cards?[winner] is { } card && card.Course == CourseVote.RandomCourse ? _rotation!.Random(Courses.Pool, Random.Shared.Next)
+            var drawn = _cards?[winner] is { } card && card.Course == CourseVote.RandomCourse ? _rotation!.Random(CoursePool, Random.Shared.Next)
                 : _cards?[winner];
-            course = drawn?.Course ?? (_options[winner] == CourseVote.RandomCourse ? Courses.Pool[Random.Shared.Next(Courses.Pool.Count)] : _options[winner]);
+            course = drawn?.Course ?? (_options[winner] == CourseVote.RandomCourse ? CoursePool[Random.Shared.Next(CoursePool.Count)] : _options[winner]);
             send(new CourseChosen(MatchId, _options, [.. _votes], winner, course, drawn?.Card));
             _machines = drawn?.Mode.Terms.Machines;
             _customsOff = drawn?.Mode.Terms.CustomsOff == true;

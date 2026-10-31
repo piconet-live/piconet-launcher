@@ -205,6 +205,23 @@ public sealed class StandInModesTests
         }
     }
 
+    /// <summary>A mode's list: the stand-in's vote offers those courses and Random, and the draw lands on one, as the service.</summary>
+    [Fact]
+    public async Task AListOfCoursesIsTheVoteAndTheDraw()
+    {
+        var c = await Connected();
+        await using (c.Link)
+        {
+            await Created(c, "courses [\"Lightning: Loop Cross\", \"Mute City: Sonic Oval\"];");
+            await c.Link.StartLobbyRaceAsync(TestContext.Current.CancellationToken);
+            var vote = await Next<CourseVote>(c.Got);
+            Assert.Equal([8, 36], vote.Options.Where(o => o != CourseVote.RandomCourse).Order());
+            Assert.Equal(CourseVote.RandomCourse, vote.Options[^1]);
+            var chosen = await Next<CourseChosen>(c.Got);
+            Assert.True(chosen.Course is 8 or 36);
+        }
+    }
+
     [Fact]
     public async Task APinnedCourseHasNoVoteAndTheModesMachinesAreOffered()
     {
