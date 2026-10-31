@@ -139,9 +139,16 @@ public sealed partial class RaceViewModel : ViewModelBase
     [ObservableProperty]
     public partial bool HasMode { get; set; }
 
-    /// <summary>The mode has lines for the race or a team, under the player's own numbers.</summary>
+    /// <summary>The mode has lines for the race or a team, or broke, under the player's own numbers.</summary>
     [ObservableProperty]
     public partial bool HasModeFigures { get; set; }
+
+    /// <summary>What ended the race when the mode broke; "" while it runs as it should.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasModeFault))]
+    public partial string ModeFault { get; set; } = "";
+
+    public bool HasModeFault => ModeFault.Length > 0;
 
     /// <summary>The standings' width: their own and a column for each of the mode's lines for a racer.</summary>
     public double StandingsWidth => 268 + (ModeSeatHeads.Count * ModeColumn);
@@ -417,6 +424,9 @@ public sealed partial class RaceViewModel : ViewModelBase
     /// <summary>The mode's lines as they stand now; nothing is told when nothing moved.</summary>
     private void ShowMode(ModeBoardRows rows)
     {
+        ModeFault = _mode?.Fault ?? "";
+        HasMode = rows.Any || HasModeFault;
+        HasModeFigures = rows.Globals.Count > 0 || rows.Teams.Count > 0 || HasModeFault;
         if (_shownMode.Same(rows))
         {
             return;
@@ -425,8 +435,6 @@ public sealed partial class RaceViewModel : ViewModelBase
         ModeGlobals = rows.Globals;
         TeamFigures = rows.Teams;
         ModeSeatHeads = rows.SeatHeads;
-        HasMode = rows.Any;
-        HasModeFigures = rows.Globals.Count > 0 || rows.Teams.Count > 0;
     }
 
     /// <summary>Each seat's team in the race the page shows, from the replay, the lobby's race or the player's own match start.</summary>

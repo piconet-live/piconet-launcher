@@ -219,7 +219,7 @@ public sealed class GameBoard : IDisposable
         {
             _mode = ModeBoardHead.Of(_modeHead);
         }
-        if (_mode is { Lines.Count: > 0 } head && _view.TryReadModeValues(_modeValues) && _modeValues.Serial != 0 && _modeValues.Serial != _modeSerial)
+        if (_mode is { } head && _view.TryReadModeValues(_modeValues) && _modeValues.Serial != 0 && _modeValues.Serial != _modeSerial)
         {
             _modeSerial = _modeValues.Serial;
             Mode = ModeBoardNow.Of(head, _modeValues);

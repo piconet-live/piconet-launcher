@@ -74,7 +74,8 @@ public sealed partial class LobbyStageRulesTests
             PumpTelling(state, () => lobby.VoteShown && lobby.CourseOptions.Count == 6);
             var cards = lobby.CourseOptions;
             Assert.Equal("OVERDRIVE", cards[spicy].Badge);
-            Assert.Equal("Speed locked and rising. Last one alive wins.", cards[spicy].About);
+            Assert.StartsWith("Speed locked and rising. Last one alive wins.\n", cards[spicy].About, StringComparison.Ordinal);
+            Assert.Contains("Pedals locked", cards[spicy].About, StringComparison.Ordinal);
             Assert.Equal(cards[spicy].Place, cards[spicy].PlaceLine);     // unlimited laps: nothing said
             Assert.All(cards.Where(c => c.Index != spicy && c.Course != CourseVote.RandomCourse), c =>
             {

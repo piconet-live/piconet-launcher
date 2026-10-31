@@ -79,7 +79,7 @@ public sealed record ModeBoardHead(string Name, string Hash, IReadOnlyList<Shown
 }
 
 /// <summary>The mode's values at one picture of the game (ModeValues), with the head that says how they read.</summary>
-public sealed class ModeBoardNow(ModeBoardHead head, uint frame, int[] globals, int[] seats, int[] teams)
+public sealed class ModeBoardNow(ModeBoardHead head, uint frame, int[] globals, int[] seats, int[] teams, uint fault = 0)
 {
     /// <summary>The values a scope has a seat, a team or a race: a line's <see cref="ShownModeLine.Column"/> is below.</summary>
     public const int Columns = 8;
@@ -89,13 +89,25 @@ public sealed class ModeBoardNow(ModeBoardHead head, uint frame, int[] globals, 
     /// <summary>The step of the picture.</summary>
     public uint Frame { get; } = frame;
 
+    /// <summary>What ended the race when the mode broke (D6), in words; null while it runs as it should.</summary>
+    public string? Fault { get; } = fault switch
+    {
+        0 => null,
+        1 => "Mode error: the race ended for everyone. The mode did too much in one step.",
+        2 => "Mode error: the race ended for everyone. The mode asked for too many actions in one step.",
+        3 => "Mode error: the race ended for everyone. The mode gave the game a number it can't use.",
+        4 => "Mode error: the race ended for everyone. The mode's code did something it may not.",
+        5 => "Mode error: the race ended for everyone. The game had no room for the mode.",
+        _ => "Mode error: the race ended for everyone. Too many of the mode's rules were waiting at once.",
+    };
+
     /// <summary>The numbers in <paramref name="values"/> as the game wrote them.</summary>
     public static ModeBoardNow Of(ModeBoardHead head, BoardModeValues values)
     {
         ArgumentNullException.ThrowIfNull(head);
         ArgumentNullException.ThrowIfNull(values);
         return new ModeBoardNow(head, values.Frame, [.. values.Globals.Select(v => v.Value)],
-            [.. values.Seats.Select(v => v.Value)], [.. values.Teams.Select(v => v.Value)]);
+            [.. values.Seats.Select(v => v.Value)], [.. values.Teams.Select(v => v.Value)], values.Fault);
     }
 
     public int Global(ShownModeLine line)

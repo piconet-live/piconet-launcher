@@ -117,7 +117,8 @@ public sealed partial class CourseOption(int index, string name, int course) : O
     [NotifyPropertyChangedFor(nameof(HasBadge))]
     public partial string Badge { get; set; } = "";
 
-    /// <summary>The spicy mode's line of what it changes, shown when the card is hovered; null on a normal card.</summary>
+    /// <summary>The spicy mode's line of what it changes and the rules it changes, a line each, shown when the card is
+    /// hovered; null on a normal card.</summary>
     [ObservableProperty]
     public partial string? About { get; set; }
 
@@ -128,7 +129,7 @@ public sealed partial class CourseOption(int index, string name, int course) : O
     {
         Laps = card?.Laps;
         Badge = card?.Badge ?? "";
-        About = card?.Badge is null ? null : card.About;
+        About = card?.Badge is null ? null : string.Join('\n', new[] { card.About }.Concat(card.Rules ?? []).OfType<string>());
     }
 
     /// <summary>The venue line: the venue and the race's laps when the card has them ("Casino Palace · 6 laps";

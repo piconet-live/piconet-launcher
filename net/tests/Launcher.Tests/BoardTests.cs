@@ -172,6 +172,14 @@ public sealed unsafe class BoardTests : IDisposable
     }
 
     [Fact]
+    public void AModeThatBrokeSaysWhatHappened()
+    {
+        var head = new ModeBoardHead("M", "", []);
+        Assert.Null(new ModeBoardNow(head, 0, new int[8], new int[240], new int[240]).Fault);
+        Assert.Contains("too much in one step", new ModeBoardNow(head, 0, new int[8], new int[240], new int[240], 1).Fault, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void AModeOfNoLinesOrAHeadWrittenBadlyShowsNothingItCannotRead()
     {
         Assert.Null(ModeBoardHead.Of(new BoardModeHead()));   // serial 0: no mode
