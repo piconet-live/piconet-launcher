@@ -31,9 +31,11 @@
             tracks round (StaticFullCornerRadius). Square (SquareCorner): the left column and its places, the title bar. Leaning
             (Controls/Plate, about 15 degrees): the active tab, the primary button and the hero's title plate only; the
             rules panel has one chamfered corner. A ring (the selection's 2 px, the pad's mark) follows the shape.
-  MOTION    Quick 120 ms (hover tone, press, tooltip), Standard 200 ms (a control changing size or state), Emphasis
-            320 ms (a card lifting, bars growing). Easing: EaseOut, cubic-bezier(.2, .8, .2, 1): fast start, soft
-            landing; nothing snaps, nothing bounces. Flat fills: no glow; a shadow only for what floats (FloatShadow).
+  MOTION    Quick 120 ms (hover tone, press, tooltip), Standard 200 ms (a page, a selector, a panel: the longest
+            anything a player waits on takes), Emphasis 320 ms (a big moment nobody waits on), StaggerStep 20 ms between
+            a list's rows. Easing: EaseOut, cubic-bezier(.2, .8, .2, 1): fast start, soft landing; Spring for a press
+            and its release, a little past the end and back. These four are the one place to tune motion (Motion.cs
+            reads them). Only transforms and opacity move. Flat fills: no glow; a shadow only for what floats (FloatShadow).
   CONTROLS  Button.go (the one primary) · Button.primary · Button.secondary (a surface button) · Button.quiet ·
             Button.nav (the column's places) · Button.link · Button.tab · Button.section (a mode tab) ·
             Button.chrome (the window's own buttons) · Button.icon (the bell) · Border.row and Border.rowhead
@@ -198,7 +200,9 @@
     <x:TimeSpan x:Key="Quick">0:0:0.12</x:TimeSpan>
     <x:TimeSpan x:Key="Standard">0:0:0.2</x:TimeSpan>
     <x:TimeSpan x:Key="Emphasis">0:0:0.32</x:TimeSpan>
+    <x:TimeSpan x:Key="StaggerStep">0:0:0.02</x:TimeSpan>
     <SplineEasing x:Key="EaseOut" X1="0.2" Y1="0.8" X2="0.2" Y2="1" />
+    <SplineEasing x:Key="Spring" X1="0.3" Y1="1.7" X2="0.5" Y2="1" />
 
     <!-- Whether the player's disc gives its pictures (GameSkin.Load sets them). -->
     <x:Boolean x:Key="HasDiscArt">False</x:Boolean>
@@ -440,4 +444,5 @@
   <!-- The rest of the look, in this order (a later style wins over an earlier one). -->
   <StyleInclude Source="avares://Launcher.App/Theme/Buttons.axaml" />
   <StyleInclude Source="avares://Launcher.App/Theme/Forms.axaml" />
+  <StyleInclude Source="avares://Launcher.App/Theme/Motion.axaml" />
 </Styles>

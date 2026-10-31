@@ -1,0 +1,7 @@
+<!-- The launcher's look (Theme.axaml): what moves. Press and lift move a button's face, inside a root that stays still
+     and takes the pointer, so a press at the very edge still counts. Under the window's class "still" (Reduced motion)
+     they stand. -->
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="using:Launcher.App.Controls">
+</Styles>

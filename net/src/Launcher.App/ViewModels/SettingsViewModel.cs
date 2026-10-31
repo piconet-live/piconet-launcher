@@ -43,6 +43,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         ShowFrameRate = s.ShowFrameRate || FrameRateAlwaysShown;
         ShowInputs = s.ShowInputs;
         Rumble = s.Rumble;
+        ReducedMotion = s.ReducedMotion;
         InputDelayIndex = s.RaceInputDelay;
         VerticalSyncIndex = s.VerticalSync ? 1 : 0;
         FullScreenIndex = s.GameFullScreen == LauncherSettings.FullScreenExclusive ? 1 : 0;
@@ -202,6 +203,10 @@ public sealed partial class SettingsViewModel : ViewModelBase
     /// its box is ticked and cannot be changed, and the file keeps the player's own value.</summary>
     public bool FrameRateAlwaysShown { get; } = StackStamp.Current.Test;
 
+    /// <summary>The launcher's animations are off (<see cref="LauncherSettings.ReducedMotion"/>).</summary>
+    [ObservableProperty]
+    public partial bool ReducedMotion { get; set; }
+
     /// <summary>The controllers rumble in the game (<see cref="LauncherSettings.Rumble"/>).</summary>
     [ObservableProperty]
     public partial bool Rumble { get; set; }
@@ -333,6 +338,12 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
     partial void OnRumbleChanged(bool value) => Save();
 
+    partial void OnReducedMotionChanged(bool value)
+    {
+        Controls.Motion.Reduced = value;
+        Save();
+    }
+
     partial void OnInputDelayIndexChanged(int value) => Save();
 
     partial void OnVerticalSyncIndexChanged(int value) => Save();
@@ -409,6 +420,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
             ShowFrameRate = FrameRateAlwaysShown ? s.ShowFrameRate : ShowFrameRate,
             ShowInputs = ShowInputs,
             Rumble = Rumble,
+            ReducedMotion = ReducedMotion,
             // (a list with nothing selected says -1: the setting stays what it is)
             InputDelay = InputDelayIndex is >= 0 and <= LauncherSettings.PlayersInputDelay ? InputDelayIndex : s.RaceInputDelay,
             VerticalSync = VerticalSyncIndex is 0 or 1 ? VerticalSyncIndex == 1 : s.VerticalSync,
