@@ -60,6 +60,7 @@ public sealed partial class LobbyRulesEditor : ObservableObject
         ModeRow.PropertyChanged += OnRowChanged;
         TeamsRow = NewTeamsRow(_start.Value(LobbyRules.TeamsKey) ?? 0);
         _params = NewParamRows();
+        NewModePresetRow();
         RuleGroups = Build(_start);
         PresetRow.Note = SummaryShown;
         LobbyGroups = MakeLobbyGroups();
@@ -69,18 +70,19 @@ public sealed partial class LobbyRulesEditor : ObservableObject
     private IReadOnlyList<RuleGroup> MakeLobbyGroups()
     {
         RuleRow[] first = Editing ? [NameRow, LockedRow, PasswordRow] : [NameRow, PasswordRow];
-        return ModeChosen ? RuleGroup.Of(first, [ModeRow, TeamsRow, .. _params.Select(p => p.Row), PresetRow]) : RuleGroup.Of(first, [ModeRow, PresetRow]);
+        RuleRow[] presets = ModePresetRow is { } row ? [row] : [];
+        return ModeChosen ? RuleGroup.Of(first, [ModeRow, TeamsRow, .. presets, .. _params.Select(p => p.Row), PresetRow]) : RuleGroup.Of(first, [ModeRow, PresetRow]);
     }
 
     /// <summary>The chosen mode's own settings as the compiled package declares them, on their defaults for a new file
     /// and on the lobby's values for the mode it has. Quick Play's modes race their defaults.</summary>
-    private IReadOnlyList<ModeParamRow> NewParamRows()
+    private IReadOnlyList<ModeParamRow> NewParamRows(IReadOnlyList<int>? chosen = null)
     {
         foreach (var row in _params)
         {
             row.Row.PropertyChanged -= OnRowChanged;
         }
-        IReadOnlyList<ModeParamRow> rows = ModeRow.FileChosen ? [.. ModeRow.File!.Params.Select(p => new ModeParamRow(p, p.Default))]
+        IReadOnlyList<ModeParamRow> rows = ModeRow.FileChosen ? [.. ModeRow.File!.Params.Select((p, i) => new ModeParamRow(p, chosen is null ? p.Default : chosen[i]))]
             : ModeRow.ServedChosen && ModeRow.Served is { Params: { } declared, Values: { } values } ? [.. declared.Select((p, i) => new ModeParamRow(p, values[i]))]
             : [];
         foreach (var row in rows)
@@ -88,6 +90,65 @@ public sealed partial class LobbyRulesEditor : ObservableObject
             row.Row.PropertyChanged += OnRowChanged;
         }
         return rows;
+    }
+
+    /// <summary>The presets of the host's mode file (the file's <c>preset</c> lines; a mode the lobby has already was
+    /// compiled by the server, and its values stand): its defaults, each preset, and Custom when the rows hold none of
+    /// them. Null: the mode has none. Choosing one sets the rows; what travels is the values, as for rows set by hand.</summary>
+    public ChoiceRule? ModePresetRow { get; private set; }
+
+    private const string ModeDefaults = "Default", ModeCustom = "Custom";
+
+    private void NewModePresetRow()
+    {
+        if (ModePresetRow is { } old)
+        {
+            old.PropertyChanged -= OnModePreset;
+        }
+        ModePresetRow = ModeRow.FileChosen && ModeRow.File!.Presets.Count > 0
+            ? new ChoiceRule("Preset of the mode", [ModeDefaults, .. ModeRow.File.Presets.Select(p => p.Name), ModeCustom])
+            : null;
+        if (ModePresetRow is { } row)
+        {
+            row.PropertyChanged += OnModePreset;
+        }
+    }
+
+    private void OnModePreset(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName != nameof(ChoiceRule.Selected) || _applying || ModePresetRow is not { } row || row.Chosen == ModeCustom)
+        {
+            return;
+        }
+        _applying = true;
+        try
+        {
+            var file = ModeRow.File!;
+            IReadOnlyList<int> values = row.Selected == 0 ? [.. file.Params.Select(p => p.Default)] : file.Presets[row.Selected - 1].Values;
+            _params = NewParamRows(values);
+            LobbyGroups = MakeLobbyGroups();
+            Changed();
+        }
+        finally
+        {
+            _applying = false;
+        }
+    }
+
+    /// <summary>A row set by hand: the preset the rows now hold, or Custom.</summary>
+    private void FollowModePreset()
+    {
+        if (ModePresetRow is not { } row || _applying)
+        {
+            return;
+        }
+        var file = ModeRow.File!;
+        var values = _params.Select(p => p.Value).ToList();
+        var at = values.SequenceEqual(file.Params.Select(p => p.Default)) ? 0
+            : file.Presets.Select((p, i) => (p, i)).FirstOrDefault(x => x.p.Values.SequenceEqual(values), (null!, -1)).Item2 + 1;
+        _applying = true;
+        row.Selected = at == 0 && !values.SequenceEqual(file.Params.Select(p => p.Default)) ? row.Options.Count - 1 : at;
+        _applying = false;
     }
 
     /// <summary>The chosen mode's settings, in its package's order (null: none).</summary>
@@ -273,8 +334,13 @@ public sealed partial class LobbyRulesEditor : ObservableObject
             TeamsRow.PropertyChanged -= OnRowChanged;
             TeamsRow = NewTeamsRow(int.TryParse(TeamsRow.Chosen, System.Globalization.CultureInfo.InvariantCulture, out var teams) ? teams : 0);
             _params = NewParamRows();
+            NewModePresetRow();
             RuleGroups = Shown();
             LobbyGroups = MakeLobbyGroups();
+        }
+        else if (_params.Any(p => p.Row == sender))
+        {
+            FollowModePreset();
         }
         Changed();
     }

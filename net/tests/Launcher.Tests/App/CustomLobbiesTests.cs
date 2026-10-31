@@ -787,6 +787,49 @@ public sealed class CustomLobbiesTests : IDisposable
 
     /// <summary>The Create page with a mode's settings, and a lobby with them in All rules. LOBBY_SHOTS keeps them.</summary>
     [Fact]
+    public void AHostPicksAModesPreset()
+    {
+        var text = """
+            mode "Presets" { api 1; }
+            param lap_count "Laps" number 1..9 default 3;
+            param hide_it "Hide" switch default off;
+            preset "Sprint" { lap_count = 1; }
+            preset "Long and hidden" { lap_count = 9; hide_it = on; }
+            laps lap_count;
+            """;
+        var path = Path.GetTempFileName() + HostModeFile.Extension;
+        File.WriteAllText(path, text);
+        try
+        {
+            var editor = new LobbyRulesEditor(null, null, [], "Lobby");
+            Assert.Null(editor.ModePresetRow);
+            editor.ModeRow.Load(path);
+            var row = Assert.IsType<ChoiceRule>(editor.ModePresetRow);
+            Assert.Equal(["Default", "Sprint", "Long and hidden", "Custom"], row.Options);
+            Assert.Contains(editor.LobbyGroups.SelectMany(g => g.Rows), r => ReferenceEquals(r, row));
+            Assert.Equal([3, 0], editor.ParamRows.Select(p => p.Value));
+            row.Selected = 2;
+            Assert.Equal([9, 1], editor.ParamRows.Select(p => p.Value));
+            Assert.Equal([9, 1], editor.Rules.ModeValues);
+            row.Selected = 1;
+            Assert.Equal([1, 0], editor.ParamRows.Select(p => p.Value));
+            // a row set by hand: Custom, and back to a preset's values: that preset
+            ((StepperRule)editor.ParamRows[0].Row).Value = 5;
+            Assert.Equal("Custom", row.Chosen);
+            ((StepperRule)editor.ParamRows[0].Row).Value = 1;
+            Assert.Equal("Sprint", row.Chosen);
+            ((StepperRule)editor.ParamRows[0].Row).Value = 3;
+            Assert.Equal("Default", row.Chosen);
+            row.Selected = 0;
+            Assert.Equal([3, 0], editor.ParamRows.Select(p => p.Value));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public async Task AModesSettingsShowInThePanelAndInTheLobbysRules()
     {
         var path = Path.Combine(_dir, "cutter.fzmode");
