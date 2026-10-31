@@ -241,6 +241,59 @@ public sealed class CustomRulesTests
         Assert.Equal("random course", editor.Summary);
     }
 
+    private static LobbyRules ModeRules(string words)
+    {
+        var compiled = ModeCompiler.Compile("mode \"M\" { api 1; }\n" + words + "\n");
+        Assert.True(compiled.Succeeded, string.Join("; ", compiled.Errors));
+        var terms = ModeTerms.Of(compiled.Mode!);
+        return new LobbyRules(new Dictionary<string, int>(), Mode: new LobbyMode(new string('a', 64), "AAAAAAAA", "M", 1, Terms: terms.Rules(),
+            Courses: terms.Courses is { Count: > 0 } courses ? courses : null));
+    }
+
+    /// <summary>A mode that lists courses: the row stays (Vote, Random, Fixed), its picker offers the list alone, and
+    /// the lobby's line and whole list say so; a mode that pins one has no row; neither word, every course.</summary>
+    [Fact]
+    public void TheCourseRowStaysWithinTheModesCourses()
+    {
+        var listed = new LobbyRulesEditor(ModeRules("courses [\"Mute City: Sonic Oval\", \"Casino Palace: Split Oval\"];"), QuickPlay, [], "Friday", editing: true);
+        Assert.Contains(listed.RuleGroups.SelectMany(g => g.Rows), r => r is CourseRule);
+        Assert.Equal([16, 36], listed.CourseRow.Picker.Cards.Select(c => c.Course).Order());
+        listed.CourseRow.Selected = CourseRule.Fixed;
+        Assert.True(listed.CourseRow.Course is 16 or 36);
+        Assert.True(listed.Rules.Value(LobbyRules.FixedCourseKey) is 16 or 36);
+        Assert.Contains("2 courses", CustomRules.Summary(listed.Rules, QuickPlay), StringComparison.Ordinal);
+        Assert.Equal("2 courses", CustomRules.AllRules(listed.Rules, QuickPlay).SelectMany(g => g.Rows).OfType<ValueRule>().Single(r => r.Label == "Courses").Value);
+
+        var one = new LobbyRulesEditor(ModeRules("courses [\"Mute City: Sonic Oval\"];"), QuickPlay, [], "Friday", editing: true);
+        Assert.Equal(36, Assert.Single(one.CourseRow.Picker.Cards).Course);
+        Assert.Equal(CustomRules.CoursesLine([36]), Launcher.Core.Courses.Name(36) + " only");
+
+        var pinned = new LobbyRulesEditor(ModeRules("course \"Mute City: Sonic Oval\";"), QuickPlay, [], "Friday", editing: true);
+        Assert.DoesNotContain(pinned.RuleGroups.SelectMany(g => g.Rows), r => r is CourseRule);
+
+        foreach (var words in new[] { "", "courses all;" })
+        {
+            var free = new LobbyRulesEditor(ModeRules(words), QuickPlay, [], "Friday", editing: true);
+            Assert.Contains(free.RuleGroups.SelectMany(g => g.Rows), r => r is CourseRule);
+            Assert.Equal(CourseCups.All.Count, free.CourseRow.Picker.Cards.Count);
+        }
+    }
+
+    /// <summary>A fixed course from before the mode moves into its list; taking the mode off opens the row again.</summary>
+    [Fact]
+    public void AFixedCourseFollowsTheListWhenTheModeComesAndGoes()
+    {
+        var start = ModeRules("courses [\"Mute City: Sonic Oval\"];");
+        var rules = start with { Values = new Dictionary<string, int> { ["course-select"] = (int)CourseSelectMode.Fixed, [LobbyRules.FixedCourseKey] = 16 } };
+        var editor = new LobbyRulesEditor(rules, QuickPlay, [], "Friday", editing: true);
+        Assert.Equal(36, editor.CourseRow.Course);          // (16 is outside the list)
+        Assert.Equal(36, editor.Rules.Value(LobbyRules.FixedCourseKey));
+        editor.ModeRow.Selected = 0;                        // no mode
+        Assert.Equal(CourseCups.All.Count, editor.CourseRow.Picker.Cards.Count);
+        Assert.Contains(editor.RuleGroups.SelectMany(g => g.Rows), r => r == editor.CourseRow);
+        Assert.Equal(36, editor.Rules.Value(LobbyRules.FixedCourseKey));
+    }
+
     [Theory]
     [InlineData(CustomLobby.BadPassword, "Wrong password")]
     [InlineData(CustomLobby.LobbyFull, "Lobby full")]

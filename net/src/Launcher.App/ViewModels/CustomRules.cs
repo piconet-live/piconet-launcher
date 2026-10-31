@@ -63,7 +63,7 @@ public static class CustomRules
         // (a game mode first, by its name: "Overdrive · 5 laps")
         return string.Join(" · ", rules.Differing(against).Select(name => Said(name, rules, against))
             .Prepend(ParamsLine(rules.Mode?.Params, rules.Mode?.Values)).Prepend(rules.Mode?.Name ?? "")
-            .Append(TeamsLine(rules)).Append(MachinesLine(rules.Mode?.Machines)).Append(CustomsLine(rules.Mode?.CustomsOff == true)).Where(s => s.Length > 0));
+            .Append(TeamsLine(rules)).Append(CoursesLine(rules.Mode?.Courses)).Append(MachinesLine(rules.Mode?.Machines)).Append(CustomsLine(rules.Mode?.CustomsOff == true)).Where(s => s.Length > 0));
     }
 
     /// <summary>A mode's <c>customs off</c> in words.</summary>
@@ -71,6 +71,12 @@ public static class CustomRules
 
     /// <summary><see cref="NoCustoms"/> when it holds, "" when not.</summary>
     public static string CustomsLine(bool off) => off ? NoCustoms : "";
+
+    /// <summary>A mode's list of courses in words: "Mute City: Sonic Oval only", "3 courses"; "" for none.</summary>
+    public static string CoursesLine(IReadOnlyList<int>? courses) =>
+        courses is null or { Count: 0 } ? ""
+        : courses.Count == 1 ? Courses.Name(courses[0]) + " only"
+        : N($"{courses.Count} courses");
 
     /// <summary>A list of allowed machines in words: "Blue Falcon only", "12 machines"; "" for none or all.</summary>
     public static string MachinesLine(IReadOnlyList<int>? machines) =>
@@ -165,6 +171,7 @@ public static class CustomRules
             ? [new RuleGroup([new ValueRule("Mode", mode.Name) { Marked = true, Note = mode.About },
                 .. rules.Value(LobbyRules.TeamsKey) is > 0 and var teams ? [new ValueRule("Teams", N($"{teams}")) { Marked = true }] : (RuleRow[])[],
                 .. ParamValues(mode),
+                .. CoursesLine(mode.Courses) is { Length: > 0 } courses ? [new ValueRule("Courses", courses) { Marked = true }] : (RuleRow[])[],
                 .. MachinesLine(mode.Machines) is { Length: > 0 } machines ? [new ValueRule("Machines", machines) { Marked = true }] : (RuleRow[])[],
                 .. mode.CustomsOff ? [new ValueRule("Custom machines", "Not allowed") { Marked = true }] : (RuleRow[])[]]) { Heading = "Mode" },
                .. groups.Select(g => g with { Later = true })]
