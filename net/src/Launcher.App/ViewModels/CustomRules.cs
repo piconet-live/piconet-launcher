@@ -82,7 +82,7 @@ public static class CustomRules
                 _ => "course vote",
             },
             "boost-start" => v != 0 ? "boost from the start" : "no boost on lap 1",
-            "restore" => v != 0 ? "machines come back" : "no restore",
+            "restore" => v != 0 ? "Restore On" : "no restore",
             "finish-limit" => v == 0 ? "no finish limit" : N($"finish limit {v} s"),
             "mine-regen" => LobbyViewModel.MinesRule(v) ?? "mines back after 0.2 s",
             "machine-setting" => LobbyViewModel.SettingRule(Range(rules, quickPlay)) ?? "setting 100",

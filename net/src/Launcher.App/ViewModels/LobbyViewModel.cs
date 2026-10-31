@@ -502,7 +502,7 @@ public sealed partial class LobbyViewModel : ViewModelBase
         }
         if (r.Race.Restore)
         {
-            parts.Add("machines come back");
+            parts.Add("Restore On");
         }
         // the mines' rule only when it is not Quick Play's 0.2 s
         if (MinesRule(r.Race.MineRegenMs) is { } mines)
