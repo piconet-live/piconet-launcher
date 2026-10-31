@@ -75,6 +75,7 @@ public sealed class RaceTeamsTests : IDisposable
                 var lobby = LedServer.Lobby(LobbyState.Racing) with { LobbyId = "l1", Custom = true, HostId = "p9", Name = "Friday", Race = race, Rules = LobbyRules.QuickPlay };
                 server.SendAsync(LedServer.Welcome(), lobby).GetAwaiter().GetResult();
                 PumpTelling(state, () => joining.IsCompleted && state.Session?.Lobby?.Race is not null);
+                main.Current = main.Lobby;   // (joining, with no lobby yet, the window can go to the custom lobbies' page)
                 server.SendAsync(new LiveRace("m1", new RaceSnapshot(600, 0,
                     [Racer(0, RacerLive.Racing, 900), Racer(1, RacerLive.Racing, 800), Racer(2, RacerLive.Racing, 700), Racer(3, RacerLive.Out, 100)]))).GetAwaiter().GetResult();
                 PumpTelling(state, () => main.Lobby.Race.Standings.Count == 4, "no standings came", 15);

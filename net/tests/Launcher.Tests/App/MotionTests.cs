@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
@@ -38,7 +39,13 @@ public sealed class MotionTests
         Motion.Enter(button, 0, 16);
         Motion.Play(button, "end", Motion.Standard, null, _ => { }, () => ended = true);
         Assert.NotNull(button.RenderTransform);
-        Click(window, button);
+        Frame();
+        var at = button.TranslatePoint(new Point(100, 30), window)!.Value;   // part way, not Click: that settles
+        window.MouseMove(at);
+        window.MouseDown(at, MouseButton.Left);
+        window.MouseUp(at, MouseButton.Left);
+        Dispatcher.UIThread.RunJobs();
+        Assert.True(button.Opacity < 1, "the move had ended before the click");
         Assert.Equal(1, clicks);
         Pump(() => ended && button.RenderTransform is null, "the move did not end");
         Assert.Equal(1, button.Opacity);

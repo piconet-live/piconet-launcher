@@ -98,6 +98,12 @@ public static class Motion
         Time.Add(new Run(target, channel, duration, easing, step, done, delay));
     }
 
+    /// <summary>Moves on now, without waiting for a frame or the timer (a check whose window draws when it says).</summary>
+    public static void Advance() => _clock?.Tick();
+
+    /// <summary>Every move under way ends now (a check that aims by layout).</summary>
+    public static void Settle() => _clock?.Settle();
+
     /// <summary>The control arrives from an offset and a scale, fading in, and is left with no transform of its own.
     /// Only for what has no transform or opacity from a style (a page's host, a list's container, a panel).</summary>
     public static void Enter(Visual target, double dx, double dy, double scale = 1, TimeSpan? duration = null, TimeSpan delay = default)
@@ -348,7 +354,17 @@ public static class Motion
             }
         }
 
-        private void Tick()
+        public void Settle()
+        {
+            foreach (var run in _runs.ToArray())
+            {
+                _runs.Remove(run);
+                run.Step(1);
+                run.Done?.Invoke();
+            }
+        }
+
+        public void Tick()
         {
             var now = Now;
             foreach (var run in _runs.ToArray())
