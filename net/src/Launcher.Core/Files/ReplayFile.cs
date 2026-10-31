@@ -76,11 +76,12 @@ public static class ReplayFile
                 ? t
                 : new DateTimeOffset(File.GetLastWriteTimeUtc(path));
             var (pack, packProblem) = PackOf(file.RaceVersion, setup);
+            var (mode, modeProblem) = ModeOf(file.RaceVersion, setup);
             return new ReplayInfo(path, recorded, setup.GetProperty("course").GetInt32(), setup.GetProperty("laps").GetInt32(),
                 players, you, TimeSpan.FromSeconds(steps / 60.0), racers.GetValueOrDefault(seat),
                 results is { } block ? Results(block, racers) : null, pack, packProblem,
                 h.TryGetProperty(ReplayFormat.Header.Practice, out var practice) && practice.ValueKind == JsonValueKind.True,
-                TeamsOf(setup), [.. racers.Values.OrderBy(racer => racer.Seat)]);
+                TeamsOf(setup), [.. racers.Values.OrderBy(racer => racer.Seat)], mode, modeProblem);
         }
         catch (Exception e) when (Unreadable(e))
         {
@@ -111,6 +112,44 @@ public static class ReplayFile
         }
         return list;
     }
+
+    /// <summary>The game mode of a replay's race (its header's <c>match.setup.mode</c>): its name, and why the game would
+    /// not play the file for it, by the game's own tests (the runner's files_mode.cpp and files_replay.cpp): a newer api,
+    /// a hash that is not the package's, a package that does not read, or a version other than 9.</summary>
+    private static (string? Name, string? Problem) ModeOf(int version, JsonElement setup)
+    {
+        if (!setup.TryGetProperty("mode", out var mode) || mode.ValueKind == JsonValueKind.Null)
+        {
+            return (null, null);
+        }
+        if (mode.ValueKind != JsonValueKind.Object || !mode.TryGetProperty("package", out var text) || text.ValueKind != JsonValueKind.String ||
+            !mode.TryGetProperty("hash", out var hash) || hash.ValueKind != JsonValueKind.String)
+        {
+            return (null, ModeDamaged);
+        }
+        if (mode.TryGetProperty("api", out var api) && api.ValueKind == JsonValueKind.Number && api.TryGetInt32(out var number) && number > ModeWords.Api)
+        {
+            return (null, ModeNewer);
+        }
+        try
+        {
+            var package = Convert.FromBase64String(text.GetString()!);
+            if (ModePackage.Hash(package) != hash.GetString())
+            {
+                return (null, ModeDamaged);
+            }
+            var read = ModePackage.Read(package);
+            return (ReplayWords.Name(read.Name), version == ModeFormatVersion ? null : ModeDamaged);
+        }
+        catch (Exception e) when (e is FormatException or InvalidDataException or ArgumentException or EndOfStreamException or InvalidOperationException)
+        {
+            return (null, ModeDamaged);
+        }
+    }
+
+    public const string ModeNewer = "This replay's mode needs a newer version of the game.";
+
+    public const string ModeDamaged = "This replay's mode is damaged: the game does not play it.";
 
     private static (string? Name, string? Problem) PackOf(int version, JsonElement setup)
     {
@@ -195,7 +234,8 @@ public static class ReplayFile
     public const string Incomplete = "Replay file incomplete";
 
     /// <summary>Why a replay file cannot be played, in the player's words; null when the file is whole and this
-    /// game's: a stat pack the game or this launcher would not take (<see cref="ReplayInfo.StatPackProblem"/>),
+    /// game's: a stat pack the game or this launcher would not take (<see cref="ReplayInfo.StatPackProblem"/>), a game
+    /// mode the game would not take (<see cref="ReplayInfo.ModeProblem"/>),
     /// another format version (another version of the game program wrote it), another game than
     /// <see cref="DiscCheck.GameId"/> (a header that names none is the fork's, which ran only this one), or a file
     /// that ends early (a header, a lineup or a step cut off, or no step at all: every file the game closed ends on
@@ -257,7 +297,7 @@ public static class ReplayFile
         {
             return Incomplete;
         }
-        return Listed(path, file) is not { } listed ? NotAReplay : listed.StatPackProblem;
+        return Listed(path, file) is not { } listed ? NotAReplay : listed.StatPackProblem ?? listed.ModeProblem;
     }
 
     /// <summary>What recorded a replay, from its header: the engine that ran the game (<c>engine</c>: the recompiled

@@ -222,6 +222,46 @@ public sealed class ReplayReadersTests : IDisposable
         });
     }
 
+    /// <summary>The header of a race under this <c>setup.mode</c> (JSON).</summary>
+    private static string WithMode(string mode) =>
+        Header(Match.Replace("\"setup\": {", $"\"setup\": {{\"mode\": {mode}, ", StringComparison.Ordinal));
+
+    /// <summary>A mode's replay is version 9 and names its mode in its header: the row says the mode's name. One the game
+    /// would refuse for its mode says so before any game is started, by the game's own tests (files_mode.cpp,
+    /// files_replay.cpp): a newer api, a hash that is not the package's, a package that does not read, another format.</summary>
+    [Fact]
+    public void AModesReplayNamesItsModeAndOneTheGameWouldRefuseSaysSo()
+    {
+        var compiled = Online.Protocol.ModeCompiler.Compile("mode \"Test Mode\" { api 1; about \"A test.\"; }\nlaps 1;\n");
+        var start = compiled.Mode!.Start();
+        string Json(string package, string hash, int api) =>
+            $"{{\"package\": \"{package}\", \"hash\": \"{hash}\", \"api\": {api}, \"params\": []}}";
+        var good = WithMode(Json(start.Package, start.Hash, start.Api));
+
+        var raced = Replay(good, version: 9);
+        Assert.Null(ReplayFile.Problem(raced));
+        var read = ReplayFile.Read(raced)!;
+        Assert.Equal(("Test Mode", null, "Test Mode"), (read.Mode, read.ModeProblem, read.ModeLabel));
+        Assert.Equal("Test Mode", ReplayListing.From(read).ModeLabel);
+        Assert.Equal((null, null, ""), (ReplayFile.Read(Replay())!.Mode, ReplayFile.Read(Replay())!.ModeProblem, ReplayFile.Read(Replay())!.ModeLabel));
+
+        var cases = new (string Path, string Why)[]
+        {
+            (Replay(WithMode(Json(start.Package, start.Hash, Online.Protocol.ModeWords.Api + 1)), version: 9), ReplayFile.ModeNewer),
+            (Replay(WithMode(Json(start.Package, new string('0', 64), start.Api)), version: 9), ReplayFile.ModeDamaged),
+            (Replay(WithMode(Json("not base64", start.Hash, start.Api)), version: 9), ReplayFile.ModeDamaged),
+            (Replay(WithMode(Json("AAAA", Online.Protocol.ModePackage.Hash(new byte[3]), start.Api)), version: 9), ReplayFile.ModeDamaged),
+            (Replay(WithMode("7"), version: 9), ReplayFile.ModeDamaged),
+            (Replay(good, version: 7), ReplayFile.ModeDamaged),
+        };
+        Assert.All(cases, c =>
+        {
+            Assert.Equal(c.Why, ReplayFile.Problem(c.Path));
+            var listed = ReplayFile.Read(c.Path);                              // still a row of the list, which says it
+            Assert.Equal((c.Why, "Mode not playable"), (listed!.ModeProblem, listed.ModeLabel));
+        });
+    }
+
     /// <summary>A file that ends early is incomplete, wherever it ends; the header's own readers need only the
     /// header whole.</summary>
     [Fact]

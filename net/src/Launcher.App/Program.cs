@@ -236,6 +236,7 @@ internal static class Program
                     $"place {own.Place} of {r.Results!.Count}, {(own.Time is { } t ? t.ToString("m\\:ss\\.fff", System.Globalization.CultureInfo.InvariantCulture) : own.Out ? "out" : "disqualified")}"),
                 "players " + Launcher.Core.Replays.Racers(r.Players),
                 r.StatPackLabel.Length > 0 ? "stat pack: " + r.StatPackLabel : "original stats",
+                r.ModeLabel.Length > 0 ? "mode: " + r.ModeLabel : "no mode",
                 $"recorded by {engine ?? "?"} {(module is null ? "?" : module[..8])}",
                 Launcher.Core.ReplayFile.Problem(r.Path) ?? "whole"));
         }

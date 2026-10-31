@@ -21,7 +21,7 @@ public sealed partial class ReplayItem : ObservableObject
         Listing = listing;
         var (venue, track) = ReplayWords.Course(listing.CourseName);
         (Venue, Track) = (venue, track);
-        Under = string.Join(" · ", new[] { venue, ReplayWords.Laps(listing.Laps), listing.StatPackLabel }.Where(word => word.Length > 0));
+        Under = string.Join(" · ", new[] { venue, ReplayWords.Laps(listing.Laps), listing.ModeLabel, listing.StatPackLabel }.Where(word => word.Length > 0));
         RacerMachine = listing.Raced is { } raced ? Theme.GameSkin.NameOf(raced) : "";
         When = ReplayDates.When(listing.Recorded, now ?? DateTimeOffset.Now);
     }
@@ -42,7 +42,7 @@ public sealed partial class ReplayItem : ObservableObject
 
     public string Track { get; }
 
-    /// <summary>Under the track: the venue, the laps, and the race's stat pack when it had one.</summary>
+    /// <summary>Under the track: the venue, the laps, and the race's mode and stat pack when it had them.</summary>
     public string Under { get; }
 
     public string RacerName => Listing.Racer;

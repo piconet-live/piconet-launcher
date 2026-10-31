@@ -31,11 +31,20 @@ public sealed record RaceResult(ReplayRacer Racer, int Place, bool Finished, boo
 /// its pack disagree, or the pack is not one this launcher takes), as <see cref="ReplayFile.Problem"/> says it;
 /// null: nothing of the kind.</param>
 /// <param name="Practice">A practice run (its header's <c>practice</c>: true): the player alone, rewinds left out.</param>
+/// <param name="Mode">The name of the game mode the race ran under (its header's <c>setup.mode</c>); null: none, or one
+/// that does not read.</param>
+/// <param name="ModeProblem">Why the game would not play the file for its mode, as <see cref="ReplayFile.Problem"/> says
+/// it; null: nothing of the kind.</param>
 public sealed record ReplayInfo(
     string Path, DateTimeOffset Recorded, int Course, int Laps, IReadOnlyList<string> Players, string You, TimeSpan Length,
     ReplayRacer? Recorder = null, IReadOnlyList<RaceResult>? Results = null, string? StatPack = null, string? StatPackProblem = null,
-    bool Practice = false, IReadOnlyList<int>? Teams = null, IReadOnlyList<ReplayRacer>? Racers = null)
+    bool Practice = false, IReadOnlyList<int>? Teams = null, IReadOnlyList<ReplayRacer>? Racers = null,
+    string? Mode = null, string? ModeProblem = null)
 {
+    /// <summary>What a row says of the race's mode: its name, "Mode not playable" for a file the game would refuse, or
+    /// nothing for a race with no mode.</summary>
+    public string ModeLabel => ModeProblem is not null ? "Mode not playable" : Mode ?? "";
+
     /// <summary>What a row says of the race's stats in a word or two: the pack's name, "Stat pack not playable"
     /// for a file the game would refuse, or nothing for the original stats.</summary>
     public string StatPackLabel => StatPackProblem is not null ? "Stat pack not playable" : StatPack ?? "";
