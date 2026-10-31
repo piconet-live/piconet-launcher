@@ -12,8 +12,7 @@ namespace Launcher.App.ViewModels;
 /// means something alone (<see cref="HostRules.Alone"/>: the stats and the machine setting with the machine, then
 /// the race's: laps, boosting from the start, Restore, the mines' return), as rows of the one list
 /// (<see cref="HostRuleRows"/>); the rewind's reach and the save's buttons as values; START PRACTICE. It opens on
-/// the practice last started, else Quick Play's rules. Labels and values only. Play's Time Trial is this page with
-/// fewer rows (<see cref="TimeTrial"/>): the machine's and the laps; the rules it does not show stay Quick Play's.
+/// the practice last started, else Quick Play's rules. Labels and values only.
 /// </summary>
 public sealed partial class PracticeViewModel : ViewModelBase
 {
@@ -25,11 +24,6 @@ public sealed partial class PracticeViewModel : ViewModelBase
     private readonly Func<PracticeSetup, string?>? _start;
     private readonly Func<RacedMachine> _machineOf;
 
-    /// <summary>A time trial's page, its Laps the mode's own range.</summary>
-    public static PracticeViewModel TimeTrial(Func<RacedMachine> machine, Action garage, IReadOnlyList<string> packs,
-                                              Func<PracticeSetup, string?>? start = null, PracticeSetup? last = null) =>
-        new(machine, garage, packs, start, last, timeTrial: true);
-
     /// <param name="machine">The machine the player races as the Garage has it now (<see cref="RacerProfile.Raced"/>):
     /// a custom machine when one is raced.</param>
     /// <param name="garage">Shows the Garage.</param>
@@ -39,30 +33,15 @@ public sealed partial class PracticeViewModel : ViewModelBase
     /// <param name="last">The practice last started (the settings'): the page opens on its course and rules; null:
     /// <see cref="PracticeSetup.Fresh"/>.</param>
     public PracticeViewModel(Func<RacedMachine> machine, Action garage, IReadOnlyList<string> packs, Func<PracticeSetup, string?>? start = null,
-                             PracticeSetup? last = null) : this(machine, garage, packs, start, last, timeTrial: false)
-    {
-    }
-
-    private PracticeViewModel(Func<RacedMachine> machine, Action garage, IReadOnlyList<string> packs, Func<PracticeSetup, string?>? start,
-                              PracticeSetup? last, bool timeTrial)
+                             PracticeSetup? last = null)
     {
         ArgumentNullException.ThrowIfNull(machine);
         ArgumentNullException.ThrowIfNull(packs);
         _machineOf = machine;
         _start = start;
-        StartLabel = timeTrial ? "START TIME TRIAL" : "START PRACTICE";
         var opened = (last ?? PracticeSetup.Default).Kept();
         Courses = new CoursePickerModel(PickMode.One, [opened.Course]);
         _machine = new MachineRule("Machine", NameOf(machine()), garage);
-        if (timeTrial)
-        {
-            var laps = opened.Laps == PracticeSetup.Unlimited ? HostRules.Laps.Default
-                : Math.Clamp(opened.Laps, PracticeMode.TimeTrialFewestLaps, PracticeMode.TimeTrialMostLaps);
-            _rules = MachineRules.ToDictionary(r => r.Name, r => HostRuleRows.For(r, ValueOf(r, opened), packs, opened.StatPack));
-            _rules[HostRules.Laps.Name] = new StepperRule(HostRules.Laps.Label, laps, PracticeMode.TimeTrialFewestLaps, PracticeMode.TimeTrialMostLaps);
-            Groups = RuleGroup.Of([_machine, .. MachineRules.Select(r => _rules[r.Name])], [_rules[HostRules.Laps.Name]]);
-            return;
-        }
         _rules = HostRules.Alone.ToDictionary(r => r.Name, r => HostRuleRows.For(r, ValueOf(r, opened), packs, opened.StatPack));
         Groups = RuleGroup.Of(
             [_machine, .. MachineRules.Select(r => _rules[r.Name])],
@@ -82,11 +61,7 @@ public sealed partial class PracticeViewModel : ViewModelBase
         _ => throw new NotSupportedException($"a practice has no {rule.Name}"),
     };
 
-    /// <summary>A rule's number on this page; one the page does not show: Quick Play's.</summary>
-    private int Number(HostRule rule) => _rules.TryGetValue(rule.Name, out var row) ? HostRuleRows.Number(row) : rule.Default;
-
-    /// <summary>The start button's words.</summary>
-    public string StartLabel { get; }
+    private int Number(HostRule rule) => HostRuleRows.Number(_rules[rule.Name]);
 
     public CoursePickerModel Courses { get; }
 
