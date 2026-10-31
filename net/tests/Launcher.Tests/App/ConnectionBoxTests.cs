@@ -71,14 +71,14 @@ public sealed class ConnectionBoxTests : IDisposable
         // (its text block is empty), the version, and no line more
         const string Dot = "No server set";
         Assert.Equal([Dot, "", BuildInfo.Text], none.Shown);
-        Assert.Equal([Dot, "official server A", BuildInfo.Text], own.Shown);
+        Assert.Equal([Dot, "Official Server", BuildInfo.Text], own.Shown);
         Assert.Equal(0, none.Mark);
         Assert.StartsWith("Version ", BuildInfo.Text, StringComparison.Ordinal);
 
         // a stack's own build names the stack, in a box of the same height; a test build has its mark under the version
-        Assert.Equal([Dot, "official server B", BuildInfo.Text], players.Shown);
+        Assert.Equal([Dot, "Official Server", BuildInfo.Text], players.Shown);
         Assert.Equal(none.Height, players.Height);
-        Assert.Equal([Dot, "test server B", BuildInfo.Text, "TEST BUILD"], test.Shown);
+        Assert.Equal([Dot, "Test Server", BuildInfo.Text, "TEST BUILD"], test.Shown);
         Assert.True(test.Mark > 0);
         Assert.Equal(none.Height + test.Mark, test.Height, 0.5);
     }
