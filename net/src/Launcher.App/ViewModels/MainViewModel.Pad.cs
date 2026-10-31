@@ -35,7 +35,7 @@ public sealed partial class MainViewModel
         return true;
     }
 
-    /// <summary>Z: the tab's next page (Quick Play, Custom lobbies, Lobby, Practice; Replays, Stats; Settings' four), round to the
+    /// <summary>Z: the tab's next page (Quick Play, Custom lobbies, Lobby, Practice, Time Trial; Replays, Stats; Settings' four), round to the
     /// first after the last. False: the tab has one page.</summary>
     public bool NextSection()
     {

@@ -222,6 +222,11 @@ public sealed record LauncherSettings
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public PracticeSetup? Practice { get; init; }
 
+    /// <summary>The time trial last started (Play's Time Trial): as <see cref="Practice"/>, for that page.</summary>
+    [JsonConverter(typeof(SettingAsWritten.Whole<PracticeSetup>))]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public PracticeSetup? TimeTrial { get; init; }
+
     /// <summary>The Settings tab's page last chosen (Game, Online, Controller, Launcher): the tab opens on it.</summary>
     public SettingsTab SettingsTab { get; init; } = SettingsTab.Game;
 

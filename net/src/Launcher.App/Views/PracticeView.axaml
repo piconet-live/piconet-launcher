@@ -5,10 +5,10 @@
              xmlns:c="using:Launcher.App.Controls"
              x:Class="Launcher.App.Views.PracticeView"
              x:DataType="vm:PracticeViewModel">
-  <!-- Play's Practice page (direction D): on the left the
+  <!-- Play's Practice and Time Trial pages (direction D): on the left the
        course picked as the hero (its course-select model turning on its venue's sky; on a plate that leans, the venue, the cup in its
        gem colour and the course's name at 64, with Pico's two stripes), and under it every course one move away
-       (CoursePicker); on the right the rules panel with START PRACTICE, and under it the start's problem. -->
+       (CoursePicker); on the right the rules panel with the page's start, and under it the start's problem. -->
   <UserControl.Styles>
     <Style Selector="TextBlock.over">
       <Setter Property="FontSize" Value="{StaticResource Size13}" />
@@ -73,7 +73,7 @@
       <c:CoursePicker DataContext="{Binding Courses}" VerticalAlignment="Top" />
     </StackPanel>
     <StackPanel Grid.Column="2" Spacing="8">
-      <c:RulesPanel Groups="{Binding Groups}" Action="START PRACTICE" ActionCommand="{Binding StartCommand}" />
+      <c:RulesPanel Groups="{Binding Groups}" Action="{Binding StartLabel}" ActionCommand="{Binding StartCommand}" />
       <Grid Classes="warnline" ColumnDefinitions="Auto,*"
             IsVisible="{Binding Notice, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
         <Path Classes="warnmark" />

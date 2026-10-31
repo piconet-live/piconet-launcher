@@ -40,6 +40,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         Lan = new LanViewModel(state, () => Current = Lobby);
         Lobbies = CustomLobbies(state);
         Practice = PracticePage(state);
+        TimeTrial = TimeTrialPage(state);
         Update = new UpdateViewModel(state, updates);
         Settings = new SettingsViewModel(state) { Update = Update };
         Controller = new ControllerViewModel(state);
@@ -84,6 +85,11 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         new(() => _state.Settings.Racer.Raced with { Machine = Garage.ChosenIndex }, () => Current = Garage,
             [.. state.PracticePackList.Select(p => p.Name)], state.StartPractice, state.Settings.Practice);
 
+    /// <summary>Play's Time Trial page, on the Garage's machine.</summary>
+    private PracticeViewModel TimeTrialPage(AppState state) =>
+        PracticeViewModel.TimeTrial(() => _state.Settings.Racer.Raced with { Machine = Garage.ChosenIndex }, () => Current = Garage,
+            [.. state.PracticePackList.Select(p => p.Name)], state.StartTimeTrial, state.Settings.TimeTrial);
+
     /// <summary>The Custom lobbies page, and the lobby page's ways to it (leaving a custom lobby, the host's presets).</summary>
     private CustomLobbiesViewModel CustomLobbies(AppState state)
     {
@@ -115,6 +121,9 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
 
     /// <summary>Play's Practice page: a solo run's set-up.</summary>
     public PracticeViewModel Practice { get; }
+
+    /// <summary>Play's Time Trial page: Practice's page on the mode <c>time_trial.fzmode</c>.</summary>
+    public PracticeViewModel TimeTrial { get; }
 
     public SettingsViewModel Settings { get; }
 
@@ -359,8 +368,8 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         Sections = Tab switch
         {
             "play" when _state.InQuickPlay && _state.Session is not { Custom: true, Lobby: null } =>
-                [Link("Quick Play", Home), Link("Custom lobbies", Lobbies), Link("Lobby", Lobby), Link("Practice", Practice)],
-            "play" => [Link("Quick Play", Home), Link("Custom lobbies", Lobbies), Link("Practice", Practice)],
+                [Link("Quick Play", Home), Link("Custom lobbies", Lobbies), Link("Lobby", Lobby), Link("Practice", Practice), Link("Time Trial", TimeTrial)],
+            "play" => [Link("Quick Play", Home), Link("Custom lobbies", Lobbies), Link("Practice", Practice), Link("Time Trial", TimeTrial)],
             // Stats beside the replays it is counted from, a page of the tab as Practice is Play's
             "replays" => [Link("Replays", Replays), Link("Stats", Stats)],
             "settings" =>

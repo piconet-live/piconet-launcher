@@ -29,6 +29,18 @@ public sealed class PracticePageTests : IDisposable
 
     public void Dispose() => Directory.Delete(_dir, recursive: true);
 
+    [Fact]
+    public void TheTimeTrialPageShowsTheMachineAndLapsAndKeepsLapsInTheModesRange()
+    {
+        var page = PracticeViewModel.TimeTrial(() => new RacedMachine(0, null), () => { }, []);
+        Assert.Equal("START TIME TRIAL", page.StartLabel);
+        var laps = Assert.IsType<StepperRule>(page.Rule(HostRules.Laps.Name));
+        Assert.Equal(3, laps.Value);
+        Assert.Equal(3, page.Setup.Laps);
+        Assert.False(page.Setup.Restore);
+        Assert.Equal(2, page.Groups.Count);
+    }
+
     private AppState State()
     {
         var data = Path.Combine(_dir, "data");

@@ -29,6 +29,28 @@ public sealed class PracticeModeTests
     }
 
     [Fact]
+    public void ATimeTrialIsThePracticeWayOnItsOwnModeFile()
+    {
+        var mode = PracticeMode.Start(Folder, PracticeMode.TimeTrialFile, false, 5, out var problem);
+        Assert.Null(problem);
+        var file = JsonNode.Parse(PracticeMatch.Build(PracticeSetup.Default with { Laps = 5 }, "P", null, DateTimeOffset.UnixEpoch, mode: mode))!;
+        var set = file["match"]!["setup"]!;
+        Assert.True((bool)file["practice"]!);
+        Assert.Equal(5, (int)set["laps"]!);
+        Assert.Equal(5, (int)set["mode"]!["params"]![0]!);
+        Assert.Equal(mode!.Hash, (string)set["mode"]!["hash"]!);
+    }
+
+    [Fact]
+    public void ATimeTrialsLapsAreItsModesRange()
+    {
+        var compiled = ModeCompiler.Compile(File.ReadAllText(Path.Combine(Folder, PracticeMode.TimeTrialFile)));
+        Assert.True(compiled.Succeeded);
+        var laps = Assert.Single(compiled.Mode!.Params);
+        Assert.Equal((PracticeMode.TimeTrialFewestLaps, PracticeMode.TimeTrialMostLaps), (laps.Least, laps.Most));
+    }
+
+    [Fact]
     public void AMissingFileIsAProblemNotAPlainPractice()
     {
         Assert.Null(PracticeMode.Start(Path.Combine(Folder, "nowhere"), false, 0, out var problem));
