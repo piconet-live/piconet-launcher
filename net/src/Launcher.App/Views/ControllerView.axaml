@@ -48,14 +48,14 @@
 
     <Grid Grid.Row="1" Classes="form" ColumnDefinitions="84,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto"
           IsEnabled="{Binding Enabled}" VerticalAlignment="Top" MinWidth="336">
-        <TextBlock Classes="label" Text="Input" />
+        <TextBlock Classes="label top" Text="Input" />
         <ListBox Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:ControllerViewModel.KindNames}"
                  SelectedIndex="{Binding KindIndex}" AutomationProperties.Name="What is plugged into the port" />
         <TextBlock Grid.Row="1" Grid.Column="1" Classes="note" IsVisible="{Binding OtherKind}" TextWrapping="Wrap"
                    Text="Other device" />
 
         <!-- a controller: its device, the sticks' dead zones -->
-        <TextBlock Grid.Row="2" Classes="label" Text="Device" IsVisible="{Binding IsController}" />
+        <TextBlock Grid.Row="2" Classes="label top" Text="Device" IsVisible="{Binding IsController}" />
         <ComboBox Grid.Row="2" Grid.Column="1" Classes="field" Classes.missing="{Binding DeviceMissing}"
                   ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}" PlaceholderText="Choose a controller"
                   IsVisible="{Binding IsController}" HorizontalAlignment="Stretch" AutomationProperties.Name="Device" />
@@ -63,7 +63,20 @@
           <Path Classes="warnmark" />
           <TextBlock Grid.Column="1" Text="Not plugged in" />
         </Grid>
-        <TextBlock Grid.Row="5" Classes="label" Text="Dead zone" IsVisible="{Binding IsController}" />
+        <StackPanel Grid.Row="4" Grid.Column="1">
+          <StackPanel Orientation="Horizontal" Spacing="8" >
+            <Button Classes="secondary" Content="Test rumble" Command="{Binding RumbleCommand}" IsVisible="{Binding CanRumble}"
+                    IsEnabled="{Binding Enabled}" HorizontalAlignment="Left" AutomationProperties.Name="Test rumble" />
+            <!-- what this page cannot set: the game's own controller options (calibration, button settings, rumble). The
+                 game starts on them and closes when the player leaves them; off, with the reason, while it cannot start -->
+            <Button x:Name="SetUpInGameButton" Classes="secondary" Content="Set up in the game" Command="{Binding SetUpInGameCommand}"
+                    IsEnabled="{Binding CanSetUpInGame}" HorizontalAlignment="Left"
+                    AutomationProperties.Name="Set up in the game" />
+          </StackPanel>
+          <TextBlock x:Name="SetUpInGameNote" Classes="note" Text="{Binding SetUpInGameNote}" Margin="0,6,0,0"
+                     IsVisible="{Binding SetUpInGameNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        </StackPanel>
+        <TextBlock Grid.Row="5" Classes="label top" Text="Dead zone" IsVisible="{Binding IsController}" />
         <Grid Grid.Row="5" Grid.Column="1" ColumnDefinitions="56,Auto,8,Auto" RowDefinitions="Auto,4,Auto" IsVisible="{Binding IsController}">
           <TextBlock Classes="dim" Text="Stick" VerticalAlignment="Center" />
           <c:Stepper Grid.Column="1" Value="{Binding StickDeadZone}" Minimum="0" Maximum="50" Step="5" />
@@ -74,7 +87,7 @@
         </Grid>
 
         <!-- the adapter: what the game says of it -->
-        <TextBlock Grid.Row="6" Classes="label" Text="Adapter" IsVisible="{Binding IsAdapter}" />
+        <TextBlock Grid.Row="6" Classes="label top" Text="Adapter" IsVisible="{Binding IsAdapter}" />
         <StackPanel Grid.Row="6" Grid.Column="1" Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsAdapter}">
           <Border Classes="dot" Classes.online="{Binding AdapterReady}" Classes.problem="{Binding AdapterProblem}"
                   IsVisible="{Binding AdapterText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
@@ -146,17 +159,6 @@
         <Path Classes="warnmark" />
         <TextBlock Grid.Column="1" Text="{Binding PadNote}" />
       </Grid>
-      <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,12,0,0">
-        <Button Classes="secondary" Content="Test rumble" Command="{Binding RumbleCommand}" IsVisible="{Binding CanRumble}"
-                IsEnabled="{Binding Enabled}" HorizontalAlignment="Left" AutomationProperties.Name="Test rumble" />
-        <!-- what this page cannot set: the game's own controller options (calibration, button settings, rumble). The
-             game starts on them and closes when the player leaves them; off, with the reason, while it cannot start -->
-        <Button x:Name="SetUpInGameButton" Classes="secondary" Content="Set up in the game" Command="{Binding SetUpInGameCommand}"
-                IsEnabled="{Binding CanSetUpInGame}" HorizontalAlignment="Left"
-                AutomationProperties.Name="Set up in the game" />
-      </StackPanel>
-      <TextBlock x:Name="SetUpInGameNote" Classes="note" Text="{Binding SetUpInGameNote}" Margin="0,6,0,0"
-                 IsVisible="{Binding SetUpInGameNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
     </StackPanel>
   </Grid>
 </UserControl>
