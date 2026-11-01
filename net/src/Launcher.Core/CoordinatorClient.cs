@@ -95,8 +95,8 @@ public sealed partial class CoordinatorClient : ICoordinatorConnection
         await ConnectAsync(server, name, build, debug, key, cancel).ConfigureAwait(false);
 
     public Task EnterQuickPlayAsync(int machine, Rgb color, int? setting = null, int? stockColor = null,
-        CustomMachine? custom = null, CancellationToken cancel = default) =>
-        SendAsync(new EnterQuickPlay(machine, color, setting, stockColor, CustomMachine.Checked(custom)), cancel);
+        CustomMachine? custom = null, BoostTrail? trail = null, CancellationToken cancel = default) =>
+        SendAsync(new EnterQuickPlay(machine, color, setting, stockColor, CustomMachine.Checked(custom), trail), cancel);
 
     public Task RaceOverAsync(string matchId, RaceSnapshot? final = null, CancellationToken cancel = default) =>
         SendAsync(new RaceOver(matchId, final), cancel);
@@ -122,8 +122,8 @@ public sealed partial class CoordinatorClient : ICoordinatorConnection
         SendAsync(new VoteCourse(matchId, choice), cancel);
 
     public Task ChooseMachineAsync(string matchId, int machine, Rgb color, int? setting = null, int? stockColor = null,
-        CustomMachine? custom = null, string? pack = null, CancellationToken cancel = default) =>
-        SendAsync(new MachineChoice(matchId, machine, color, setting, stockColor, CustomMachine.Checked(custom), pack), cancel);
+        CustomMachine? custom = null, string? pack = null, BoostTrail? trail = null, CancellationToken cancel = default) =>
+        SendAsync(new MachineChoice(matchId, machine, color, setting, stockColor, CustomMachine.Checked(custom), pack, trail), cancel);
 
     public Task BrowseLobbiesAsync(bool browse, CancellationToken cancel = default) => SendAsync(new BrowseLobbies(browse), cancel);
 

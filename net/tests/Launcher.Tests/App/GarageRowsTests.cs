@@ -168,6 +168,19 @@ public sealed class GarageRowsTests : IDisposable
         {
             states.Add(($"Custom, {tab.Label}", () => Click(window, Tab(view, tab.Index))));
         }
+        states.Add(("Stock, Trail", () =>
+        {
+            Open("ShelfStock", () => CardOf(view, 11)!);
+            Click(window, Tab(view, GarageViewModel.TrailSection));
+            if (Environment.GetEnvironmentVariable("LOBBY_SHOTS") is { Length: > 0 } folder)
+            {
+                garage.TrailBoost.PickCommand.Execute(garage.TrailBoost.Swatches[4]);
+                PumpFor(400);
+                Avalonia.Headless.AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+                Directory.CreateDirectory(folder);
+                window.CaptureRenderedFrame()?.Save(Path.Combine(folder, "garage-trail.png"), new Avalonia.Media.Imaging.PngBitmapEncoderOptions());
+            }
+        }));
         states.Add(("Stock again, Stats", () =>
         {
             Open("ShelfStock", () => CardOf(view, 11)!);
@@ -175,9 +188,9 @@ public sealed class GarageRowsTests : IDisposable
         }));
         SamePlaces(window, view, PreviewRows, $"{width} x {height}", states, () =>
         {
-            // the tabs: always the six, in one order, each in its place; a stock machine's parts dim
+            // the tabs: always the seven, in one order, each in its place; a stock machine's parts dim
             var tabs = view.GetVisualDescendants().OfType<Button>().Where(b => b.DataContext is SectionTab).ToList();
-            Assert.Equal(["Body", "Cockpit", "Booster", "Pilot", "Colour", "Stats"], tabs.Select(t => ((SectionTab)t.DataContext!).Label));
+            Assert.Equal(["Body", "Cockpit", "Booster", "Pilot", "Colour", "Stats", "Trail"], tabs.Select(t => ((SectionTab)t.DataContext!).Label));
             Assert.All(tabs, t => Assert.True(t.IsEffectivelyVisible, "a tab is hidden"));
             Assert.All(tabs.Take(4), t => Assert.Equal(garage.CustomShown, t.IsEffectivelyEnabled));
             Assert.Single(tabs, t => t.Classes.Contains("on"));

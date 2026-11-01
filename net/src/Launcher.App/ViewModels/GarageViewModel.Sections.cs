@@ -4,17 +4,17 @@ using CommunityToolkit.Mvvm.Input;
 namespace Launcher.App.ViewModels;
 
 // The column beside the 3D view keeps one row of tabs whatever the shelf or the machine (tabs
-// that move about confuse): Body, Cockpit, Booster, Pilot, Colour, Stats. A part's tab shows that
+// that move about confuse): Body, Cockpit, Booster, Pilot, Colour, Stats, Trail. A part's tab shows that
 // part's list (the builder's, on the Custom shelf); a stock machine has no parts, and its four are there, dim. Under
 // the column's content one row of actions, Save, Remove, New machine, in the same place on every shelf: on Favourites
 // and Stock only New machine is pressed (a stock machine's look is kept as it is made).
 public sealed partial class GarageViewModel
 {
-    public const int ColourSection = 4, StatsSection = 5;
+    public const int ColourSection = 4, StatsSection = 5, TrailSection = 6;
 
     /// <summary>The column's tabs, in their one order.</summary>
     public IReadOnlyList<SectionTab> Sections { get; } =
-        [new("Body", 0), new("Cockpit", 1), new("Booster", 2), new("Pilot", 3), new("Colour", ColourSection), new("Stats", StatsSection)];
+        [new("Body", 0), new("Cockpit", 1), new("Booster", 2), new("Pilot", 3), new("Colour", ColourSection), new("Stats", StatsSection), new("Trail", TrailSection)];
 
     /// <summary>The tab last chosen. A part's tab is a custom machine's only: on Favourites and Stock the column then
     /// shows the colour, and the part's tab is there again on the Custom shelf.</summary>
@@ -43,6 +43,9 @@ public sealed partial class GarageViewModel
 
     /// <summary>The custom machine's stats (Custom).</summary>
     public bool BuildStatsShown => CustomShown && ShownSection == StatsSection;
+
+    /// <summary>The racer's boost trail colours (every shelf: they go with the racer, whichever machine).</summary>
+    public bool TrailShown => ShownSection == TrailSection;
 
     /// <summary>A list of parts or pilots (Custom).</summary>
     public bool PartsShown => CustomShown && ShownSection < ColourSection;
@@ -78,7 +81,7 @@ public sealed partial class GarageViewModel
             tab.On = tab.Index == ShownSection;
         }
         foreach (var name in (string[])[nameof(ShownSection), nameof(Panel), nameof(ColourShown), nameof(StatsShown), nameof(BuildColourShown),
-            nameof(BuildStatsShown), nameof(PartsShown), nameof(ShownParts), nameof(ShownBuild), nameof(CanRemove)])
+            nameof(BuildStatsShown), nameof(TrailShown), nameof(PartsShown), nameof(ShownParts), nameof(ShownBuild), nameof(CanRemove)])
         {
             OnPropertyChanged(name);
         }

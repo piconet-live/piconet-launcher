@@ -96,19 +96,19 @@ public sealed partial class QuickPlaySession
     {
         ArgumentNullException.ThrowIfNull(rules);
         RulesSent(rules);
-        var (machine, color, setting, stock, custom) = RacerToSend();
+        var (machine, color, setting, stock, custom, trail) = RacerToSend();
         Requested();
         return Client.CreateLobbyAsync(new CreateLobby(name, rules, string.IsNullOrEmpty(password) ? null : password,
-            machine, color, setting, stock, custom));
+            machine, color, setting, stock, custom, trail));
     }
 
     /// <summary>Joins a lobby of the list (its password for a locked one).</summary>
     public Task JoinLobbyAsync(string lobbyId, string? password = null)
     {
-        var (machine, color, setting, stock, custom) = RacerToSend();
+        var (machine, color, setting, stock, custom, trail) = RacerToSend();
         Requested();
         return Client.JoinLobbyAsync(new JoinLobby(lobbyId, string.IsNullOrEmpty(password) ? null : password,
-            machine, color, setting, stock, custom));
+            machine, color, setting, stock, custom, trail));
     }
 
     /// <summary>The host's change: the name (null: the same), the rules whole, a new password (null: the same) or
@@ -144,13 +144,13 @@ public sealed partial class QuickPlaySession
     /// <summary>The racer as a create or a join carries it, as the queue's would: the machine the server allows, its
     /// look, the player's own setting (the server brings it into the lobby's range, which a create or a join from the
     /// browser does not know yet); and kept as what the server was told.</summary>
-    private (int Machine, Rgb Color, int? Setting, int? StockColor, CustomMachine? Custom) RacerToSend()
+    private (int Machine, Rgb Color, int? Setting, int? StockColor, CustomMachine? Custom, BoostTrail? Trail) RacerToSend()
     {
         var profile = Racer;
         Machine = QueueMachine(profile.Machine, Rules);
         var look = profile.LookOf(Machine.Value);
         Sent = new RacedMachine(Machine.Value, CustomMachine.Checked(profile.Custom));
         return (Machine.Value, look.Color ?? profile.Color, Math.Clamp(look.Setting, 0, 100),
-            look.StockColor, profile.Custom);
+            look.StockColor, profile.Custom, profile.Trail);
     }
 }

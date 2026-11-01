@@ -264,7 +264,7 @@
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:SectionTab">
-                  <Button Classes="section" Classes.on="{Binding On}" IsEnabled="{Binding Enabled}" Padding="4,0" HorizontalAlignment="Stretch"
+                  <Button Classes="section" Classes.on="{Binding On}" IsEnabled="{Binding Enabled}" Padding="1,0" HorizontalAlignment="Stretch"
                           Command="{Binding #Root.((vm:GarageViewModel)DataContext).ShowSectionCommand}" CommandParameter="{Binding}"
                           AutomationProperties.Name="{Binding Label}">
                     <TextBlock Text="{Binding Label}" />
@@ -334,6 +334,53 @@
                            AutomationProperties.Name="Colour as hex, such as #E8432E" />
                 </StackPanel>
               </StackPanel>
+            </StackPanel>
+
+            <!-- Trail: the flame's colours, the racer's on every machine; a swatch or a hex box each, "Its own" the machine's -->
+            <StackPanel Grid.Row="1" IsVisible="{Binding TrailShown}" Spacing="12">
+              <StackPanel>
+                <TextBlock Classes="colhead" Text="{Binding TrailNormal.Label}" Margin="0,0,0,4" />
+                <ItemsControl ItemsSource="{Binding TrailNormal.Swatches}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:TrailSwatch">
+                      <StackPanel Width="52" Margin="0,0,1,4">
+                        <Button Classes="swatch" Classes.on="{Binding Selected}"
+                                Background="{Binding Hex, Converter={x:Static v:HexToBrush.Instance}}"
+                                Command="{Binding #Root.((vm:GarageViewModel)DataContext).TrailNormal.PickCommand}" CommandParameter="{Binding}"
+                                AutomationProperties.Name="{Binding Label}" />
+                        <TextBlock Classes="colhead" Text="{Binding Label}" HorizontalAlignment="Center" Margin="0,1,0,0" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBox Classes="field" Classes.bad="{Binding !TrailNormal.Valid}" Text="{Binding TrailNormal.Hex}" Watermark="#RRGGBB" Width="100" MaxLength="7" HorizontalAlignment="Left"
+                         AutomationProperties.Name="Colour as hex, such as #E8432E" />
+              </StackPanel>
+              <StackPanel>
+                <TextBlock Classes="colhead" Text="{Binding TrailBoost.Label}" Margin="0,0,0,4" />
+                <ItemsControl ItemsSource="{Binding TrailBoost.Swatches}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:TrailSwatch">
+                      <StackPanel Width="52" Margin="0,0,1,4">
+                        <Button Classes="swatch" Classes.on="{Binding Selected}"
+                                Background="{Binding Hex, Converter={x:Static v:HexToBrush.Instance}}"
+                                Command="{Binding #Root.((vm:GarageViewModel)DataContext).TrailBoost.PickCommand}" CommandParameter="{Binding}"
+                                AutomationProperties.Name="{Binding Label}" />
+                        <TextBlock Classes="colhead" Text="{Binding Label}" HorizontalAlignment="Center" Margin="0,1,0,0" />
+                      </StackPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <TextBox Classes="field" Classes.bad="{Binding !TrailBoost.Valid}" Text="{Binding TrailBoost.Hex}" Watermark="#RRGGBB" Width="100" MaxLength="7" HorizontalAlignment="Left"
+                         AutomationProperties.Name="Colour as hex, such as #E8432E" />
+              </StackPanel>
+              <TextBlock Classes="colhead" TextWrapping="Wrap" Text="Everyone in the race sees your trail. Very dark colours are brightened so the flame still shows." />
             </StackPanel>
 
             <!-- Stats, a stock machine's: every value of the machine, as the disc has them, or, in a lobby whose races run

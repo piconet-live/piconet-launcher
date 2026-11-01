@@ -17,8 +17,8 @@ public static class PracticeMatch
 
     /// <summary>Writes the match file (<see cref="Build"/>) at <paramref name="path"/>.</summary>
     public static void Write(string path, PracticeSetup setup, string name, MachineLook? look, DateTimeOffset now,
-                             StatPack? pack = null, ModeStart? mode = null) =>
-        File.WriteAllText(path, Build(setup, name, look, now, pack, mode));
+                             StatPack? pack = null, ModeStart? mode = null, BoostTrail? trail = null) =>
+        File.WriteAllText(path, Build(setup, name, look, now, pack, mode, trail));
 
     /// <summary>The match file's text.</summary>
     /// <param name="name">The racer's name as the game shows it.</param>
@@ -27,7 +27,7 @@ public static class PracticeMatch
     /// start carries one (<c>setup.stats</c>); null: the disc's own stats.</param>
     /// <param name="mode">Practice's game mode (<see cref="PracticeMode"/>), its Restore and laps among its
     /// parameters; null: none, the game's own words for a practice (old launch files and tests).</param>
-    public static string Build(PracticeSetup setup, string name, MachineLook? look, DateTimeOffset now, StatPack? pack = null, ModeStart? mode = null)
+    public static string Build(PracticeSetup setup, string name, MachineLook? look, DateTimeOffset now, StatPack? pack = null, ModeStart? mode = null, BoostTrail? trail = null)
     {
         ArgumentNullException.ThrowIfNull(setup);
         ArgumentNullException.ThrowIfNull(name);
@@ -44,6 +44,10 @@ public static class PracticeMatch
         {
             // raced in place of the stock machine, as an online seat races one (protocol/formats.md section 2)
             seat["custom"] = JsonSerializer.SerializeToNode(custom, ControlProtocol.Json);
+        }
+        if (trail is { IsStock: false })
+        {
+            seat["trail"] = JsonSerializer.SerializeToNode(trail, ControlProtocol.Json);
         }
         if (look is { StockColor: { } stock })
         {
