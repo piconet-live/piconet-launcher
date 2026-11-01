@@ -44,6 +44,10 @@ public sealed partial class SettingsViewModel : ViewModelBase
         ShowInputs = s.ShowInputs;
         HudIndex = s.ModernHud ? 1 : 0;
         MeterIndex = Math.Max(0, LauncherSettings.HudMeters.ToList().FindIndex(m => m.Name == s.HudMeter));
+        PictureEngineIndex = Math.Max(0, LauncherSettings.PictureEngines.ToList().FindIndex(e => e.Name == s.PictureEngine));
+        AuroraSizeIndex = Math.Max(0, LauncherSettings.AuroraSizes.ToList().FindIndex(a => a.Name == s.AuroraSize));
+        AuroraEdgesIndex = Math.Max(0, LauncherSettings.AuroraEdgeCounts.ToList().FindIndex(a => a.Count == s.AuroraEdges));
+        AuroraTexturesIndex = Math.Max(0, LauncherSettings.AuroraTextureLevels.ToList().FindIndex(a => a.Level == s.AuroraTextures));
         Rumble = s.Rumble;
         ReducedMotion = s.ReducedMotion;
         InputDelayIndex = s.RaceInputDelay;
@@ -213,6 +217,34 @@ public sealed partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     public partial int MeterIndex { get; set; }
 
+    /// <summary>The picture engine rows show only in a test build until Aurora ships; the launch keys go with them
+    /// (AppState's game window).</summary>
+    public bool PictureEngineOffered { get; } = StackStamp.Current.Test;
+
+    public static IReadOnlyList<string> PictureEngineChoices { get; } = LauncherSettings.PictureEngines.Select(e => e.Words).ToList();
+
+    public static IReadOnlyList<string> AuroraSizeChoices { get; } = LauncherSettings.AuroraSizes.Select(a => a.Words).ToList();
+
+    public static IReadOnlyList<string> AuroraEdgesChoices { get; } = LauncherSettings.AuroraEdgeCounts.Select(a => a.Words).ToList();
+
+    public static IReadOnlyList<string> AuroraTexturesChoices { get; } = LauncherSettings.AuroraTextureLevels.Select(a => a.Words).ToList();
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AuroraRowsShown))]
+    public partial int PictureEngineIndex { get; set; }
+
+    /// <summary>Aurora's own rows show when it is the engine chosen.</summary>
+    public bool AuroraRowsShown => PictureEngineOffered && PictureEngineIndex == 1;
+
+    [ObservableProperty]
+    public partial int AuroraSizeIndex { get; set; }
+
+    [ObservableProperty]
+    public partial int AuroraEdgesIndex { get; set; }
+
+    [ObservableProperty]
+    public partial int AuroraTexturesIndex { get; set; }
+
     /// <summary>A test build shows the frame rate whatever the setting says (<see cref="LauncherSettings.FrameRateShown"/>):
     /// its box is ticked and cannot be changed, and the file keeps the player's own value.</summary>
     public bool FrameRateAlwaysShown { get; } = StackStamp.Current.Test;
@@ -353,6 +385,14 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
     partial void OnMeterIndexChanged(int value) => Save();
 
+    partial void OnPictureEngineIndexChanged(int value) => Save();
+
+    partial void OnAuroraSizeIndexChanged(int value) => Save();
+
+    partial void OnAuroraEdgesIndexChanged(int value) => Save();
+
+    partial void OnAuroraTexturesIndexChanged(int value) => Save();
+
     partial void OnRumbleChanged(bool value) => Save();
 
     partial void OnReducedMotionChanged(bool value)
@@ -439,6 +479,11 @@ public sealed partial class SettingsViewModel : ViewModelBase
             ModernHud = HudIndex == 1,
             // (a list with nothing selected says -1: the setting stays what it is)
             HudMeter = MeterIndex >= 0 && MeterIndex < LauncherSettings.HudMeters.Count ? LauncherSettings.HudMeters[MeterIndex].Name : s.HudMeter,
+            // (a list with nothing selected says -1: the setting stays what it is)
+            PictureEngine = PictureEngineIndex >= 0 && PictureEngineIndex < LauncherSettings.PictureEngines.Count ? LauncherSettings.PictureEngines[PictureEngineIndex].Name : s.PictureEngine,
+            AuroraSize = AuroraSizeIndex >= 0 && AuroraSizeIndex < LauncherSettings.AuroraSizes.Count ? LauncherSettings.AuroraSizes[AuroraSizeIndex].Name : s.AuroraSize,
+            AuroraEdges = AuroraEdgesIndex >= 0 && AuroraEdgesIndex < LauncherSettings.AuroraEdgeCounts.Count ? LauncherSettings.AuroraEdgeCounts[AuroraEdgesIndex].Count : s.AuroraEdges,
+            AuroraTextures = AuroraTexturesIndex >= 0 && AuroraTexturesIndex < LauncherSettings.AuroraTextureLevels.Count ? LauncherSettings.AuroraTextureLevels[AuroraTexturesIndex].Level : s.AuroraTextures,
             Rumble = Rumble,
             ReducedMotion = ReducedMotion,
             // (a list with nothing selected says -1: the setting stays what it is)

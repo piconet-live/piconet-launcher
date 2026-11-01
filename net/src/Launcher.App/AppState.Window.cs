@@ -16,11 +16,18 @@ public sealed partial class AppState
     /// a picture where it is one of the two kept for comparison, and its refresh rate where frames are drawn between steps.
     /// The frame rate is always shown on a test build and in a test game (<see cref="LauncherSettings.FrameRateShown"/>).</summary>
     private GameWindow GameWindow =>
-        new(Debug.Title ?? "F-Zero GX", Branding.DisplayName,
+        WithAurora(new(Debug.Title ?? "F-Zero GX", Branding.DisplayName,
             Settings.FrameRateShown(StackStamp.Current, testGame: !ReferenceEquals(Debug, DebugSettings.Off)),
             NamePicture: null, TaskbarGroup,
             Settings.GamePresent, Settings.VerticalSync, Settings.GameFullScreen, RefreshRate: Settings.GameRefreshRate,
             Rumble: Settings.Rumble, Camera: Settings.StartCamera, ShowInputs: Settings.ShowInputs,
             ModernHud: Settings.ModernHud, HudLayout: Settings.ModernHud ? Path.Combine(DataFolder, "hud-layout.json") : null,
-            HudMeter: Settings.HudMeter == LauncherSettings.HudMeters[0].Name ? null : Settings.HudMeter);
+            HudMeter: Settings.HudMeter == LauncherSettings.HudMeters[0].Name ? null : Settings.HudMeter));
+
+    /// <summary>The picture engine's keys: left out in a build that does not offer Aurora, and at their defaults.</summary>
+    private GameWindow WithAurora(GameWindow window)
+    {
+        var (engine, size, edges, textures) = Settings.AuroraLaunchKeys(offered: StackStamp.Current.Test);
+        return window with { Renderer = engine, AuroraSize = size, AuroraEdges = edges, AuroraTextures = textures };
+    }
 }

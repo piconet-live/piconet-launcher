@@ -221,4 +221,18 @@ public sealed class LanTests
         clock.Now += LanBrowser.Expiry;
         Assert.Empty(browser.Servers);
     }
+
+    [Fact]
+    public void AuroraKeysAreLeftOutAtTheirDefaultsAndWhenNotOffered()
+    {
+        var chosen = new LauncherSettings { PictureEngine = "aurora", AuroraSize = "native", AuroraEdges = 4, AuroraTextures = 16 };
+        Assert.Equal(("aurora", "native", 4, 16), chosen.AuroraLaunchKeys(offered: true));
+        // a build that does not offer it, and the default engine: nothing a runner from before the keys would refuse
+        Assert.Equal((null, null, 0, 0), chosen.AuroraLaunchKeys(offered: false));
+        Assert.Equal((null, null, 0, 0), new LauncherSettings().AuroraLaunchKeys(offered: true));
+        Assert.Equal(("aurora", null, 0, 0), new LauncherSettings { PictureEngine = "aurora" }.AuroraLaunchKeys(offered: true));
+        // a file edited by hand never stops the game from starting
+        var edited = chosen with { AuroraSize = "9", AuroraEdges = 3, AuroraTextures = 99 };
+        Assert.Equal(("aurora", null, 0, 0), edited.AuroraLaunchKeys(offered: true));
+    }
 }
