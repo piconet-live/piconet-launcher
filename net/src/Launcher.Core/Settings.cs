@@ -210,12 +210,12 @@ public sealed record LauncherSettings
     /// <summary>The picture engines, the default first: the launch file's name, the words in Settings.</summary>
     public static IReadOnlyList<(string Name, string Words)> PictureEngines { get; } = [("dolphin", "Standard"), ("aurora", "Aurora")];
 
-    /// <summary>Aurora's picture size (<c>"auroraSize"</c>): one of <see cref="AuroraSizes"/>; the default covers the
-    /// display with the smallest whole number, at most 4.</summary>
+    /// <summary>Aurora's picture size (<c>"auroraSize"</c>): one of <see cref="AuroraSizes"/>; the default, Auto, is the
+    /// window's own pixels and follows its size. An older file's <c>"native"</c> is that same thing, so it reads as Auto.</summary>
     public string AuroraSize { get; init; } = AuroraSizes[0].Name;
 
     public static IReadOnlyList<(string Name, string Words)> AuroraSizes { get; } =
-        [("auto", "Auto"), ("2", "2x"), ("3", "3x"), ("4", "4x"), ("native", "Same as the window")];
+        [("auto", "Auto"), ("2", "2x"), ("3", "3x"), ("4", "4x")];
 
     /// <summary>Aurora's samples for each pixel (<c>"auroraEdges"</c>): one of <see cref="AuroraEdgeCounts"/>.</summary>
     public int AuroraEdges { get; init; } = AuroraEdgeCounts[0].Count;
