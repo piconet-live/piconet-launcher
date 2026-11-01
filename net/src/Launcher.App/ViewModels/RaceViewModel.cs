@@ -14,7 +14,9 @@ namespace Launcher.App.ViewModels;
 /// <summary>
 /// The race page: the lobby's race as it runs, then its results. While the player races, from
 /// their own game (<see cref="AppState.LiveReceived"/>, every frame); while they wait in a racing lobby,
-/// from a racer's game through the coordinator (<see cref="QuickPlaySession.Live"/>). Shows the player's own numbers,
+/// from a racer's game through the coordinator (<see cref="QuickPlaySession.Live"/>). One source at a time: a game of
+/// this launcher, a spectator's too, is the source from its first report until it closes. A spectator has no numbers of
+/// their own (the seat their game names is only where it started). Shows the player's own numbers,
 /// the standings and the 3D track map; laid out for a narrow window beside the game too. A mode's <c>board</c> lines
 /// come from the game this launcher runs (<see cref="GameBoard.Mode"/>), a spectator's too; a player waiting in the lobby
 /// with no game has none, and the page shows the race without them. A second page of this kind follows a replay
@@ -33,6 +35,10 @@ public sealed partial class RaceViewModel : ViewModelBase
     private ModeBoardNow? _mode;
     private ModeBoardRows _shownMode = ModeBoardRows.None;
     private IReadOnlyList<int>? _playbackTeams;
+    // a game of this launcher has reported, so the page takes no coordinator's report until it closes
+    private bool _gameReports;
+    // the game that last reported is a spectator's: its last snapshot may still be on its way when it has closed
+    private bool _spectatorGame;
 
     /// <summary>How long the map stays on a followed racer's last place once it is knocked out or gone, before going
     /// back to the whole course: long enough to see where it happened.</summary>
@@ -204,11 +210,18 @@ public sealed partial class RaceViewModel : ViewModelBase
     /// <summary>The player's own game: the race as it runs here, with the mode's values at that moment.</summary>
     public void FromGame(RaceSnapshot snapshot, ModeBoardNow? mode)
     {
+        var race = _session?.Race;
+        if (_spectatorGame && race is null)
+        {
+            return;   // the spectator's game has closed
+        }
+        _spectatorGame = race is { Spectate: true };
         if (Setup() is { } setup)
         {
             Begin(setup);
             _mode = mode ?? _mode;
-            Show(snapshot, setup.Seats, setup.Course, setup.Laps, snapshot.LocalSeat, watching: false);
+            _gameReports = _state.Racing;
+            Show(snapshot, setup.Seats, setup.Course, setup.Laps, _spectatorGame ? null : snapshot.LocalSeat, watching: _spectatorGame);
         }
     }
 
@@ -259,9 +272,10 @@ public sealed partial class RaceViewModel : ViewModelBase
         {
             Begin(next);   // before the early return: while the player's own game loads, the page shows its course
         }
-        if (_state.Racing && session.Racing)
+        _gameReports &= _state.Racing;
+        if (_state.Racing && (session.Racing || _gameReports))
         {
-            return;   // the player's own game has it
+            return;   // the game this launcher runs has it
         }
         if (session.Live is { } live && Setup() is { } setup && live.MatchId == setup.MatchId)
         {
