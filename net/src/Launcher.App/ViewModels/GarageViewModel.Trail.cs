@@ -5,16 +5,22 @@ using Online.Protocol;
 
 namespace Launcher.App.ViewModels;
 
-// The Garage's Trail tab: the flame's two colours. They are the racer's, on whichever machine, and are kept at once.
+// The Garage's Trail tab: the flame's two colours and the sparks'. They are the racer's, on whichever machine, and are kept at once.
 public sealed partial class GarageViewModel
 {
     /// <summary>The flame while not boosting.</summary>
-    public TrailRow TrailNormal => _trailNormal ??= new TrailRow("Normal", _state.Settings.Racer.Trail?.Normal, c => SetTrail(t => t with { Normal = c }));
+    public TrailRow TrailNormal => _trailNormal ??= new TrailRow("Flame", _state.Settings.Racer.Trail?.Normal, c => SetTrail(t => t with { Normal = c }));
 
-    /// <summary>The flame and the streak while boosting.</summary>
-    public TrailRow TrailBoost => _trailBoost ??= new TrailRow("Boost", _state.Settings.Racer.Trail?.Boost, c => SetTrail(t => t with { Boost = c }));
+    /// <summary>The flame while boosting.</summary>
+    public TrailRow TrailBoost => _trailBoost ??= new TrailRow("Boost flame", _state.Settings.Racer.Trail?.Boost, c => SetTrail(t => t with { Boost = c }));
 
-    private TrailRow? _trailNormal, _trailBoost;
+    /// <summary>What a boost throws off: the bolts, the sparkles and the streak.</summary>
+    public TrailRow TrailSparks => _trailSparks ??= new TrailRow("Boost sparks", _state.Settings.Racer.Trail?.Sparks, c => SetTrail(t => t with { Sparks = c }));
+
+    private TrailRow? _trailNormal, _trailBoost, _trailSparks;
+
+    /// <summary>The tab's rows, in their order.</summary>
+    public IReadOnlyList<TrailRow> TrailRows => [TrailNormal, TrailBoost, TrailSparks];
 
     private void SetTrail(Func<BoostTrail, BoostTrail> change) =>
         _state.Update(s =>
@@ -47,6 +53,9 @@ public sealed partial class TrailRow : ObservableObject
     }
 
     public string Label { get; }
+
+    /// <summary>What the box is called to a screen reader.</summary>
+    public string HexName => $"{Label} as hex, such as #E8432E";
 
     [ObservableProperty]
     public partial IReadOnlyList<TrailSwatch> Swatches { get; set; } = [];

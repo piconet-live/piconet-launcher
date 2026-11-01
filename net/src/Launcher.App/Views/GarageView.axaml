@@ -336,52 +336,40 @@
               </StackPanel>
             </StackPanel>
 
-            <!-- Trail: the flame's colours, the racer's on every machine; a swatch or a hex box each, "Its own" the machine's -->
-            <StackPanel Grid.Row="1" IsVisible="{Binding TrailShown}" Spacing="12">
-              <StackPanel>
-                <TextBlock Classes="colhead" Text="{Binding TrailNormal.Label}" Margin="0,0,0,4" />
-                <ItemsControl ItemsSource="{Binding TrailNormal.Swatches}">
-                  <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                  </ItemsControl.ItemsPanel>
+            <!-- Trail: the racer's on every machine; each row a swatch or a hex box, "Its own" the game's. The rows fit the
+                 panel at the least window; a lower panel scrolls them rather than draw them under the actions. -->
+            <ScrollViewer Grid.Row="1" Name="TrailList" IsVisible="{Binding TrailShown}" VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+              <StackPanel Spacing="10">
+                <ItemsControl ItemsSource="{Binding TrailRows}">
                   <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="vm:TrailSwatch">
-                      <StackPanel Width="52" Margin="0,0,1,4">
-                        <Button Classes="swatch" Classes.on="{Binding Selected}"
-                                Background="{Binding Hex, Converter={x:Static v:HexToBrush.Instance}}"
-                                Command="{Binding #Root.((vm:GarageViewModel)DataContext).TrailNormal.PickCommand}" CommandParameter="{Binding}"
-                                AutomationProperties.Name="{Binding Label}" />
-                        <TextBlock Classes="colhead" Text="{Binding Label}" HorizontalAlignment="Center" Margin="0,1,0,0" />
+                    <DataTemplate x:DataType="vm:TrailRow">
+                      <StackPanel Margin="0,0,0,10">
+                        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,4">
+                          <TextBlock Classes="colhead" Text="{Binding Label}" VerticalAlignment="Center" />
+                          <TextBox Grid.Column="1" Classes="field" Classes.bad="{Binding !Valid}" Text="{Binding Hex}" Watermark="#RRGGBB" Width="100" MaxLength="7"
+                                   AutomationProperties.Name="{Binding HexName}" />
+                        </Grid>
+                        <ItemsControl ItemsSource="{Binding Swatches}">
+                          <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
+                          </ItemsControl.ItemsPanel>
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:TrailSwatch">
+                              <Button Classes="swatch" Classes.on="{Binding Selected}" Width="32" Height="26"
+                                      Background="{Binding Hex, Converter={x:Static v:HexToBrush.Instance}}"
+                                      Command="{Binding $parent[ItemsControl].((vm:TrailRow)DataContext).PickCommand}" CommandParameter="{Binding}"
+                                      ToolTip.Tip="{Binding Label}" AutomationProperties.Name="{Binding Label}" />
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                       </StackPanel>
                     </DataTemplate>
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
-                <TextBox Classes="field" Classes.bad="{Binding !TrailNormal.Valid}" Text="{Binding TrailNormal.Hex}" Watermark="#RRGGBB" Width="100" MaxLength="7" HorizontalAlignment="Left"
-                         AutomationProperties.Name="Colour as hex, such as #E8432E" />
+                <TextBlock Classes="colhead" TextWrapping="Wrap" Text="Everyone in the race sees these. Grey is the game's own colour. Very dark colours are brightened." />
               </StackPanel>
-              <StackPanel>
-                <TextBlock Classes="colhead" Text="{Binding TrailBoost.Label}" Margin="0,0,0,4" />
-                <ItemsControl ItemsSource="{Binding TrailBoost.Swatches}">
-                  <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
-                  </ItemsControl.ItemsPanel>
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="vm:TrailSwatch">
-                      <StackPanel Width="52" Margin="0,0,1,4">
-                        <Button Classes="swatch" Classes.on="{Binding Selected}"
-                                Background="{Binding Hex, Converter={x:Static v:HexToBrush.Instance}}"
-                                Command="{Binding #Root.((vm:GarageViewModel)DataContext).TrailBoost.PickCommand}" CommandParameter="{Binding}"
-                                AutomationProperties.Name="{Binding Label}" />
-                        <TextBlock Classes="colhead" Text="{Binding Label}" HorizontalAlignment="Center" Margin="0,1,0,0" />
-                      </StackPanel>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <TextBox Classes="field" Classes.bad="{Binding !TrailBoost.Valid}" Text="{Binding TrailBoost.Hex}" Watermark="#RRGGBB" Width="100" MaxLength="7" HorizontalAlignment="Left"
-                         AutomationProperties.Name="Colour as hex, such as #E8432E" />
-              </StackPanel>
-              <TextBlock Classes="colhead" TextWrapping="Wrap" Text="Everyone in the race sees your trail. Very dark colours are brightened so the flame still shows." />
-            </StackPanel>
+            </ScrollViewer>
 
             <!-- Stats, a stock machine's: every value of the machine, as the disc has them, or, in a lobby whose races run
                  on a stat pack, as that pack has them: its name and author then stand at the head, so the numbers say

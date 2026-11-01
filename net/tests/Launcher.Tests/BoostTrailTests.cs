@@ -34,6 +34,7 @@ public class BoostTrailTests
         Assert.Contains("\"trail\"", PracticeMatch.Build(PracticeSetup.Default, "A", null, at, trail: trail));
         Assert.DoesNotContain("\"trail\"", PracticeMatch.Build(PracticeSetup.Default, "A", null, at));
         Assert.DoesNotContain("\"trail\"", PracticeMatch.Build(PracticeSetup.Default, "A", null, at, trail: new BoostTrail()));
+        Assert.Contains("\"sparks\"", PracticeMatch.Build(PracticeSetup.Default, "A", null, at, trail: new BoostTrail(Sparks: new Rgb(1, 2, 3))));
     }
 
     [Fact]
