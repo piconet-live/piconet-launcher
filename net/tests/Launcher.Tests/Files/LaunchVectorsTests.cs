@@ -45,7 +45,8 @@ public sealed class LaunchVectorsTests
         yield return ("window-plain", GameLaunchFile.Offline(null, window: new GameWindow("Port test")));
         yield return ("window-every-member", GameLaunchFile.Offline("b", window: new GameWindow("F-Zero GX", "Piconet", true, picture,
             Taskbar, LauncherSettings.PresentAsBefore, true, LauncherSettings.FullScreenExclusive, @"C:\data\boards\game-1.board",
-            LauncherSettings.Refresh240, Rumble: false, ShowInputs: true, ModernHud: true, HudLayout: @"D:\Piconet\hud-layout.json", HudMeter: "rev")));
+            LauncherSettings.Refresh240, Rumble: false, ShowInputs: true, ModernHud: true, HudLayout: @"D:\Piconet\hud-layout.json", HudMeter: "rev",
+            Renderer: "aurora", AuroraSize: "native", AuroraEdges: 4, AuroraTextures: 16, AuroraColourblind: "deuteranopia")));
         yield return ("window-race", GameLaunchFile.Race("b", Match, record: "race.fzrp", debug: debug, window: new GameWindow("F-Zero GX",
             "Piconet", false, picture, Taskbar, LauncherSettings.PresentAtTheCopy, false, LauncherSettings.FullScreenBorderless,
             "g.board", LauncherSettings.Refresh120)));

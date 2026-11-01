@@ -24,7 +24,7 @@
   <Panel>
     <!-- Game: the game's picture, sound and rumble -->
     <Grid Name="GamePage" Classes="form" ColumnDefinitions="196,*" MaxWidth="900" HorizontalAlignment="Left"
-          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" IsVisible="{Binding OnGame}">
+          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" IsVisible="{Binding OnGame}">
       <!-- the game's picture: Normal, the game's own 16:9, or true widescreen (16:9 with Normal's whole height) -->
       <TextBlock Classes="label" Text="Widescreen" />
       <ListBox Grid.Column="1" Classes="seg tall" Name="Widescreen"
@@ -77,6 +77,27 @@
       <ListBox Grid.Row="10" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.MeterChoices}"
                SelectedIndex="{Binding MeterIndex}"
                AutomationProperties.Name="Energy meter" />
+      <!-- the launch file's "renderer", "auroraSize", "auroraEdges", "auroraTextures", "auroraColourblind": test builds only, until Aurora ships -->
+      <TextBlock Grid.Row="11" Classes="label" Text="Picture engine" IsVisible="{Binding PictureEngineOffered}" />
+      <ListBox Grid.Row="11" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.PictureEngineChoices}"
+               SelectedIndex="{Binding PictureEngineIndex}" IsVisible="{Binding PictureEngineOffered}"
+               AutomationProperties.Name="Picture engine" />
+      <TextBlock Grid.Row="12" Classes="label" Text="Picture size" IsVisible="{Binding AuroraRowsShown}" />
+      <ListBox Grid.Row="12" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.AuroraSizeChoices}"
+               SelectedIndex="{Binding AuroraSizeIndex}" IsVisible="{Binding AuroraRowsShown}"
+               AutomationProperties.Name="Picture size" />
+      <TextBlock Grid.Row="13" Classes="label" Text="Smooth edges" IsVisible="{Binding AuroraRowsShown}" />
+      <ListBox Grid.Row="13" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.AuroraEdgesChoices}"
+               SelectedIndex="{Binding AuroraEdgesIndex}" IsVisible="{Binding AuroraRowsShown}"
+               AutomationProperties.Name="Smooth edges" />
+      <TextBlock Grid.Row="14" Classes="label" Text="Sharper textures" IsVisible="{Binding AuroraRowsShown}" />
+      <ListBox Grid.Row="14" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.AuroraTexturesChoices}"
+               SelectedIndex="{Binding AuroraTexturesIndex}" IsVisible="{Binding AuroraRowsShown}"
+               AutomationProperties.Name="Sharper textures" />
+      <TextBlock Grid.Row="15" Classes="label" Text="Colourblind filter" IsVisible="{Binding AuroraRowsShown}" />
+      <ListBox Grid.Row="15" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.AuroraColourblindChoices}"
+               SelectedIndex="{Binding AuroraColourblindIndex}" IsVisible="{Binding AuroraRowsShown}"
+               AutomationProperties.Name="Colourblind filter" />
     </Grid>
 
     <!-- Online: the input delay first (what players change most), the server, the account -->
