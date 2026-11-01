@@ -17,7 +17,24 @@ public sealed class ControllerPageOpensTests : IDisposable
 {
     private readonly string _dir = Directory.CreateTempSubdirectory("launcher-tests").FullName;
 
-    public void Dispose() => Directory.Delete(_dir, recursive: true);
+    /// <summary>The folder goes, a few tries if need be: when a page leaves, the pad reader may start its helper again,
+    /// and that start can still be making the game's user folder as the test ends (nothing waits for it, as nothing in
+    /// the launcher needs to).</summary>
+    public void Dispose()
+    {
+        for (var tries = 50; ; tries--)
+        {
+            try
+            {
+                Directory.Delete(_dir, recursive: true);
+                return;
+            }
+            catch (IOException) when (tries > 0)
+            {
+                Thread.Sleep(100);
+            }
+        }
+    }
 
     /// <summary>A launcher with a game program that takes its time to go, as the real one letting go of the adapter.</summary>
     private AppState State(string name)
@@ -126,13 +143,14 @@ public sealed class ControllerPageOpensTests : IDisposable
                 Assert.NotEmpty(page.Devices);   // the helper came, after the old one went
                 page.Hidden();
             }, cancel);
-            await Gone(cancel);
         }
         finally
         {
             state.Shutdown();
             await ui.DisposeAsync();
         }
+        // (after the shutdown: the page left, the window still in front, the pad reader may rightly run its own again)
+        await Gone(cancel);
     }
 
     [Fact]

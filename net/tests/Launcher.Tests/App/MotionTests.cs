@@ -36,7 +36,7 @@ public sealed class MotionTests
         window.Show();
         Dispatcher.UIThread.RunJobs();
         var ended = false;
-        Motion.Enter(button, 0, 16);
+        Motion.Enter(button, 0, 16, 1, TimeSpan.FromSeconds(1.5));   // long: a busy PC must not end it before the click
         Motion.Play(button, "end", Motion.Standard, null, _ => { }, () => ended = true);
         Assert.NotNull(button.RenderTransform);
         Frame();
