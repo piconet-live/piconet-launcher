@@ -41,6 +41,10 @@ public static class MapCamera
     /// <summary>How long following starts or stops: about half a second.</summary>
     public const double EaseMs = 550;
 
+    /// <summary>How quickly the followed view turns to a new heading (<see cref="HeadingTracker"/>, itself steady, and
+    /// a little behind the machine): through a bend with it.</summary>
+    public const double TurnMs = 200;
+
     /// <summary>The course select's view: turning about the model's centre once a minute, from 30 to 50 degrees above
     /// it (the game's 22.5 to 67.5, gentler) and back every 23 seconds.</summary>
     public static MapView WholeCourse(Vector3 center, float radius, double seconds) => new(center, radius,
@@ -122,38 +126,68 @@ public static class MapGlide
 }
 
 /// <summary>
-/// Which way a followed racer is going, from where it has been: each move of at least <see cref="Step"/> sets the
-/// heading (a racer's place glides between updates, so these come every frame or two at racing speeds); a jump (a
-/// respawn, a missed stretch) starts over without turning.
+/// Which way a followed racer is going, from where it has been: along the long chord from its place about
+/// <see cref="Chord"/> back on its own path to its place now, so that a weave across the road barely moves the heading
+/// while the view still follows the course's bends. A racer's place glides between updates, so places come every frame
+/// or two at racing speeds; a jump (a respawn, a missed stretch) starts over without turning.
 /// </summary>
 public sealed class HeadingTracker
 {
     public const float Step = 8;
     public const float Jump = 300;
 
-    private Vector3? _last;
+    /// <summary>How far back the heading looks: ten times a machine's sideways burst, so that a burst of 15 units each
+    /// way turns it some ten degrees at the very most.</summary>
+    public const float Chord = 150;
 
-    /// <summary>The yaw along the latest move (see <see cref="MapCamera.YawAlong"/>), null until there is one.</summary>
+    /// <summary>Enough places at <see cref="Step"/> apart for <see cref="Chord"/> on any line short of going in circles;
+    /// past it, the oldest there is.</summary>
+    private const int Kept = 64;
+
+    private readonly Vector3[] _places = new Vector3[Kept];
+    private int _newest;
+    private int _count;
+
+    /// <summary>The yaw along the chord (see <see cref="MapCamera.YawAlong"/>), null until there is one.</summary>
     public float? Yaw { get; private set; }
 
     public void Reset()
     {
-        _last = null;
+        _count = 0;
         Yaw = null;
     }
 
     public void Add(Vector3 at)
     {
-        if (_last is not { } last || Vector3.Distance(last, at) > Jump)
+        if (_count == 0 || Vector3.Distance(_places[_newest], at) > Jump)
         {
-            _last = at;
+            _count = 1;
+            _places[_newest] = at;
             return;
         }
-        if (Vector3.Distance(last, at) < Step)
+        if (Vector3.Distance(_places[_newest], at) < Step)
         {
             return;
         }
-        Yaw = MapCamera.YawAlong(at - last) ?? Yaw;
-        _last = at;
+        _newest = (_newest + 1) % Kept;
+        _places[_newest] = at;
+        _count = Math.Min(_count + 1, Kept);
+        Yaw = MapCamera.YawAlong(at - ChordStart(at)) ?? Yaw;
+    }
+
+    /// <summary>The latest place at least <see cref="Chord"/> away (by distance, not by path: a place that went back and
+    /// forth does not shorten it), or the oldest there is.</summary>
+    private Vector3 ChordStart(Vector3 at)
+    {
+        var place = at;
+        for (var back = 1; back < _count; back++)
+        {
+            place = _places[(_newest - back + Kept) % Kept];
+            if (Vector3.Distance(place, at) >= Chord)
+            {
+                break;
+            }
+        }
+        return place;
     }
 }
