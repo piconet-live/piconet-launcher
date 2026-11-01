@@ -129,7 +129,7 @@ public sealed class InterfaceScaleTests : IDisposable
     public Task TheSliderChangesNothingUntilApplyWhichKeepsIt() => OnAWindow(State("""{"noServer": true}"""), (window, main) =>
     {
         main.ShowSettings(SettingsTab.Launcher);
-        Dispatcher.UIThread.RunJobs();
+        Aim();
         var slider = Named<Slider>(window, "InterfaceScale");
         var apply = Named<Button>(window, "ApplyScale");
         var number = Named<Launcher.App.Controls.NumberBox>(window, "InterfaceScaleNumber");

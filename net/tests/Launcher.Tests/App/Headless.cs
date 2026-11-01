@@ -17,6 +17,7 @@ internal static class Headless
     /// <summary>A click in the middle of a control.</summary>
     public static void Click(Window window, Control control, MouseButton button = MouseButton.Left)
     {
+        Aim();
         var at = control.TranslatePoint(new Point(control.Bounds.Width / 2, control.Bounds.Height / 2), window)!.Value;
         window.MouseMove(at);
         window.MouseDown(at, button);
@@ -31,6 +32,25 @@ internal static class Headless
         Dispatcher.UIThread.RunJobs();
     }
 
+    /// <summary>What a real window does while time passes: a frame, then the thread's work. A headless window draws
+    /// none by itself, and the launcher's moves (Controls/Motion.cs) run on frames.</summary>
+    public static void Frame()
+    {
+        Dispatcher.UIThread.RunJobs();
+        Launcher.App.Controls.Motion.Advance();
+        Avalonia.Headless.AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+        Dispatcher.UIThread.RunJobs();
+    }
+
+    /// <summary>Ready for the mouse: moves under way end first. A headless window's hit test does not follow a move's
+    /// transform as a drawn window's does, so a place worked out part way can miss a small control.</summary>
+    public static void Aim()
+    {
+        Dispatcher.UIThread.RunJobs();
+        Launcher.App.Controls.Motion.Settle();
+        Dispatcher.UIThread.RunJobs();
+    }
+
     /// <summary>Lets the window's thread work until <paramref name="done"/>, ten seconds at most.</summary>
     public static void Pump(Func<bool> done, string what = "the page did not get there in ten seconds")
     {
@@ -39,7 +59,7 @@ internal static class Headless
         while (!done() && DateTime.UtcNow < limit)
         {
             Thread.Sleep(10);
-            Dispatcher.UIThread.RunJobs();
+            Frame();
         }
         Assert.True(done(), what);
     }
@@ -55,7 +75,7 @@ internal static class Headless
         {
             Thread.Sleep(20);
             state.Update(s => s);
-            Dispatcher.UIThread.RunJobs();
+            Frame();
         }
         Assert.True(done(), what);
     }
@@ -68,7 +88,7 @@ internal static class Headless
         {
             Thread.Sleep(10);
             telling?.Update(s => s);
-            Dispatcher.UIThread.RunJobs();
+            Frame();
         }
     }
 

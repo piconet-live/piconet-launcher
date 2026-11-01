@@ -211,6 +211,10 @@ public sealed record LauncherSettings
     /// "Set up in the game") still applies: off there is off too.</summary>
     public bool Rumble { get; init; } = true;
 
+    /// <summary>The launcher's animations are off: pages and lists stand at once (the Settings page's "Reduced motion",
+    /// Launcher; off by default).</summary>
+    public bool ReducedMotion { get; init; }
+
     /// <summary>The chase camera view (1 to 3, 4 first person) the player last raced in: the game says each view chosen with the
     /// camera button on its status board (<see cref="Board.BoardEventKind.Camera"/>), and the next race starts in it
     /// (the launch file's <c>match.camera</c>). 0: none yet, and the game starts in its own. The player's picture

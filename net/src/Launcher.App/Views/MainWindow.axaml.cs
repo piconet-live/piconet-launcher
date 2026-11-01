@@ -38,6 +38,8 @@ public sealed partial class MainWindow : AppWindow
         }
         Fold();
         DataContextChanged += (_, _) => Hear();
+        Controls.Motion.ReducedChanged += OnReducedChanged;
+        OnReducedChanged();
         // the interface scale's keys, wherever the keyboard is in the window (a text box too)
         AddHandler(KeyDownEvent, OnScaleKey, RoutingStrategies.Tunnel);
         AddHandler(KeyDownEvent, OnEscape, RoutingStrategies.Bubble);
@@ -126,6 +128,10 @@ public sealed partial class MainWindow : AppWindow
 
     private void OnMainChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
+        if (e.PropertyName is nameof(ViewModels.MainViewModel.Current) or nameof(ViewModels.MainViewModel.Sections))
+        {
+            SlideToPlace();
+        }
         if (e.PropertyName == nameof(ViewModels.MainViewModel.Scale))
         {
             Rescaled();
@@ -157,13 +163,49 @@ public sealed partial class MainWindow : AppWindow
             {
                 Pad = new PadNavigator(this, _heard, mark, this.FindControl<ContentControl>("PageHost"));
             }
+            Controls.Motion.Reduced = _heard.Settings.ReducedMotion;
             _heard.Lobby.Moment += OnMoment;
             _heard.Lobby.Sounded += OnLobbySound;
             _heard.Garage.Confirmed += OnConfirmed;
             _heard.Notices.Alert += OnNotice;
             _heard.PropertyChanged += OnMainChanged;
+            _place = Place(_heard);
+            Controls.Motion.OpenListWindow();
         }
         Rescaled();
+    }
+
+    /// <summary>How far a new page slides in, in the direction of travel.</summary>
+    private const double PageSlide = 16;
+
+    private (int Tab, int Section) _place;
+
+    /// <summary>Where the window is: the place in the left column's order, the page in the mode bar's.</summary>
+    private static (int Tab, int Section) Place(ViewModels.MainViewModel main) =>
+        (ViewModels.MainViewModel.TabOrder.ToList().IndexOf(main.Tab), main.Sections.ToList().FindIndex(s => s.Current));
+
+    /// <summary>A new page comes from the way the player went: from below going down the column, from the side along
+    /// the mode bar. Input goes on all the while: the page is laid out where it ends.</summary>
+    private void SlideToPlace()
+    {
+        if (_heard is not { } main)
+        {
+            return;
+        }
+        var place = Place(main);
+        if (place == _place)
+        {
+            return;
+        }
+        var from = _place;
+        _place = place;
+        if (this.FindControl<ContentControl>("PageHost") is { } page)
+        {
+            var (dx, dy) = place.Tab != from.Tab
+                ? (0d, place.Tab > from.Tab ? PageSlide : -PageSlide)
+                : (place.Section > from.Section ? PageSlide : -PageSlide, 0d);
+            Controls.Motion.EnterPage(page, dx, dy);
+        }
     }
 
     /// <summary>A server's notice of the two highest tiers: the taskbar's button flashes (warning and urgent), and
@@ -256,6 +298,15 @@ public sealed partial class MainWindow : AppWindow
                 well.Height = wanted;
             }
         }
+    }
+
+    /// <summary>The theme's press and hover motion stands still under the class <c>still</c> (Theme/Motion.axaml).</summary>
+    private void OnReducedChanged() => Classes.Set("still", Controls.Motion.Reduced);
+
+    protected override void OnClosed(EventArgs e)
+    {
+        Controls.Motion.ReducedChanged -= OnReducedChanged;
+        base.OnClosed(e);
     }
 
     private void OnMinimize(object? sender, RoutedEventArgs e) => WindowState = WindowState.Minimized;

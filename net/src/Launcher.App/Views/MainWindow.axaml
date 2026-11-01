@@ -98,6 +98,7 @@
            box and "Play F-Zero GX" are on Quick Play's page (PlayControlView); the lobby's state is the Lobby's. -->
       <Border Width="{StaticResource ColumnWidth}" Background="{StaticResource ColumnBrush}" IsVisible="{Binding Navigation}">
         <!-- Declared top to bottom, so Tab goes as the eye does (a dock declared first comes first). -->
+        <c:TravelHost Fill="{StaticResource RaisedBrush}">
         <Grid RowDefinitions="Auto,*,Auto">
           <!-- The machine in 3D, in its paint, on the game's turntable (nothing without the disc). It takes the height
                the window can spare (MainWindow.axaml.cs). -->
@@ -157,6 +158,7 @@
             <v:ConnectionView DataContext="{Binding Account}" />
           </StackPanel>
         </Grid>
+        </c:TravelHost>
       </Border>
 
       <Grid Grid.Column="1" RowDefinitions="Auto,*">
@@ -167,6 +169,7 @@
           <TextBlock Classes="display d40" Text="{Binding TabTitle}" VerticalAlignment="Center" Margin="0,0,24,0" />
           <!-- the mode bar: the pages on the surface tone, the one showing a green plate that leans -->
           <Border Grid.Column="1" Background="{StaticResource WellBrush}" Padding="4" VerticalAlignment="Center" CornerRadius="{DynamicResource StaticMediumCornerRadius}" IsVisible="{Binding HasSections}">
+            <c:TravelHost Fill="{StaticResource AccentBrush}" Shape="Lean">
             <ItemsControl ItemsSource="{Binding Sections}">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="4" /></ItemsPanelTemplate>
@@ -181,6 +184,7 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
+            </c:TravelHost>
           </Border>
           <TextBlock Grid.Column="2" Classes="dim" Text="{Binding Home.RulesLine}" IsVisible="{Binding OnQuickPlay}"
                      HorizontalAlignment="Right" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="16,0" />
@@ -205,14 +209,14 @@
         </ScrollViewer>
 
         <!-- The bell's list, over the page under the bell. -->
-        <Panel Grid.Row="1" IsVisible="{Binding Notices.ListOpen}" HorizontalAlignment="Right" c:PadNav.Scope="True"
+        <Panel Grid.Row="1" c:Motion.Reveal="True" IsVisible="{Binding Notices.ListOpen}" HorizontalAlignment="Right" c:PadNav.Scope="True"
                VerticalAlignment="Top" Width="380" MaxHeight="440" Margin="0,4,16,0">
           <v:NoticesList Name="Notices" DataContext="{Binding Notices}" />
         </Panel>
       </Grid>
 
       <!-- The question before leaving a lobby for the game, over the page. -->
-      <Panel Grid.ColumnSpan="2" IsVisible="{Binding Control.Asking}" c:PadNav.Scope="True">
+      <Panel Grid.ColumnSpan="2" c:Motion.Reveal="True" IsVisible="{Binding Control.Asking}" c:PadNav.Scope="True">
         <Panel.Styles>
           <Style Selector="Button.leave">
             <Setter Property="Background" Value="{StaticResource HoverBrush}" />

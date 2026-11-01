@@ -80,7 +80,7 @@
             <TextBlock Grid.Column="5" Classes="colhead" Text="RULES" LetterSpacing="1" Margin="12,0,0,0" />
           </Grid>
         </Border>
-        <ItemsControl Name="LobbyList" ItemsSource="{Binding Rows}">
+        <ItemsControl Name="LobbyList" ItemsSource="{Binding Rows}" c:Motion.Stagger="True">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:CustomLobbyRow">
               <Button Classes="plain lobbyrow" AutomationProperties.Name="{Binding Name}"
@@ -106,7 +106,7 @@
     </StackPanel>
 
     <!-- Create -->
-    <Grid RowDefinitions="Auto,*" IsVisible="{Binding Creating}">
+    <Grid RowDefinitions="Auto,*" IsVisible="{Binding Creating}" c:Motion.Reveal="True">
       <!-- the line: the face's title, and at its end the way back, where the lobby page has its Leave -->
       <Grid Name="CreateLine" ColumnDefinitions="*,Auto" Height="32" Margin="0,0,0,16">
         <TextBlock Classes="display d20" Text="NEW LOBBY" VerticalAlignment="Center" />

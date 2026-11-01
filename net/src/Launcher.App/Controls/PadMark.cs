@@ -14,11 +14,14 @@ namespace Launcher.App.Controls;
 /// </summary>
 public sealed class PadMark : Control
 {
-    private static readonly TimeSpan Glide = TimeSpan.FromMilliseconds(200), FadeIn = TimeSpan.FromMilliseconds(120),
-        FadeOut = TimeSpan.FromMilliseconds(200);
+    private static TimeSpan Glide => Motion.Standard;
 
-    /// <summary>The design language's motion curve, cubic-bezier(.2, .8, .2, 1).</summary>
-    private static readonly SplineEasing Ease = new() { X1 = 0.2, Y1 = 0.8, X2 = 0.2, Y2 = 1 };
+    private static TimeSpan FadeIn => Motion.Quick;
+
+    private static TimeSpan FadeOut => Motion.Standard;
+
+    /// <summary>The theme's motion curve.</summary>
+    private static Easing Ease => Motion.EaseOut;
 
     /// <summary>The ring and its gap when the theme cannot be asked (a control outside an application).</summary>
     private static readonly Color RingFallback = Color.FromRgb(0xFF, 0xFF, 0xFF), GapFallback = Color.FromRgb(0x00, 0x00, 0x00);
@@ -56,7 +59,7 @@ public sealed class PadMark : Control
         {
             return;
         }
-        if (glide && !wasHidden)
+        if (glide && !wasHidden && !Motion.Reduced)
         {
             (_from, _to, _moveStart) = (_now, box, null);
         }

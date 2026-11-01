@@ -91,7 +91,7 @@
     </Grid>
     <!-- the tabs over the table: All, Races, Practice, each with its count -->
     <Border BorderBrush="{StaticResource EdgeBrush}" BorderThickness="0,0,0,1" Margin="0,4,0,8">
-      <ItemsControl ItemsSource="{Binding Tabs}">
+      <c:TravelHost Fill="{StaticResource AccentBrush}" Shape="Lean"><ItemsControl ItemsSource="{Binding Tabs}">
         <ItemsControl.ItemsPanel>
           <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="20" /></ItemsPanelTemplate>
         </ItemsControl.ItemsPanel>
@@ -106,7 +106,7 @@
             </Button>
           </DataTemplate>
         </ItemsControl.ItemTemplate>
-      </ItemsControl>
+      </ItemsControl></c:TravelHost>
     </Border>
     <!-- the race of the replay the game plays, when its mode has lines: the race page's own parts -->
     <Grid Name="PlaybackRace" ColumnDefinitions="*,16,Auto" Margin="0,0,0,16" DataContext="{Binding Race}" IsVisible="{Binding HasMode}">
@@ -134,7 +134,7 @@
     </Border>
     <!-- the replays in their groups by date (a group's heading, then its rows); only the rows on the screen are drawn,
          so thousands of replays scroll as a few do -->
-    <ItemsControl Name="ReplayList" ItemsSource="{Binding Rows}">
+    <ItemsControl Name="ReplayList" ItemsSource="{Binding Rows}" c:Motion.Stagger="True">
       <ItemsControl.ItemsPanel>
         <ItemsPanelTemplate><VirtualizingStackPanel /></ItemsPanelTemplate>
       </ItemsControl.ItemsPanel>

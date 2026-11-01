@@ -164,8 +164,13 @@
                 AutomationProperties.Name="Navigation sounds" />
       <!-- the pad works the launcher's pages (D-pad, A, B, L and R); off by default: the controller is the game's -->
       <TextBlock Grid.Row="4" Classes="label" Text="Menus" />
-      <CheckBox Grid.Row="4" Grid.Column="1" Name="PadNavigation" Classes="box" Content="Controller navigation"
-                IsChecked="{Binding PadNavigation}" AutomationProperties.Name="Controller menu navigation" />
+      <StackPanel Grid.Row="4" Grid.Column="1" Spacing="8">
+        <CheckBox Name="PadNavigation" Classes="box" Content="Controller navigation"
+                  IsChecked="{Binding PadNavigation}" AutomationProperties.Name="Controller menu navigation" />
+        <!-- the launcher's animations (Controls/Motion.cs) -->
+        <CheckBox Name="ReducedMotion" Classes="box" Content="Reduced motion"
+                  IsChecked="{Binding ReducedMotion}" AutomationProperties.Name="Reduced motion" />
+      </StackPanel>
       <!-- the launcher's size on top of the system's scaling: set by Apply; Ctrl+0, Ctrl+plus, Ctrl+minus at once -->
       <TextBlock Grid.Row="5" Classes="label" Text="Interface scale" />
       <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal" Spacing="12">

@@ -71,7 +71,7 @@
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:SeatColumn">
-            <ItemsControl ItemsSource="{Binding Seats}" Margin="0,0,16,0">
+            <ItemsControl ItemsSource="{Binding Seats}" c:Motion.Stagger="True" Margin="0,0,16,0">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:SeatRow">
                   <!-- the number, the paint, the name with its tick right after it (has voted, is ready), the machine
@@ -118,7 +118,7 @@
            each, no number and no tick (a watcher has no vote); the player's own row comes here while they watch. -->
       <StackPanel Grid.Column="1" Name="WatchingList" Width="144" Margin="8,0,0,0" IsVisible="{Binding WatchingShown}">
         <TextBlock Classes="caps" Foreground="{StaticResource FaintBrush}" Text="WATCHING" Height="20" Padding="0,4,0,0" />
-        <ItemsControl ItemsSource="{Binding WatchingRows}">
+        <ItemsControl ItemsSource="{Binding WatchingRows}" c:Motion.Stagger="True">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:SeatRow">
               <Grid ColumnDefinitions="16,*" Height="{Binding #Root.((vm:LobbyViewModel)DataContext).SeatHeight}">
