@@ -25,6 +25,11 @@ public sealed partial class RaceViewModel : ViewModelBase
     private readonly AppState _state;
     private QuickPlaySession? _session;
     private RaceSnapshot? _last;
+    private int _mapCourse = -1;              // the course the map is to show
+    private Task<CourseModel?>? _mapReading;  // its model on its way from the disc
+    private readonly HashSet<Task> _coloursAwaited = [];
+    private Task? _colourUnread;              // a machine's colours this snapshot asked for and did not find
+    private (RaceSnapshot Snapshot, IReadOnlyList<SeatSetup> Seats, int Course, int Laps, int? MySeat, bool Watching)? _showAgain;
     // the match the page shows: a new one clears the last one's course, map and standings at once
     private string? _shownMatch;
     private long _shown;
@@ -271,7 +276,7 @@ public sealed partial class RaceViewModel : ViewModelBase
         {
             Course = CourseNames.Name(race.Course);
             Stage = session.Racing ? "Racing" : "Watching";
-            Map = Theme.GameSkin.Course(race.Course);
+            ShowMap(race.Course);
             Waiting = true;
         }
     }
@@ -303,7 +308,7 @@ public sealed partial class RaceViewModel : ViewModelBase
         _shown = 0;
         Followed = null;
         Course = CourseNames.Name(setup.Course);
-        Map = Theme.GameSkin.Course(setup.Course);
+        ShowMap(setup.Course);
         Stage = _session?.Racing == true ? "Racing" : "Watching";
         MapRacers = [];
         Standings.Clear();
@@ -332,6 +337,15 @@ public sealed partial class RaceViewModel : ViewModelBase
             return new MapRacer(r.Seat, new Vector3(r.X, r.Y, r.Z), Color.FromRgb(c.R, c.G, c.B), r.Seat == mySeat,
                 r.State == RacerLive.Out, r.State == RacerLive.Finished, r.Rank, RacerName(s, r.Seat));
         })];
+        if (_colourUnread is { } unread)
+        {
+            _colourUnread = null;
+            _showAgain = (snapshot, seats, course, laps, mySeat, watching);
+            if (_coloursAwaited.Add(unread))
+            {
+                _ = unread.ContinueWith(_ => OnUi(ColoursLanded), TaskScheduler.Default);
+            }
+        }
         var over = racers.Count > 0 && racers.All(r => r.State != RacerLive.Racing);
         var now = Environment.TickCount64;
         if (Followed is { } followed)
@@ -357,7 +371,7 @@ public sealed partial class RaceViewModel : ViewModelBase
         }
         _shown = now;
         Course = CourseNames.Name(course);
-        Map = Theme.GameSkin.Course(course);
+        ShowMap(course);
         Stage = over ? "Results" : watching ? "Watching" : "Racing";
         // the race's order from distances and finish times (the game's ranking byte is not the position)
         var ordered = RaceStandings.Order(racers);
@@ -458,14 +472,59 @@ public sealed partial class RaceViewModel : ViewModelBase
         r.State == RacerLive.Racing || s?.PlayerId is not { } id || open is null ? ""
         : open.Contains(id) ? "Game open" : "In lobby";
 
+    /// <summary>The map of a course, at once when it is known. Else no map (never the last race's) until it has been read
+    /// off the window's thread.</summary>
+    private void ShowMap(int course)
+    {
+        _mapCourse = course;
+        var reading = Theme.GameSkin.CourseAsync(course);
+        if (reading.IsCompleted)
+        {
+            _mapReading = null;
+            Map = reading.IsCompletedSuccessfully ? reading.Result : null;
+            return;
+        }
+        if (reading == _mapReading)
+        {
+            return;
+        }
+        _mapReading = reading;
+        Map = null;
+        _ = reading.ContinueWith(read => OnUi(() =>
+        {
+            if (_mapCourse == course && _mapReading == read)
+            {
+                _mapReading = null;
+                Map = read.IsCompletedSuccessfully ? read.Result : null;
+            }
+        }), TaskScheduler.Default);
+    }
+
+    /// <summary>A machine's colours were read: the last snapshot shown without them is shown again, if none came since.</summary>
+    private void ColoursLanded()
+    {
+        if (_showAgain is { } again && ReferenceEquals(again.Snapshot, _last))
+        {
+            _showAgain = null;
+            _shown = 0;
+            Show(again.Snapshot, again.Seats, again.Course, again.Laps, again.MySeat, again.Watching);
+        }
+    }
+
     /// <summary>A seat's colour: its stock colour's swatch, its painted colour, or (a CPU) its machine's own.</summary>
-    private static Rgb SeatColor(SeatSetup? s)
+    private Rgb SeatColor(SeatSetup? s)
     {
         if (s is null)
         {
             return new Rgb(140, 150, 170);
         }
-        var swatches = Theme.GameSkin.StockSwatches(s.Machine);
+        // (never waited for here: this is the window's thread, and the colours fill in when they land: ColoursLanded)
+        var reading = Theme.GameSkin.StockSwatchesAsync(s.Machine);
+        if (!reading.IsCompleted)
+        {
+            _colourUnread = reading;
+        }
+        var swatches = reading.IsCompletedSuccessfully ? reading.Result : null;
         return s.StockColor is { } k && swatches is { } list ? list[Math.Clamp(k, 0, 3)]
             : s.Color ?? swatches?[0] ?? new Rgb(140, 150, 170);
     }

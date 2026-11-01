@@ -152,6 +152,16 @@ public sealed class StallWalkTests : IDisposable
         await StepAsync("machine choice", () => server.SendAsync(new ChooseMachine("m1", 21, all, 40_000), Full(LobbyState.Choosing)), 1500);
         await Step("machine choice: another machine", () => main.Lobby.Garage.MachineIndex = 17, 900);
         await StepAsync("back to the gathering", () => server.SendAsync(Full(LobbyState.Forming)), 900);
+        // the race page, with the disc's data still being read (the disc loaded a moment before), as a slow disc would
+        await Step("the disc read again", () => GameSkin.Load(disc), 0);
+        var race = new LobbyRace("m1", 8, 3, [.. Enumerable.Range(0, 30).Select(i => new SeatSetup(i, null, $"PLAYER {i}", i, new Rgb(1, 2, (byte)i)) with { StockColor = i % 4 })],
+            DateTimeOffset.UtcNow);
+        LobbyState Racing() => Full(LobbyState.Racing) with { Race = race };
+        await StepAsync("race page, data still being read", () => server.SendAsync(Racing()), 900);
+        await StepAsync("race: first report", () => server.SendAsync(new LiveRace("m1", Report(600, RacerLive.Racing))), 500);
+        await StepAsync("race: a report", () => server.SendAsync(new LiveRace("m1", Report(900, RacerLive.Racing))), 500);
+        await StepAsync("race: results", () => server.SendAsync(new LiveRace("m1", Report(1200, RacerLive.Finished))), 900);
+        await StepAsync("back to the gathering, after the race", () => server.SendAsync(Full(LobbyState.Forming)), 900);
         await StepAsync("leave the lobby", () => state.LeaveAsync(), 900);
         await Step("Home again", () => main.Current = main.Home);
         window.Close();
@@ -162,6 +172,10 @@ public sealed class StallWalkTests : IDisposable
 
         new ViewLocator().Prebuild(main.AllPages);
 
+
+    /// <summary>Thirty racers' report.</summary>
+    private static RaceSnapshot Report(int frame, string racerState) => new(frame, 0, [.. Enumerable.Range(0, 30).Select(i =>
+        new RacerLive(i, i, 2, 20_000, 60_000 + i, 19_000, 900, 80, 100, 0, 1000, racerState, 0, 0, 0, 1000 - i))]);
 
     /// <summary>A full lobby of thirty, as a big one tells it.</summary>
     private static LobbyState Full(string stage) => LedServer.Lobby(stage) with

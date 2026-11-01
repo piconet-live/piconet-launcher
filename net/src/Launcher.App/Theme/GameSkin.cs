@@ -40,6 +40,7 @@ public static partial class GameSkin
     private static readonly Dictionary<string, Bitmap?> Cache = [];
     private static readonly Dictionary<int, Task<IReadOnlyList<Online.Protocol.Rgb>?>> Swatches = [];
     private static readonly Dictionary<int, CourseModel?> Courses3D = [];
+    private static readonly Dictionary<int, Task<CourseModel?>> CourseReads = [];
     private static readonly Dictionary<int, Task<GarageMachine?>> Machines3D = [];
     private static readonly Dictionary<int, Task<CourseLook?>> CourseLooks = [];
     private static Task<string?>? _stillsKey;
@@ -110,6 +111,7 @@ public static partial class GameSkin
             Cache.Clear();
             Swatches.Clear();
             Courses3D.Clear();
+            CourseReads.Clear();
             Machines3D.Clear();
             CourseLooks.Clear();
             ClearCustoms3D();
@@ -136,6 +138,7 @@ public static partial class GameSkin
             Cache.Clear();
             Swatches.Clear();
             Courses3D.Clear();
+            CourseReads.Clear();
             Machines3D.Clear();
             CourseLooks.Clear();
             ClearCustoms3D();
@@ -322,7 +325,27 @@ public static partial class GameSkin
     /// they are still being read.</summary>
     public static IReadOnlyList<Online.Protocol.Rgb>? StockSwatches(int machine) => StockSwatchesAsync(machine).GetAwaiter().GetResult();
 
-    /// <summary>A course's model from the course-select screen, the track map; null without the disc.</summary>
+    /// <summary>A course's model, for the window's thread: at once when it is known, else read on a worker.</summary>
+    public static Task<CourseModel?> CourseAsync(int course)
+    {
+        lock (Gate)
+        {
+            if (Courses3D.TryGetValue(course, out var known))
+            {
+                return Task.FromResult(known);
+            }
+            if (CourseReads.TryGetValue(course, out var reading))
+            {
+                return reading;
+            }
+            var read = Task.Run(() => Quietly(() => Course(course)));
+            CourseReads[course] = read;
+            return read;
+        }
+    }
+
+    /// <summary>A course's model from the course-select screen, the track map; null without the disc. It may read the
+    /// disc: off the window's thread (there, <see cref="CourseAsync"/>).</summary>
     public static CourseModel? Course(int course)
     {
         DiscArt? art;
@@ -340,6 +363,7 @@ public static partial class GameSkin
             if (art == _art)
             {
                 Courses3D[course] = model;
+                CourseReads.Remove(course);
             }
             return model;
         }

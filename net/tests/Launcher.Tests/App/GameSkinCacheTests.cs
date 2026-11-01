@@ -17,6 +17,17 @@ public sealed class GameSkinCacheTests : IDisposable
         Directory.Delete(_dir, recursive: true);
     }
 
+    /// <summary>The race page's question: never read on the asker's thread, the same read for two askers, and known after.</summary>
+    [Fact]
+    public async Task ACoursesModelIsReadOnAWorkerAndKept()
+    {
+        GameSkin.Load(new SyntheticDisc().Write(_dir, "gx.iso"));
+        var read = GameSkin.CourseAsync(8);
+        Assert.Same(read, GameSkin.CourseAsync(8));
+        Assert.Null(await read);   // (the synthetic disc has no models)
+        Assert.True(GameSkin.CourseAsync(8).IsCompletedSuccessfully);
+    }
+
     [Fact]
     public async Task ManyThreadsAskingAtOnceGetOneTaskAKey()
     {
