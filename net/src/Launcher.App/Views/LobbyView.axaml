@@ -356,7 +356,7 @@
         <ItemsControl Name="CourseQuestion" c:Motion.RevealBig="True" ItemsSource="{Binding CourseRows}" IsVisible="{Binding VoteShown}" Margin="0,-4,0,16">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="x:Object">
-              <ItemsControl Classes="cardrow" ItemsSource="{Binding}" c:Motion.Stagger="True" Margin="0,0,0,4">
+              <ItemsControl Classes="cardrow" c:Paced.Items="{Binding}" c:Paced.Batch="1" c:Motion.Stagger="True" Margin="0,0,0,4">
                 <ItemsControl.ItemsPanel>
                   <ItemsPanelTemplate><c:ShareRow Gap="16" /></ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>

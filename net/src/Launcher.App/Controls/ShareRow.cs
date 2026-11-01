@@ -44,13 +44,23 @@ public sealed class ShareRow : Panel
 
     public static void SetShare(Control part, double share) => part.SetValue(ShareProperty, share);
 
+    private int ComingParts(int here) =>
+        Avalonia.VisualTree.VisualExtensions.FindAncestorOfType<ItemsControl>(this) is { } list && list.ItemsPanelRoot == this && Paced.GetItems(list) is System.Collections.ICollection all
+            ? Math.Max(0, all.Count - here) : 0;
+
     /// <summary>Where each part begins and ends in a row of the given width.</summary>
     private List<(double Left, double Right)> Edges(double width)
     {
         var shares = Children.Select(c => ShareOf(c) is var s && double.IsFinite(s) && s > 0 ? s : 0).ToList();
+        // (a paced list's parts still to come have their places already: nothing moves as they arrive)
+        var coming = ComingParts(shares.Count);
         var all = shares.Sum();
+        if (coming > 0)
+        {
+            all += coming * (shares.Count > 0 && all > 0 ? all / shares.Count : 1);
+        }
         // the gaps between parts that have width come out of the row first; the rest is shared
-        var gaps = Gap * Math.Max(0, shares.Count(x => x > 0) - 1);
+        var gaps = Gap * Math.Max(0, shares.Count(x => x > 0) + coming - 1);
         var room = Math.Max(0, width - gaps);
         var edges = new List<(double, double)>(shares.Count);
         var before = 0.0;

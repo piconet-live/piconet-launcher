@@ -19,8 +19,10 @@ namespace Launcher.App.Controls;
 /// </summary>
 public static class Paced
 {
-    /// <summary>The rows made in one go: a row of the slower lists costs 1 to 3 ms.</summary>
-    private const int Batch = 4;
+    /// <summary>The rows made in one go: a row of the slower lists costs 1 to 3 ms, so two stay inside a frame's share
+    /// of the thread. A list of heavier rows asks for fewer (<see cref="BatchProperty"/>).</summary>
+    public static readonly AttachedProperty<int> BatchProperty =
+        AvaloniaProperty.RegisterAttached<ItemsControl, ItemsControl, int>("Batch", 2);
 
     public static readonly AttachedProperty<IEnumerable?> ItemsProperty =
         AvaloniaProperty.RegisterAttached<ItemsControl, ItemsControl, IEnumerable?>("Items");
@@ -38,6 +40,10 @@ public static class Paced
         }
         feed.Source(e.NewValue as IEnumerable);
     });
+
+    public static int GetBatch(ItemsControl list) => list.GetValue(BatchProperty);
+
+    public static void SetBatch(ItemsControl list, int rows) => list.SetValue(BatchProperty, rows);
 
     public static IEnumerable? GetItems(ItemsControl list) => list.GetValue(ItemsProperty);
 
@@ -107,7 +113,7 @@ public static class Paced
             }
             var wanted = _source?.Cast<object?>().ToList() ?? [];
             var deck = _list.FindAncestorOfType<PageDeck>();
-            var batch = deck is { LaidOutAhead: false } ? wanted.Count : Batch;
+            var batch = deck is { LaidOutAhead: false } ? wanted.Count : GetBatch(_list);
             // a changed row is a row made again: those go in batches too, the first ones first
             var left = batch;
             for (var i = 0; i < _shown.Count && left > 0; i++)

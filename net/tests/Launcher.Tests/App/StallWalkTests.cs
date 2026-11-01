@@ -23,6 +23,7 @@ public sealed class StallWalkTests : IDisposable
     private readonly List<string> _rows = [];
     private StallWatch? _watch;
     private int _beforeFirstFrame = -1;
+    private int _beforeSecondFrame = -1;
 
     public void Dispose() => Directory.Delete(_dir, recursive: true);
 
@@ -113,10 +114,15 @@ public sealed class StallWalkTests : IDisposable
         {
             window = new MainWindow { DataContext = main, Width = 1280, Height = 800 };
             window.Show();
-            window.RequestAnimationFrame(_ => _beforeFirstFrame = _watch!.Seen.Count);
+            window.RequestAnimationFrame(_ =>
+            {
+                _beforeFirstFrame = _watch!.Seen.Count;
+                window.RequestAnimationFrame(_ => _beforeSecondFrame = _watch!.Seen.Count);
+            });
             main.Current = main.Home;
         }, 1200);
         _rows.Add($"{_beforeFirstFrame,7}\t  0\t      0\tstalls of this start seen before the window's first frame\t\t");
+        _rows.Add($"{_beforeSecondFrame,7}\t  0\t      0\tstalls of this start seen before its second frame\t\t");
         Memory("memory, window open");
         state.WindowFocus(true);
         _ = state.Pads;   // what a real window does: the pad reader's helper runs while the window is in front

@@ -101,11 +101,12 @@ internal static class Headless
         Assert.True(met(), what);
     }
 
-    /// <summary>A control of the window by its name; of several (the pages all stand in the window), the one showing.</summary>
+    /// <summary>A control of the window by its name; of several (the pages all stand in the window), the one showing, or the first when none shows.</summary>
     public static T Named<T>(Visual root, string name) where T : Control
     {
         var named = root.GetVisualDescendants().OfType<T>().Where(c => c.Name == name).ToList();
-        return named.Count == 1 ? named[0] : named.Single(c => c.IsEffectivelyVisible);
+        var showing = named.Where(c => c.IsEffectivelyVisible).ToList();
+        return named.Count == 1 || showing.Count == 0 ? named[0] : showing.Single();
     }
 
     /// <summary>A window with the toolkit's layer for menus, which a flyout needs where there are no system windows
