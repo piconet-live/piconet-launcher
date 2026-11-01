@@ -27,7 +27,7 @@ public sealed partial class AppState
     /// <summary>The picture engine's keys: left out in a build that does not offer Aurora, and at their defaults.</summary>
     private GameWindow WithAurora(GameWindow window)
     {
-        var (engine, size, edges, textures) = Settings.AuroraLaunchKeys(offered: StackStamp.Current.Test);
-        return window with { Renderer = engine, AuroraSize = size, AuroraEdges = edges, AuroraTextures = textures };
+        var (engine, size, edges, textures, colourblind) = Settings.AuroraLaunchKeys(offered: StackStamp.Current.Test);
+        return window with { Renderer = engine, AuroraSize = size, AuroraEdges = edges, AuroraTextures = textures, AuroraColourblind = colourblind };
     }
 }

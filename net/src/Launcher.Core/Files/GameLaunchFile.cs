@@ -80,6 +80,7 @@ public sealed record TaskbarGroup(string Id, string Program, string Name)
 /// <param name="AuroraSize">Aurora's picture size (<c>"auroraSize"</c>); null: Auto.</param>
 /// <param name="AuroraEdges">Aurora's samples for each pixel (<c>"auroraEdges"</c>); 0: left out.</param>
 /// <param name="AuroraTextures">Aurora's anisotropic filtering (<c>"auroraTextures"</c>); 0: left out.</param>
+/// <param name="AuroraColourblind">Aurora's colour filter of the whole picture (<c>"auroraColourblind"</c>); null: off.</param>
 /// <param name="HudLayout">Its layout file (<c>"hudLayout"</c>); a missing file is the default layout.</param>
 /// <param name="NamePicture">The name as the launcher's own title bar draws it, in the game's lettering from the
 /// player's disc (<c>"windowNamePicture"</c>: the game draws it in place of the name's text); null: the text.</param>
@@ -106,7 +107,7 @@ public sealed record TaskbarGroup(string Id, string Program, string Name)
 public sealed record GameWindow(string Title, string? Name = null, bool ShowFrameRate = false, Picture? NamePicture = null,
     TaskbarGroup? Taskbar = null, string? Present = null, bool VerticalSync = false, string? FullScreen = null,
     string? Board = null, string? RefreshRate = null, bool Rumble = true, int Camera = 0, bool ShowInputs = false, bool ModernHud = false, string? HudLayout = null, string? HudMeter = null,
-    string? Renderer = null, string? AuroraSize = null, int AuroraEdges = 0, int AuroraTextures = 0)
+    string? Renderer = null, string? AuroraSize = null, int AuroraEdges = 0, int AuroraTextures = 0, string? AuroraColourblind = null)
 {
     /// <summary>The largest name picture the game's reader takes.</summary>
     public const int MostPictureWidth = LaunchFormat.WindowNamePictureWidthHigh, MostPictureHeight = LaunchFormat.WindowNamePictureHeightHigh;
@@ -129,6 +130,7 @@ public sealed record GameWindow(string Title, string? Name = null, bool ShowFram
         AuroraSize = AuroraSize,
         AuroraEdges = AuroraEdges,
         AuroraTextures = AuroraTextures,
+        AuroraColourblind = AuroraColourblind,
         // written only when off: the game's default is on, and a runner from before the key (0.3.0) refuses a file with it
         Rumble = Rumble,
         // the game's own ways are left out: the console's moment, 60 a second
