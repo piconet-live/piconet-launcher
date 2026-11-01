@@ -12,10 +12,11 @@ namespace Launcher.App.Controls;
 /// <summary>
 /// The window's pages, all kept in the window: the one current shows, the others stand hidden with their styles, their
 /// templates and their layout already done. Going to a page is then showing it, with nothing to attach or style, and
-/// leaving it takes nothing apart. All the pages are laid out once in the window's first layout pass, before its
-/// first frame, and with them the parts of each page that are hidden at that moment (a lobby's stages, the Garage's
-/// other phase), so that showing a part finds its styles and templates in place. A window that changes width lays the
-/// hidden pages out again, one at a time, once it has stopped.
+/// leaving it takes nothing apart. The window opens on the current page alone; the others come into the window behind
+/// it after that, in small steps with the thread free between them (<see cref="Continue"/>), and with them the parts
+/// of each page that are hidden at that moment (a lobby's stages, the Garage's other phase), so that showing a part
+/// finds its styles and templates in place. A window that changes width lays the hidden pages out again, one at a
+/// time, once it has stopped.
 /// </summary>
 public sealed class PageDeck : Panel
 {
@@ -25,15 +26,28 @@ public sealed class PageDeck : Panel
 
     private static readonly TimeSpan RefitAfter = TimeSpan.FromMilliseconds(300);
 
+    /// <summary>How long one go of the work behind the page may run before the thread is let go.</summary>
+    private const double SliceMs = 4;
+
+    /// <summary>The window's first page has its entrance before the work behind it starts.</summary>
+    private static readonly TimeSpan BehindAfter = TimeSpan.FromMilliseconds(450);
+
     private readonly Dictionary<object, Control> _views = [];
     private readonly ViewLocator _locator = new();
     private Control? _shown;
-    private bool _laidOutAhead;
+    private bool _opened;
+    private readonly Queue<object> _waiting = [];
+    private readonly Stack<(Layoutable At, bool HiddenAbove)> _templates = [];
+    private readonly Queue<Layoutable> _layouts = [];
+    private bool _continuing;
     private double _width = double.NaN;
     private DispatcherTimer? _refit;
 
-    /// <summary>The window's first layout pass is over: from here on what comes onto a hidden page is laid out there.</summary>
-    public bool LaidOutAhead => _laidOutAhead;
+    /// <summary>Every page is in the window with its templates and layout done.</summary>
+    public bool Ready => _opened && !_continuing;
+
+    /// <summary>All the pages have become ready.</summary>
+    public event Action? BecameReady;
 
     /// <summary>A page came into view.</summary>
     public event Action<Control>? PageShown;
@@ -57,7 +71,7 @@ public sealed class PageDeck : Panel
         {
             foreach (var page in pages)
             {
-                Add(page);
+                _waiting.Enqueue(page);
             }
         }
         else if (change.Property == CurrentProperty)
@@ -82,6 +96,7 @@ public sealed class PageDeck : Panel
         }
         _views[page] = view;
         view.DataContext = page;
+        view.IsVisible = page == Current;
         Children.Add(view);
         return view;
     }
@@ -103,7 +118,7 @@ public sealed class PageDeck : Panel
             return;
         }
         view.IsVisible = true;
-        if (_laidOutAhead)
+        if (_opened)
         {
             Motion.PageShown(view);
             GpuView.Wake(view);
@@ -114,7 +129,7 @@ public sealed class PageDeck : Panel
     /// <summary>A hidden page holds neither the focus nor an open drop-down.</summary>
     private void Leave(Control page)
     {
-        page.IsVisible = !_laidOutAhead;
+        page.IsVisible = false;
         if (TopLevel.GetTopLevel(this)?.FocusManager is { } focus && focus.GetFocusedElement() is Visual on && page.IsVisualAncestorOf(on))
         {
             focus.Focus(null);
@@ -128,21 +143,13 @@ public sealed class PageDeck : Panel
     protected override Size ArrangeOverride(Size finalSize)
     {
         var arranged = base.ArrangeOverride(finalSize);
-        if (!_laidOutAhead)
+        if (!_opened)
         {
-            // the first pass laid out every page; from here only the current one shows (the layout passes again
-            // before the window's first frame)
-            _laidOutAhead = true;
+            _opened = true;
             _width = finalSize.Width;
-            var room = new Size(finalSize.Width, double.PositiveInfinity);
-            foreach (var child in Children)
-            {
-                LayOutHiddenParts(child, room, false);
-            }
-            foreach (var child in Children.Where(c => c != _shown))
-            {
-                child.IsVisible = false;
-            }
+            _continuing = true;
+            var thread = Dispatcher.UIThread;
+            _ = Task.Delay(BehindAfter).ContinueWith(_ => thread.Post(Continue, DispatcherPriority.Background), TaskScheduler.Default);
         }
         else if (finalSize.Width != _width)
         {
@@ -152,24 +159,55 @@ public sealed class PageDeck : Panel
         return arranged;
     }
 
-    /// <summary>What stands under a hidden control has had no layout: its styles and templates come with a layout of
-    /// its own, in about the room it will have. (Only the room may still change when it shows, and that is the cheap
-    /// part.)</summary>
-    private static void LayOutHiddenParts(Layoutable at, Size room, bool hiddenAbove)
+    private void ContinueSoon() => Dispatcher.UIThread.Post(Continue, DispatcherPriority.Background);
+
+    /// <summary>A little of the work behind the page, then the thread is free: the next page into the window (its
+    /// styles come with that), the templates of everything on it, what is hidden on it included, a control at a time,
+    /// then the layout of what stands under something hidden, which gets none from the window.</summary>
+    private void Continue()
+    {
+        var started = System.Diagnostics.Stopwatch.GetTimestamp();
+        do
+        {
+            if (_templates.TryPop(out var next))
+            {
+                Template(next.At, next.HiddenAbove);
+            }
+            else if (_layouts.TryDequeue(out var part))
+            {
+                part.Measure(new Size(_width, double.PositiveInfinity));
+                part.Arrange(new Rect(part.DesiredSize));
+            }
+            else if (_waiting.TryDequeue(out var page))
+            {
+                if (Add(page) is { } view)
+                {
+                    _templates.Push((view, false));
+                }
+                break;   // (a page's styles are the biggest single step: nothing more in this go)
+            }
+            else
+            {
+                _continuing = false;
+                BecameReady?.Invoke();
+                return;
+            }
+        }
+        while (System.Diagnostics.Stopwatch.GetElapsedTime(started).TotalMilliseconds < SliceMs);
+        ContinueSoon();
+    }
+
+    private void Template(Layoutable at, bool hiddenAbove)
     {
         var hidden = !at.IsVisible;
-        if (hidden && at is TemplatedControl templated)
+        at.ApplyTemplate();
+        if (!hidden && hiddenAbove)
         {
-            templated.ApplyTemplate();
+            _layouts.Enqueue(at);
         }
-        else if (!hidden && hiddenAbove)
+        foreach (var child in at.GetVisualChildren().OfType<Layoutable>().Reverse())
         {
-            at.Measure(room);
-            at.Arrange(new Rect(at.DesiredSize));
-        }
-        foreach (var child in at.GetVisualChildren().OfType<Layoutable>().ToList())
-        {
-            LayOutHiddenParts(child, room, hidden);
+            _templates.Push((child, hidden));
         }
     }
 

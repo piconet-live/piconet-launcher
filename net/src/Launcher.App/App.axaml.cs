@@ -39,6 +39,7 @@ public sealed partial class App : Application
             var updates = ReferenceEquals(state.Debug, Launcher.Core.DebugSettings.Off) && !state.StandIn
                 ? new Updates(() => state.Racing, line => Program.Faults?.Note(line)) : null;
             var stalls = Program.WatchStalls(state.DataFolder);
+            var collector = new YoungCollector();
             var main = Pages(state, updates);
             new ViewLocator().Prebuild(main.AllPages);
             var window = new MainWindow { DataContext = main };
@@ -49,6 +50,7 @@ public sealed partial class App : Application
             desktop.ShutdownRequested += (_, _) =>
             {
                 stalls?.Dispose();
+                collector.Dispose();
                 updates?.Dispose();
                 main.Dispose();
                 state.Shutdown();

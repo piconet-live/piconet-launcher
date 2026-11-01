@@ -1,5 +1,6 @@
 using Avalonia.Headless;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using Launcher.App;
 using Launcher.App.Theme;
 using Launcher.App.ViewModels;
@@ -13,8 +14,10 @@ namespace Launcher.Tests;
 /// Not a check but a measurement, run only on demand: STALL_WALK names a file and every page and common action is
 /// walked through in the launcher's window, on the toolkit's own main loop, with the stall watch running
 /// (<see cref="StallWatch"/>); the file gets one row per action, its worst stall, and what the stall was on.
-/// STALL_WALK_DISC names a real disc image (else a made-up one). No screen: frames are ticked and no pixels reach a
-/// card, so it shows the window thread's work, not what a real window's drawing adds.
+/// STALL_WALK_DISC names a real disc image (else a made-up one). No screen: a headless window draws its software
+/// pixels on the window's own thread, which a real window does on its render thread, so that drawing is stopped once
+/// the window is open (STALL_WALK_DRAW keeps it, for comparing): the rows show the window thread's own work, not what
+/// a real window's drawing adds. A row's last column is the collector's pauses in that step, each in ms.
 /// </summary>
 [Collection(ControllerPageTests.Name)]
 public sealed class StallWalkTests : IDisposable
@@ -82,6 +85,7 @@ public sealed class StallWalkTests : IDisposable
                     }
                     await stop.CancelAsync();
                 });
+                using var collector = new YoungCollector();   // (as the launcher's start has it)
                 thread.MainLoop(stop.Token);
                 frames.Join();
                 _watch.Dispose();
@@ -114,6 +118,10 @@ public sealed class StallWalkTests : IDisposable
         {
             window = new MainWindow { DataContext = main, Width = 1280, Height = 800 };
             window.Show();
+            if (Environment.GetEnvironmentVariable("STALL_WALK_DRAW") is not { Length: > 0 })
+            {
+                StopDrawing(window);
+            }
             window.RequestAnimationFrame(_ =>
             {
                 _beforeFirstFrame = _watch!.Seen.Count;
@@ -121,6 +129,17 @@ public sealed class StallWalkTests : IDisposable
             });
             main.Current = main.Home;
         }, 1200);
+        var deck = window.GetVisualDescendants().OfType<Launcher.App.Controls.PageDeck>().First();
+        var behind = System.Diagnostics.Stopwatch.StartNew();
+        await StepAsync("the other pages come in behind Home", async () =>
+        {
+            while (!deck.Ready)
+            {
+                await Task.Delay(10);
+            }
+            _rows.Add(FormattableString.Invariant($"{behind.Elapsed.TotalMilliseconds,7:F0}\t  0\t      0\tms until every page stood ready\t\t"));
+        }, 300);
+        Memory("memory, every page ready");
         _rows.Add($"{_beforeFirstFrame,7}\t  0\t      0\tstalls of this start seen before the window's first frame\t\t");
         _rows.Add($"{_beforeSecondFrame,7}\t  0\t      0\tstalls of this start seen before its second frame\t\t");
         Memory("memory, window open");
@@ -146,6 +165,9 @@ public sealed class StallWalkTests : IDisposable
             }
             await Step($"Home, {round} back", () => main.Current = main.Home);
         }
+        await Step("window another width (hidden pages laid out again)", () => window.Width = 1500, 1500);
+        _rows.Add(FormattableString.Invariant($"{deck.Bounds.Width,7:F0}\t  0\t      0\tthe deck's width at the other width\t\t"));
+        await Step("window its width again (hidden pages laid out again)", () => window.Width = 1280, 1500);
         await Step("a setting changed", () => state.Update(s => s with { SoundVolume = 40 }));
 
         var all = Enumerable.Range(0, GameMachines.Count).ToArray();
@@ -177,6 +199,14 @@ public sealed class StallWalkTests : IDisposable
         Memory("memory, every page seen");
         window.Close();
         main.Dispose();
+    }
+
+    /// <summary>The window's scene still goes to the compositor; no pixels are made from it.</summary>
+    private static void StopDrawing(MainWindow window)
+    {
+        var flags = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic;
+        var renderer = typeof(Avalonia.Controls.TopLevel).GetProperty("Renderer", flags)!.GetValue(window)!;
+        renderer.GetType().GetMethod("Stop")!.Invoke(renderer, null);
     }
 
     /// <summary>What the launcher holds at this point, as a row of its own: managed heap after a full collection, and the working set.</summary>
@@ -214,14 +244,23 @@ public sealed class StallWalkTests : IDisposable
     {
         await Task.Delay(100);   // what the step before still had going is not this one's
         _watch!.Take();
+        var gcs = Pauses();
         StallWatch.Doing(name);
         await action();
         await Task.Delay(settleMs);
         var seen = _watch.Take();
         var worst = seen.OrderByDescending(s => s.Ms).FirstOrDefault();
-        _rows.Add(FormattableString.Invariant($"{worst?.Ms ?? 0,7:F1}\t{seen.Count,3}\t{seen.Sum(s => s.Ms),7:F0}\t{name}\t{worst?.Doing}\t{(worst is null ? "" : string.Join("; ", worst.Toolkit))}\t{string.Join(" ", seen.Select(s => s.Ms.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)))}"));
+        _rows.Add(FormattableString.Invariant($"{worst?.Ms ?? 0,7:F1}\t{seen.Count,3}\t{seen.Sum(s => s.Ms),7:F0}\t{name}\t{worst?.Doing}\t{(worst is null ? "" : string.Join("; ", worst.Toolkit))}\t{string.Join(" ", seen.Select(s => s.Ms.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)))}\t{Math.Max(0, Pauses().Ms - gcs.Ms):F0} ms in {GC.CollectionCount(0) - gcs.Count} ({_lastGc()})"));
         StallWatch.Doing("");
     }
+
+    private static (double Ms, int Count) Pauses() => (GC.GetTotalPauseDuration().TotalMilliseconds, GC.CollectionCount(0));
+
+    private static readonly Func<string> _lastGc = () =>
+    {
+        var last = GC.GetGCMemoryInfo(GCKind.Any);
+        return FormattableString.Invariant($"last gen{last.Generation} {last.PauseDurations[0].TotalMilliseconds:F0} ms, {last.PromotedBytes / 1048576.0:F1} MB promoted");
+    };
 
     private static async Task Until(Func<bool> met)
     {

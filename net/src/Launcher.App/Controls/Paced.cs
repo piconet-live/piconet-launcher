@@ -13,16 +13,15 @@ namespace Launcher.App.Controls;
 /// <see cref="ItemsProperty"/> in place of <c>ItemsSource</c> on a long list without virtualising (the Garage's tiles,
 /// a lobby's seats, the course cards). Between batches the window's thread does its layout and its input, so opening
 /// a page with forty rows holds no frame up. A list out of the window holds no rows; a change to the source
-/// changes only the rows that differ. A list on a page laid out ahead (<see cref="PageDeck"/>) has all its rows for
-/// the first layout; after that, while it is hidden, its rows get their layout as they come, a batch at a time, so
-/// that showing it has none left to do.
+/// changes only the rows that differ. A list on a hidden page (<see cref="PageDeck"/>) gets its rows the same way,
+/// each batch with its layout, so that showing it has none left to do.
 /// </summary>
 public static class Paced
 {
-    /// <summary>The rows made in one go: a row of the slower lists costs 1 to 3 ms, so two stay inside a frame's share
-    /// of the thread. A list of heavier rows asks for fewer (<see cref="BatchProperty"/>).</summary>
+    /// <summary>The rows made in one go: a row of the slower lists costs up to 8 ms with its styles, so one stays
+    /// inside a frame's share of the thread. A list of light rows may ask for more.</summary>
     public static readonly AttachedProperty<int> BatchProperty =
-        AvaloniaProperty.RegisterAttached<ItemsControl, ItemsControl, int>("Batch", 2);
+        AvaloniaProperty.RegisterAttached<ItemsControl, ItemsControl, int>("Batch", 1);
 
     public static readonly AttachedProperty<IEnumerable?> ItemsProperty =
         AvaloniaProperty.RegisterAttached<ItemsControl, ItemsControl, IEnumerable?>("Items");
@@ -113,9 +112,8 @@ public static class Paced
             }
             var wanted = _source?.Cast<object?>().ToList() ?? [];
             var deck = _list.FindAncestorOfType<PageDeck>();
-            var batch = deck is { LaidOutAhead: false } ? wanted.Count : GetBatch(_list);
             // a changed row is a row made again: those go in batches too, the first ones first
-            var left = batch;
+            var left = GetBatch(_list);
             for (var i = 0; i < _shown.Count && left > 0; i++)
             {
                 if (!Equals(_shown[i], wanted[i]))
@@ -128,7 +126,7 @@ public static class Paced
             {
                 _shown.Add(wanted[_shown.Count]);
             }
-            if (deck is { LaidOutAhead: true } && !_list.IsEffectivelyVisible && _list.IsVisible && _list.Bounds.Width > 0)
+            if (deck is not null && !_list.IsEffectivelyVisible && _list.IsVisible && _list.Bounds.Width > 0)
             {
                 // (a hidden page gets no layout passes)
                 _list.Measure(new Size(_list.Bounds.Width, double.PositiveInfinity));

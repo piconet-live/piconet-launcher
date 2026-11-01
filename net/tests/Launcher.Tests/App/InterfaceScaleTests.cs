@@ -250,7 +250,9 @@ public sealed class InterfaceScaleTests : IDisposable
         var window = new MainWindow { DataContext = main, Width = 1116, Height = 789 };
         window.Show();
         main.Current = main.Garage;
-        Dispatcher.UIThread.RunJobs();
+        // (the lobby's Garage comes into the window behind the page, a little after it opens)
+        var deck = window.GetVisualDescendants().OfType<Launcher.App.Controls.PageDeck>().First();
+        Pump(() => deck.Ready, "the pages did not come in");
         var views = window.GetVisualDescendants().OfType<MachinePreview>().ToList();
         Assert.Equal(3, views.Count);                                   // the left column's, the Garage's, the lobby's Garage's
         Assert.All(views, v => Assert.IsType<Unscaled>(v.GetVisualParent()));
