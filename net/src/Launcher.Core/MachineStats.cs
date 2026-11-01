@@ -61,7 +61,7 @@ public enum MachineStatKind
 /// <summary>A stat as the launcher knows it: its label on the Garage page, how its value reads, where it stands in a
 /// machine's block of the car data file (<see cref="MachineStatFile"/>; -1: not there), and whether the Garage shows
 /// it (the two camera values are a machine's, and no measure of one).</summary>
-public sealed record MachineStatInfo(MachineStat Stat, string Label, MachineStatKind Kind, int At = -1, bool Shown = true)
+public sealed record MachineStatInfo(MachineStat Stat, string Label, MachineStatKind Kind, int At = -1, bool Shown = true, string? Note = null)
 {
     /// <summary>The two orders a list can be put in by this stat, in words: the first is rising values.</summary>
     public (string Rising, string Falling) Orders => Kind switch
@@ -88,11 +88,11 @@ public static class MachineStats
         new(MachineStat.BoostStrength, "Boost strength", MachineStatKind.Value, 0x34),
         new(MachineStat.BoostDuration, "Boost duration", MachineStatKind.Value, 0x38),
         new(MachineStat.Grip1, "Grip 1", MachineStatKind.Value, 0x10),
-        new(MachineStat.Grip2, "Grip 2", MachineStatKind.Value, 0x30),
-        new(MachineStat.Grip3, "Grip 3", MachineStatKind.Value, 0x14),
+        new(MachineStat.Grip2, "Drift rotation resistance", MachineStatKind.Value, 0x30),
+        new(MachineStat.Grip3, "Overall drift friction", MachineStatKind.Value, 0x14),
         new(MachineStat.TurnTension, "Turn tension", MachineStatKind.Value, 0x18),
         new(MachineStat.TurnMovement, "Turn movement", MachineStatKind.Value, 0x20),
-        new(MachineStat.TurnReaction, "Turn reaction", MachineStatKind.Value, 0x2C),
+        new(MachineStat.TurnReaction, "Turn reaction", MachineStatKind.Value, 0x2C, Note: "The higher, the twitchier the steering feels."),
         new(MachineStat.TurnDeceleration, "Turn deceleration", MachineStatKind.Value, 0x3C),
         new(MachineStat.DriftAcceleration, "Drift acceleration", MachineStatKind.Value, 0x1C),
         new(MachineStat.Strafe, "Strafe", MachineStatKind.Value, 0x28),
