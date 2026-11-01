@@ -257,6 +257,20 @@ public static class Motion
         }
     }
 
+    /// <summary>A page came back into view with the rows it kept: they arrive as a new list's do.</summary>
+    public static void PageShown(Control page)
+    {
+        OpenListWindow();
+        foreach (var list in page.GetVisualDescendants().OfType<ItemsControl>().Where(l => l.GetValue(StaggerProperty) && l.IsEffectivelyVisible))
+        {
+            var index = 0;
+            foreach (var row in list.GetRealizedContainers())
+            {
+                Enter(row, 0, RowRise, 1, Quick, StaggerStep * Math.Min(index++, MostStaggered));
+            }
+        }
+    }
+
     private static void Staggered(ItemsControl list)
     {
         var fresh = true;

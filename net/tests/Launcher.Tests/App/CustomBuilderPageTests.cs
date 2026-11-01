@@ -39,7 +39,7 @@ public sealed class CustomBuilderPageTests : IDisposable
                 window.Show();
                 main.Current = main.Garage;
                 PumpFor(200);
-                var garage = window.GetVisualDescendants().OfType<GarageView>().Single();
+                var garage = window.GetVisualDescendants().OfType<GarageView>().Single(v => v.IsEffectivelyVisible);
                 Click(window, Named<Button>(garage, "ShelfCustom"));
                 Pump(() => main.Garage.CustomShown, "the Custom shelf did not open");
                 PumpFor(100);

@@ -4,6 +4,7 @@ using System.Collections.Specialized;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 
 namespace Launcher.App.Controls;
 
@@ -11,8 +12,10 @@ namespace Launcher.App.Controls;
 /// A list that arrives a few items at a time instead of making all its rows in one pass: set
 /// <see cref="ItemsProperty"/> in place of <c>ItemsSource</c> on a long list without virtualising (the Garage's tiles,
 /// a lobby's seats, the course cards). Between batches the window's thread does its layout and its input, so opening
-/// a page with forty rows holds no frame up. While the list is not on screen it holds no rows; a change to the source
-/// changes only the rows that differ.
+/// a page with forty rows holds no frame up. A list out of the window holds no rows; a change to the source
+/// changes only the rows that differ. A list on a page laid out ahead (<see cref="PageDeck"/>) has all its rows for
+/// the first layout; after that, while it is hidden, its rows get their layout as they come, a batch at a time, so
+/// that showing it has none left to do.
 /// </summary>
 public static class Paced
 {
@@ -89,13 +92,6 @@ public static class Paced
                 return;
             }
             var wanted = _source?.Cast<object?>().ToList() ?? [];
-            for (var i = Math.Min(_shown.Count, wanted.Count) - 1; i >= 0; i--)
-            {
-                if (!Equals(_shown[i], wanted[i]))
-                {
-                    _shown[i] = wanted[i];
-                }
-            }
             while (_shown.Count > wanted.Count)
             {
                 _shown.RemoveAt(_shown.Count - 1);
@@ -110,11 +106,29 @@ public static class Paced
                 return;
             }
             var wanted = _source?.Cast<object?>().ToList() ?? [];
-            for (var i = 0; i < Batch && _shown.Count < wanted.Count; i++)
+            var deck = _list.FindAncestorOfType<PageDeck>();
+            var batch = deck is { LaidOutAhead: false } ? wanted.Count : Batch;
+            // a changed row is a row made again: those go in batches too, the first ones first
+            var left = batch;
+            for (var i = 0; i < _shown.Count && left > 0; i++)
+            {
+                if (!Equals(_shown[i], wanted[i]))
+                {
+                    _shown[i] = wanted[i];
+                    left--;
+                }
+            }
+            for (; left > 0 && _shown.Count < wanted.Count; left--)
             {
                 _shown.Add(wanted[_shown.Count]);
             }
-            if (_shown.Count < wanted.Count && !_going)
+            if (deck is { LaidOutAhead: true } && !_list.IsEffectivelyVisible && _list.IsVisible && _list.Bounds.Width > 0)
+            {
+                // (a hidden page gets no layout passes)
+                _list.Measure(new Size(_list.Bounds.Width, double.PositiveInfinity));
+                _list.Arrange(new Rect(_list.Bounds.Position, _list.DesiredSize));
+            }
+            if (!_going && !_shown.SequenceEqual(wanted))
             {
                 _going = true;
                 _list.Dispatcher.Post(() =>

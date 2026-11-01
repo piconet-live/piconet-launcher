@@ -158,7 +158,7 @@ public sealed partial class LobbyStageRulesTests : IDisposable
             lobby.Garage.PreviewMachineCommand.Execute(17);
             PumpFor(150, state);
             Assert.True(lobby.IsReady);
-            var swatch = view.GetVisualDescendants().OfType<Button>().Single(b => b.DataContext is StockSwatch { Index: 1 });
+            var swatch = view.GetVisualDescendants().OfType<Button>().Single(b => b.DataContext is StockSwatch { Index: 1 } && b.IsEffectivelyVisible);
             swatch.IsEnabled = true;                                                   // (no disc here to read the colours from)
             Click(window, swatch);
             Pump(() => LastChoice(server) is { Machine: 17, StockColor: 1 }, "a colour changed after Ready was not sent");
@@ -338,7 +338,7 @@ public sealed partial class LobbyStageRulesTests : IDisposable
             // left column keeps the one raced)
             main.Current = main.Garage;
             Dispatcher.UIThread.RunJobs();
-            var view = window.GetVisualDescendants().OfType<GarageView>().Single();
+            var view = window.GetVisualDescendants().OfType<GarageView>().Single(v => v.IsEffectivelyVisible);
             Assert.Equal((6, 6, "Blue Falcon"), (state.Settings.Racer.Machine, main.ShownMachine, main.Account.Machine));
             ClickCell(window, view, 12);
             Assert.Equal((6, 6, "Blue Falcon"), (state.Settings.Racer.Machine, main.ShownMachine, main.Account.Machine));
@@ -361,7 +361,7 @@ public sealed partial class LobbyStageRulesTests : IDisposable
             Assert.Equal(80, server.Of<EnterQuickPlay>()[0].Setting);                 // the player's 50, brought in
             main.Current = main.Garage;
             Dispatcher.UIThread.RunJobs();
-            var view = window.GetVisualDescendants().OfType<GarageView>().Single();
+            var view = window.GetVisualDescendants().OfType<GarageView>().Single(v => v.IsEffectivelyVisible);
             garage.PreviewMachineCommand.Execute(garage.MachineIndex);                // (the setting is PREVIEW's)
             PumpFor(100, state);
             var slider = Named<Slider>(view, "Setting");

@@ -76,7 +76,7 @@ public sealed class GarageSortTests : IDisposable
         window.Show();
         main.Current = main.Garage;
         Dispatcher.UIThread.RunJobs();
-        return (window, main, window.GetVisualDescendants().OfType<GarageView>().Single());
+        return (window, main, window.GetVisualDescendants().OfType<GarageView>().Single(v => v.IsEffectivelyVisible));
     }
 
     private string DataWith(SyntheticDisc disc, string more = "")
@@ -260,7 +260,7 @@ public sealed class GarageSortTests : IDisposable
             window.Show();
             main.Current = main.Garage;
             var garage = main.Garage;
-            var view = window.GetVisualDescendants().OfType<GarageView>().Single();
+            var view = window.GetVisualDescendants().OfType<GarageView>().Single(v => v.IsEffectivelyVisible);
             string Weight() => garage.Stats.Single(s => s.Stat == MachineStat.Weight).Value;
             Until(() => garage.HasStats);
             Assert.Equal("401.5 kg", Weight());                                // machine 6 on the first disc

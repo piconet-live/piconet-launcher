@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Launcher.App.ViewModels"
              xmlns:v="using:Launcher.App.Views"
+             xmlns:c="using:Launcher.App.Controls"
              x:Class="Launcher.App.Views.StandingsTable"
              x:DataType="vm:RaceViewModel"
              Width="{Binding StandingsWidth}">
@@ -54,7 +55,7 @@
         </DataTemplate>
       </ItemsControl.ItemTemplate>
     </ItemsControl>
-    <ItemsControl Name="StandingList" ItemsSource="{Binding Standings}">
+    <ItemsControl Name="StandingList" c:Paced.Items="{Binding Standings}">
       <ItemsControl.ItemTemplate>
         <DataTemplate x:DataType="vm:StandingRow">
           <Border Classes="standing" Classes.out="{Binding Out}" Classes.followed="{Binding Followed}">

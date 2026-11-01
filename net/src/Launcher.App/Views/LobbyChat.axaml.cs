@@ -22,13 +22,30 @@ public sealed partial class LobbyChat : UserControl
     /// <summary>The list follows its newest line: the player is at its foot (or was, when the last line came).</summary>
     private bool _following = true;
 
+    private bool _watchesDeck;
+
     public LobbyChat()
     {
         AvaloniaXamlLoader.Load(this);
         DataContextChanged += (_, _) => Watch();
         // a chat that comes onto the page opens at its newest line. Each stage of the lobby has a chat of its own,
         // and one would otherwise open at its oldest, until somebody writes
-        Loaded += (_, _) => Dispatcher.UIThread.Post(ToFoot, DispatcherPriority.Loaded);
+        Loaded += (_, _) =>
+        {
+            Dispatcher.UIThread.Post(ToFoot, DispatcherPriority.Loaded);
+            // (the pages stay in the window: the lobby's page coming back is a coming onto the page too)
+            if (!_watchesDeck && this.FindAncestorOfType<Controls.PageDeck>() is { } deck)
+            {
+                _watchesDeck = true;
+                deck.PageShown += page =>
+                {
+                    if (page.IsVisualAncestorOf(this))
+                    {
+                        Dispatcher.UIThread.Post(ToFoot, DispatcherPriority.Loaded);
+                    }
+                };
+            }
+        };
         _lines = this.FindControl<ScrollViewer>("Lines")!;
         _moreBelow = this.FindControl<Button>("MoreBelow")!;
         _lines.ScrollChanged += OnScrolled;

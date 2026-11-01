@@ -22,6 +22,7 @@ public sealed class StallWalkTests : IDisposable
     private readonly string _dir = Directory.CreateTempSubdirectory("launcher-tests").FullName;
     private readonly List<string> _rows = [];
     private StallWatch? _watch;
+    private int _beforeFirstFrame = -1;
 
     public void Dispose() => Directory.Delete(_dir, recursive: true);
 
@@ -112,8 +113,11 @@ public sealed class StallWalkTests : IDisposable
         {
             window = new MainWindow { DataContext = main, Width = 1280, Height = 800 };
             window.Show();
+            window.RequestAnimationFrame(_ => _beforeFirstFrame = _watch!.Seen.Count);
             main.Current = main.Home;
         }, 1200);
+        _rows.Add($"{_beforeFirstFrame,7}\t  0\t      0\tstalls of this start seen before the window's first frame\t\t");
+        Memory("memory, window open");
         state.WindowFocus(true);
         _ = state.Pads;   // what a real window does: the pad reader's helper runs while the window is in front
         state.PadsChanged();
@@ -164,8 +168,18 @@ public sealed class StallWalkTests : IDisposable
         await StepAsync("back to the gathering, after the race", () => server.SendAsync(Full(LobbyState.Forming)), 900);
         await StepAsync("leave the lobby", () => state.LeaveAsync(), 900);
         await Step("Home again", () => main.Current = main.Home);
+        Memory("memory, every page seen");
         window.Close();
         main.Dispose();
+    }
+
+    /// <summary>What the launcher holds at this point, as a row of its own: managed heap after a full collection, and the working set.</summary>
+    private void Memory(string name)
+    {
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        _rows.Add(FormattableString.Invariant($"{GC.GetTotalMemory(false) / 1048576.0,7:F1}\t  0\t{Environment.WorkingSet / 1048576,7}\t{name} (managed MB, working set MB)\t\t"));
     }
 
     private static void Prebuild(MainViewModel main) =>
@@ -199,7 +213,7 @@ public sealed class StallWalkTests : IDisposable
         await Task.Delay(settleMs);
         var seen = _watch.Take();
         var worst = seen.OrderByDescending(s => s.Ms).FirstOrDefault();
-        _rows.Add(FormattableString.Invariant($"{worst?.Ms ?? 0,7:F1}\t{seen.Count,3}\t{seen.Sum(s => s.Ms),7:F0}\t{name}\t{worst?.Doing}\t{(worst is null ? "" : string.Join("; ", worst.Toolkit))}"));
+        _rows.Add(FormattableString.Invariant($"{worst?.Ms ?? 0,7:F1}\t{seen.Count,3}\t{seen.Sum(s => s.Ms),7:F0}\t{name}\t{worst?.Doing}\t{(worst is null ? "" : string.Join("; ", worst.Toolkit))}\t{string.Join(" ", seen.Select(s => s.Ms.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)))}"));
         StallWatch.Doing("");
     }
 

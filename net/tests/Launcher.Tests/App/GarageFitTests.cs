@@ -113,7 +113,7 @@ public sealed class GarageFitTests : IDisposable
                 window.Show();
                 main.Current = main.Garage;
                 PumpFor(200);
-                Fits(window, window.GetVisualDescendants().OfType<GarageView>().Single(), "the Garage tab");
+                Fits(window, window.GetVisualDescendants().OfType<GarageView>().Single(v => v.IsEffectivelyVisible), "the Garage tab");
                 window.Close();
                 main.Dispose();
             }, TestContext.Current.CancellationToken);
@@ -150,7 +150,7 @@ public sealed class GarageFitTests : IDisposable
                         (window.Width, window.Height) = (w, h);
                         PumpFor(200);
                     }
-                    var garage = window.GetVisualDescendants().OfType<GarageView>().Single();
+                    var garage = window.GetVisualDescendants().OfType<GarageView>().Single(v => v.IsEffectivelyVisible);
                     Fits(window, garage, "the Garage tab, resized");
                     var sizes = (Named<Control>(garage, "Stage").Height, Named<Control>(garage, "Wheel").Height, (garage.RosterColumns, garage.TileWidth, garage.TileHeight));
                     window.Close();
@@ -199,7 +199,7 @@ public sealed class GarageFitTests : IDisposable
                 server.SendAsync(new ChooseMachine("m1", 21, All, 40_000), LedServer.Lobby(LobbyState.Choosing)).GetAwaiter().GetResult();
                 PumpTelling(state, () => main.Lobby.ChoiceShown && main.Lobby.GarageShown);
                 PumpFor(200, state);
-                Fits(window, window.GetVisualDescendants().OfType<GarageView>().Single(), "the lobby's machine stage");
+                Fits(window, window.GetVisualDescendants().OfType<GarageView>().Single(v => v.IsEffectivelyVisible), "the lobby's machine stage");
             }, cancel);
         }
         finally
@@ -259,7 +259,7 @@ public sealed class GarageFitTests : IDisposable
                 if (way.StartsWith("opened-while-gathering")) { if (way.EndsWith("-big")) { window.Height = 947; } PumpFor(200, state); }
                 else if (way != "away-then-back" && way != "garage-tab-first") { window.Height = 947; PumpFor(200, state); }
                 else { main.Current = main.Lobby; PumpFor(200, state); }
-                Fits(window, window.GetVisualDescendants().OfType<GarageView>().Single(), "the lobby's machine stage " + way);
+                Fits(window, window.GetVisualDescendants().OfType<GarageView>().Single(v => v.IsEffectivelyVisible), "the lobby's machine stage " + way);
             }, cancel);
         }
         finally

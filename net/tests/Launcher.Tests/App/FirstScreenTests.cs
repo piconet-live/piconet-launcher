@@ -141,7 +141,7 @@ public sealed partial class FirstScreenTests : IDisposable
         public MainViewModel Main { get; } = main;
 
         /// <summary>The first screen is the page showing (null: the launcher's pages are).</summary>
-        public DiscView? View => Window.GetVisualDescendants().OfType<DiscView>().SingleOrDefault();
+        public DiscView? View => Window.GetVisualDescendants().OfType<DiscView>().SingleOrDefault(v => v.IsEffectivelyVisible);
 
         private T Part<T>(string name) where T : Control => View!.FindControl<T>(name)!;
 

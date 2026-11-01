@@ -251,7 +251,7 @@ public sealed class InterfaceScaleTests : IDisposable
         window.Show();
         main.Current = main.Garage;
         Dispatcher.UIThread.RunJobs();
-        var views = window.GetVisualDescendants().OfType<MachinePreview>().ToList();
+        var views = window.GetVisualDescendants().OfType<MachinePreview>().Where(v => v.IsEffectivelyVisible).ToList();
         Assert.Equal(2, views.Count);                                   // the left column's and the Garage's
         Assert.All(views, v => Assert.IsType<Unscaled>(v.GetVisualParent()));
         Assert.Contains(new CourseMap().GetVisualChildren(), c => c is Unscaled { Child: Launcher.App.Gpu.GpuView });   // the race map's

@@ -44,6 +44,7 @@ public abstract class GpuView : OpenGlControlBase
     private string? _why;
     private long _drawn;      // when the last frame was drawn (Stopwatch ticks)
     private bool _pacing;     // a next frame is already waiting for its time
+    private bool _watched;    // the watchdog has been started for this stay in the window
 
     protected GpuView()
     {
@@ -94,6 +95,12 @@ public abstract class GpuView : OpenGlControlBase
             }
             return;
         }
+        // (the context comes with the first frame shown: a view on a hidden page has none yet, and is no failure)
+        if (!_watched && _gl is null && !_unavailable)
+        {
+            _watched = true;
+            _watchdog.Start();
+        }
         Pace();
     }
 
@@ -126,7 +133,6 @@ public abstract class GpuView : OpenGlControlBase
         base.OnAttachedToVisualTree(e);
         if (!_unavailable)
         {
-            _watchdog.Start();
             _ = CheckAsync();
         }
         StillPainter.Wanted += Redraw;
@@ -150,6 +156,7 @@ public abstract class GpuView : OpenGlControlBase
         CourseStillPainter.Wanted -= Redraw;
         _wake.Stop();
         _watchdog.Stop();
+        _watched = false;
         base.OnDetachedFromVisualTree(e);
     }
 
@@ -251,6 +258,15 @@ public abstract class GpuView : OpenGlControlBase
         if (Animating || StillPainter.Waiting > 0 || CourseStillPainter.Waiting > 0)
         {
             Pace();
+        }
+    }
+
+    /// <summary>A page with 3D views in it came back into view (<see cref="Controls.PageDeck"/>): they draw again.</summary>
+    public static void Wake(Avalonia.Controls.Control page)
+    {
+        foreach (var view in Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(page).OfType<GpuView>())
+        {
+            view.Redraw();
         }
     }
 

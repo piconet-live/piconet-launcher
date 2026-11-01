@@ -103,29 +103,41 @@ public sealed partial class LobbyView : UserControl
         }
     }
 
-    /// <summary>The Garage under the lobby's line, there only while the page shows it (its 3D view is the graphics
-    /// card's work): the launcher's own Garage page, without its title, the selected machine's cell holding the
-    /// keyboard so that the arrow keys and Enter work at once.</summary>
+    private bool _garageWasShown;
+
+    /// <summary>The Garage under the lobby's line, showing only while the page shows it (its 3D view is the graphics
+    /// card's work, and draws only then) and standing ready all the while, so that the machine stage opens with nothing
+    /// to make: the launcher's own Garage page, without its title, the selected machine's cell holding the keyboard so
+    /// that the arrow keys and Enter work at once.</summary>
     private void ShowGarage()
     {
         var place = this.FindControl<Panel>("GaragePlace")!;
-        if (_lobby is { GarageShown: true } lobby)
+        if (_lobby is { } lobby && (_garage is null || _garage.DataContext != lobby.Garage))
         {
-            if (_garage is null || _garage.DataContext != lobby.Garage)
-            {
-                place.Children.Clear();
-                _garage = new GarageView { DataContext = lobby.Garage, Titled = false };
-                place.Children.Add(_garage);
-                lobby.Garage.Roster.CollectionChanged -= OnCellsMoved;
-                lobby.Garage.Roster.CollectionChanged += OnCellsMoved;
-            }
-            Avalonia.Threading.Dispatcher.UIThread.Post(FocusSelected, Avalonia.Threading.DispatcherPriority.Loaded);
-        }
-        else if (_garage is not null)
-        {
-            (_garage.DataContext as GarageViewModel)?.Roster.CollectionChanged -= OnCellsMoved;
+            (_garage?.DataContext as GarageViewModel)?.Roster.CollectionChanged -= OnCellsMoved;
             place.Children.Clear();
-            _garage = null;
+            _garage = new GarageView { DataContext = lobby.Garage, Titled = false };
+            place.Children.Add(_garage);
+            lobby.Garage.Roster.CollectionChanged += OnCellsMoved;
+        }
+        // (the place shows and hides by its binding)
+        var shown = _lobby is { GarageShown: true };
+        if (shown)
+        {
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                if (!_garageWasShown && place.IsEffectivelyVisible)
+                {
+                    _garageWasShown = true;
+                    Controls.Motion.PageShown(place);
+                    Gpu.GpuView.Wake(place);
+                }
+                FocusSelected();
+            }, Avalonia.Threading.DispatcherPriority.Loaded);
+        }
+        else
+        {
+            _garageWasShown = false;
         }
     }
 

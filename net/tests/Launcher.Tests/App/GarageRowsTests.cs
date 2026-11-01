@@ -61,7 +61,7 @@ public sealed class GarageRowsTests : IDisposable
                 PumpFor(200);
                 try
                 {
-                    steps(window, window.GetVisualDescendants().OfType<GarageView>().Single(), main.Garage);
+                    steps(window, window.GetVisualDescendants().OfType<GarageView>().Single(v => v.IsEffectivelyVisible), main.Garage);
                 }
                 finally
                 {

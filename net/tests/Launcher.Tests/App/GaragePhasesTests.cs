@@ -43,7 +43,7 @@ public sealed class GaragePhasesTests : IDisposable
                 window.Show();
                 main.Current = main.Garage;
                 PumpFor(200);
-                var view = window.GetVisualDescendants().OfType<GarageView>().Single();
+                var view = window.GetVisualDescendants().OfType<GarageView>().Single(v => v.IsEffectivelyVisible);
                 try
                 {
                     steps(window, view, main.Garage, state);

@@ -220,7 +220,7 @@ public sealed class PadNavigationTests : IDisposable
         main.Current = main.Garage;
         PumpFor(200);
         var garage = main.Garage;
-        var view = window.GetVisualDescendants().OfType<GarageView>().Single();
+        var view = window.GetVisualDescendants().OfType<GarageView>().Single(v => v.IsEffectivelyVisible);
         Pump(() => PageCards(view).Count == Machines.Names.Count);
         var raced = garage.MachineIndex;
         var cards = PageCards(view);
@@ -280,7 +280,7 @@ public sealed class PadNavigationTests : IDisposable
         main.Current = main.Garage;
         PumpFor(200);
         var garage = main.Garage;
-        var view = window.GetVisualDescendants().OfType<GarageView>().Single();
+        var view = window.GetVisualDescendants().OfType<GarageView>().Single(v => v.IsEffectivelyVisible);
         var button = Named<Button>(view, "SortFilter");
         var panel = Named<Control>(view, "SortFilterPanel");
         button.Focus();
@@ -397,7 +397,7 @@ public sealed class PadNavigationTests : IDisposable
     {
         main.Current = main.Practice;
         Dispatcher.UIThread.RunJobs();
-        var panel = window.GetVisualDescendants().OfType<RulesPanel>().Single();
+        var panel = window.GetVisualDescendants().OfType<RulesPanel>().Single(v => v.IsEffectivelyVisible);
         var targets = PadNavigator.TargetsIn(window).Where(panel.IsVisualAncestorOf).ToList();
         var rows = panel.GetVisualDescendants().OfType<Grid>().Where(g => g.Classes.Contains("rule")).ToList();
         // every row with something to set has a control the pad stops on (Rewind and Save · Load are values)

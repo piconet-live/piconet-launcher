@@ -205,7 +205,9 @@
 
         <!-- the page's scroll bar stays at its full width, there to grab, while the page is longer than the window -->
         <ScrollViewer Grid.Row="1" Name="PageScroll" ClipToBounds="True" AllowAutoHide="False">
-          <ContentControl Name="PageHost" Classes="page" Content="{Binding Current}" Classes.sectioned="{Binding HasSections}" />
+          <ContentControl Name="PageHost" Classes="page" Classes.sectioned="{Binding HasSections}">
+            <c:PageDeck Pages="{Binding AllPages}" Current="{Binding Current}" />
+          </ContentControl>
         </ScrollViewer>
 
         <!-- The bell's list, over the page under the bell. -->
