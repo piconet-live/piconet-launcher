@@ -42,6 +42,8 @@ public sealed partial class SettingsViewModel : ViewModelBase
         WidescreenIndex = Enum.IsDefined(s.Widescreen) ? (int)s.Widescreen : (int)WidescreenMode.Game;
         ShowFrameRate = s.ShowFrameRate || FrameRateAlwaysShown;
         ShowInputs = s.ShowInputs;
+        HudIndex = s.ModernHud ? 1 : 0;
+        MeterIndex = Math.Max(0, LauncherSettings.HudMeters.ToList().FindIndex(m => m.Name == s.HudMeter));
         Rumble = s.Rumble;
         InputDelayIndex = s.RaceInputDelay;
         VerticalSyncIndex = s.VerticalSync ? 1 : 0;
@@ -198,6 +200,18 @@ public sealed partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     public partial bool ShowInputs { get; set; }
 
+    /// <summary>The HUD row's choices, in the order of <see cref="HudIndex"/>.</summary>
+    public static IReadOnlyList<string> HudChoices { get; } = ["Classic", "Modern"];
+
+    [ObservableProperty]
+    public partial int HudIndex { get; set; }
+
+    /// <summary>The energy meter row's choices, in the order of <see cref="MeterIndex"/>.</summary>
+    public static IReadOnlyList<string> MeterChoices { get; } = LauncherSettings.HudMeters.Select(m => m.Words).ToList();
+
+    [ObservableProperty]
+    public partial int MeterIndex { get; set; }
+
     /// <summary>A test build shows the frame rate whatever the setting says (<see cref="LauncherSettings.FrameRateShown"/>):
     /// its box is ticked and cannot be changed, and the file keeps the player's own value.</summary>
     public bool FrameRateAlwaysShown { get; } = StackStamp.Current.Test;
@@ -330,6 +344,9 @@ public sealed partial class SettingsViewModel : ViewModelBase
     partial void OnShowFrameRateChanged(bool value) => Save();
 
     partial void OnShowInputsChanged(bool value) => Save();
+    partial void OnHudIndexChanged(int value) => Save();
+
+    partial void OnMeterIndexChanged(int value) => Save();
 
     partial void OnRumbleChanged(bool value) => Save();
 
@@ -408,6 +425,9 @@ public sealed partial class SettingsViewModel : ViewModelBase
             Widescreen = (WidescreenMode)Math.Clamp(WidescreenIndex, 0, WidescreenChoices.Count - 1),
             ShowFrameRate = FrameRateAlwaysShown ? s.ShowFrameRate : ShowFrameRate,
             ShowInputs = ShowInputs,
+            ModernHud = HudIndex == 1,
+            // (a list with nothing selected says -1: the setting stays what it is)
+            HudMeter = MeterIndex >= 0 && MeterIndex < LauncherSettings.HudMeters.Count ? LauncherSettings.HudMeters[MeterIndex].Name : s.HudMeter,
             Rumble = Rumble,
             // (a list with nothing selected says -1: the setting stays what it is)
             InputDelay = InputDelayIndex is >= 0 and <= LauncherSettings.PlayersInputDelay ? InputDelayIndex : s.RaceInputDelay,
