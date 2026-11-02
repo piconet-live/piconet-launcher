@@ -29,6 +29,27 @@ public sealed partial class LobbyStageRulesTests
         window.CaptureRenderedFrame()?.Save(Path.Combine(folder, name + ".png"), new Avalonia.Media.Imaging.PngBitmapEncoderOptions());
     }
 
+    /// <summary>The spicy card's tip (<see cref="ToolTip.GetTip"/>) is its line and rules; with LOBBY_SHOTS it is drawn in a
+    /// window of its own (no system windows here for its popup) as NAME.png, and the card's lower left corner kept in
+    /// NAME.at, for a picture of the two together.</summary>
+    private static void TipShot(Window window, LobbyView view, AppState state, int index, string? about, string name)
+    {
+        var card = view.GetVisualDescendants().OfType<Button>().Where(b => b.Classes.Contains("votecard")).ElementAt(index);
+        Assert.Equal(about, ToolTip.GetTip(card));
+        if (Environment.GetEnvironmentVariable("LOBBY_SHOTS") is not { Length: > 0 } folder)
+        {
+            return;
+        }
+        var tipWindow = new Window { Content = new ToolTip { Content = about }, SizeToContent = SizeToContent.WidthAndHeight };
+        tipWindow.Show();
+        PumpFor(200, state);
+        AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+        tipWindow.CaptureRenderedFrame()?.Save(Path.Combine(folder, name + ".png"), new Avalonia.Media.Imaging.PngBitmapEncoderOptions());
+        tipWindow.Close();
+        var at = Avalonia.VisualExtensions.TranslatePoint(card, new Avalonia.Point(0, card.Bounds.Height), window)!.Value;
+        File.WriteAllText(Path.Combine(folder, name + ".at"), FormattableString.Invariant($"{at.X:0} {at.Y:0}"));
+    }
+
     /// <summary>The player's game left a race of a mode without CPUs: Watch stands where Rejoin would, the lobby's own
     /// Watch gives way, and a rejoin asked for anyway says plainly why not. LOBBY_SHOTS keeps both.</summary>
     [Fact]
@@ -93,12 +114,45 @@ public sealed partial class LobbyStageRulesTests
             Assert.True(shown.Bounds.Width > 40, $"the badge was {shown.Bounds.Width} px wide");
             Shot(window, state, "mode-vote");
 
+            // held or hovered, the spicy card lists only what it changes (design 6): its line, then its rules
+            TipShot(window, view, state, spicy, cards[spicy].About, "mode-vote-hover-tip");
+
             // Random drew the spicy option: its card turns into it, badge and all
             Send(server, new CourseChosen("m1", options, [0, 0, 0, 0, 0, 2], 5, 8, vote[spicy].Card));
             PumpTelling(state, () => lobby.DrawFinished, "the draw did not run");
             var won = Assert.Single(cards, c => c.IsWon);
             Assert.Equal((8, "OVERDRIVE"), (won.Course, won.Badge));
             Shot(window, state, "mode-vote-drawn");
+        });
+    }
+
+    /// <summary>Quick Play's own rotation (protocol/quickplay: the competitive lap table, Knockout the spicy card on Loop
+    /// Cross): each normal card says its course's laps, Knockout its badge and no laps (it races unlimited). LOBBY_SHOTS
+    /// keeps it, to set beside the vote's mockup (design 6).</summary>
+    [Fact]
+    public async Task QuickPlaysOwnRotationShowsEachCoursesLaps()
+    {
+        var rotation = QuickPlayRotation.Read(RepositoryFolder.Protocol("protocol", "quickplay"));
+        var vote = rotation.Vote(CoursePool.Default, new Random(4).Next);
+        int[] options = [.. vote.Select(o => o.Course)];
+        await using var server = new LedServer();
+        await InALobby(server, LedServer.Welcome(), LedServer.Lobby(LobbyState.Forming), (window, main, state) =>
+        {
+            var lobby = main.Lobby;
+            Send(server, LedServer.Lobby(LobbyState.Starting), new CourseVote("m1", options, 60_000, [.. vote.Select(o => o.Card)]));
+            PumpTelling(state, () => lobby.VoteShown && lobby.CourseOptions.Count == 6);
+            var cards = lobby.CourseOptions;
+            var spicy = Assert.Single(cards, c => c.HasBadge);
+            Assert.Equal(("KNOCKOUT", spicy.Place), (spicy.Badge, spicy.PlaceLine));
+            Assert.All(cards.Where(c => !c.HasBadge && c.Course != CourseVote.RandomCourse), c =>
+                Assert.Matches(@" · \d+ laps?$", c.PlaceLine));
+            // the cards say the laps: the lobby's line says none of its own
+            Assert.DoesNotContain("lap", lobby.RulesText, StringComparison.Ordinal);
+            Shot(window, state, "mode-vote-quickplay");
+            var view = window.GetVisualDescendants().OfType<LobbyView>().Single();
+            Assert.StartsWith("The racer in last place is out at every cut.", spicy.About, StringComparison.Ordinal);
+            Assert.DoesNotContain("normally", spicy.About, StringComparison.OrdinalIgnoreCase);
+            TipShot(window, view, state, spicy.Index, spicy.About, "mode-vote-quickplay-tip");
         });
     }
 

@@ -31,7 +31,8 @@ The few tests of what only `Launcher.App`'s own code does, run without a window 
 - `ReplayTabsTests.cs`: the Replays page's tabs All, Races, Practice with their counts, pressed; a practice run's row
   ("Practice", the time, no Results); the header's word that makes a replay a practice run; "•••" open on one row
   at a time, and a row deleted leaving the others as they were; the rows under their date headings (Today, then
-  each month), in the tab shown.
+  each month), in the tab shown; a mode's replay offering "Show mode file" under "•••" and opening its name, share
+  code, settings and text under the row (LOBBY_SHOTS keeps both).
 - `RaceModeBoardTests.cs`: a mode's `board` lines on the race page (the race's, a racer's as columns, a team's), none for a mode without, none for a player with no game; a replay the game plays, from a status board, until its game ends. With `LOBBY_SHOTS` the pages as PNGs.
 - `Headless.cs`: what the newer tests share: a press with the headless window's mouse, a key, waiting for the page, a
   window with the toolkit's layer for menus.

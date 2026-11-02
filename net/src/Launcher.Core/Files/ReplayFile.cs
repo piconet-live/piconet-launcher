@@ -76,12 +76,12 @@ public static class ReplayFile
                 ? t
                 : new DateTimeOffset(File.GetLastWriteTimeUtc(path));
             var (pack, packProblem) = PackOf(file.RaceVersion, setup);
-            var (mode, modeProblem) = ModeOf(file.RaceVersion, setup);
+            var (mode, modeProblem, modeFile) = ModeOf(file.RaceVersion, setup);
             return new ReplayInfo(path, recorded, setup.GetProperty("course").GetInt32(), setup.GetProperty("laps").GetInt32(),
                 players, you, TimeSpan.FromSeconds(steps / 60.0), racers.GetValueOrDefault(seat),
                 results is { } block ? Results(block, racers) : null, pack, packProblem,
                 h.TryGetProperty(ReplayFormat.Header.Practice, out var practice) && practice.ValueKind == JsonValueKind.True,
-                TeamsOf(setup), [.. racers.Values.OrderBy(racer => racer.Seat)], mode, modeProblem);
+                TeamsOf(setup), [.. racers.Values.OrderBy(racer => racer.Seat)], mode, modeProblem, modeFile);
         }
         catch (Exception e) when (Unreadable(e))
         {
@@ -115,36 +115,59 @@ public static class ReplayFile
 
     /// <summary>The game mode of a replay's race (its header's <c>match.setup.mode</c>): its name, and why the game would
     /// not play the file for it, by the game's own tests (the runner's files_mode.cpp and files_replay.cpp): a newer api,
-    /// a hash that is not the package's, a package that does not read, or a version other than 9.</summary>
-    private static (string? Name, string? Problem) ModeOf(int version, JsonElement setup)
+    /// a hash that is not the package's, a package that does not read, or a version other than 9; and the file as it
+    /// was raced, from the package (its text, its share code, its settings with the race's values), when it reads.</summary>
+    private static (string? Name, string? Problem, ReplayModeFile? File) ModeOf(int version, JsonElement setup)
     {
         if (!setup.TryGetProperty("mode", out var mode) || mode.ValueKind == JsonValueKind.Null)
         {
-            return (null, null);
+            return (null, null, null);
         }
         if (mode.ValueKind != JsonValueKind.Object || !mode.TryGetProperty("package", out var text) || text.ValueKind != JsonValueKind.String ||
             !mode.TryGetProperty("hash", out var hash) || hash.ValueKind != JsonValueKind.String)
         {
-            return (null, ModeDamaged);
+            return (null, ModeDamaged, null);
         }
         if (mode.TryGetProperty("api", out var api) && api.ValueKind == JsonValueKind.Number && api.TryGetInt32(out var number) && number > ModeWords.Api)
         {
-            return (null, ModeNewer);
+            return (null, ModeNewer, null);
         }
         try
         {
             var package = Convert.FromBase64String(text.GetString()!);
             if (ModePackage.Hash(package) != hash.GetString())
             {
-                return (null, ModeDamaged);
+                return (null, ModeDamaged, null);
             }
             var read = ModePackage.Read(package);
-            return (ReplayWords.Name(read.Name), version == ModeFormatVersion ? null : ModeDamaged);
+            var name = ReplayWords.Name(read.Name);
+            return (name, version == ModeFormatVersion ? null : ModeDamaged,
+                new ReplayModeFile(name, ModePackage.ShareCode(hash.GetString()!), ReplayModeFile.Plain(read.Source), read.Params, ValuesOf(mode, read.Params.Count)));
         }
         catch (Exception e) when (e is FormatException or InvalidDataException or ArgumentException or EndOfStreamException or InvalidOperationException)
         {
-            return (null, ModeDamaged);
+            return (null, ModeDamaged, null);
         }
+    }
+
+    /// <summary>The race's values of the mode's settings (<c>setup.mode.params</c>, in the package's order); null: none
+    /// said, or not one whole number a setting.</summary>
+    private static List<int>? ValuesOf(JsonElement mode, int count)
+    {
+        if (!mode.TryGetProperty("params", out var values) || values.ValueKind != JsonValueKind.Array || values.GetArrayLength() != count)
+        {
+            return null;
+        }
+        var list = new List<int>(count);
+        foreach (var value in values.EnumerateArray())
+        {
+            if (value.ValueKind != JsonValueKind.Number || !value.TryGetInt32(out var v))
+            {
+                return null;
+            }
+            list.Add(v);
+        }
+        return list;
     }
 
     public const string ModeNewer = "This replay's mode needs a newer version of the game.";

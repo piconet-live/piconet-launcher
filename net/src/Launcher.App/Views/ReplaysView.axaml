@@ -169,14 +169,17 @@
                   </DockPanel>
                   <TextBlock Classes="note" Text="{Binding RacerMachine}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" Margin="18,0,0,0" />
                 </StackPanel>
-                <StackPanel Grid.Column="3" Width="88">
-                  <TextBlock Classes="figure accent" Height="20" Text="Practice" IsVisible="{Binding IsPractice}" />
-                  <StackPanel Orientation="Horizontal" Spacing="5" Height="20" IsVisible="{Binding IsRace}">
-                    <TextBlock Classes="figure" Classes.out="{Binding PlaceOut}" Text="{Binding Place}" />
-                    <TextBlock Classes="note" Text="{Binding Of}" VerticalAlignment="Center" />
+                <!-- (its column keeps its width while the result gives way to the file's actions) -->
+                <Panel Grid.Column="3" Width="88">
+                  <StackPanel IsVisible="{Binding ResultShown}">
+                    <TextBlock Classes="figure accent" Height="20" Text="Practice" IsVisible="{Binding IsPractice}" />
+                    <StackPanel Orientation="Horizontal" Spacing="5" Height="20" IsVisible="{Binding IsRace}">
+                      <TextBlock Classes="figure" Classes.out="{Binding PlaceOut}" Text="{Binding Place}" />
+                      <TextBlock Classes="note" Text="{Binding Of}" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <TextBlock Classes="note" Text="{Binding Time}" FontFeatures="tnum" />
                   </StackPanel>
-                  <TextBlock Classes="note" Text="{Binding Time}" FontFeatures="tnum" />
-                </StackPanel>
+                </Panel>
                 <Panel Grid.Column="4" Width="112">
                   <TextBlock Classes="dim" Text="{Binding When}" TextTrimming="CharacterEllipsis" IsVisible="{Binding Acting}" />
                 </Panel>
@@ -196,9 +199,14 @@
                             Command="{Binding #Root.((vm:ReplaysViewModel)DataContext).PlayCommand}" CommandParameter="{Binding Path}" />
                   </StackPanel>
                 </Panel>
-                <!-- "•••" pressed: the file's own actions, in the place of the date and the row's end -->
-                <StackPanel Grid.Column="4" Grid.ColumnSpan="2" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right"
+                <!-- "•••" pressed: the file's own actions, in the place of the date and the row's end (and of the result
+                     too when the race's mode file is offered: ResultShown; spanned from the racer's column so that its
+                     width never widens the row's columns, right-aligned so that it never reaches the racer) -->
+                <StackPanel Grid.Column="2" Grid.ColumnSpan="4" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right"
                             VerticalAlignment="Center" IsVisible="{Binding More}">
+                  <Button Name="ModeFileButton" Classes="secondary" Content="Show mode file" IsVisible="{Binding HasModeFile}"
+                          Command="{Binding #Root.((vm:ReplaysViewModel)DataContext).ShowModeFileCommand}" CommandParameter="{Binding}"
+                          AutomationProperties.Name="Show the race's mode file" />
                   <Button Classes="secondary" Content="Show in folder"
                           Command="{Binding #Root.((vm:ReplaysViewModel)DataContext).RevealCommand}" CommandParameter="{Binding}" />
                   <Button Classes="secondary" Content="Delete"
@@ -216,6 +224,26 @@
                           Command="{Binding #Root.((vm:ReplaysViewModel)DataContext).KeepReplayCommand}" CommandParameter="{Binding}" />
                 </StackPanel>
               </Grid>
+
+              <!-- the race's mode file as it was raced: its name and share code, its settings' values, its text -->
+              <Border Name="ModeFileWell" Classes="well" Padding="10,6" Margin="64,2,0,10" IsVisible="{Binding ShowingMode}">
+                <StackPanel Spacing="6">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel>
+                      <TextBlock Classes="strong" Text="{Binding ModeHeading}" TextTrimming="CharacterEllipsis" />
+                      <TextBlock Classes="note" Text="{Binding ModeSettings}" TextWrapping="Wrap" IsVisible="{Binding HasModeSettings}" />
+                    </StackPanel>
+                    <Button Grid.Column="1" Classes="link" VerticalAlignment="Top" AutomationProperties.Name="Close the mode file"
+                            Command="{Binding #Root.((vm:ReplaysViewModel)DataContext).HideModeFileCommand}" CommandParameter="{Binding}">
+                      <TextBlock Text="Close" />
+                    </Button>
+                  </Grid>
+                  <ScrollViewer MaxHeight="360" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                    <SelectableTextBlock Name="ModeSource" Text="{Binding ModeSource}" FontFamily="Cascadia Mono, Consolas, monospace"
+                                         FontSize="{StaticResource Size13}" />
+                  </ScrollViewer>
+                </StackPanel>
+              </Border>
 
               <!-- the race's results, every racer by place: 15 to a column -->
               <Border Classes="well" Padding="10,6" Margin="64,2,0,10" IsVisible="{Binding ShowingStats}">

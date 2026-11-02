@@ -311,7 +311,8 @@ public sealed partial class LobbyViewModel : ViewModelBase
         {
             return;
         }
-        RulesText = _session.Lobby is { Custom: true } ? "" : _session.Rules is { } rules ? Describe(rules) : "";
+        // (a vote of game modes: each card says its own laps, so the line says none)
+        RulesText = _session.Lobby is { Custom: true } ? "" : _session.Rules is { } rules ? Describe(rules, _session.CourseVote?.Vote.Cards is null) : "";
         ShowVote(_session);
         var lobby = _session.Lobby;
         Screen = LobbyScreens.Of(lobby);
@@ -511,11 +512,12 @@ public sealed partial class LobbyViewModel : ViewModelBase
     /// 150 ms"; null: Quick Play's.</summary>
     public static string? PingRule(int ms) => ms == ServerRules.QuickPlayLatencyLimitMs ? null : $"ping limit {ms} ms";
 
-    private static string Describe(ServerRules r)
+    /// <param name="laps">The server's laps are the race's: false where the vote's cards say each race's laps.</param>
+    private static string Describe(ServerRules r, bool laps = true)
     {
         // the course vote and CPUs on a vote are Quick Play's own way, which the page shows itself (its steps, its
         // CPU vote): only another way is said
-        var parts = new List<string> { $"{r.Laps} {(r.Laps == 1 ? "lap" : "laps")}" };
+        var parts = laps ? new List<string> { $"{r.Laps} {(r.Laps == 1 ? "lap" : "laps")}" } : [];
         if (r.CourseSelect != CourseSelectMode.Vote)
         {
             parts.Add(r.CourseSelect == CourseSelectMode.Random ? "random course"

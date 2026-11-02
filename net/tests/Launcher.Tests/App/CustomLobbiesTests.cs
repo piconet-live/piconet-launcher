@@ -399,8 +399,12 @@ public sealed class CustomLobbiesTests : IDisposable
         Assert.Equal((null, (string?)null), (editor.Rules.Mode, editor.Rules.ModeFile));
 
         var all = CustomRules.AllRules(rules, null);
-        var first = Assert.IsType<ValueRule>(Assert.Single(all[0].Rows));
+        Assert.Equal(2, all[0].Rows.Count);
+        var first = Assert.IsType<ValueRule>(all[0].Rows[0]);
         Assert.Equal(("Mode", "Overdrive", "Speed locked and rising."), (first.Label, first.Value, first.Note));
+        // its share code under it, unmarked: it names the file, it changes nothing
+        var code = Assert.IsType<ValueRule>(all[0].Rows[1]);
+        Assert.Equal(("Mode code", "AAAAAAAA", false), (code.Label, code.Value, code.Marked));
     }
 
     /// <summary>A custom lobby's own machine setting rules the Garage and the choice, not the server's Quick Play one

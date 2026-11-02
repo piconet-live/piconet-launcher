@@ -166,9 +166,11 @@ public static class CustomRules
             Later = i > 0,
             Heading = g.Heading,
         })];
-        // a game mode: its own group first, its name and what it changes
+        // a game mode: its own group first, its name and what it changes, and its share code (language 12: the same
+        // code is the same file)
         return rules?.Mode is { } mode
             ? [new RuleGroup([new ValueRule("Mode", mode.Name) { Marked = true, Note = mode.About },
+                .. mode.ShareCode.Length > 0 ? [new ValueRule("Mode code", mode.ShareCode)] : (RuleRow[])[],
                 .. rules.Value(LobbyRules.TeamsKey) is > 0 and var teams ? [new ValueRule("Teams", N($"{teams}")) { Marked = true }] : (RuleRow[])[],
                 .. ParamValues(mode),
                 .. CoursesLine(mode.Courses) is { Length: > 0 } courses ? [new ValueRule("Courses", courses) { Marked = true }] : (RuleRow[])[],

@@ -35,15 +35,20 @@ public sealed record RaceResult(ReplayRacer Racer, int Place, bool Finished, boo
 /// that does not read.</param>
 /// <param name="ModeProblem">Why the game would not play the file for its mode, as <see cref="ReplayFile.Problem"/> says
 /// it; null: nothing of the kind.</param>
+/// <param name="ModeFile">The mode as it was raced (language 1: the package holds the file's text, so a replay can show
+/// what was raced); null: no mode, or a package that does not read.</param>
 public sealed record ReplayInfo(
     string Path, DateTimeOffset Recorded, int Course, int Laps, IReadOnlyList<string> Players, string You, TimeSpan Length,
     ReplayRacer? Recorder = null, IReadOnlyList<RaceResult>? Results = null, string? StatPack = null, string? StatPackProblem = null,
     bool Practice = false, IReadOnlyList<int>? Teams = null, IReadOnlyList<ReplayRacer>? Racers = null,
-    string? Mode = null, string? ModeProblem = null)
+    string? Mode = null, string? ModeProblem = null, ReplayModeFile? ModeFile = null)
 {
     /// <summary>What a row says of the race's mode: its name, "Mode not playable" for a file the game would refuse, or
     /// nothing for a race with no mode.</summary>
-    public string ModeLabel => ModeProblem is not null ? "Mode not playable" : Mode ?? "";
+    public string ModeLabel => ModeProblem is not null ? ModeNotPlayable : Mode ?? "";
+
+    /// <summary><see cref="ModeLabel"/> for a file the game would refuse for its mode.</summary>
+    public const string ModeNotPlayable = "Mode not playable";
 
     /// <summary>What a row says of the race's stats in a word or two: the pack's name, "Stat pack not playable"
     /// for a file the game would refuse, or nothing for the original stats.</summary>
@@ -55,6 +60,21 @@ public sealed record ReplayInfo(
 
     /// <summary>The recorder's own result, if the replay has results.</summary>
     public RaceResult? RecorderResult => Results?.FirstOrDefault(r => r.Racer.Seat == Recorder?.Seat);
+}
+
+/// <summary>A replay's mode as it was raced: its name, its share code (language 12: the content hash's first 8
+/// characters in base32), the file's text from the package, and its settings with the race's values (null: the
+/// replay names none).</summary>
+public sealed record ReplayModeFile(string Name, string Code, string Source, IReadOnlyList<Online.Protocol.ModeParam> Params,
+    IReadOnlyList<int>? Values)
+{
+    /// <summary>A file's text as it is shown: its line ends as one, tabs as four spaces, no other control characters.</summary>
+    public static string Plain(string source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        var text = source.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Replace("\t", "    ", StringComparison.Ordinal);
+        return string.Concat(text.Where(c => c == '\n' || !char.IsControl(c))).TrimEnd();
+    }
 }
 
 /// <summary>What the launcher does with a replay beside reading it (<see cref="ReplayFile"/>): the file shown in the
