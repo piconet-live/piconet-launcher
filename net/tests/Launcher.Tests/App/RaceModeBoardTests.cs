@@ -174,6 +174,16 @@ public sealed class RaceModeBoardTests : IDisposable
             PumpFor(150, state);
             Assert.Equal(before, main.Lobby.Race.Standings);
 
+            // the mode broke (D6): the line says so above the numbers, in the player's words
+            Assert.Empty(Shown(window, "ModeFaultLine"));
+            var board = Mode(lines);
+            main.Lobby.Race.FromGame(new RaceSnapshot(612, 0,
+                [Racer(0, RacerLive.Racing, 900), Racer(1, RacerLive.Racing, 800), Racer(2, RacerLive.Racing, 700), Racer(3, RacerLive.Out, 100)]),
+                new ModeBoardNow(board.Head, 612, new int[8], new int[240], new int[240], 3));
+            PumpFor(200, state);
+            Assert.Equal(["Mode error: the race ended for everyone. The mode gave the game a number it can't use."], Shown(window, "ModeFaultLine"));
+            Shot(window, state, "race-mode-fault");
+
             // the game closed and the page goes on from the lobby's reports: what it last read stays for the race
             server.SendAsync(new LiveRace("m1", new RaceSnapshot(900, 0,
                 [Racer(0, RacerLive.Finished, 1000), Racer(1, RacerLive.Finished, 1000), Racer(2, RacerLive.Finished, 1000), Racer(3, RacerLive.Out, 100)]))).GetAwaiter().GetResult();
