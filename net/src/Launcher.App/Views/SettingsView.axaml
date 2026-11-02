@@ -24,7 +24,7 @@
   <Panel>
     <!-- Game: the game's picture, sound and rumble -->
     <Grid Name="GamePage" Classes="form" ColumnDefinitions="196,*" MaxWidth="900" HorizontalAlignment="Left"
-          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" IsVisible="{Binding OnGame}">
+          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" IsVisible="{Binding OnGame}">
       <!-- the game's picture: Normal, the game's own 16:9, or true widescreen (16:9 with Normal's whole height) -->
       <TextBlock Classes="label" Text="Widescreen" />
       <ListBox Grid.Column="1" Classes="seg tall" Name="Widescreen"
@@ -77,7 +77,7 @@
       <ListBox Grid.Row="10" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.MeterChoices}"
                SelectedIndex="{Binding MeterIndex}"
                AutomationProperties.Name="Energy meter" />
-      <!-- the launch file's "renderer", "auroraSize", "auroraEdges", "auroraTextures", "auroraColourblind": test builds only, until Aurora ships -->
+      <!-- the launch file's "renderer", "auroraSize", "auroraEdges", "auroraTextures", "auroraColourblind", "auroraHighRefresh": test builds only, until Aurora ships -->
       <TextBlock Grid.Row="11" Classes="label" Text="Picture engine" IsVisible="{Binding PictureEngineOffered}" />
       <ListBox Grid.Row="11" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.PictureEngineChoices}"
                SelectedIndex="{Binding PictureEngineIndex}" IsVisible="{Binding PictureEngineOffered}"
@@ -98,6 +98,11 @@
       <ListBox Grid.Row="15" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.AuroraColourblindChoices}"
                SelectedIndex="{Binding AuroraColourblindIndex}" IsVisible="{Binding AuroraRowsShown}"
                AutomationProperties.Name="Colourblind filter" />
+      <TextBlock Grid.Row="16" Classes="label" Text="High refresh" IsVisible="{Binding AuroraRowsShown}"
+                 ToolTip.Tip="Pictures between the game's own steps, for a screen above 60 Hz. No added input delay. The race stays at 60 steps a second; when there is no time for one, it is left out." />
+      <ListBox Grid.Row="16" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.AuroraHighRefreshChoices}"
+               SelectedIndex="{Binding AuroraHighRefreshIndex}" IsVisible="{Binding AuroraRowsShown}"
+               AutomationProperties.Name="High refresh" />
     </Grid>
 
     <!-- Online: the input delay first (what players change most), the server, the account -->

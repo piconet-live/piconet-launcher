@@ -225,16 +225,16 @@ public sealed class LanTests
     [Fact]
     public void AuroraKeysAreLeftOutAtTheirDefaultsAndWhenNotOffered()
     {
-        var chosen = new LauncherSettings { PictureEngine = "aurora", AuroraSize = "3", AuroraEdges = 4, AuroraTextures = 16, AuroraColourblind = "tritanopia" };
-        Assert.Equal(("aurora", "3", 4, 16, "tritanopia"), chosen.AuroraLaunchKeys(offered: true));
+        var chosen = new LauncherSettings { PictureEngine = "aurora", AuroraSize = "3", AuroraEdges = 4, AuroraTextures = 16, AuroraColourblind = "tritanopia", AuroraHighRefresh = 240 };
+        Assert.Equal(("aurora", "3", 4, 16, "tritanopia", 240), chosen.AuroraLaunchKeys(offered: true));
         // a build that does not offer it, and the default engine: nothing a runner from before the keys would refuse
-        Assert.Equal((null, null, 0, 0, null), chosen.AuroraLaunchKeys(offered: false));
-        Assert.Equal((null, null, 0, 0, null), new LauncherSettings().AuroraLaunchKeys(offered: true));
-        Assert.Equal(("aurora", null, 0, 0, null), new LauncherSettings { PictureEngine = "aurora" }.AuroraLaunchKeys(offered: true));
+        Assert.Equal((null, null, 0, 0, null, 0), chosen.AuroraLaunchKeys(offered: false));
+        Assert.Equal((null, null, 0, 0, null, 0), new LauncherSettings().AuroraLaunchKeys(offered: true));
+        Assert.Equal(("aurora", null, 0, 0, null, 0), new LauncherSettings { PictureEngine = "aurora" }.AuroraLaunchKeys(offered: true));
         // an older file's "native" is Auto now: the key left out, the same picture
-        Assert.Equal(("aurora", null, 0, 0, null), new LauncherSettings { PictureEngine = "aurora", AuroraSize = "native" }.AuroraLaunchKeys(offered: true));
+        Assert.Equal(("aurora", null, 0, 0, null, 0), new LauncherSettings { PictureEngine = "aurora", AuroraSize = "native" }.AuroraLaunchKeys(offered: true));
         // a file edited by hand never stops the game from starting
-        var edited = chosen with { AuroraSize = "9", AuroraEdges = 3, AuroraTextures = 99, AuroraColourblind = "green" };
-        Assert.Equal(("aurora", null, 0, 0, null), edited.AuroraLaunchKeys(offered: true));
+        var edited = chosen with { AuroraSize = "9", AuroraEdges = 3, AuroraTextures = 99, AuroraColourblind = "green", AuroraHighRefresh = 77 };
+        Assert.Equal(("aurora", null, 0, 0, null, 0), edited.AuroraLaunchKeys(offered: true));
     }
 }

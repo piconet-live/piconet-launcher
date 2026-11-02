@@ -233,20 +233,26 @@ public sealed record LauncherSettings
     public static IReadOnlyList<(string Name, string Words)> AuroraColourblindFilters { get; } =
         [("off", "Off"), ("deuteranopia", "Deuteranopia"), ("protanopia", "Protanopia"), ("tritanopia", "Tritanopia")];
 
+    /// <summary>Pictures between the game's own steps, each step run ahead (<c>"auroraHighRefresh"</c>): one of <see cref="AuroraHighRefreshes"/>, off by default.</summary>
+    public int AuroraHighRefresh { get; init; } = AuroraHighRefreshes[0].Rate;
+
+    public static IReadOnlyList<(int Rate, string Words)> AuroraHighRefreshes { get; } = [(0, "Off"), (120, "Up to 120"), (240, "Up to 240")];
+
     /// <summary>The Aurora settings as the launch file has them: all left out unless Aurora is chosen and this build
     /// offers it, each left out at its default (a runner from before the keys refuses them), and anything not on the lists
     /// left out (a settings file edited by hand must not stop the game from starting).</summary>
-    public (string? Engine, string? Size, int Edges, int Textures, string? Colourblind) AuroraLaunchKeys(bool offered)
+    public (string? Engine, string? Size, int Edges, int Textures, string? Colourblind, int HighRefresh) AuroraLaunchKeys(bool offered)
     {
         if (!offered || PictureEngine != PictureEngines[1].Name)
         {
-            return (null, null, 0, 0, null);
+            return (null, null, 0, 0, null, 0);
         }
         return (PictureEngine,
             AuroraSize != AuroraSizes[0].Name && AuroraSizes.Any(a => a.Name == AuroraSize) ? AuroraSize : null,
             AuroraEdges != AuroraEdgeCounts[0].Count && AuroraEdgeCounts.Any(a => a.Count == AuroraEdges) ? AuroraEdges : 0,
             AuroraTextures != AuroraTextureLevels[0].Level && AuroraTextureLevels.Any(a => a.Level == AuroraTextures) ? AuroraTextures : 0,
-            AuroraColourblind != AuroraColourblindFilters[0].Name && AuroraColourblindFilters.Any(a => a.Name == AuroraColourblind) ? AuroraColourblind : null);
+            AuroraColourblind != AuroraColourblindFilters[0].Name && AuroraColourblindFilters.Any(a => a.Name == AuroraColourblind) ? AuroraColourblind : null,
+            AuroraHighRefreshes.Any(a => a.Rate == AuroraHighRefresh) ? AuroraHighRefresh : 0);
     }
 
     /// <summary>The controllers rumble in the game (the Settings page's "Rumble", Game; on by default).
