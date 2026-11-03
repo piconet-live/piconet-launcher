@@ -35,7 +35,8 @@ public sealed class LaunchVectorsTests
         yield return ("offline-overlay", GameLaunchFile.Offline(@"C:\game\fzgx", overlay:
             [new OverlayFile("stage/st05.tpl.lz", @"C:\mods\luminous\stage\st05.tpl.lz"), new OverlayFile("game/cardata.lz", @"C:\mods\stats\game\cardata.lz")]));
         yield return ("playback-overlay", GameLaunchFile.Playback("b", "r.fzrp", OtherSounds.Full,
-            overlay: [new OverlayFile("bg/bg_tow.tpl.lz", @"C:\mods\luminous\bg\bg_tow.tpl.lz")]));
+            overlay: [new OverlayFile("bg/bg_tow.tpl.lz", @"C:\mods\luminous\bg\bg_tow.tpl.lz"),
+                new OverlayFile("stage/COLI_COURSE05.lz", @"C:\mods\tron\stage\COLI_COURSE05.lz", RaceSame: true)]));
         yield return ("playback-true-widescreen", GameLaunchFile.Playback("b", "C:/data/replays/r.fzrp", OtherSounds.Quieter, WidescreenMode.TrueWide));
         yield return ("playback-narrow-off", GameLaunchFile.Playback("b", "r.fzrp", OtherSounds.Off, WidescreenMode.Off, debug));
         yield return ("race", GameLaunchFile.Race("b", Match, record: "race.fzrp"));

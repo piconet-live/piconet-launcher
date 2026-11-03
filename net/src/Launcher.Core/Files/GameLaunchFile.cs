@@ -256,21 +256,8 @@ public static class GameLaunchFile
         file = (window?.Into(file) ?? file) with
         {
             Debug = debug?.Launch(),
-            Overlay = overlay is { Count: > 0 } ? [.. overlay.Select(o => new LaunchOverlayEntry(o.Disc, o.From))] : null,
+            Overlay = overlay is { Count: > 0 } ? [.. overlay.Select(o => new LaunchOverlayEntry(o.Disc, o.From, o.RaceSame))] : null,
         };
-        var json = file.ToJson();
-        // raceSame on the entries that have it (the protocol's next launch.toml carries the key; until its generated
-        // writer does, it is set here, in the entry after "from")
-        if (overlay is not null && json["overlay"] is JsonArray entries)
-        {
-            for (var i = 0; i < entries.Count && i < overlay.Count; i++)
-            {
-                if (overlay[i].RaceSame && entries[i] is JsonObject entry)
-                {
-                    entry["raceSame"] = true;
-                }
-            }
-        }
-        return json.ToJsonString(Indented);
+        return file.ToJson().ToJsonString(Indented);
     }
 }

@@ -133,6 +133,8 @@ public sealed class PadNavigationTests : IDisposable
         Do(pad, Press(PadButton.R));
         Assert.Same(main.Replays, main.Current);
         Do(pad, Press(PadButton.R));
+        Assert.Same(main.Mods, main.Current);
+        Do(pad, Press(PadButton.R));
         Assert.Equal("settings", main.Tab);
         var page = main.ShownSettingsTab;
         Do(pad, Press(PadButton.R));
@@ -305,9 +307,9 @@ public sealed class PadNavigationTests : IDisposable
     [Fact]
     public Task TheDPadMovesByPositionAndAPresses() => OnAWindow((window, main, pad) =>
     {
-        // the places in the left column: Play, Garage, Replays, top to bottom (direction D)
+        // the places in the left column: Play, Garage, Replays, Mods, top to bottom (direction D)
         var tabs = window.GetVisualDescendants().OfType<Button>().Where(b => b.Classes.Contains("tab")).ToList();
-        Assert.Equal(3, tabs.Count);
+        Assert.Equal(4, tabs.Count);
         tabs[0].Focus();
         Do(pad, Press(PadMove.Down));                                // shows the pad where the focus is
         Assert.Same(tabs[0], pad.On);
