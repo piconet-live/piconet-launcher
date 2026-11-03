@@ -67,15 +67,15 @@
       <TextBlock Grid.Row="8" Classes="label" Text="Show inputs" />
       <ToggleSwitch Grid.Row="8" Grid.Column="1" Name="ShowInputs" IsChecked="{Binding ShowInputs}" OnContent="" OffContent=""
                     HorizontalAlignment="Left" AutomationProperties.Name="Show inputs" />
-      <!-- the launch file's "modernHud": the game's energy, place, laps and times, or ours -->
-      <TextBlock Grid.Row="9" Classes="label" Text="HUD" />
+      <!-- the launch file's "modernHud": the game's energy, place, laps and times, or ours; test builds only, not in 0.6 -->
+      <TextBlock Grid.Row="9" Classes="label" Text="HUD" IsVisible="{Binding HudOffered}" />
       <ListBox Grid.Row="9" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.HudChoices}"
-               SelectedIndex="{Binding HudIndex}"
+               SelectedIndex="{Binding HudIndex}" IsVisible="{Binding HudOffered}"
                AutomationProperties.Name="HUD" />
-      <!-- the launch file's "hudMeter": the modern HUD's energy meter (also when a mode asks for that HUD) -->
-      <TextBlock Grid.Row="10" Classes="label" Text="Energy meter" />
+      <!-- the launch file's "hudMeter": the modern HUD's energy meter; test builds only, with the HUD row -->
+      <TextBlock Grid.Row="10" Classes="label" Text="Energy meter" IsVisible="{Binding HudOffered}" />
       <ListBox Grid.Row="10" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.MeterChoices}"
-               SelectedIndex="{Binding MeterIndex}"
+               SelectedIndex="{Binding MeterIndex}" IsVisible="{Binding HudOffered}"
                AutomationProperties.Name="Energy meter" />
       <!-- the launch file's "renderer", "auroraSize", "auroraEdges", "auroraTextures", "auroraColourblind": test builds only, until Aurora ships -->
       <TextBlock Grid.Row="11" Classes="label" Text="Picture engine" IsVisible="{Binding PictureEngineOffered}" />

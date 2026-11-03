@@ -218,6 +218,10 @@ public sealed partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     public partial int MeterIndex { get; set; }
 
+    /// <summary>The HUD and energy meter rows show only in a test build: the modern HUD is not ready for 0.6's players
+    /// (the owner, 2026-11-02), who keep the game's own; the launch keys go with them (AppState's game window).</summary>
+    public bool HudOffered { get; } = StackStamp.Current.Test;
+
     /// <summary>The picture engine rows show only in a test build until Aurora ships; the launch keys go with them
     /// (AppState's game window).</summary>
     public bool PictureEngineOffered { get; } = StackStamp.Current.Test;

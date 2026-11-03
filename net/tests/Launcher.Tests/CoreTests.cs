@@ -237,4 +237,14 @@ public sealed class LanTests
         var edited = chosen with { AuroraSize = "9", AuroraEdges = 3, AuroraTextures = 99, AuroraColourblind = "green" };
         Assert.Equal(("aurora", null, 0, 0, null), edited.AuroraLaunchKeys(offered: true));
     }
+
+    [Fact]
+    public void HudKeysAreLeftOutWhenNotOffered()
+    {
+        // an older settings file with the modern HUD on: a build that does not offer it writes neither key
+        var modern = new LauncherSettings { ModernHud = true, HudMeter = "rev" };
+        Assert.Equal((true, "rev"), modern.HudLaunchKeys(offered: true));
+        Assert.Equal((false, null), modern.HudLaunchKeys(offered: false));
+        Assert.Equal((false, null), new LauncherSettings().HudLaunchKeys(offered: true));
+    }
 }

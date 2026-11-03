@@ -105,9 +105,9 @@ public sealed class SettingsTabsTests : IDisposable
     {
         Click(window, TopTab(window, "Settings"));
         Assert.Equal(["Game", "Online", "Controller", "Launcher"], Headings(window).Select(b => ((SectionLink)b.DataContext!).Label));
-        // a first start: Game (the picture engine's rows show only in a test build, and these tests are stamped public)
+        // a first start: Game (the HUD's and the picture engine's rows show only in a test build, and these tests are stamped public)
         Assert.Same(main.Settings, main.Current);
-        Assert.Equal(["Widescreen", "Full screen mode", "Vertical sync", "Refresh rate (experimental)", "Frame rate", "Volume", "Other racers' sounds", "Rumble", "Show inputs", "HUD", "Energy meter"], Rows(window));
+        Assert.Equal(["Widescreen", "Full screen mode", "Vertical sync", "Refresh rate (experimental)", "Frame rate", "Volume", "Other racers' sounds", "Rumble", "Show inputs"], Rows(window));
         Assert.Contains("on", Heading(window, "Game").Classes);
 
         Click(window, Heading(window, "Online"));

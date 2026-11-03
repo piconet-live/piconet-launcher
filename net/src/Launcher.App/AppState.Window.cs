@@ -21,8 +21,10 @@ public sealed partial class AppState
             NamePicture: null, TaskbarGroup,
             Settings.GamePresent, Settings.VerticalSync, Settings.GameFullScreen, RefreshRate: Settings.GameRefreshRate,
             Rumble: Settings.Rumble, Camera: Settings.StartCamera, ShowInputs: Settings.ShowInputs,
-            ModernHud: Settings.ModernHud, HudLayout: Settings.ModernHud ? Path.Combine(DataFolder, "hud-layout.json") : null,
-            HudMeter: Settings.HudMeter == LauncherSettings.HudMeters[0].Name ? null : Settings.HudMeter));
+            ModernHud: Hud.Modern, HudLayout: Hud.Modern ? Path.Combine(DataFolder, "hud-layout.json") : null, HudMeter: Hud.Meter));
+
+    /// <summary>The HUD's keys: left out in a build that does not offer the modern HUD (a test build only, for 0.6).</summary>
+    private (bool Modern, string? Meter) Hud => Settings.HudLaunchKeys(offered: StackStamp.Current.Test);
 
     /// <summary>The picture engine's keys: left out in a build that does not offer Aurora, and at their defaults.</summary>
     private GameWindow WithAurora(GameWindow window)
