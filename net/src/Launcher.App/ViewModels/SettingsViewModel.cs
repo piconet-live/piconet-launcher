@@ -49,6 +49,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         AuroraEdgesIndex = Math.Max(0, LauncherSettings.AuroraEdgeCounts.ToList().FindIndex(a => a.Count == s.AuroraEdges));
         AuroraTexturesIndex = Math.Max(0, LauncherSettings.AuroraTextureLevels.ToList().FindIndex(a => a.Level == s.AuroraTextures));
         AuroraColourblindIndex = Math.Max(0, LauncherSettings.AuroraColourblindFilters.ToList().FindIndex(a => a.Name == s.AuroraColourblind));
+        AuroraHighRefreshIndex = Math.Max(0, LauncherSettings.AuroraHighRefreshes.ToList().FindIndex(a => a.Rate == s.AuroraHighRefresh));
         Rumble = s.Rumble;
         ReducedMotion = s.ReducedMotion;
         InputDelayIndex = s.RaceInputDelay;
@@ -255,6 +256,11 @@ public sealed partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     public partial int AuroraColourblindIndex { get; set; }
 
+    public static IReadOnlyList<string> AuroraHighRefreshChoices { get; } = LauncherSettings.AuroraHighRefreshes.Select(a => a.Words).ToList();
+
+    [ObservableProperty]
+    public partial int AuroraHighRefreshIndex { get; set; }
+
     /// <summary>A test build shows the frame rate whatever the setting says (<see cref="LauncherSettings.FrameRateShown"/>):
     /// its box is ticked and cannot be changed, and the file keeps the player's own value.</summary>
     public bool FrameRateAlwaysShown { get; } = StackStamp.Current.Test;
@@ -405,6 +411,8 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
     partial void OnAuroraColourblindIndexChanged(int value) => Save();
 
+    partial void OnAuroraHighRefreshIndexChanged(int value) => Save();
+
     partial void OnRumbleChanged(bool value) => Save();
 
     partial void OnReducedMotionChanged(bool value)
@@ -497,6 +505,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
             AuroraEdges = AuroraEdgesIndex >= 0 && AuroraEdgesIndex < LauncherSettings.AuroraEdgeCounts.Count ? LauncherSettings.AuroraEdgeCounts[AuroraEdgesIndex].Count : s.AuroraEdges,
             AuroraTextures = AuroraTexturesIndex >= 0 && AuroraTexturesIndex < LauncherSettings.AuroraTextureLevels.Count ? LauncherSettings.AuroraTextureLevels[AuroraTexturesIndex].Level : s.AuroraTextures,
             AuroraColourblind = AuroraColourblindIndex >= 0 && AuroraColourblindIndex < LauncherSettings.AuroraColourblindFilters.Count ? LauncherSettings.AuroraColourblindFilters[AuroraColourblindIndex].Name : s.AuroraColourblind,
+            AuroraHighRefresh = AuroraHighRefreshIndex >= 0 && AuroraHighRefreshIndex < LauncherSettings.AuroraHighRefreshes.Count ? LauncherSettings.AuroraHighRefreshes[AuroraHighRefreshIndex].Rate : 0,
             Rumble = Rumble,
             ReducedMotion = ReducedMotion,
             // (a list with nothing selected says -1: the setting stays what it is)
