@@ -99,6 +99,8 @@ public sealed partial class AppState(SettingsStore store, string dataFolder)
             // the stand-in's address in place of the player's server while the launcher runs
             state.Update(s => s with { Server = StandInService.Address, NoServer = false });
         }
+        // the player's mods, read off the window's thread: every game start lays the ones that are on over the disc
+        _ = state.LoadModsAsync();
         return state;
     }
 

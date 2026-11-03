@@ -249,21 +249,27 @@ public static class GameLaunchFile
     /// <summary>The file's text, with the window's members and the test settings. Its <c>"lanes"</c> is 0 in
     /// every start (launch.toml): the multicore physics is not in the game, and a
     /// game refuses any other count.</summary>
-    /// <para>The mods' <c>overlay</c> (an array of <c>{"disc", "from"}</c>, applied in order) is added here until the
-    /// protocol's launch.toml has the key and its generated writer carries it; with no file in it the key is not
-    /// written, so a start without mods writes the file as before.</para>
+    /// <para>The mods' <c>overlay</c> (<see cref="ModOverlay"/>): with no file in it the key is not written, so a start
+    /// without mods writes the file as before.</para>
     private static string Text(LaunchFile file, GameDebug? debug, GameWindow? window, IReadOnlyList<OverlayFile>? overlay = null)
     {
-        file = (window?.Into(file) ?? file) with { Debug = debug?.Launch() };
-        var json = file.ToJson();
-        if (overlay is { Count: > 0 })
+        file = (window?.Into(file) ?? file) with
         {
-            var array = new JsonArray();
-            foreach (var entry in overlay)
+            Debug = debug?.Launch(),
+            Overlay = overlay is { Count: > 0 } ? [.. overlay.Select(o => new LaunchOverlayEntry(o.Disc, o.From))] : null,
+        };
+        var json = file.ToJson();
+        // raceSame on the entries that have it (the protocol's next launch.toml carries the key; until its generated
+        // writer does, it is set here, in the entry after "from")
+        if (overlay is not null && json["overlay"] is JsonArray entries)
+        {
+            for (var i = 0; i < entries.Count && i < overlay.Count; i++)
             {
-                array.Add(new JsonObject { ["disc"] = entry.Disc, ["from"] = entry.From });
+                if (overlay[i].RaceSame && entries[i] is JsonObject entry)
+                {
+                    entry["raceSame"] = true;
+                }
             }
-            json["overlay"] = array;
         }
         return json.ToJsonString(Indented);
     }

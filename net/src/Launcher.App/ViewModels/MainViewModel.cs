@@ -122,6 +122,11 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
 
     public ReplaysViewModel Replays { get; }
 
+    /// <summary>The Mods place: the player's mods (made when first shown).</summary>
+    public ModsViewModel Mods => _mods ??= new ModsViewModel(_state);
+
+    private ModsViewModel? _mods;
+
     /// <summary>The Replays tab's second page: the player's figures from their replays (made when first asked for).</summary>
     public StatsViewModel Stats => _stats ??= new StatsViewModel(_state);
 
@@ -166,6 +171,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         HomeViewModel or LobbyViewModel or LanViewModel or PracticeViewModel or CustomLobbiesViewModel => "play",
         GarageViewModel => "garage",
         ReplaysViewModel or StatsViewModel => "replays",
+        ModsViewModel => "mods",
         SettingsViewModel or ControllerViewModel => "settings",
         _ => "",
     };
@@ -273,6 +279,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         "play" => _play is LobbyViewModel && !_state.InQuickPlay ? Home : _play,
         "garage" => Garage,
         "replays" => _replays,
+        "mods" => Mods,
         "settings" => _state.Settings.SettingsTab == SettingsTab.Controller ? Controller : SettingsPage(),
         _ => Current,
     };

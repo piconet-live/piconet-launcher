@@ -94,13 +94,24 @@ public static class ModImport
         var list = roots.Select(r => new ModRoot(r.Key, r.Value, false)).ToList();
         var defaults = Defaults(list);
         list = [.. list.Select(r => r with { OnByDefault = defaults.Contains(r.Path) })];
-        var name = Directory.Exists(source) ? Path.GetFileName(Path.TrimEndingDirectorySeparator(source)) : Path.GetFileNameWithoutExtension(source);
+        // the mod's name: its one top folder's where it has one (an archive's own name is often a download's), else
+        // the file's or folder's
+        var tops = entries.Select(e => e.Path.Split('/')).Where(p => p.Length > 1).Select(p => p[0]).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        var name = tops.Count == 1 && entries.All(e => e.Path.Contains('/', StringComparison.Ordinal)) && !top.Contains(tops[0])
+            ? tops[0]
+            : Directory.Exists(source) ? Path.GetFileName(Path.TrimEndingDirectorySeparator(source)) : Path.GetFileNameWithoutExtension(source);
         return (new ModSurvey(source, NameOf(name), list, Picture(entries, roots.Keys), entries), null);
     }
 
+    /// <summary>A name to show: underscores as spaces, a trailing "complete" or "all versions" dropped, and words
+    /// written all in small letters given a capital.</summary>
     private static string NameOf(string file)
     {
-        var name = file.Replace('_', ' ').Trim();
+        var name = Regex.Replace(file.Replace('_', ' '), @"\s+(complete|all versions)\s*$", "", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant).Trim();
+        if (!name.Any(char.IsUpper))
+        {
+            name = string.Join(' ', name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(w => char.ToUpperInvariant(w[0]) + w[1..]));
+        }
         return name.Length is > 0 and <= 60 ? name : name.Length > 60 ? name[..60] : "Mod";
     }
 

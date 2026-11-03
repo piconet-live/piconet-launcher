@@ -140,11 +140,15 @@ public sealed class ModGuardTests
     }
 
     [Fact]
-    public void ACheckedCourseFileStaysOutOfRacesUntilTheRunnerTakesIt()
+    public void ACheckedCourseFileGoesToEveryStartMarkedRaceSame()
     {
-        var overlay = ModOverlay.Of([Mod("t", true, File("stage/COLI_COURSE05.lz", ModFileClass.Course, true))]);
-        Assert.Single(overlay.Offline);
-        Assert.Equal(ModOverlay.CheckedRaceFilesOnline, overlay.Guarded.Count == 1);
+        var overlay = ModOverlay.Of([Mod("t", true, File("stage/COLI_COURSE05.lz", ModFileClass.Course, true),
+            File("game/cardata.lz", ModFileClass.CarData, false), File("stage/st05.tpl.lz", ModFileClass.Look, true))]);
+        Assert.Equal([("stage/COLI_COURSE05.lz", true), ("stage/st05.tpl.lz", false)], overlay.Guarded.Select(f => (f.Disc, f.RaceSame)));
+        Assert.Contains(overlay.Offline, f => f is { Disc: "game/cardata.lz", RaceSame: false });
+        var json = System.Text.Json.Nodes.JsonNode.Parse(GameLaunchFile.Playback("b", "r.fzrp", overlay: overlay.Guarded))!["overlay"]!.AsArray();
+        Assert.True((bool?)json[0]!["raceSame"]);
+        Assert.Null(json[1]!["raceSame"]);
     }
 
     [Fact]

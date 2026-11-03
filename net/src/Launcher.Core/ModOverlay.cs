@@ -1,8 +1,10 @@
 namespace Launcher.Core;
 
 /// <summary>One file the runner lays over the disc at boot: its path under <c>files/</c> and the file it takes the
-/// bytes from (a whole path: the runner is a Windows program). The launch file's <c>overlay</c>.</summary>
-public sealed record OverlayFile(string Disc, string From);
+/// bytes from (a whole path: the runner is a Windows program). The launch file's <c>overlay</c>. RaceSame: a car data
+/// or course file whose race fields the guard found equal to the disc's (only look fields differ): the runner takes
+/// such a file in every start, online included, and no other car data or course file outside offline play.</summary>
+public sealed record OverlayFile(string Disc, string From, bool RaceSame = false);
 
 /// <summary>Which game start an overlay is for: offline play ("Play F-Zero GX"), where the whole mod is used, or any
 /// other (a race, Practice, a replay, watching, the game's controller options), where only what passed the guard is.</summary>
@@ -21,11 +23,6 @@ public sealed record ModOverlay(IReadOnlyList<OverlayFile> Offline, IReadOnlyLis
 {
     public static ModOverlay None { get; } = new([], []);
 
-    /// <summary>Whether a start that is not offline play takes a car data or course file that passed the guard. The
-    /// runner's contract (2026-11-03) refuses <c>game/cardata.lz</c> and <c>stage/COLI_COURSE*.lz</c> in every start
-    /// but offline play, whatever the guard said, so they are not sent there until the runner takes them.</summary>
-    public const bool CheckedRaceFilesOnline = false;
-
     /// <summary>The overlay of a start.</summary>
     public IReadOnlyList<OverlayFile> For(OverlayUse use) => use == OverlayUse.Offline ? Offline : Guarded;
 
@@ -33,8 +30,9 @@ public sealed record ModOverlay(IReadOnlyList<OverlayFile> Offline, IReadOnlyLis
     public static bool UsedOnline(ModFile file)
     {
         ArgumentNullException.ThrowIfNull(file);
-        return file.Online && file.Class != ModFileClass.Code &&
-               (CheckedRaceFilesOnline || file.Class is not (ModFileClass.CarData or ModFileClass.Course));
+        // a car data or course file that passed the guard goes too, marked raceSame (the owner, 2026-11-03: mods work
+        // online; the runner takes such a file outside offline play only so marked)
+        return file.Online && file.Class != ModFileClass.Code;
     }
 
     /// <summary>The overlays of the mods that are on.</summary>
@@ -47,7 +45,8 @@ public sealed record ModOverlay(IReadOnlyList<OverlayFile> Offline, IReadOnlyLis
         {
             foreach (var file in mod.Manifest.Files.Where(f => f.Class != ModFileClass.Code))
             {
-                var entry = new OverlayFile(file.Disc, Path.GetFullPath(Path.Combine(mod.Files, file.Disc)));
+                var raceSame = file.Online && file.Class is ModFileClass.CarData or ModFileClass.Course;
+                var entry = new OverlayFile(file.Disc, Path.GetFullPath(Path.Combine(mod.Files, file.Disc)), raceSame);
                 offline.Add(entry);
                 if (UsedOnline(file))
                 {
