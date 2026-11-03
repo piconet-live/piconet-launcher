@@ -42,6 +42,10 @@ public sealed partial class AppState
         }
     }
 
+    /// <summary>The first read of the mods' list, started with the launcher (<see cref="LoadModsAsync"/>): a start from
+    /// the command line waits for it, so its game gets the overlay of the mods that are on.</summary>
+    public Task ModsRead { get; private set; } = Task.CompletedTask;
+
     /// <summary>Reads the mods' list from the disk, on another thread.</summary>
     public Task LoadModsAsync() => Task.Run(() => SetMods(ReadModsQuietly(), save: false));
 

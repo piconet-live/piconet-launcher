@@ -97,6 +97,9 @@ internal static class Program
         }
         state.BoardMade += board => Launcher.Core.BoardLines.Follow(board, Say);
         state.Noted += text => Say(System.Text.Json.JsonSerializer.Serialize(new { @event = "noted", values = new { text } }));
+        // the mods' list is read off the main thread at the start: a start from here waits for it, or its game could
+        // go without the overlay of the mods that are on
+        state.ModsRead.Wait();
         var problem = line.Mode switch
         {
             StartMode.PlayReplay => state.Play(line.File!),
