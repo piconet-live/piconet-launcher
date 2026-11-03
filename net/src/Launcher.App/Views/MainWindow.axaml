@@ -93,7 +93,7 @@
 
     <Grid Grid.Row="2" ColumnDefinitions="Auto,*">
       <!-- The left column, on every page (direction D: "who you are, where you can go, whether you are online"): your
-           machine in 3D, the gold bar, your name and machine; the places (Play, Garage, Replays); the one notice;
+           machine in 3D, the gold bar, your name and machine; the places (Play, Garage, Replays, Mods); the one notice;
            at its foot Settings, lit while a Settings page shows, above the connection and the build. RACE, the lobby's
            box and "Play F-Zero GX" are on Quick Play's page (PlayControlView); the lobby's state is the Lobby's. -->
       <Border Width="{StaticResource ColumnWidth}" Background="{StaticResource ColumnBrush}" IsVisible="{Binding Navigation}">
@@ -127,6 +127,8 @@
                         Classes.on="{Binding Tab, Converter={x:Static v:Equal.Instance}, ConverterParameter=garage}" />
                 <Button Classes="tab" Content="Replays" Tag="{StaticResource GlyphReplays}" Command="{Binding ShowTabCommand}" CommandParameter="replays"
                         Classes.on="{Binding Tab, Converter={x:Static v:Equal.Instance}, ConverterParameter=replays}" />
+                <Button Classes="tab" Content="Mods" Tag="{StaticResource GlyphMods}" Command="{Binding ShowTabCommand}" CommandParameter="mods"
+                        Classes.on="{Binding Tab, Converter={x:Static v:Equal.Instance}, ConverterParameter=mods}" />
               </StackPanel>
               <v:ColumnNoticeView DataContext="{Binding Control}" />
               <!-- a lobby's stage with a decision the player was not brought to (a change not saved in the builder):

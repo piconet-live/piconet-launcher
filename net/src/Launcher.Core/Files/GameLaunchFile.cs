@@ -172,17 +172,20 @@ public static class GameLaunchFile
     /// <param name="controllerSetup">The start opens the game's own controller options once its title stands, and
     /// the game closes when the player leaves them (the game's <c>"controllerSetup"</c>: a player's key, no test
     /// setting).</param>
-    public static string Offline(string? bundle, GameDebug? debug = null, GameWindow? window = null, bool controllerSetup = false)
+    /// <param name="overlay">The mods' files the runner lays over the disc at boot (<see cref="ModOverlay"/>); none: the
+    /// file has no <c>overlay</c>.</param>
+    public static string Offline(string? bundle, GameDebug? debug = null, GameWindow? window = null, bool controllerSetup = false,
+        IReadOnlyList<OverlayFile>? overlay = null)
     {
         var about = controllerSetup ? "Piconet Launcher: the game's controller options" : "Piconet Launcher: offline play";
-        return Text(new LaunchFile(about, bundle, ControllerSetup: controllerSetup), debug, window);
+        return Text(new LaunchFile(about, bundle, ControllerSetup: controllerSetup), debug, window, overlay);
     }
 
     /// <summary>A race from a match file's text (<see cref="MatchFile.Build"/>, or a file somebody wrote).</summary>
     /// <param name="record">Where the race is recorded; null: not recorded.</param>
     /// <exception cref="FormatException">The match file is not a JSON object.</exception>
     public static string Race(string bundle, string matchFile, WidescreenMode widescreen = WidescreenMode.Game, string? record = null,
-        GameDebug? debug = null, GameWindow? window = null, bool rejoin = false)
+        GameDebug? debug = null, GameWindow? window = null, bool rejoin = false, IReadOnlyList<OverlayFile>? overlay = null)
     {
         ArgumentNullException.ThrowIfNull(bundle);
         ArgumentNullException.ThrowIfNull(matchFile);
@@ -192,7 +195,7 @@ public static class GameLaunchFile
             var name = (match["match"] as JsonObject)?["matchId"] is JsonValue id && id.TryGetValue<string>(out var text) ? text : "?";
             // rejoin: started again into its running race
             return Text(Screen(new LaunchFile($"Piconet Launcher: a race (match {name})", bundle,
-                Match: new LaunchMatch(match, record, rejoin)), widescreen), debug, window);
+                Match: new LaunchMatch(match, record, rejoin)), widescreen), debug, window, overlay);
         }
         catch (Exception e) when (e is JsonException or InvalidOperationException or ArgumentException)
         {
@@ -216,12 +219,12 @@ public static class GameLaunchFile
 
     /// <summary>A replay's playback, as the race itself.</summary>
     public static string Playback(string bundle, string replayFile, OtherSounds sounds = OtherSounds.Quieter,
-        WidescreenMode widescreen = WidescreenMode.Game, GameDebug? debug = null, GameWindow? window = null)
+        WidescreenMode widescreen = WidescreenMode.Game, GameDebug? debug = null, GameWindow? window = null, IReadOnlyList<OverlayFile>? overlay = null)
     {
         ArgumentNullException.ThrowIfNull(bundle);
         ArgumentNullException.ThrowIfNull(replayFile);
         return Text(Screen(new LaunchFile("Piconet Launcher: a replay's playback", bundle,
-            Replay: new LaunchReplay(replayFile, sounds.ToString().ToLower(CultureInfo.InvariantCulture))), widescreen), debug, window);
+            Replay: new LaunchReplay(replayFile, sounds.ToString().ToLower(CultureInfo.InvariantCulture))), widescreen), debug, window, overlay);
     }
 
     /// <summary>The picture's keys: <c>"widescreen"</c>, the game's own 16:9 mode, and with true widescreen
@@ -248,9 +251,15 @@ public static class GameLaunchFile
     /// <summary>The file's text, with the window's members and the test settings. Its <c>"lanes"</c> is 0 in
     /// every start (launch.toml): the multicore physics is not in the game, and a
     /// game refuses any other count.</summary>
-    private static string Text(LaunchFile file, GameDebug? debug, GameWindow? window)
+    /// <para>The mods' <c>overlay</c> (<see cref="ModOverlay"/>): with no file in it the key is not written, so a start
+    /// without mods writes the file as before.</para>
+    private static string Text(LaunchFile file, GameDebug? debug, GameWindow? window, IReadOnlyList<OverlayFile>? overlay = null)
     {
-        file = (window?.Into(file) ?? file) with { Debug = debug?.Launch() };
+        file = (window?.Into(file) ?? file) with
+        {
+            Debug = debug?.Launch(),
+            Overlay = overlay is { Count: > 0 } ? [.. overlay.Select(o => new LaunchOverlayEntry(o.Disc, o.From, o.RaceSame))] : null,
+        };
         return file.ToJson().ToJsonString(Indented);
     }
 }

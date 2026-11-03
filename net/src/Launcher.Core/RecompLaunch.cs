@@ -11,8 +11,10 @@ namespace Launcher.Core;
 /// copy's prepared folder that is not ready (damaged, or with another online part's words in it).</param>
 /// <param name="Installed">The launcher is an installed one (<see cref="Install.Installed"/>; a kind of
 /// <paramref name="PlayerCopy"/>): what is missing is said as it is true for one (Setup puts it back).</param>
+/// <param name="Mods">The files of the player's mods that are on, for each kind of start (<see cref="ModOverlay"/>);
+/// null: none, and no launch file has an <c>overlay</c>.</param>
 public sealed record RecompPaths(string Runner, string Module, string GameFolder, string UserFolder, string? Bundle = null,
-    bool PlayerCopy = false, bool NoGame = false, bool Installed = false);
+    bool PlayerCopy = false, bool NoGame = false, bool Installed = false, ModOverlay? Mods = null);
 
 /// <summary>Where the recompiled game is when the settings do not say (development builds set these): null
 /// leaves the launcher's own place, a <c>recomp</c> folder
@@ -108,7 +110,9 @@ public static partial class RecompLaunch
     {
         ArgumentNullException.ThrowIfNull(paths);
         var native = NativeBundle(paths);
-        return GameLaunchFile.Offline(native ? paths.Bundle : null, debug, window, controllerSetup);
+        // offline play takes the whole mod; the game's controller options are a start of their own, and take the guarded part
+        var overlay = paths.Mods?.For(controllerSetup ? OverlayUse.Guarded : OverlayUse.Offline);
+        return GameLaunchFile.Offline(native ? paths.Bundle : null, debug, window, controllerSetup, overlay);
     }
 
     /// <summary>The launch file of a race from a match file: the
@@ -122,7 +126,7 @@ public static partial class RecompLaunch
     {
         ArgumentNullException.ThrowIfNull(paths);
         return GameLaunchFile.Race(paths.Bundle ?? throw new ArgumentException("no mod bundle", nameof(paths)),
-            GameLaunchFile.MatchFileText(matchFile), widescreen, replayFile, debug, window, rejoin);
+            GameLaunchFile.MatchFileText(matchFile), widescreen, replayFile, debug, window, rejoin, paths.Mods?.For(OverlayUse.Guarded));
     }
 
     /// <summary>The launch file of a replay's playback: the
@@ -135,7 +139,7 @@ public static partial class RecompLaunch
     {
         ArgumentNullException.ThrowIfNull(paths);
         return GameLaunchFile.Playback(paths.Bundle ?? throw new ArgumentException("no mod bundle", nameof(paths)), replayFile,
-            sounds, widescreen, debug, window);
+            sounds, widescreen, debug, window, paths.Mods?.For(OverlayUse.Guarded));
     }
 
     /// <summary>Where the runner writes its standard output and error (and its line for every slow second) when the

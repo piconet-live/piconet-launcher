@@ -15,7 +15,7 @@ public sealed partial class MainViewModel
 
     /// <summary>The tabs as L and R go through them, left to right as the window shows them, Settings last (it is at
     /// the left column's foot).</summary>
-    public static IReadOnlyList<string> TabOrder { get; } = ["play", "garage", "replays", "settings"];
+    public static IReadOnlyList<string> TabOrder { get; } = ["play", "garage", "replays", "mods", "settings"];
 
     /// <summary>L (-1) and R (1): the tab before or after the one showing, its page the one last shown there; at
     /// either end nothing changes. False: nothing changed (the first screen has no tabs).</summary>

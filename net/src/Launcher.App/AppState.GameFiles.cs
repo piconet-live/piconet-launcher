@@ -16,7 +16,9 @@ public sealed partial class AppState
 
     /// <summary>Where the game is for these settings, as the launcher's places have it: in this launcher's folder
     /// (<see cref="Install"/>: a player copy's is the one above its libraries).</summary>
-    private RecompPaths PathsOf(RecompSettings? recomp) => RecompLaunch.Resolve(recomp, Where, dataFolder, Preparation.Pins);
+    /// <para>With mods on, the paths carry their overlay (<see cref="Overlay"/>); without, none.</para>
+    private RecompPaths PathsOf(RecompSettings? recomp) =>
+        RecompLaunch.Resolve(recomp, Where, dataFolder, Preparation.Pins) with { Mods = Overlay.Offline.Count > 0 ? Overlay : null };
 
     /// <summary>Where this launcher is (a test's: a made-up player copy).</summary>
     public Install Where { get; private init; } = Install.This;

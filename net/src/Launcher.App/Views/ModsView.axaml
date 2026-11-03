@@ -1,0 +1,179 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:c="using:Launcher.App.Controls"
+             x:Class="Launcher.App.Views.ModsView"
+             x:DataType="vm:ModsViewModel"
+             x:Name="Root">
+  <!-- The Mods page (direction D): Import and Folder over the list; the player's mods as cards in their order (a
+       later one's files win): the mod's picture, its name, small tags for what it cannot do online (the reasons when
+       pointed at), and at its end Stat pack where its car data changes the race, the switch, up and down, and remove.
+       While a mod is looked at or unpacked: its name, the bar and Cancel; where it has several folders, the folders
+       to tick and IMPORT. -->
+  <UserControl.Styles>
+    <Style Selector="Border.modcard">
+      <Setter Property="Background" Value="{StaticResource WellBrush}" />
+      <Setter Property="CornerRadius" Value="{DynamicResource StaticLargeCornerRadius}" />
+      <Setter Property="Padding" Value="8" />
+      <Setter Property="Height" Value="104" />
+    </Style>
+    <Style Selector="Border.modcard.off TextBlock.name">
+      <Setter Property="Foreground" Value="{StaticResource DimBrush}" />
+    </Style>
+    <Style Selector="Border.modcard.off Panel.picture">
+      <Setter Property="Opacity" Value="0.45" />
+    </Style>
+    <Style Selector="Border.picture">
+      <Setter Property="Width" Value="156" />
+      <Setter Property="Height" Value="88" />
+      <Setter Property="CornerRadius" Value="{DynamicResource StaticMediumCornerRadius}" />
+      <Setter Property="ClipToBounds" Value="True" />
+      <Setter Property="Background" Value="{StaticResource RaisedBrush}" />
+    </Style>
+    <Style Selector="TextBlock.name">
+      <Setter Property="FontSize" Value="{StaticResource Size20}" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+    <!-- a tag: a small chip of state, its reasons in the tooltip -->
+    <Style Selector="Border.tag">
+      <Setter Property="CornerRadius" Value="{DynamicResource StaticMediumCornerRadius}" />
+      <Setter Property="Padding" Value="8,3" />
+      <Setter Property="Background" Value="{StaticResource RaisedBrush}" />
+    </Style>
+    <Style Selector="Border.tag TextBlock">
+      <Setter Property="FontSize" Value="{StaticResource Size13}" />
+      <Setter Property="Foreground" Value="{StaticResource DimBrush}" />
+    </Style>
+    <Style Selector="Border.tag.single">
+      <Setter Property="Background" Value="{StaticResource TierWarningTintBrush}" />
+    </Style>
+    <Style Selector="Border.tag.single TextBlock">
+      <Setter Property="Foreground" Value="{StaticResource NoticeBrush}" />
+    </Style>
+    <Style Selector="Path.chevron">
+      <Setter Property="Stroke" Value="{StaticResource TextBrush}" />
+      <Setter Property="StrokeThickness" Value="1.8" />
+      <Setter Property="Width" Value="12" />
+      <Setter Property="Height" Value="8" />
+      <Setter Property="Stretch" Value="Uniform" />
+      <Setter Property="StrokeLineCap" Value="Round" />
+      <Setter Property="StrokeJoin" Value="Round" />
+    </Style>
+    <Style Selector="Button:disabled Path.chevron">
+      <Setter Property="Stroke" Value="{StaticResource OffBrush}" />
+    </Style>
+    <Style Selector="Button.secondary.danger, Button.secondary.danger:pointerover">
+      <Setter Property="BorderBrush" Value="{StaticResource OfflineBrush}" />
+      <Setter Property="Background" Value="#1FFF4D4D" />
+    </Style>
+    <Style Selector="ProgressBar.import">
+      <Setter Property="Height" Value="4" />
+      <Setter Property="MinHeight" Value="4" />
+      <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+      <Setter Property="Background" Value="{StaticResource RaisedBrush}" />
+    </Style>
+  </UserControl.Styles>
+
+  <StackPanel Spacing="12">
+    <Grid ColumnDefinitions="*,Auto" Height="40">
+      <Grid Classes="warnline" ColumnDefinitions="Auto,*" Name="Notice" VerticalAlignment="Center"
+            IsVisible="{Binding Notice, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+        <Path Classes="warnmark" />
+        <TextBlock Grid.Column="1" Text="{Binding Notice}" />
+      </Grid>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" IsEnabled="{Binding Idle}">
+        <Button Name="ImportFolder" Classes="secondary" Content="Folder…" Click="OnImportFolder" AutomationProperties.Name="Import a mod's folder" />
+        <Button Name="ImportFile" Classes="primary" c:PadNav.Main="True" Content="Import…" Click="OnImportFile" AutomationProperties.Name="Import a mod" />
+      </StackPanel>
+    </Grid>
+
+    <!-- Looking at a mod or unpacking it -->
+    <Border Classes="modcard" Height="NaN" Padding="16" IsVisible="{Binding Importing}">
+      <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+        <TextBlock Classes="name" Text="{Binding ImportName}" VerticalAlignment="Center" />
+        <Button Grid.Column="1" Classes="secondary" Content="Cancel" Command="{Binding CancelImportCommand}" />
+        <ProgressBar Grid.Row="1" Grid.ColumnSpan="2" Classes="import" Minimum="0" Maximum="1" Value="{Binding Fraction}" Margin="0,12,0,0" />
+      </Grid>
+    </Border>
+
+    <!-- The mod's folders, to tick -->
+    <Border Classes="modcard" Height="NaN" Padding="16" IsVisible="{Binding Choosing}">
+      <StackPanel Spacing="8">
+        <TextBlock Classes="name" Text="{Binding ImportName}" />
+        <ItemsControl Name="RootList" ItemsSource="{Binding Roots}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:ModRootChoice">
+              <Grid ColumnDefinitions="*,Auto" Height="30">
+                <CheckBox Classes="box" IsChecked="{Binding On}" VerticalAlignment="Center">
+                  <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                </CheckBox>
+                <TextBlock Grid.Column="1" Classes="dim" Text="{Binding Files}" FontFeatures="tnum" VerticalAlignment="Center" Margin="12,0,0,0" />
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,4,0,0">
+          <Button Classes="secondary" Content="Cancel" Command="{Binding CancelImportCommand}" />
+          <Button Name="ImportChosen" Classes="primary" Content="IMPORT" Command="{Binding ImportChosenCommand}" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
+    <TextBlock Classes="faint" Text="No mods" IsVisible="{Binding NoCards}" Margin="0,8,0,0" />
+
+    <ItemsControl Name="ModList" ItemsSource="{Binding Cards}">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate><StackPanel Spacing="8" /></ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:ModCard">
+          <Border Classes="modcard" Classes.off="{Binding !On}">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+              <Panel Classes="picture">
+                <Border Classes="picture">
+                  <Panel>
+                    <TextBlock Text="{Binding Initial}" FontSize="32" FontWeight="Bold" Foreground="{StaticResource OffBrush}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !HasPicture}" />
+                    <Image Source="{Binding Picture}" Stretch="UniformToFill" IsVisible="{Binding HasPicture}" />
+                  </Panel>
+                </Border>
+              </Panel>
+              <StackPanel Grid.Column="1" Margin="16,4,12,0" Spacing="10" VerticalAlignment="Center">
+                <TextBlock Classes="name" Text="{Binding Name}" />
+                <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasTags}">
+                  <Border Classes="tag single" IsVisible="{Binding SinglePlayer}" ToolTip.Tip="{Binding SinglePlayerWhy}" ToolTip.ShowDelay="200">
+                    <TextBlock Text="Single player" />
+                  </Border>
+                  <Border Classes="tag" IsVisible="{Binding CodeNotUsed}" ToolTip.Tip="{Binding CodeWhy}" ToolTip.ShowDelay="200">
+                    <TextBlock Text="Code not used" />
+                  </Border>
+                </StackPanel>
+              </StackPanel>
+              <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Button Classes="secondary" Content="Stat pack" Command="{Binding MakePackCommand}" ToolTip.Tip="{Binding PackWhy}"
+                        IsVisible="{Binding CanMakePack}" AutomationProperties.Name="Make a stat pack of its machine stats" />
+                <Button Classes="secondary" Content="Show pack" Command="{Binding ShowPackCommand}"
+                        IsVisible="{Binding PackFile, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <ToggleSwitch IsChecked="{Binding On}" OnContent="" OffContent="" VerticalAlignment="Center"
+                              AutomationProperties.Name="{Binding Name}" Margin="4,0" />
+                <Button Classes="secondary" Width="32" Padding="0" Command="{Binding MoveUpCommand}" IsEnabled="{Binding CanMoveUp}"
+                        AutomationProperties.Name="Up">
+                  <Path Classes="chevron" Data="M1,7 L6,2 L11,7" />
+                </Button>
+                <Button Classes="secondary" Width="32" Padding="0" Command="{Binding MoveDownCommand}" IsEnabled="{Binding CanMoveDown}"
+                        AutomationProperties.Name="Down">
+                  <Path Classes="chevron" Data="M1,1 L6,6 L11,1" />
+                </Button>
+                <Button Classes="secondary" Content="Remove" Command="{Binding AskRemoveCommand}" IsVisible="{Binding !Removing}" />
+                <Button Classes="secondary danger" Content="Remove" Command="{Binding RemoveCommand}" IsVisible="{Binding Removing}"
+                        AutomationProperties.Name="Remove for good" />
+                <Button Classes="secondary" Content="Keep" Command="{Binding AskRemoveCommand}" IsVisible="{Binding Removing}" />
+              </StackPanel>
+            </Grid>
+          </Border>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+  </StackPanel>
+</UserControl>

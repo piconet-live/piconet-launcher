@@ -33,6 +33,7 @@ The few tests of what only `Launcher.App`'s own code does, run without a window 
   at a time, and a row deleted leaving the others as they were; the rows under their date headings (Today, then
   each month), in the tab shown; a mode's replay offering "Show mode file" under "•••" and opening its name, share
   code, settings and text under the row (LOBBY_SHOTS keeps both).
+- `ModsPageTests.cs`: the Mods place opened from its tab, a card's Down and switch pressed: saved to `Mods/mods.json` and changing the overlay a start is given; with real mods (MODS_SHOTS_DATA) the cards and Unleashed's chooser pictured
 - `RaceModeBoardTests.cs`: a mode's `board` lines on the race page (the race's, a racer's as columns, a team's), none for a mode without, none for a player with no game; a replay the game plays, from a status board, until its game ends. With `LOBBY_SHOTS` the pages as PNGs.
 - `Headless.cs`: what the newer tests share: a press with the headless window's mouse, a key, waiting for the page, a
   window with the toolkit's layer for menus.
