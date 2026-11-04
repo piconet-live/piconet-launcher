@@ -338,39 +338,41 @@
               </StackPanel>
             </StackPanel>
 
-            <!-- Trail: the racer's on every machine; each row a swatch or a hex box, "Its own" the game's. The rows fit the
-                 panel at the least window; a lower panel scrolls them rather than draw them under the actions. -->
+            <!-- Trail: the racer's on every machine; each row a swatch or a hex box, "Its own" the game's. The three rows fit
+                 the lobby's machine stage at the least window (184 px in 192: a lower box and no note under them; what the note
+                 said is the list's tooltip); a lower panel scrolls them rather than draw them under the actions. -->
             <ScrollViewer Grid.Row="1" Name="TrailList" IsVisible="{Binding TrailShown}" VerticalScrollBarVisibility="Auto"
-                          HorizontalScrollBarVisibility="Disabled">
-              <StackPanel Spacing="10">
-                <ItemsControl ItemsSource="{Binding TrailRows}">
-                  <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="vm:TrailRow">
-                      <StackPanel Margin="0,0,0,10">
-                        <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,4">
-                          <TextBlock Classes="colhead" Text="{Binding Label}" VerticalAlignment="Center" />
-                          <TextBox Grid.Column="1" Classes="field" Classes.bad="{Binding !Valid}" Text="{Binding Hex}" Watermark="#RRGGBB" Width="100" MaxLength="7"
-                                   AutomationProperties.Name="{Binding HexName}" />
-                        </Grid>
-                        <ItemsControl ItemsSource="{Binding Swatches}">
-                          <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
-                          </ItemsControl.ItemsPanel>
-                          <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="vm:TrailSwatch">
-                              <Button Classes="swatch" Classes.on="{Binding Selected}" Width="32" Height="26"
-                                      Background="{Binding Hex, Converter={x:Static v:HexToBrush.Instance}}"
-                                      Command="{Binding $parent[ItemsControl].((vm:TrailRow)DataContext).PickCommand}" CommandParameter="{Binding}"
-                                      ToolTip.Tip="{Binding Label}" AutomationProperties.Name="{Binding Label}" />
-                            </DataTemplate>
-                          </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                      </StackPanel>
-                    </DataTemplate>
-                  </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <TextBlock Classes="colhead" TextWrapping="Wrap" Text="Everyone in the race sees these. Grey is the game's own colour. Very dark colours are brightened." />
-              </StackPanel>
+                          HorizontalScrollBarVisibility="Disabled"
+                          ToolTip.Tip="Everyone in the race sees these. Grey is the game's own colour. Very dark colours are brightened.">
+              <ItemsControl ItemsSource="{Binding TrailRows}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><StackPanel Spacing="8" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:TrailRow">
+                    <StackPanel>
+                      <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,2">
+                        <TextBlock Classes="colhead" Text="{Binding Label}" VerticalAlignment="Center" />
+                        <TextBox Grid.Column="1" Classes="field" Classes.bad="{Binding !Valid}" Text="{Binding Hex}" Watermark="#RRGGBB" Width="100" MaxLength="7"
+                                 Height="28" MinHeight="28" AutomationProperties.Name="{Binding HexName}" />
+                      </Grid>
+                      <ItemsControl ItemsSource="{Binding Swatches}">
+                        <ItemsControl.ItemsPanel>
+                          <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate x:DataType="vm:TrailSwatch">
+                            <Button Classes="swatch" Classes.on="{Binding Selected}" Width="32" Height="26"
+                                    Background="{Binding Hex, Converter={x:Static v:HexToBrush.Instance}}"
+                                    Command="{Binding $parent[ItemsControl].((vm:TrailRow)DataContext).PickCommand}" CommandParameter="{Binding}"
+                                    ToolTip.Tip="{Binding Label}" AutomationProperties.Name="{Binding Label}" />
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
             </ScrollViewer>
 
             <!-- Stats, a stock machine's: every value of the machine, as the disc has them, or, in a lobby whose races run
