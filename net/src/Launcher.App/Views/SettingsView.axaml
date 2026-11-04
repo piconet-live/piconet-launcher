@@ -24,7 +24,7 @@
   <Panel>
     <!-- Game: the game's picture, sound and rumble -->
     <Grid Name="GamePage" Classes="form" ColumnDefinitions="196,*" MaxWidth="900" HorizontalAlignment="Left"
-          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" IsVisible="{Binding OnGame}">
+          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" IsVisible="{Binding OnGame}">
       <!-- the game's picture: Normal, the game's own 16:9, or true widescreen (16:9 with Normal's whole height) -->
       <TextBlock Classes="label" Text="Widescreen" />
       <ListBox Grid.Column="1" Classes="seg tall" Name="Widescreen"
@@ -103,6 +103,14 @@
       <ListBox Grid.Row="16" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.AuroraHighRefreshChoices}"
                SelectedIndex="{Binding AuroraHighRefreshIndex}" IsVisible="{Binding AuroraRowsShown}"
                AutomationProperties.Name="High refresh" />
+      <!-- the launch file's "auroraRayTracing": the runner's tested set of ray switches. The box can be ticked on a graphics
+           card the launcher's check found can ray trace (Launcher.Core/RayTracingCard.cs); beside it, why it cannot. The box
+           names itself, as Navigation sounds does on the Launcher page -->
+      <StackPanel Grid.Row="17" Grid.Column="1" Orientation="Horizontal" Spacing="12" IsVisible="{Binding AuroraRowsShown}">
+        <CheckBox Classes="box" Name="RayTracing" Content="Ray tracing" IsChecked="{Binding RayTracing}"
+                  IsEnabled="{Binding RayTracingPossible}" AutomationProperties.Name="Ray tracing" />
+        <TextBlock Classes="faint" VerticalAlignment="Center" Text="{Binding RayTracingReason}" IsVisible="{Binding RayTracingReasonShown}" />
+      </StackPanel>
     </Grid>
 
     <!-- Online: the input delay first (what players change most), the server, the account -->

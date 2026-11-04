@@ -225,17 +225,88 @@ public sealed class LanTests
     [Fact]
     public void AuroraKeysAreLeftOutAtTheirDefaultsAndWhenNotOffered()
     {
-        var chosen = new LauncherSettings { PictureEngine = "aurora", AuroraSize = "3", AuroraEdges = 4, AuroraTextures = 16, AuroraColourblind = "tritanopia", AuroraHighRefresh = 240 };
-        Assert.Equal(("aurora", "3", 4, 16, "tritanopia", 240), chosen.AuroraLaunchKeys(offered: true));
+        var chosen = new LauncherSettings { PictureEngine = "aurora", AuroraSize = "3", AuroraEdges = 4, AuroraTextures = 16, AuroraColourblind = "tritanopia", AuroraHighRefresh = 240, RayTracing = true };
+        Assert.Equal(("aurora", "3", 4, 16, "tritanopia", 240, true), chosen.AuroraLaunchKeys(offered: true));
         // a build that does not offer it, and the default engine: nothing a runner from before the keys would refuse
-        Assert.Equal((null, null, 0, 0, null, 0), chosen.AuroraLaunchKeys(offered: false));
-        Assert.Equal((null, null, 0, 0, null, 0), new LauncherSettings().AuroraLaunchKeys(offered: true));
-        Assert.Equal(("aurora", null, 0, 0, null, 0), new LauncherSettings { PictureEngine = "aurora" }.AuroraLaunchKeys(offered: true));
+        Assert.Equal((null, null, 0, 0, null, 0, false), chosen.AuroraLaunchKeys(offered: false));
+        Assert.Equal((null, null, 0, 0, null, 0, false), new LauncherSettings().AuroraLaunchKeys(offered: true));
+        Assert.Equal(("aurora", null, 0, 0, null, 0, false), new LauncherSettings { PictureEngine = "aurora" }.AuroraLaunchKeys(offered: true));
         // an older file's "native" is Auto now: the key left out, the same picture
-        Assert.Equal(("aurora", null, 0, 0, null, 0), new LauncherSettings { PictureEngine = "aurora", AuroraSize = "native" }.AuroraLaunchKeys(offered: true));
+        Assert.Equal(("aurora", null, 0, 0, null, 0, false), new LauncherSettings { PictureEngine = "aurora", AuroraSize = "native" }.AuroraLaunchKeys(offered: true));
         // a file edited by hand never stops the game from starting
-        var edited = chosen with { AuroraSize = "9", AuroraEdges = 3, AuroraTextures = 99, AuroraColourblind = "green", AuroraHighRefresh = 77 };
-        Assert.Equal(("aurora", null, 0, 0, null, 0), edited.AuroraLaunchKeys(offered: true));
+        var edited = chosen with { AuroraSize = "9", AuroraEdges = 3, AuroraTextures = 99, AuroraColourblind = "green", AuroraHighRefresh = 77, RayTracing = false };
+        Assert.Equal(("aurora", null, 0, 0, null, 0, false), edited.AuroraLaunchKeys(offered: true));
+    }
+
+    [Fact]
+    public void RayTracingIsOffByDefaultAndWrittenOnlyOnACardThatCan()
+    {
+        Assert.False(new LauncherSettings().RayTracing);
+        var on = new LauncherSettings { PictureEngine = "aurora", RayTracing = true };
+        Assert.True(on.AuroraLaunchKeys(offered: true, cardRayTraces: true).RayTracing);
+        // a card the check found cannot: left out, whatever the file says
+        Assert.False(on.AuroraLaunchKeys(offered: true, cardRayTraces: false).RayTracing);
+        // with the standard engine, rays are no setting at all
+        Assert.False((on with { PictureEngine = "dolphin" }).AuroraLaunchKeys(offered: true).RayTracing);
+    }
+
+    [Fact]
+    public void RayTracingIsKeptInTheSettingsFile()
+    {
+        var dir = Directory.CreateTempSubdirectory("launcher-tests").FullName;
+        try
+        {
+            var data = Path.Combine(dir, "data");
+            Directory.CreateDirectory(data);
+            File.WriteAllText(Path.Combine(data, "settings.json"), "{\"noServer\": true}");   // (a file from before the setting)
+            var state = Launcher.App.AppState.Load(data);
+            try
+            {
+                Assert.False(state.Settings.RayTracing);
+                state.Update(s => s with { RayTracing = true });
+            }
+            finally
+            {
+                state.Shutdown();
+            }
+            Assert.Contains("\"rayTracing\": true", File.ReadAllText(Path.Combine(data, "settings.json")), StringComparison.Ordinal);
+            var again = Launcher.App.AppState.Load(data);
+            Assert.True(again.Settings.RayTracing);   // kept
+            again.Shutdown();
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void ARayTracingCardIsOneWithDirectX12RayTracingTierOnePointOne()
+    {
+        Assert.Equal(RayTracingCard.Yes, RayTracingCard.FromTier(11));
+        Assert.True(RayTracingCard.FromTier(12).Can);
+        // DXR 1.0 has no inline ray queries, which Aurora's shaders use; none; no Direct3D 12 device at all
+        foreach (var tier in new[] { 10, 0, -1 })
+        {
+            Assert.Equal(new RayTracingCard(false, RayTracingCard.NoCard), RayTracingCard.FromTier(tier));
+        }
+        Assert.Null(RayTracingCard.Yes.Reason);
+    }
+
+    [Fact]
+    public async Task TheCardIsCheckedOnceAndNotWindowsCannot()
+    {
+        var first = await RayTracingCard.Check();
+        Assert.Same(RayTracingCard.Check(), RayTracingCard.Check());
+        Assert.Same(first, RayTracingCard.Known);
+        if (!OperatingSystem.IsWindows())
+        {
+            Assert.Equal(new RayTracingCard(false, RayTracingCard.NoWindows), first);
+        }
+        else
+        {
+            Assert.True(first.Can || first.Reason == RayTracingCard.NoCard);
+        }
     }
 
     [Fact]
