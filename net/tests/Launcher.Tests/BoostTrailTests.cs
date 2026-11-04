@@ -58,6 +58,11 @@ public class BoostTrailTests
         row.PickCommand.Execute(row.Swatches[0]);
         Assert.Null(told[^1]);
         Assert.Equal("", row.Hex);
+        Assert.Equal("Its own", row.Swatches[0].Label);
+        // the sparks' unset swatch says what an unset one follows (the game's reader: the boost flame's colour)
+        var sparks = new Launcher.App.ViewModels.TrailRow("Boost sparks", null, told.Add, "Same as the boost flame");
+        Assert.True(sparks.Swatches[0].Own && sparks.Swatches[0].Selected);
+        Assert.Equal("Same as the boost flame", sparks.Swatches[0].Label);
     }
 
     [Fact]

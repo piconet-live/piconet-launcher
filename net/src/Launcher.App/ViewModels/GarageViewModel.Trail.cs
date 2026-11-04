@@ -14,8 +14,9 @@ public sealed partial class GarageViewModel
     /// <summary>The flame while boosting.</summary>
     public TrailRow TrailBoost => _trailBoost ??= new TrailRow("Boost flame", _state.Settings.Racer.Trail?.Boost, c => SetTrail(t => t with { Boost = c }));
 
-    /// <summary>What a boost throws off: the bolts, the sparkles and the streak.</summary>
-    public TrailRow TrailSparks => _trailSparks ??= new TrailRow("Boost sparks", _state.Settings.Racer.Trail?.Sparks, c => SetTrail(t => t with { Sparks = c }));
+    /// <summary>What a boost throws off: the bolts, the sparkles and the streak; left unset, the boost flame's colour.</summary>
+    public TrailRow TrailSparks => _trailSparks ??= new TrailRow("Boost sparks", _state.Settings.Racer.Trail?.Sparks, c => SetTrail(t => t with { Sparks = c }),
+        "Same as the boost flame");
 
     private TrailRow? _trailNormal, _trailBoost, _trailSparks;
 
@@ -30,7 +31,8 @@ public sealed partial class GarageViewModel
         });
 }
 
-/// <summary>One colour of the trail: a row of swatches, the first the machine's own, and a box for any other.</summary>
+/// <summary>One colour of the trail: a row of swatches, the first the machine's own (or what an unset one follows,
+/// <paramref name="ownLabel"/>), and a box for any other.</summary>
 public sealed partial class TrailRow : ObservableObject
 {
     /// <summary>The swatches' colours: bright and plain, as the flame is added to the picture.</summary>
@@ -43,11 +45,13 @@ public sealed partial class TrailRow : ObservableObject
     private const string OwnHex = "#5A6478";
 
     private readonly Action<Rgb?> _changed;
+    private readonly string _ownLabel;
     private bool _showing;
 
-    public TrailRow(string label, Rgb? color, Action<Rgb?> changed)
+    public TrailRow(string label, Rgb? color, Action<Rgb?> changed, string ownLabel = "Its own")
     {
         Label = label;
+        _ownLabel = ownLabel;
         _changed = changed;
         Show(color);
     }
@@ -105,7 +109,7 @@ public sealed partial class TrailRow : ObservableObject
     private void Mark(Rgb? color)
     {
         var hex = color is null ? null : Rgb.Hex(BoostTrail.Lifted(color));
-        Swatches = [new TrailSwatch("Its own", OwnHex, color is null, true),
+        Swatches = [new TrailSwatch(_ownLabel, OwnHex, color is null, true),
             .. Colours.Select(c => new TrailSwatch(c.Label, c.Hex, c.Hex == hex))];
     }
 }
