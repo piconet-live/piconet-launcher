@@ -4,7 +4,7 @@ using Online.Protocol;
 namespace Launcher.Core;
 
 /// <summary>A practice run as the player sets it up on Play's Practice page: solo, alone, no
-/// CPU racers, in the game's own Practice mode, with a minute's rewind and one save; its rules are a custom lobby's
+/// CPU racers, in the game's own Practice mode, with five minutes of rewind and one save; its rules are a custom lobby's
 /// for one player (<see cref="HostRules.Alone"/>), Quick Play's until the player changes
 /// them. Every value is kept inside the game's own ranges whatever is asked.</summary>
 /// <param name="Course">The course's number (<see cref="CourseCups"/>).</param>
@@ -32,7 +32,7 @@ public sealed record PracticeSetup(int Course, int Machine, string? StatPack, in
     public const int Unlimited = 0;
 
     /// <summary>How far a rewind reaches, in seconds (the game's rolling buffer).</summary>
-    public const int RewindSeconds = 60;
+    public const int RewindSeconds = 300;
 
     /// <summary>The first course, the first machine, the disc's stats, unlimited laps and Quick Play's other rules.</summary>
     public static PracticeSetup Default { get; } = new(1, 0, null, HostRules.MachineSetting.Default, Unlimited,

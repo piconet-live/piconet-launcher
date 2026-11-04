@@ -164,7 +164,7 @@ public sealed class PracticePageTests : IDisposable
         // the host's rules that mean something alone, from the one list a custom lobby shows too; none of the others
         Assert.Equal(HostRules.Alone.Select(r => r.Label).Order(), labels.Except(["Machine", "Rewind", "Save · Load"]).Order());
         Assert.DoesNotContain(labels, l => HostRules.All.Any(r => r.Reach != RuleReach.Alone && r.Label == l));
-        Assert.Contains(RowOf(window, "Rewind").GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "1'00\"");
+        Assert.Contains(RowOf(window, "Rewind").GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "5'00\"");
         Assert.Contains(RowOf(window, "Save · Load").GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "D-pad right · left");
 
         // a cup's chip shows its five cards; a card pressed is the course, and the only one framed
@@ -255,7 +255,7 @@ public sealed class PracticePageTests : IDisposable
     }
 
     private static IReadOnlyList<RuleGroup> EveryKind(List<string> garage) => RuleGroup.Of(
-        [new ValueRule("Rewind", "1'00\""), new MachineRule("Machine", "Blue Falcon", () => garage.Add("garage")),
+        [new ValueRule("Rewind", "5'00\""), new MachineRule("Machine", "Blue Falcon", () => garage.Add("garage")),
          new ChoiceRule("Stats", ["Stock", "Pack"]), new SegmentedRule("Courses", ["Vote", "Host picks"])],
         [new StepperRule("Players", 30, 2, 30), new SliderRule("Machine setting", 100, 0, 100), new SwitchRule("Restore", false)],
         [new TextRule("Name", "Lobby name"), new RangeRule("Setting range", 80, 100, 0, 100)]);
