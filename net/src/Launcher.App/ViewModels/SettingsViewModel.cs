@@ -50,6 +50,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         AuroraTexturesIndex = Math.Max(0, LauncherSettings.AuroraTextureLevels.ToList().FindIndex(a => a.Level == s.AuroraTextures));
         AuroraColourblindIndex = Math.Max(0, LauncherSettings.AuroraColourblindFilters.ToList().FindIndex(a => a.Name == s.AuroraColourblind));
         AuroraHighRefreshIndex = Math.Max(0, LauncherSettings.AuroraHighRefreshes.ToList().FindIndex(a => a.Rate == s.AuroraHighRefresh));
+        RayTracing = s.RayTracing;
         Rumble = s.Rumble;
         ReducedMotion = s.ReducedMotion;
         InputDelayIndex = s.RaceInputDelay;
@@ -64,6 +65,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         PadNavigation = s.PadNavigation;
         PendingScale = _scale = s.ShownInterfaceScale;
         _loading = false;
+        _ = HearTheCardAsync();
         // the first screen can set the disc after this page was made
         state.Changed += () => OnUi(() =>
         {
@@ -261,6 +263,29 @@ public sealed partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     public partial int AuroraHighRefreshIndex { get; set; }
 
+    /// <summary>Ray tracing (<c>"auroraRayTracing"</c>), with Aurora's rows. Its box can be ticked once the check of the
+    /// graphics card has said it can (<see cref="RayTracingCard"/>); until then, and on a card that cannot, it cannot be
+    /// changed, and <see cref="RayTracingReason"/> says why beside it.</summary>
+    [ObservableProperty]
+    public partial bool RayTracing { get; set; }
+
+    [ObservableProperty]
+    public partial bool RayTracingPossible { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RayTracingReasonShown))]
+    public partial string RayTracingReason { get; set; } = "";
+
+    public bool RayTracingReasonShown => RayTracingReason.Length > 0;
+
+    /// <summary>The card's answer, from the check the launcher asks once (off the window's thread).</summary>
+    private async Task HearTheCardAsync()
+    {
+        var card = await RayTracingCard.Check().ConfigureAwait(true);
+        RayTracingPossible = card.Can;
+        RayTracingReason = card.Reason ?? "";
+    }
+
     /// <summary>A test build shows the frame rate whatever the setting says (<see cref="LauncherSettings.FrameRateShown"/>):
     /// its box is ticked and cannot be changed, and the file keeps the player's own value.</summary>
     public bool FrameRateAlwaysShown { get; } = StackStamp.Current.Test;
@@ -413,6 +438,8 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
     partial void OnAuroraHighRefreshIndexChanged(int value) => Save();
 
+    partial void OnRayTracingChanged(bool value) => Save();
+
     partial void OnRumbleChanged(bool value) => Save();
 
     partial void OnReducedMotionChanged(bool value)
@@ -506,6 +533,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
             AuroraTextures = AuroraTexturesIndex >= 0 && AuroraTexturesIndex < LauncherSettings.AuroraTextureLevels.Count ? LauncherSettings.AuroraTextureLevels[AuroraTexturesIndex].Level : s.AuroraTextures,
             AuroraColourblind = AuroraColourblindIndex >= 0 && AuroraColourblindIndex < LauncherSettings.AuroraColourblindFilters.Count ? LauncherSettings.AuroraColourblindFilters[AuroraColourblindIndex].Name : s.AuroraColourblind,
             AuroraHighRefresh = AuroraHighRefreshIndex >= 0 && AuroraHighRefreshIndex < LauncherSettings.AuroraHighRefreshes.Count ? LauncherSettings.AuroraHighRefreshes[AuroraHighRefreshIndex].Rate : 0,
+            RayTracing = RayTracing,
             Rumble = Rumble,
             ReducedMotion = ReducedMotion,
             // (a list with nothing selected says -1: the setting stays what it is)

@@ -26,10 +26,13 @@ public sealed partial class AppState
     /// <summary>The HUD's keys: left out in a build that does not offer the modern HUD (a test build only, for 0.6).</summary>
     private (bool Modern, string? Meter) Hud => Settings.HudLaunchKeys(offered: StackStamp.Current.Test);
 
-    /// <summary>The picture engine's keys: left out in a build that does not offer Aurora, and at their defaults.</summary>
+    /// <summary>The picture engine's keys: left out in a build that does not offer Aurora, and at their defaults. Ray
+    /// tracing is left out on a graphics card the check found cannot (<see cref="RayTracingCard"/>).</summary>
     private GameWindow WithAurora(GameWindow window)
     {
-        var (engine, size, edges, textures, colourblind, highRefresh) = Settings.AuroraLaunchKeys(offered: StackStamp.Current.Test);
-        return window with { Renderer = engine, AuroraSize = size, AuroraEdges = edges, AuroraTextures = textures, AuroraColourblind = colourblind, AuroraHighRefresh = highRefresh };
+        var (engine, size, edges, textures, colourblind, highRefresh, rays) = Settings.AuroraLaunchKeys(offered: StackStamp.Current.Test,
+            cardRayTraces: RayTracingCard.Known?.Can != false);
+        return window with { Renderer = engine, AuroraSize = size, AuroraEdges = edges, AuroraTextures = textures, AuroraColourblind = colourblind,
+            AuroraHighRefresh = highRefresh, AuroraRayTracing = rays };
     }
 }
