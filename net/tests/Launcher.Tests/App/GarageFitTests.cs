@@ -93,8 +93,35 @@ public sealed class GarageFitTests : IDisposable
         var inset = garage.TranslatePoint(new Point(16, 0), window)!.Value.X - garage.TranslatePoint(default, window)!.Value.X;
         Assert.True(panel.Right <= stage.Right - inset + 0.5, $"{at}: the panel ends at {panel.Right}, not 16 px in from the stage's edge {stage.Right}");
         Assert.True(page.Extent.Height <= page.Viewport.Height + 0.5, $"{at}: PREVIEW scrolls ({page.Extent.Height} in {page.Viewport.Height})");
+        TrailFits(window, garage, model, at);
         model.BackCommand.Execute(null);
         PumpFor(100);
+    }
+
+    /// <summary>The Trail tab: its list ends above the row of actions, and when the list is taller than its room it
+    /// scrolls instead of drawing under them; at the least window every row shows without scrolling.</summary>
+    private static void TrailFits(Window window, GarageView garage, GarageViewModel model, string at)
+    {
+        var section = model.ShownSection;
+        model.ShowSectionCommand.Execute(model.Sections.Single(t => t.Index == GarageViewModel.TrailSection));
+        PumpFor(150);
+        var list = Named<ScrollViewer>(garage, "TrailList");
+        var setting = In(window, Named<Control>(garage, "SettingRow"));
+        var shown = In(window, list);
+        Assert.True(list.IsEffectivelyVisible, $"{at}: no Trail list");
+        Assert.True(shown.Bottom <= setting.Top + 0.5, $"{at}: the Trail list ends at {shown.Bottom}, under the actions at {setting.Top}");
+        Assert.True(list.Extent.Height <= list.Viewport.Height + 0.5, $"{at}: the Trail list scrolls ({list.Extent.Height} in {list.Viewport.Height})");
+        if (Environment.GetEnvironmentVariable("LOBBY_SHOTS") is { Length: > 0 } folder)
+        {
+            model.TrailSparks.PickCommand.Execute(model.TrailSparks.Swatches[4]);
+            PumpFor(150);
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+            Directory.CreateDirectory(folder);
+            window.CaptureRenderedFrame()?.Save(Path.Combine(folder, $"garage-trail-{window.Width}x{window.Height}-{garage.Bounds.Width:0}.png"), new Avalonia.Media.Imaging.PngBitmapEncoderOptions());
+            model.TrailSparks.PickCommand.Execute(model.TrailSparks.Swatches[0]);
+        }
+        model.ShowSectionCommand.Execute(model.Sections.Single(t => t.Index == section));
+        PumpFor(50);
     }
 
     [Theory]

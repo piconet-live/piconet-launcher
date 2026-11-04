@@ -40,7 +40,7 @@ public sealed partial class AppState
         {
             Update(s => s with { Practice = kept });
         }
-        PracticeMatch.Write(file, setup, racer.Name, racer.LookOf(setup.Machine), DateTimeOffset.Now, pack, mode);
+        PracticeMatch.Write(file, setup, racer.Name, racer.LookOf(setup.Machine), DateTimeOffset.Now, pack, mode, racer.Trail);
         return PlayMatch(file, run: GameRun.Practice, course: setup.Kept().Course, record: Settings.RecordPractice);
     }
 }

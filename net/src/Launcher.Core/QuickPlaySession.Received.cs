@@ -138,7 +138,7 @@ public sealed partial class QuickPlaySession
         Sent = new RacedMachine(Machine.Value, CustomMachine.Checked(profile.Custom));
         _ = Client.EnterQuickPlayAsync(Machine.Value, look.Color ?? profile.Color,
             w.Rules?.MachineSetting.Clamp(Math.Clamp(look.Setting, 0, 100)),
-            look.StockColor, profile.Custom);
+            look.StockColor, profile.Custom, profile.Trail);
         ServerHasName(settings.Racer.Name.Trim());   // the hello's; a name saved since then goes now
     }
 

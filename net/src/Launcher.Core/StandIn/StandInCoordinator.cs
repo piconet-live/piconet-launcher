@@ -106,7 +106,7 @@ public sealed class StandInCoordinator : ICoordinatorConnection
     private StandInLobby Lobby => _rooms.Current ?? _quick;
 
     public Task EnterQuickPlayAsync(int machine, Rgb color, int? setting = null, int? stockColor = null,
-        CustomMachine? custom = null, CancellationToken cancel = default) => Done(() => _quick.Queue(machine, color, stockColor));
+        CustomMachine? custom = null, BoostTrail? trail = null, CancellationToken cancel = default) => Done(() => _quick.Queue(machine, color, stockColor));
 
     public Task RaceOverAsync(string matchId, RaceSnapshot? final = null, CancellationToken cancel = default) => Task.CompletedTask;
 
@@ -132,7 +132,7 @@ public sealed class StandInCoordinator : ICoordinatorConnection
     public Task VoteCourseAsync(string matchId, int choice, CancellationToken cancel = default) => Done(() => Lobby.VoteCourse(matchId, choice));
 
     public Task ChooseMachineAsync(string matchId, int machine, Rgb color, int? setting = null, int? stockColor = null,
-        CustomMachine? custom = null, string? pack = null, CancellationToken cancel = default) =>
+        CustomMachine? custom = null, string? pack = null, BoostTrail? trail = null, CancellationToken cancel = default) =>
         Done(() => Lobby.Choose(matchId, machine, color, stockColor));
 
     public Task BrowseLobbiesAsync(bool browse, CancellationToken cancel = default) => Done(() => _rooms.Browse(browse));

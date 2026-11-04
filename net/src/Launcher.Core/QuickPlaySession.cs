@@ -274,7 +274,7 @@ public sealed partial class QuickPlaySession(LauncherSettings settings, string w
         Changed?.Invoke();
         return Client.ChooseMachineAsync(c.Choose.MatchId, machine, look.Color ?? profile.Color,
             MachineSetting?.Clamp(Math.Clamp(look.Setting, 0, 100)), look.StockColor, custom,
-            Lobby?.SeatPacks is not null ? SeatPack : null);
+            Lobby?.SeatPacks is not null ? SeatPack : null, profile.Trail);
     }
 
 

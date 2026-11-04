@@ -47,9 +47,11 @@ public sealed record MachineLook(int Machine, int? StockColor = 0, Rgb? Color = 
 /// machine; <see cref="LookOf"/> reads both. <see cref="Custom"/>: a garage-built machine the racer races in place
 /// of <see cref="Machine"/> (sent with the queue and the machine choice; picked in the Garage's builder); null: the
 /// stock machine. <see cref="Customs"/>: the machines saved in the builder, the one raced among them.
+/// <see cref="Trail"/>: the racer's boost trail colours, whichever machine they race; null: the machine's own.
 /// </summary>
 public sealed record RacerProfile(string Name, int Machine, Rgb Color, int Setting = 100, int? StockColor = 0,
-    IReadOnlyList<MachineLook>? Looks = null, CustomMachine? Custom = null, IReadOnlyList<CustomBuild>? Customs = null)
+    IReadOnlyList<MachineLook>? Looks = null, CustomMachine? Custom = null, IReadOnlyList<CustomBuild>? Customs = null,
+    BoostTrail? Trail = null)
 {
     /// <summary>The most machines the builder keeps.</summary>
     public const int MostCustoms = 12;
@@ -93,7 +95,7 @@ public sealed record RacerProfile(string Name, int Machine, Rgb Color, int Setti
         other is not null && Name == other.Name && Machine == other.Machine && Color == other.Color &&
         Setting == other.Setting && StockColor == other.StockColor &&
         (Looks ?? []).SequenceEqual(other.Looks ?? []) && SameCustom(Custom, other.Custom) &&
-        (Customs ?? []).SequenceEqual(other.Customs ?? []);
+        (Customs ?? []).SequenceEqual(other.Customs ?? []) && Trail == other.Trail;
 
     private static bool SameCustom(CustomMachine? a, CustomMachine? b) =>
         a is null ? b is null : b is not null && a with { Colors = null } == b with { Colors = null }
