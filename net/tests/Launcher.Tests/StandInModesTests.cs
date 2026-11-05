@@ -10,11 +10,14 @@ namespace Launcher.Tests;
 /// draw's card names what the course drawn races. The official rotation loads, with no notice. A rotation that does not
 /// load: the stand-in votes on courses alone and says why. A custom lobby's host mode file is compiled as the service compiles it: a file that
 /// does not compile is refused with its line (bad_mode), one that does names the lobby's mode.</summary>
-[Collection(StandInModesTests.Name)]
-public sealed class StandInModesTests
+[Collection(HeadlessApp.Name)]   // the stand-in's rotation is the process's: these take turns with the app's tests
+public sealed class StandInModesTests : IDisposable
 {
-    /// <summary>The stand-in's rotation is the process's: these tests take turns.</summary>
-    public const string Name = "stand-in rotation";
+    /// <summary>The folder the stand-in raced before the test, which it races again after (the app's tests list its
+    /// official modes).</summary>
+    private readonly string _before = StandInService.QuickPlayFolder;
+
+    public void Dispose() => StandInService.UseQuickPlay(_before);
 
     private static string Vectors => RepositoryFolder.Protocol("protocol", "tests", "vectors", "quickplay");
 
