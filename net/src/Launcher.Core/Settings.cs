@@ -193,24 +193,6 @@ public sealed record LauncherSettings
     /// the launch file's <c>"showInputs"</c>, written only when on).</summary>
     public bool ShowInputs { get; init; }
 
-    /// <summary>The game's HUD is Piconet's own instead of the game's (off by default, Classic; the launch file's
-    /// <c>"modernHud"</c>, written only when on, and only by a test build: <see cref="HudLaunchKeys"/>).</summary>
-    public bool ModernHud { get; init; }
-
-    /// <summary>The HUD settings as the launch file has them: both left out unless this build offers the modern HUD
-    /// (a test build: the owner, 2026-11-02, the modern HUD is not ready for 0.6's players, who keep the game's own),
-    /// whatever an older settings file says; the meter left out at its default.</summary>
-    public (bool Modern, string? Meter) HudLaunchKeys(bool offered) =>
-        offered ? (ModernHud, HudMeter == HudMeters[0].Name ? null : HudMeter) : (false, null);
-
-    /// <summary>The modern HUD's energy meter by its name (the launch file's <c>"hudMeter"</c>): one of
-    /// <see cref="HudMeters"/>; anything else draws the first.</summary>
-    public string HudMeter { get; init; } = HudMeters[0].Name;
-
-    /// <summary>The energy meters of the modern HUD, the default first: the name the game knows it by, the words in Settings.
-    /// A new meter is one more line here and one in the runner's table (hud_layout.h).</summary>
-    public static IReadOnlyList<(string Name, string Words)> HudMeters { get; } = [("blade", "Blade"), ("rev", "Rev cells")];
-
     /// <summary>Who draws the game's picture (the launch file's <c>"renderer"</c>): one of <see cref="PictureEngines"/>,
     /// the emulator by default. Anything else in the file is the default.</summary>
     public string PictureEngine { get; init; } = PictureEngines[0].Name;
