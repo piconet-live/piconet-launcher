@@ -15,9 +15,6 @@ public sealed partial class CustomBuilderViewModel
     private const string Unknown = "#5A6478";
     private bool _showing;
 
-    /// <summary>The parts a colour is chosen for.</summary>
-    public static IReadOnlyList<string> PartTabs { get; } = ["Body", "Cockpit", "Booster"];
-
     /// <summary>The part whose colour is shown: 0 body, 1 cockpit, 2 booster.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(PartTabIndex))]

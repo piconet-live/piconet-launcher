@@ -60,6 +60,10 @@ public sealed partial class GarageViewModel : ViewModelBase
             {
                 OnPropertyChanged(nameof(ShownBuild));
                 OnPropertyChanged(nameof(CanRemove));
+                if (TrailShown && CustomShown)
+                {
+                    ShowTrailSwatches();   // (another booster: its own trail colours)
+                }
             }
         };
         LoadLenses();
@@ -148,6 +152,10 @@ public sealed partial class GarageViewModel : ViewModelBase
         _loading = false;
         Swatches = Placeholders();
         _ = RefreshSwatchesAsync(value);
+        if (TrailShown && !CustomShown)
+        {
+            ShowTrailSwatches();
+        }
     }
 
     partial void OnColorHexChanged(string value)
@@ -282,6 +290,7 @@ public sealed partial class GarageViewModel : ViewModelBase
     /// raced are not the garage's.</summary>
     public void SaveNow()
     {
+        SaveTrailNow();
         if (!_changed || MachineIndex < 0)
         {
             return;

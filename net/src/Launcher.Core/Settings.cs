@@ -47,7 +47,8 @@ public sealed record MachineLook(int Machine, int? StockColor = 0, Rgb? Color = 
 /// machine; <see cref="LookOf"/> reads both. <see cref="Custom"/>: a garage-built machine the racer races in place
 /// of <see cref="Machine"/> (sent with the queue and the machine choice; picked in the Garage's builder); null: the
 /// stock machine. <see cref="Customs"/>: the machines saved in the builder, the one raced among them.
-/// <see cref="Trail"/>: the racer's boost trail colours, whichever machine they race; null: the machine's own.
+/// <see cref="Trail"/>: the racer's boost trail, whichever machine they race: one colour in its three words
+/// (<see cref="TrailColour"/>); null: the machine's own.
 /// </summary>
 public sealed record RacerProfile(string Name, int Machine, Rgb Color, int Setting = 100, int? StockColor = 0,
     IReadOnlyList<MachineLook>? Looks = null, CustomMachine? Custom = null, IReadOnlyList<CustomBuild>? Customs = null,
