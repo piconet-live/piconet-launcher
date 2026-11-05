@@ -9,21 +9,65 @@ namespace Launcher.Core;
 /// kept: it is never used.</summary>
 public sealed record ModFile(string Disc, ModFileClass Class, bool Online, string? Why, bool New, long Size, string Sha256);
 
+/// <summary>One part of a mod: a folder of it laid out like the disc (<see cref="ModImport.Survey"/>'s roots), its
+/// path in the mod, whether it is ticked, its files kept (every file of it, ticked or not: the player may tick it
+/// later), and the paths of its files that are the disc's own (none kept: in a later part they put the disc's file
+/// back over an earlier part's).</summary>
+public sealed record ModPart(string Path, bool On, IReadOnlyList<ModFile> Files, IReadOnlyList<string> Same);
+
 /// <summary>
 /// A mod's own manifest (<c>Mods/ID/manifest.json</c>), written by the import: its name, the file it came from and
-/// that file's hash, the folders chosen, each file kept with its class and the guard's word, how many were left
-/// out and why, and its picture. Mods ship none of this; this is the launcher's own.
+/// that file's hash, its parts with their files (each with its class and the guard's word) and which are ticked, how
+/// many files were left out and why, and its picture. Mods ship none of this; this is the launcher's own. A file is
+/// kept once in <c>store/</c> by its SHA-256, however many parts have it. A mod of the first form (imported before
+/// the tree) holds only the files of the folders chosen then, under <c>files/</c> by disc path, all of them in its
+/// last part: its parts cannot change (<see cref="Fixed"/>).
 /// </summary>
 public sealed record ModManifest(string Id, string Name, string Source, string SourceSha256, DateTimeOffset Imported,
-    IReadOnlyList<string> Chosen, IReadOnlyList<ModFile> Files, IReadOnlyDictionary<string, int> Dropped, string? Picture)
+    IReadOnlyList<ModPart> Parts, IReadOnlyDictionary<string, int> Dropped, string? Picture, int Form = ModManifest.Format)
 {
-    public const int Format = 1;
+    public const int Format = 2;
 
-    public const string FileName = "manifest.json", PictureFile = "picture.png";
+    public const string FileName = "manifest.json", PictureFile = "picture.png", StoreFolder = "store";
+
+    /// <summary>A mod of the first form: its parts are as they were chosen at its import.</summary>
+    public bool Fixed => Form < 2;
+
+    /// <summary>The paths of the parts ticked.</summary>
+    public IReadOnlySet<string> PartsOn => Parts.Where(p => p.On).Select(p => p.Path).ToHashSet(StringComparer.Ordinal);
+
+    /// <summary>The manifest with these parts ticked (a fixed one as it is).</summary>
+    public ModManifest WithOn(IReadOnlySet<string> on)
+    {
+        ArgumentNullException.ThrowIfNull(on);
+        return Fixed ? this : this with { Parts = [.. Parts.Select(p => p with { On = on.Contains(p.Path) })] };
+    }
+
+    /// <summary>The files the mod lays over the disc: those of the ticked parts in Explorer's order, a later part's
+    /// over an earlier one's (and a later part's file that is the disc's own takes an earlier one's away), by disc path.</summary>
+    public IReadOnlyList<ModFile> Files
+    {
+        get
+        {
+            var files = new Dictionary<string, ModFile>(StringComparer.OrdinalIgnoreCase);
+            foreach (var part in Parts.Where(p => p.On).OrderBy(p => p.Path, ExplorerOrder.Paths))
+            {
+                foreach (var file in part.Files)
+                {
+                    files[file.Disc] = file;
+                }
+                foreach (var same in part.Same)
+                {
+                    files.Remove(same);
+                }
+            }
+            return [.. files.Values.OrderBy(f => f.Disc, StringComparer.Ordinal)];
+        }
+    }
 
     /// <summary>The courses the mod's files name (stage/stNN, selstNN, COLI_COURSENN), in order: for a picture
     /// where the mod has none of its own.</summary>
-    public IReadOnlyList<int> Courses => [.. Files.Select(f => System.Text.RegularExpressions.Regex.Match(f.Disc,
+    public IReadOnlyList<int> Courses => [.. Parts.SelectMany(p => p.Files).Select(f => System.Text.RegularExpressions.Regex.Match(f.Disc,
             @"^stage/(?:st|selst|COLI_COURSE)(\d{2})\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
         .Where(m => m.Success).Select(m => int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture)).Distinct().Order()];
 }
@@ -31,20 +75,31 @@ public sealed record ModManifest(string Id, string Name, string Source, string S
 /// <summary>One mod in the player's list: its manifest, its folder, and whether it is on.</summary>
 public sealed record InstalledMod(ModManifest Manifest, string Folder, bool On)
 {
-    /// <summary>Where the mod's kept files are, laid out by disc path.</summary>
+    /// <summary>Where a mod of the first form keeps its files, laid out by disc path.</summary>
     public string Files => Path.Combine(Folder, "files");
+
+    /// <summary>Where a mod keeps its files by their SHA-256.</summary>
+    public string Store => Path.Combine(Folder, ModManifest.StoreFolder);
+
+    /// <summary>The file that holds a kept file's bytes.</summary>
+    public string PathOf(ModFile file)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+        return Manifest.Fixed ? Path.Combine(Files, file.Disc) : Path.Combine(Store, file.Sha256);
+    }
 
     /// <summary>The mod's own picture's file, or null.</summary>
     public string? Picture => Manifest.Picture is { } p && File.Exists(Path.Combine(Folder, p)) ? Path.Combine(Folder, p) : null;
 
-    /// <summary>The kept car data file, when the mod has one.</summary>
-    public string? CarData => Manifest.Files.FirstOrDefault(f => f.Class == ModFileClass.CarData) is { } f ? Path.Combine(Files, f.Disc) : null;
+    /// <summary>The kept car data file of the ticked parts, when there is one.</summary>
+    public string? CarData => Manifest.Files.FirstOrDefault(f => f.Class == ModFileClass.CarData) is { } f ? PathOf(f) : null;
 }
 
 /// <summary>
 /// The player's mods: the data folder's <c>Mods/</c>, one folder a mod (<see cref="ModImport"/>), and
-/// <c>Mods/mods.json</c>, their order and which are on. A mod's folder whose manifest cannot be read is no mod (left
-/// as it is); a mod the list does not name comes at the end, off.
+/// <c>Mods/mods.json</c>, their order, which are on, and which of each mod's parts are ticked (none said: as at its
+/// import). A mod's folder whose manifest cannot be read is no mod (left as it is); a mod the list does not name
+/// comes at the end, off.
 /// </summary>
 public sealed class ModLibrary(string dataFolder)
 {
@@ -68,18 +123,18 @@ public sealed class ModLibrary(string dataFolder)
             }
         }
         var list = new List<InstalledMod>();
-        foreach (var (id, on) in ReadList())
+        foreach (var (id, on, parts) in ReadList())
         {
             if (found.Remove(id, out var manifest))
             {
-                list.Add(new InstalledMod(manifest, Path.Combine(Folder, id), on));
+                list.Add(new InstalledMod(parts is null ? manifest : manifest.WithOn(parts), Path.Combine(Folder, id), on));
             }
         }
         list.AddRange(found.Values.OrderBy(m => m.Imported).Select(m => new InstalledMod(m, Path.Combine(Folder, m.Id), false)));
         return list;
     }
 
-    /// <summary>Writes the order and the switches.</summary>
+    /// <summary>Writes the order, the switches and the parts ticked.</summary>
     public void Save(IEnumerable<InstalledMod> mods)
     {
         ArgumentNullException.ThrowIfNull(mods);
@@ -87,7 +142,12 @@ public sealed class ModLibrary(string dataFolder)
         var array = new JsonArray();
         foreach (var mod in mods)
         {
-            array.Add(new JsonObject { ["id"] = mod.Manifest.Id, ["on"] = mod.On });
+            var entry = new JsonObject { ["id"] = mod.Manifest.Id, ["on"] = mod.On };
+            if (!mod.Manifest.Fixed)
+            {
+                entry["parts"] = new JsonArray([.. mod.Manifest.Parts.Where(p => p.On).Select(p => (JsonNode)JsonValue.Create(p.Path))]);
+            }
+            array.Add(entry);
         }
         var text = new JsonObject { ["format"] = 1, ["mods"] = array }.ToJsonString(Indented);
         var temp = Path.Combine(Folder, ListFile + ".new");
@@ -105,13 +165,13 @@ public sealed class ModLibrary(string dataFolder)
         }
     }
 
-    private List<(string Id, bool On)> ReadList()
+    private List<(string Id, bool On, HashSet<string>? Parts)> ReadList()
     {
-        var list = new List<(string, bool)>();
+        var list = new List<(string, bool, HashSet<string>?)>();
         try
         {
             var path = Path.Combine(Folder, ListFile);
-            if (!File.Exists(path) || new FileInfo(path).Length > 1 << 20)
+            if (!File.Exists(path) || new FileInfo(path).Length > 16 << 20)
             {
                 return list;
             }
@@ -123,7 +183,12 @@ public sealed class ModLibrary(string dataFolder)
                     if (m.ValueKind == JsonValueKind.Object && m.TryGetProperty("id", out var id) && id.ValueKind == JsonValueKind.String &&
                         !list.Exists(l => l.Item1 == id.GetString()))
                     {
-                        list.Add((id.GetString()!, m.TryGetProperty("on", out var on) && on.ValueKind == JsonValueKind.True));
+                        HashSet<string>? parts = null;
+                        if (m.TryGetProperty("parts", out var p) && p.ValueKind == JsonValueKind.Array)
+                        {
+                            parts = [.. p.EnumerateArray().Where(e => e.ValueKind == JsonValueKind.String).Select(e => e.GetString()!)];
+                        }
+                        list.Add((id.GetString()!, m.TryGetProperty("on", out var on) && on.ValueKind == JsonValueKind.True, parts));
                     }
                 }
             }
@@ -137,30 +202,46 @@ public sealed class ModLibrary(string dataFolder)
 
     private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
 
-    /// <summary>Writes a mod's manifest into its folder.</summary>
+    private static JsonObject FileJson(ModFile f)
+    {
+        var o = new JsonObject
+        {
+            ["disc"] = f.Disc,
+            ["class"] = f.Class.ToString().ToLowerInvariant(),
+            ["online"] = f.Online,
+            ["size"] = f.Size,
+            ["sha256"] = f.Sha256,
+        };
+        if (f.Why is { } why)
+        {
+            o["why"] = why;
+        }
+        if (f.New)
+        {
+            o["new"] = true;
+        }
+        return o;
+    }
+
+    /// <summary>Writes a mod's manifest into its folder (the form of today: a mod of the first form is never
+    /// written again).</summary>
     public static void WriteManifest(string folder, ModManifest m)
     {
         ArgumentNullException.ThrowIfNull(m);
-        var files = new JsonArray();
-        foreach (var f in m.Files)
+        if (m.Fixed)
         {
-            var o = new JsonObject
+            throw new ArgumentException("a manifest of the first form is not written", nameof(m));
+        }
+        var parts = new JsonArray();
+        foreach (var part in m.Parts)
+        {
+            parts.Add(new JsonObject
             {
-                ["disc"] = f.Disc,
-                ["class"] = f.Class.ToString().ToLowerInvariant(),
-                ["online"] = f.Online,
-                ["size"] = f.Size,
-                ["sha256"] = f.Sha256,
-            };
-            if (f.Why is { } why)
-            {
-                o["why"] = why;
-            }
-            if (f.New)
-            {
-                o["new"] = true;
-            }
-            files.Add(o);
+                ["path"] = part.Path,
+                ["on"] = part.On,
+                ["files"] = new JsonArray([.. part.Files.Select(f => (JsonNode)FileJson(f))]),
+                ["same"] = new JsonArray([.. part.Same.Select(d => (JsonNode)JsonValue.Create(d))]),
+            });
         }
         var dropped = new JsonObject();
         foreach (var (why, count) in m.Dropped)
@@ -175,19 +256,19 @@ public sealed class ModLibrary(string dataFolder)
             ["source"] = m.Source,
             ["sourceSha256"] = m.SourceSha256,
             ["imported"] = m.Imported.ToString("o", CultureInfo.InvariantCulture),
-            ["chosen"] = new JsonArray([.. m.Chosen.Select(c => (JsonNode)JsonValue.Create(c))]),
             ["dropped"] = dropped,
-            ["files"] = files,
+            ["parts"] = parts,
         };
         if (m.Picture is { } picture)
         {
             root["picture"] = picture;
         }
-        File.WriteAllText(Path.Combine(folder, ModManifest.FileName), root.ToJsonString(Indented));
+        File.WriteAllText(Path.Combine(folder, ModManifest.FileName), root.ToJsonString());
     }
 
-    /// <summary>A mod's manifest; null when it is not one this launcher wrote (or cannot be read). The files it names
-    /// are held to paths inside the mod's folder.</summary>
+    /// <summary>A mod's manifest, of either form; null when it is not one this launcher wrote (or cannot be read). The
+    /// files it names are held to paths inside the mod's folder: a disc path that stays inside it, a SHA-256 that is
+    /// one.</summary>
     public static ModManifest? ReadManifest(string folder)
     {
         try
@@ -199,21 +280,35 @@ public sealed class ModLibrary(string dataFolder)
             }
             using var doc = JsonDocument.Parse(File.ReadAllText(path));
             var r = doc.RootElement;
-            if (r.GetProperty("format").GetInt32() != ModManifest.Format)
+            var form = r.GetProperty("format").GetInt32();
+            if (form is not (1 or ModManifest.Format))
             {
                 return null;
             }
-            var files = new List<ModFile>();
-            foreach (var f in r.GetProperty("files").EnumerateArray())
+            List<ModPart> parts = [];
+            if (form == 1)
             {
-                if (ModArchive.Safe(f.GetProperty("disc").GetString()) is not { } disc ||
-                    !Enum.TryParse<ModFileClass>(f.GetProperty("class").GetString(), true, out var kind))
+                // the folders chosen at the import, all of them ticked, the files (one each by disc path) in the last
+                var files = Files(r.GetProperty("files"), form);
+                if (files is null)
                 {
                     return null;
                 }
-                files.Add(new ModFile(disc, kind, f.GetProperty("online").GetBoolean(),
-                    f.TryGetProperty("why", out var why) ? why.GetString() : null, f.TryGetProperty("new", out var n) && n.GetBoolean(),
-                    f.GetProperty("size").GetInt64(), f.GetProperty("sha256").GetString() ?? ""));
+                var chosen = r.GetProperty("chosen").EnumerateArray().Select(c => c.GetString() ?? "").ToList();
+                parts = [.. chosen.Select((c, i) => new ModPart(c, true, i == chosen.Count - 1 ? files : [], []))];
+            }
+            else
+            {
+                foreach (var part in r.GetProperty("parts").EnumerateArray())
+                {
+                    var files = Files(part.GetProperty("files"), form);
+                    var same = part.GetProperty("same").EnumerateArray().Select(d => ModArchive.Safe(d.GetString())).ToList();
+                    if (files is null || same.Contains(null))
+                    {
+                        return null;
+                    }
+                    parts.Add(new ModPart(part.GetProperty("path").GetString() ?? "", part.GetProperty("on").GetBoolean(), files, same!));
+                }
             }
             var dropped = new Dictionary<string, int>(StringComparer.Ordinal);
             foreach (var d in r.GetProperty("dropped").EnumerateObject())
@@ -224,7 +319,7 @@ public sealed class ModLibrary(string dataFolder)
             return new ModManifest(r.GetProperty("id").GetString() ?? "", r.GetProperty("name").GetString() ?? "Mod",
                 r.GetProperty("source").GetString() ?? "", r.GetProperty("sourceSha256").GetString() ?? "",
                 DateTimeOffset.Parse(r.GetProperty("imported").GetString() ?? "", CultureInfo.InvariantCulture),
-                [.. r.GetProperty("chosen").EnumerateArray().Select(c => c.GetString() ?? "")], files, dropped, picture);
+                form == 1 ? parts : [.. parts.OrderBy(x => x.Path, ExplorerOrder.Paths)], dropped, picture, form);
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or KeyNotFoundException
                                       or InvalidOperationException or FormatException)
@@ -232,4 +327,28 @@ public sealed class ModLibrary(string dataFolder)
             return null;
         }
     }
+
+    /// <summary>A list of files; null when one names a place outside the mod's folder: a disc path that leaves it, or
+    /// (in the store of today's form) a SHA-256 that is not 64 small hex digits.</summary>
+    private static List<ModFile>? Files(JsonElement list, int form)
+    {
+        var files = new List<ModFile>();
+        foreach (var f in list.EnumerateArray())
+        {
+            var sha = f.GetProperty("sha256").GetString() ?? "";
+            if (ModArchive.Safe(f.GetProperty("disc").GetString()) is not { } disc ||
+                !Enum.TryParse<ModFileClass>(f.GetProperty("class").GetString(), true, out var kind) ||
+                (form >= 2 && !IsSha256(sha)))
+            {
+                return null;
+            }
+            files.Add(new ModFile(disc, kind, f.GetProperty("online").GetBoolean(),
+                f.TryGetProperty("why", out var why) ? why.GetString() : null, f.TryGetProperty("new", out var n) && n.GetBoolean(),
+                f.GetProperty("size").GetInt64(), sha));
+        }
+        return files;
+    }
+
+    /// <summary>A SHA-256 as the import writes it: 64 hex digits in small letters.</summary>
+    public static bool IsSha256(string s) => s is { Length: 64 } && s.All(c => char.IsAsciiDigit(c) || c is >= 'a' and <= 'f');
 }

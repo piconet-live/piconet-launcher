@@ -85,6 +85,10 @@ public sealed partial class AppState
     /// <summary>A mod switched on or off.</summary>
     public void SetModOn(string id, bool on) => ChangeMods(list => [.. list.Select(m => m.Manifest.Id == id ? m with { On = on } : m)]);
 
+    /// <summary>A mod's parts ticked (the rest not): saved at once, used from the next game start.</summary>
+    public void SetModParts(string id, IReadOnlySet<string> on) =>
+        ChangeMods(list => [.. list.Select(m => m.Manifest.Id == id ? m with { Manifest = m.Manifest.WithOn(on) } : m)]);
+
     /// <summary>A mod moved one place up (-1) or down (1): a later mod's files win.</summary>
     public void MoveMod(string id, int by) => ChangeMods(list =>
     {
@@ -144,22 +148,35 @@ public sealed partial class AppState
     }
 
     /// <summary>The import, off the window's thread: the new mod goes to the end of the list, on (imported again, it
-    /// keeps its place and switch).</summary>
-    public Task<string?> ImportModAsync(ModSurvey survey, IReadOnlyList<string> chosen, IReadOnlyDictionary<string, string> disc,
+    /// keeps its place and switch, as does one of the first form imported from the same file, which it replaces).</summary>
+    public Task<string?> ImportModAsync(ModSurvey survey, IReadOnlySet<string> on, IReadOnlyDictionary<string, string> disc,
         IProgress<ModProgress>? progress, CancellationToken cancel)
     {
         var files = GameFilesFolder;
         return Task.Run(() =>
         {
             Directory.CreateDirectory(ModLibrary.Folder);
-            var (mod, refusal) = ModImport.Import(survey, chosen, files, disc, ModLibrary.Folder, progress, cancel);
+            var (mod, refusal) = ModImport.Import(survey, on, files, disc, ModLibrary.Folder, progress, cancel);
             if (mod is null)
             {
                 return refusal;
             }
             var installed = new InstalledMod(mod, Path.Combine(ModLibrary.Folder, mod.Id), true);
-            ChangeMods(list => list.Any(m => m.Manifest.Id == mod.Id)
-                ? [.. list.Select(m => m.Manifest.Id == mod.Id ? installed with { On = m.On } : m)]
+            bool Replaced(InstalledMod m) => m.Manifest.Id == mod.Id || (m.Manifest.Fixed && m.Manifest.SourceSha256 == mod.SourceSha256);
+            var old = (Mods ?? []).Where(m => m.Manifest.Id != mod.Id && Replaced(m)).ToList();
+            foreach (var m in old)
+            {
+                try
+                {
+                    ModLibrary.Remove(m);
+                }
+                catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+                {
+                    Report("Mod not removed");
+                }
+            }
+            ChangeMods(list => list.FirstOrDefault(Replaced) is { } first
+                ? [.. list.Where(m => m == first || !Replaced(m)).Select(m => m == first ? installed with { On = m.On } : m)]
                 : [.. list, installed]);
             return null;
         }, cancel);

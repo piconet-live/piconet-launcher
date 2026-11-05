@@ -9,7 +9,9 @@ namespace Launcher.App.ViewModels;
 /// <summary>
 /// One mod's card: its name and picture, its switch, and only what the player cannot know and must: a tag when part
 /// of it is not used online ("Single player") or never ("Code not used"), each with its reasons when pointed at.
-/// The picture is the mod's own preview, else the disc's picture of the first course it touches.
+/// The picture is the mod's own preview, else the disc's picture of the first course it touches. Pressed, a mod
+/// with several parts opens its tree (<see cref="ModTreeChoice"/>). A card stays as the list changes (its tree open
+/// as it was); only what it shows follows.
 /// </summary>
 public sealed partial class ModCard : ObservableObject
 {
@@ -19,21 +21,39 @@ public sealed partial class ModCard : ObservableObject
     {
         ArgumentNullException.ThrowIfNull(mod);
         _page = page;
+        Initial = mod.Manifest.Name.Length > 0 ? mod.Manifest.Name[..1].ToUpperInvariant() : "M";
+        Mod = mod;
+        Take(mod, at, count);
+    }
+
+    /// <summary>The card made what the list says now.</summary>
+    internal void Take(InstalledMod mod, int at, int count)
+    {
         Mod = mod;
         (IsFirst, IsLast) = (at == 0, at == count - 1);
-        _on = mod.On;
+        if (_on != mod.On)
+        {
+            _on = mod.On;
+            OnPropertyChanged(nameof(On));
+        }
         var files = mod.Manifest.Files;
         var offline = files.Where(f => f.Class != ModFileClass.Code && !ModOverlay.UsedOnline(f)).ToList();
         SinglePlayerWhy = string.Join("\n", offline.Select(Reason).Distinct(StringComparer.Ordinal));
         CodeWhy = files.Any(f => f.Class == ModFileClass.Code) ? ModGuard.CodeWhy : "";
         CanMakePack = files.Any(f => f.Class == ModFileClass.CarData && !f.Online);
-        Initial = mod.Manifest.Name.Length > 0 ? mod.Manifest.Name[..1].ToUpperInvariant() : "M";
+        OnPropertyChanged(nameof(HasTree));
+        if (Tree is { } tree && !tree.Tree.Parts.SequenceEqual(mod.Manifest.Parts.Select(p => p.Path).Order(ExplorerOrder.Paths)))
+        {
+            // imported again with other parts: a new tree when it is opened
+            (Tree, TreeOpen) = (null, false);
+        }
+        Tree?.Take(mod.Manifest.PartsOn);
     }
 
     /// <summary>A file's reason in a few words, without the tag's own "single player only".</summary>
     private static string Reason(ModFile file) => (file.Why ?? "Single player").Replace(": single player only", "", StringComparison.Ordinal);
 
-    public InstalledMod Mod { get; }
+    public InstalledMod Mod { get; private set; }
 
     public string Id => Mod.Manifest.Id;
 
@@ -63,27 +83,36 @@ public sealed partial class ModCard : ObservableObject
         }
     }
 
-    public bool IsFirst { get; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanMoveUp))]
+    public partial bool IsFirst { get; private set; }
 
-    public bool IsLast { get; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanMoveDown))]
+    public partial bool IsLast { get; private set; }
 
     public bool CanMoveUp => !IsFirst;
 
     public bool CanMoveDown => !IsLast;
 
     /// <summary>Why part of the mod is single player only, a line a reason; empty: all of it is used online.</summary>
-    public string SinglePlayerWhy { get; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SinglePlayer), nameof(HasTags))]
+    public partial string SinglePlayerWhy { get; private set; } = "";
 
     public bool SinglePlayer => SinglePlayerWhy.Length > 0;
 
-    public string CodeWhy { get; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CodeNotUsed), nameof(HasTags))]
+    public partial string CodeWhy { get; private set; } = "";
 
     public bool CodeNotUsed => CodeWhy.Length > 0;
 
     public bool HasTags => SinglePlayer || CodeNotUsed;
 
     /// <summary>The mod's car data changes the race: it can be made a stat pack.</summary>
-    public bool CanMakePack { get; }
+    [ObservableProperty]
+    public partial bool CanMakePack { get; private set; }
 
     [ObservableProperty]
     public partial string? PackFile { get; set; }
@@ -93,6 +122,28 @@ public sealed partial class ModCard : ObservableObject
 
     [ObservableProperty]
     public partial bool Removing { get; set; }
+
+    /// <summary>The mod has parts to tick: more than one.</summary>
+    public bool HasTree => Mod.Manifest.Parts.Count > 1;
+
+    /// <summary>The tree, made when it is first opened.</summary>
+    [ObservableProperty]
+    public partial ModTreeChoice? Tree { get; private set; }
+
+    [ObservableProperty]
+    public partial bool TreeOpen { get; set; }
+
+    [RelayCommand]
+    private void ToggleTree()
+    {
+        if (!HasTree)
+        {
+            return;
+        }
+        Tree ??= new ModTreeChoice(ModTree.Of(Name, Mod.Manifest.Parts.Select(p => p.Path)), Mod.Manifest.PartsOn, !Mod.Manifest.Fixed,
+            on => _page.SetParts(this, on));
+        TreeOpen = !TreeOpen;
+    }
 
     [RelayCommand]
     private void MoveUp() => _page.Move(this, -1);
@@ -113,23 +164,10 @@ public sealed partial class ModCard : ObservableObject
     private void ShowPack() => _page.Reveal(PackFile);
 }
 
-/// <summary>One folder of a mod the player may take, as the chooser lists it.</summary>
-public sealed partial class ModRootChoice(ModRoot root) : ObservableObject
-{
-    public ModRoot Root { get; } = root;
-
-    public string Label => Root.Label;
-
-    public int Files => Root.Files;
-
-    [ObservableProperty]
-    public partial bool On { get; set; } = root.OnByDefault;
-}
-
 /// <summary>
 /// The Mods page: the player's mods as cards in their order (a later one's files win), each with its switch, up and
-/// down, and remove; and the import (a .zip, a .7z or a folder): where the mod has several folders a short list to
-/// choose from, then the unpacking with its bar and Cancel. Every read and write runs off the window's thread.
+/// down, and remove, and its tree of parts; and the import (a .zip, a .7z or a folder): where the mod has several
+/// parts the same tree to tick, then the unpacking with its bar and Cancel. Every read and write runs off the window's thread.
 /// </summary>
 public sealed partial class ModsViewModel : ViewModelBase
 {
@@ -153,9 +191,11 @@ public sealed partial class ModsViewModel : ViewModelBase
 
     public bool NoCards => Cards.Count == 0 && !Choosing && !Importing;
 
-    public ObservableCollection<ModRootChoice> Roots { get; } = [];
+    /// <summary>The chooser's tree: the parts of the mod being imported.</summary>
+    [ObservableProperty]
+    public partial ModTreeChoice? Choice { get; private set; }
 
-    /// <summary>The chooser shows: the mod has several folders.</summary>
+    /// <summary>The chooser shows: the mod has several parts.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(NoCards), nameof(Idle))]
     public partial bool Choosing { get; set; }
@@ -177,16 +217,33 @@ public sealed partial class ModsViewModel : ViewModelBase
     [ObservableProperty]
     public partial string Notice { get; set; } = "";
 
-    /// <summary>The cards as the list is now (an import, a switch, the order, a removal).</summary>
+    /// <summary>The cards as the list is now (an import, a switch, the order, a removal, a tick): a mod's card kept
+    /// where it was one already.</summary>
     public void Refresh()
     {
         var mods = _state.Mods ?? [];
-        var cards = mods.Select((m, i) => new ModCard(this, m, i, mods.Count)).ToList();
-        Cards.Clear();
-        foreach (var card in cards)
+        var known = Cards.ToDictionary(c => c.Id, StringComparer.Ordinal);
+        var cards = new List<ModCard>();
+        for (var i = 0; i < mods.Count; i++)
         {
-            Cards.Add(card);
-            LoadPicture(card);
+            if (known.TryGetValue(mods[i].Manifest.Id, out var card))
+            {
+                card.Take(mods[i], i, mods.Count);
+            }
+            else
+            {
+                card = new ModCard(this, mods[i], i, mods.Count);
+                LoadPicture(card);
+            }
+            cards.Add(card);
+        }
+        if (!cards.SequenceEqual(Cards))
+        {
+            Cards.Clear();
+            foreach (var card in cards)
+            {
+                Cards.Add(card);
+            }
         }
         OnPropertyChanged(nameof(HasCards));
         OnPropertyChanged(nameof(NoCards));
@@ -231,6 +288,8 @@ public sealed partial class ModsViewModel : ViewModelBase
 
     internal void Switch(ModCard card, bool on) => _state.SetModOn(card.Id, on);
 
+    internal void SetParts(ModCard card, IReadOnlySet<string> on) => _state.SetModParts(card.Id, on);
+
     internal void Move(ModCard card, int by) => _state.MoveMod(card.Id, by);
 
     internal Task RemoveAsync(ModCard card) => _state.RemoveModAsync(card.Id);
@@ -271,31 +330,26 @@ public sealed partial class ModsViewModel : ViewModelBase
         ImportName = survey.Name;
         if (survey.AsksChoice)
         {
-            Roots.Clear();
-            foreach (var root in survey.Roots)
-            {
-                Roots.Add(new ModRootChoice(root));
-            }
+            Choice = new ModTreeChoice(survey.Tree, survey.OnByDefault);
             Choosing = true;
             return;
         }
-        await ImportAsync([survey.Roots[0].Path]).ConfigureAwait(true);
+        await ImportAsync(survey.OnByDefault).ConfigureAwait(true);
     }
 
-    /// <summary>The chooser's IMPORT: the folders ticked, in the mod's own order.</summary>
+    /// <summary>The chooser's IMPORT: the whole mod, the parts ticked on.</summary>
     [RelayCommand]
     private async Task ImportChosen()
     {
-        var chosen = Roots.Where(r => r.On).Select(r => r.Root.Path).ToList();
-        if (chosen.Count == 0)
+        if (Choice is not { AnyOn: true } choice)
         {
             return;
         }
         Choosing = false;
-        await ImportAsync(chosen).ConfigureAwait(true);
+        await ImportAsync(choice.On).ConfigureAwait(true);
     }
 
-    private async Task ImportAsync(IReadOnlyList<string> chosen)
+    private async Task ImportAsync(IReadOnlySet<string> on)
     {
         if (_survey is not { } survey || _disc is not { } disc)
         {
@@ -308,7 +362,7 @@ public sealed partial class ModsViewModel : ViewModelBase
         var progress = new Progress<ModProgress>(p => Fraction = p.Total == 0 ? 0 : (double)p.Done / p.Total);
         try
         {
-            var refusal = await _state.ImportModAsync(survey, chosen, disc, progress, cancel.Token).ConfigureAwait(true);
+            var refusal = await _state.ImportModAsync(survey, on, disc, progress, cancel.Token).ConfigureAwait(true);
             Notice = refusal ?? "";
         }
         catch (OperationCanceledException)
@@ -320,6 +374,7 @@ public sealed partial class ModsViewModel : ViewModelBase
             Importing = false;
             _stop = null;
             _survey = null;
+            Choice = null;
         }
     }
 
@@ -331,6 +386,7 @@ public sealed partial class ModsViewModel : ViewModelBase
         {
             Choosing = false;
             _survey = null;
+            Choice = null;
             return;
         }
         _stop?.Invoke();

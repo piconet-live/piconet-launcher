@@ -115,7 +115,7 @@ public sealed class ModGuardTests
     }
 
     private static InstalledMod Mod(string id, bool on, params ModFile[] files) =>
-        new(new ModManifest(id, id, id + ".zip", "", DateTimeOffset.UnixEpoch, [""], files, new Dictionary<string, int>(), null),
+        new(new ModManifest(id, id, id + ".zip", "", DateTimeOffset.UnixEpoch, [new ModPart("", true, files, [])], new Dictionary<string, int>(), null),
             Path.Combine(Path.GetTempPath(), "mods", id), on);
 
     private static ModFile File(string disc, ModFileClass kind, bool online) => new(disc, kind, online, online ? null : "why", false, 1, "");
@@ -133,10 +133,10 @@ public sealed class ModGuardTests
 
         var overlay = ModOverlay.Of([first, second, off]);
 
-        Assert.Equal(["staff_ghost/ghost1.dat", "game/cardata.lz", "stage/st05.tpl.lz", "bg/bg_tow.tpl.lz"], overlay.Offline.Select(f => f.Disc));
-        Assert.Equal(["stage/st05.tpl.lz", "bg/bg_tow.tpl.lz"], overlay.Guarded.Select(f => f.Disc));
+        Assert.Equal(["game/cardata.lz", "staff_ghost/ghost1.dat", "bg/bg_tow.tpl.lz", "stage/st05.tpl.lz"], overlay.Offline.Select(f => f.Disc));
+        Assert.Equal(["bg/bg_tow.tpl.lz", "stage/st05.tpl.lz"], overlay.Guarded.Select(f => f.Disc));
         // the later mod's file wins
-        Assert.Contains(Path.Combine("mods", "b", "files"), overlay.Guarded[0].From, StringComparison.Ordinal);
+        Assert.Contains(Path.Combine("mods", "b", ModManifest.StoreFolder), overlay.Guarded.Single(f => f.Disc == "stage/st05.tpl.lz").From, StringComparison.Ordinal);
     }
 
     [Fact]
