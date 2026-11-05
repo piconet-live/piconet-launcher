@@ -39,6 +39,7 @@ public static partial class GameSkin
 
     private static readonly Dictionary<string, Bitmap?> Cache = [];
     private static readonly Dictionary<int, Task<IReadOnlyList<Online.Protocol.Rgb>?>> Swatches = [];
+    private static readonly Dictionary<int, Task<IReadOnlyList<Online.Protocol.Rgb>?>> Trails = [];
     private static readonly Dictionary<int, CourseModel?> Courses3D = [];
     private static readonly Dictionary<int, Task<GarageMachine?>> Machines3D = [];
     private static readonly Dictionary<int, Task<CourseLook?>> CourseLooks = [];
@@ -109,6 +110,7 @@ public static partial class GameSkin
         {
             Cache.Clear();
             Swatches.Clear();
+            Trails.Clear();
             Courses3D.Clear();
             Machines3D.Clear();
             CourseLooks.Clear();
@@ -135,6 +137,7 @@ public static partial class GameSkin
         {
             Cache.Clear();
             Swatches.Clear();
+            Trails.Clear();
             Courses3D.Clear();
             Machines3D.Clear();
             CourseLooks.Clear();
@@ -298,6 +301,29 @@ public static partial class GameSkin
         lock (Gate)
         {
             return Swatches.TryGetValue(machine, out var task) ? task : Task.FromResult<IReadOnlyList<Online.Protocol.Rgb>?>(null);
+        }
+    }
+
+    /// <summary>A stock machine's own trail colours (<see cref="Launcher.Core.BurnerColours"/>), read once when first
+    /// asked for; null without the disc.</summary>
+    public static Task<IReadOnlyList<Online.Protocol.Rgb>?> TrailSwatchesAsync(int machine) =>
+        TrailsOf(machine, art => art.TrailColours(machine));
+
+    /// <summary>A custom machine's own trail colours: its booster's (a part id, 50-74); null without the disc.</summary>
+    public static Task<IReadOnlyList<Online.Protocol.Rgb>?> CustomTrailSwatchesAsync(int booster) =>
+        TrailsOf(1000 + booster, art => art.PartTrailColours(booster));
+
+    private static Task<IReadOnlyList<Online.Protocol.Rgb>?> TrailsOf(int key, Func<DiscArt, IReadOnlyList<Online.Protocol.Rgb>?> read)
+    {
+        lock (Gate)
+        {
+            if (!Trails.TryGetValue(key, out var task))
+            {
+                var art = _art;
+                task = art is null ? Task.FromResult<IReadOnlyList<Online.Protocol.Rgb>?>(null) : Task.Run(() => Quietly(() => read(art)));
+                Trails[key] = task;
+            }
+            return task;
         }
     }
 

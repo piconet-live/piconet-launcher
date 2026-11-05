@@ -98,30 +98,31 @@ public sealed class GarageFitTests : IDisposable
         PumpFor(100);
     }
 
-    /// <summary>The Trail tab: its list ends above the row of actions, and when the list is taller than its room it
-    /// scrolls instead of drawing under them; at the least window every row shows without scrolling.</summary>
+    /// <summary>The Colour tab's trail: its wheel, choices and box end in the panel as the machine's do.</summary>
     private static void TrailFits(Window window, GarageView garage, GarageViewModel model, string at)
     {
-        var section = model.ShownSection;
-        model.ShowSectionCommand.Execute(model.Sections.Single(t => t.Index == GarageViewModel.TrailSection));
+        model.ColourTabIndex = model.ColourTabs.Count - 1;
         PumpFor(150);
-        var list = Named<ScrollViewer>(garage, "TrailList");
-        var setting = In(window, Named<Control>(garage, "SettingRow"));
-        var shown = In(window, list);
-        Assert.True(list.IsEffectivelyVisible, $"{at}: no Trail list");
-        Assert.True(shown.Bottom <= setting.Top + 0.5, $"{at}: the Trail list ends at {shown.Bottom}, under the actions at {setting.Top}");
-        Assert.True(list.Extent.Height <= list.Viewport.Height + 0.5, $"{at}: the Trail list scrolls ({list.Extent.Height} in {list.Viewport.Height})");
+        var panel = In(window, Named<Control>(garage, "SidePanel"));
+        var trail = Named<Control>(garage, "TrailColour");
+        Assert.True(trail.IsEffectivelyVisible, $"{at}: no trail picker");
+        Assert.False(Named<Control>(garage, "Wheel").IsEffectivelyVisible, $"{at}: the machine's wheel shows with the trail's");
+        var wheel = In(window, Named<Control>(garage, "TrailWheel"));
+        var tabs = In(window, Named<Control>(garage, "TrailColourTabs"));
+        Assert.True(wheel.Bottom <= panel.Bottom, $"{at}: the trail's wheel ends at {wheel.Bottom}, under the panel's foot {panel.Bottom}");
+        Assert.True(tabs.Bottom <= panel.Bottom && tabs.Right <= panel.Right + 0.5, $"{at}: the trail's choices end outside the panel");
         if (Environment.GetEnvironmentVariable("LOBBY_SHOTS") is { Length: > 0 } folder)
         {
-            model.TrailSparks.PickCommand.Execute(model.TrailSparks.Swatches[4]);
+            model.Trail.ColorHex = "#28FF3C";
             PumpFor(150);
             AvaloniaHeadlessPlatform.ForceRenderTimerTick();
             Directory.CreateDirectory(folder);
             window.CaptureRenderedFrame()?.Save(Path.Combine(folder, $"garage-trail-{window.Width}x{window.Height}-{garage.Bounds.Width:0}.png"), new Avalonia.Media.Imaging.PngBitmapEncoderOptions());
-            model.TrailSparks.PickCommand.Execute(model.TrailSparks.Swatches[0]);
+            model.Trail.PickSwatchCommand.Execute(0);
         }
-        model.ShowSectionCommand.Execute(model.Sections.Single(t => t.Index == section));
+        model.ColourTabIndex = 0;
         PumpFor(50);
+        Assert.True(Named<Control>(garage, "Wheel").IsEffectivelyVisible, $"{at}: the machine's wheel is not back");
     }
 
     [Theory]

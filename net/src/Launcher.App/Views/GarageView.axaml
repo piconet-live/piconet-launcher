@@ -297,6 +297,12 @@
                 <c:ColorWheelPicker Name="Wheel" Color="{Binding ColorHex}" Height="168" HorizontalAlignment="Left"
                                     AutomationProperties.Name="Colour wheel: hue and richness, and a brightness bar" />
                 <StackPanel VerticalAlignment="Bottom" Spacing="8">
+                  <ListBox Name="StockColourTabs" Classes="seg part" ItemsSource="{x:Static vm:GarageViewModel.StockColourTabs}"
+                           SelectedIndex="{Binding ColourTabIndex}" AutomationProperties.Name="Machine or trail">
+                    <ListBox.ItemsPanel>
+                      <ItemsPanelTemplate><StackPanel Spacing="2" /></ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                  </ListBox>
                   <TextBlock Classes="warn" Text="#RRGGBB" IsVisible="{Binding !ColorValid}" />
                   <TextBox Classes="field" Classes.bad="{Binding !ColorValid}" Text="{Binding ColorHex}" Width="100" MaxLength="7"
                            AutomationProperties.Name="Colour as hex, such as #E8432E" />
@@ -326,8 +332,8 @@
                 <c:ColorWheelPicker Name="BuildWheel" Color="{Binding ColorHex}" Height="168" HorizontalAlignment="Left"
                                     AutomationProperties.Name="Colour wheel: hue and richness, and a brightness bar" />
                 <StackPanel VerticalAlignment="Bottom" Spacing="8">
-                  <ListBox Name="PartTabs" Classes="seg part" ItemsSource="{x:Static vm:CustomBuilderViewModel.PartTabs}"
-                           SelectedIndex="{Binding PartTabIndex}" AutomationProperties.Name="Which part">
+                  <ListBox Name="PartTabs" Classes="seg part" ItemsSource="{x:Static vm:GarageViewModel.CustomColourTabs}"
+                           SelectedIndex="{Binding #Root.((vm:GarageViewModel)DataContext).ColourTabIndex}" AutomationProperties.Name="Which part, or the trail">
                     <ListBox.ItemsPanel>
                       <ItemsPanelTemplate><StackPanel Spacing="2" /></ItemsPanelTemplate>
                     </ListBox.ItemsPanel>
@@ -338,42 +344,41 @@
               </StackPanel>
             </StackPanel>
 
-            <!-- Trail: the racer's on every machine; each row a swatch or a hex box, "Its own" the game's. The three rows fit
-                 the lobby's machine stage at the least window (184 px in 192: a lower box and no note under them; what the note
-                 said is the list's tooltip); a lower panel scrolls them rather than draw them under the actions. -->
-            <ScrollViewer Grid.Row="1" Name="TrailList" IsVisible="{Binding TrailShown}" VerticalScrollBarVisibility="Auto"
-                          HorizontalScrollBarVisibility="Disabled"
-                          ToolTip.Tip="Everyone in the race sees these. Grey is the game's own colour. Very dark colours are brightened.">
-              <ItemsControl ItemsSource="{Binding TrailRows}">
+            <!-- Colour, the trail's: the same picker, its swatches the machine's own trail colours ("Its own": the game's
+                 trail, unset) and the player's; one colour for the flame, the boost and its sparks, the racer's on every machine -->
+            <StackPanel Grid.Row="1" Name="TrailColour" DataContext="{Binding Trail}" IsVisible="{Binding #Root.((vm:GarageViewModel)DataContext).TrailShown}"
+                        ToolTip.Tip="Everyone in the race sees it. Very dark colours are brightened.">
+              <ItemsControl ItemsSource="{Binding Swatches}">
                 <ItemsControl.ItemsPanel>
-                  <ItemsPanelTemplate><StackPanel Spacing="8" /></ItemsPanelTemplate>
+                  <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
-                  <DataTemplate x:DataType="vm:TrailRow">
-                    <StackPanel>
-                      <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,2">
-                        <TextBlock Classes="colhead" Text="{Binding Label}" VerticalAlignment="Center" />
-                        <TextBox Grid.Column="1" Classes="field" Classes.bad="{Binding !Valid}" Text="{Binding Hex}" Watermark="#RRGGBB" Width="100" MaxLength="7"
-                                 Height="28" MinHeight="28" AutomationProperties.Name="{Binding HexName}" />
-                      </Grid>
-                      <ItemsControl ItemsSource="{Binding Swatches}">
-                        <ItemsControl.ItemsPanel>
-                          <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                          <DataTemplate x:DataType="vm:TrailSwatch">
-                            <Button Classes="swatch" Classes.on="{Binding Selected}" Width="32" Height="26"
-                                    Background="{Binding Hex, Converter={x:Static v:HexToBrush.Instance}}"
-                                    Command="{Binding $parent[ItemsControl].((vm:TrailRow)DataContext).PickCommand}" CommandParameter="{Binding}"
-                                    ToolTip.Tip="{Binding Label}" AutomationProperties.Name="{Binding Label}" />
-                          </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                      </ItemsControl>
+                  <DataTemplate x:DataType="vm:StockSwatch">
+                    <StackPanel Width="52" Margin="0,0,1,0">
+                      <Button Classes="swatch" Classes.on="{Binding Selected}" IsEnabled="{Binding Known}"
+                              Background="{Binding Hex, Converter={x:Static v:HexToBrush.Instance}}"
+                              Command="{Binding #Root.((vm:GarageViewModel)DataContext).Trail.PickSwatchCommand}" CommandParameter="{Binding Index}"
+                              AutomationProperties.Name="{Binding Label}" />
+                      <TextBlock Classes="colhead" Text="{Binding Label}" HorizontalAlignment="Center" Margin="0,1,0,0" />
                     </StackPanel>
                   </DataTemplate>
                 </ItemsControl.ItemTemplate>
               </ItemsControl>
-            </ScrollViewer>
+              <StackPanel Orientation="Horizontal" Spacing="16" Margin="0,12,0,0">
+                <c:ColorWheelPicker Name="TrailWheel" Color="{Binding ColorHex}" Height="168" HorizontalAlignment="Left"
+                                    AutomationProperties.Name="Colour wheel: hue and richness, and a brightness bar" />
+                <StackPanel VerticalAlignment="Bottom" Spacing="8">
+                  <ListBox Name="TrailColourTabs" Classes="seg part" ItemsSource="{Binding #Root.((vm:GarageViewModel)DataContext).ColourTabs}"
+                           SelectedIndex="{Binding #Root.((vm:GarageViewModel)DataContext).ColourTabIndex}" AutomationProperties.Name="Which part, or the trail">
+                    <ListBox.ItemsPanel>
+                      <ItemsPanelTemplate><StackPanel Spacing="2" /></ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                  </ListBox>
+                  <TextBox Classes="field" Classes.bad="{Binding !ColorValid}" Text="{Binding ColorHex}" Width="100" MaxLength="7"
+                           AutomationProperties.Name="Trail colour as hex, such as #E8432E" />
+                </StackPanel>
+              </StackPanel>
+            </StackPanel>
 
             <!-- Stats, a stock machine's: every value of the machine, as the disc has them, or, in a lobby whose races run
                  on a stat pack, as that pack has them: its name and author then stand at the head, so the numbers say

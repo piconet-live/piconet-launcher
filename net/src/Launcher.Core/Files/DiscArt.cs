@@ -337,6 +337,26 @@ public sealed partial class DiscArt : IDisposable
         }
     }
 
+    /// <summary>A stock machine's own trail colours (<see cref="BurnerColours"/>), from its <c>NAME.fmi</c> in
+    /// <c>vehicle/NAME_p.arc</c>; null when the files are missing or cannot be read.</summary>
+    public IReadOnlyList<Online.Protocol.Rgb>? TrailColours(int machine)
+    {
+        if (machine < 0 || machine >= MachineFiles.Count)
+        {
+            return null;
+        }
+        var name = MachineFiles[machine];
+        try
+        {
+            return Read($"vehicle/{name}_p.arc") is { } arc && U8Archive.Parse(arc).File($"{name}.fmi") is { } fmi
+                ? BurnerColours.Read(fmi) : null;
+        }
+        catch (Exception e) when (Unreadable(e))
+        {
+            return null;
+        }
+    }
+
     private static T Traced<T>(string stage, Func<T> work)
     {
         using var timed = LoadTrace.Stage(stage);

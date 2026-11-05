@@ -182,6 +182,11 @@ public sealed class SettingsStore(string path)
         {
             read = read with { Server = null };
         }
+        // the three trail colours of an earlier launcher: one now (TrailColour), as the garage shows and races send it
+        if (read.Racer is { Trail: not null } racer)
+        {
+            read = read with { Racer = racer with { Trail = TrailColour.Migrated(racer.Trail) } };
+        }
         var (sound, repaired) = SettingsCheck.Sound(read);
         if (repaired)
         {
