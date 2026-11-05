@@ -131,6 +131,28 @@ public sealed class SettingsTests : IDisposable
         store.Save(loaded);
         Assert.Equal(old, new SettingsStore(path).Load().QuickPlayServer);
     }
+
+    /// <summary>The modern HUD is gone (the owner, 2026-11-04: the movable classic HUD covers it). A settings file from a
+    /// launcher that had its rows still loads as it stands, its other settings kept, and the next save leaves the HUD's
+    /// members out.</summary>
+    [Fact]
+    public void AnOldSettingsFileWithTheModernHudLoads()
+    {
+        var path = Path.Combine(_dir, "settings.json");
+        File.WriteAllText(path, """{"modernHud": true, "hudMeter": "rev", "hudLayout": "hud-layout.json", "showInputs": true, "recordReplays": false}""");
+        var store = new SettingsStore(path);
+
+        var loaded = store.Load();
+
+        Assert.Equal(SettingsRead.Fine, store.LastRead);
+        Assert.Null(store.Notice);
+        Assert.Equal(new LauncherSettings { ShowInputs = true, RecordReplays = false }, loaded);
+        store.Save(loaded);
+        var saved = File.ReadAllText(path);
+        Assert.DoesNotContain("modernHud", saved, StringComparison.Ordinal);
+        Assert.DoesNotContain("hudMeter", saved, StringComparison.Ordinal);
+        Assert.DoesNotContain("hudLayout", saved, StringComparison.Ordinal);
+    }
 }
 
 public sealed class DiscTests : IDisposable
@@ -307,15 +329,5 @@ public sealed class LanTests
         {
             Assert.True(first.Can || first.Reason == RayTracingCard.NoCard);
         }
-    }
-
-    [Fact]
-    public void HudKeysAreLeftOutWhenNotOffered()
-    {
-        // an older settings file with the modern HUD on: a build that does not offer it writes neither key
-        var modern = new LauncherSettings { ModernHud = true, HudMeter = "rev" };
-        Assert.Equal((true, "rev"), modern.HudLaunchKeys(offered: true));
-        Assert.Equal((false, null), modern.HudLaunchKeys(offered: false));
-        Assert.Equal((false, null), new LauncherSettings().HudLaunchKeys(offered: true));
     }
 }

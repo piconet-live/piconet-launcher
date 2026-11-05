@@ -20,11 +20,7 @@ public sealed partial class AppState
             Settings.FrameRateShown(StackStamp.Current, testGame: !ReferenceEquals(Debug, DebugSettings.Off)),
             NamePicture: null, TaskbarGroup,
             Settings.GamePresent, Settings.VerticalSync, Settings.GameFullScreen, RefreshRate: Settings.GameRefreshRate,
-            Rumble: Settings.Rumble, Camera: Settings.StartCamera, ShowInputs: Settings.ShowInputs,
-            ModernHud: Hud.Modern, HudLayout: Hud.Modern ? Path.Combine(DataFolder, "hud-layout.json") : null, HudMeter: Hud.Meter));
-
-    /// <summary>The HUD's keys: left out in a build that does not offer the modern HUD (a test build only, for 0.6).</summary>
-    private (bool Modern, string? Meter) Hud => Settings.HudLaunchKeys(offered: StackStamp.Current.Test);
+            Rumble: Settings.Rumble, Camera: Settings.StartCamera, ShowInputs: Settings.ShowInputs));
 
     /// <summary>The picture engine's keys: left out in a build that does not offer Aurora, and at their defaults. Ray
     /// tracing is left out on a graphics card the check found cannot (<see cref="RayTracingCard"/>).</summary>
