@@ -26,7 +26,7 @@ public static class HostRuleRows
             RuleKind.Number when rule == HostRules.Laps => new LapsRule(rule.Label, value, rule.Most) { Unlimited = value == 0 },
             // (a range's one value here: the player's own, as a practice has it)
             RuleKind.Range => new SliderRule(rule.Label, value, rule.Least, rule.Most),
-            RuleKind.Number => new StepperRule(rule.Label, value, rule.Least, rule.Most),
+            RuleKind.Number => new StepperRule(rule.Label, value, rule.Least, rule.Most) { Unit = rule.Unit },
             RuleKind.Switch => new SwitchRule(rule.Label, value != 0),
             RuleKind.Delay => new DelayRule(rule.Label, value, rule.Least, rule.Most, rule.Step, rule.Default),
             RuleKind.Pack => new ChoiceRule(rule.Label, [Stock, .. packs ?? []],
@@ -76,7 +76,7 @@ public static class HostRuleRows
             RuleKind.Range => new RangeRule(rule.Label, value, CustomRules.Value(rules, LobbyRules.SettingHighKey, quickPlay), rule.Least, rule.Most),
             RuleKind.Choice when rule == HostRules.CpuFill => new SegmentedRule(rule.Label, CpuFillChoices, value),
             RuleKind.Course => new CourseRule(rule.Label, value, CustomRules.Value(rules, LobbyRules.FixedCourseKey, quickPlay), courses),
-            RuleKind.Text => new StepperRule(rule.Label, value, rule.Least, rule.Most),
+            RuleKind.Text => new StepperRule(rule.Label, value, rule.Least, rule.Most) { Unit = rule.Unit },
             RuleKind.Pack => PackRow(rule, rules?.StatPack, packs ?? [], file),
             _ => For(rule, value, packs),
         };

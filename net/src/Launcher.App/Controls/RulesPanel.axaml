@@ -59,7 +59,7 @@
       <ComboBox Classes="field" MinWidth="150" ItemsSource="{Binding Options}" SelectedIndex="{Binding Selected}"
                 AutomationProperties.Name="{Binding Label}" />
     </DataTemplate>
-    <!-- a custom lobby's stat pack: the packs by name, the host's own file last; Choose file opens the file picker -->
+    <!-- a custom lobby's stats: the mode's, or the host's own file once chosen; Choose file opens the file picker -->
     <DataTemplate DataType="vm:PackRule">
       <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
         <ComboBox Classes="field" MinWidth="150" ItemsSource="{Binding Options}" SelectedIndex="{Binding Selected}"
@@ -68,22 +68,14 @@
                 AutomationProperties.Name="Choose a stat pack file" />
       </StackPanel>
     </DataTemplate>
-    <!-- a custom lobby's game mode: none, the lobby's, the host's own file last; Choose file opens the file picker -->
+    <!-- a custom lobby's game mode: the server's official modes, the lobby's own, the host's own file last; From file…
+         opens the file picker -->
     <DataTemplate DataType="vm:GameModeRule">
       <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
         <ComboBox Classes="field" MinWidth="150" ItemsSource="{Binding Options}" SelectedIndex="{Binding Selected}"
                   AutomationProperties.Name="{Binding Label}" />
-        <Button Name="ModeFile" Classes="link" Content="Choose file" VerticalAlignment="Center"
+        <Button Name="ModeFile" Classes="link" Content="From file…" VerticalAlignment="Center"
                 AutomationProperties.Name="Choose a mode file" />
-      </StackPanel>
-    </DataTemplate>
-    <!-- the preset, and beside it the toggle that shows every rule (Create) -->
-    <DataTemplate DataType="vm:PresetRule">
-      <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
-        <ComboBox Classes="field" MinWidth="140" ItemsSource="{Binding Options}" SelectedIndex="{Binding Selected}"
-                  AutomationProperties.Name="{Binding Label}" />
-        <Button Name="RulesToggle" Classes="link" Content="{Binding ToggleText}" Command="{Binding ToggleCommand}"
-                IsVisible="{Binding Toggles}" VerticalAlignment="Center" AutomationProperties.Name="{Binding ToggleText}" />
       </StackPanel>
     </DataTemplate>
     <!-- how the course is chosen; a fixed course's name under the choices, pressed to pick another -->
@@ -102,11 +94,28 @@
                AutomationProperties.Name="{Binding Label}" />
     </DataTemplate>
     <DataTemplate DataType="vm:StepperRule">
-      <c:Stepper Value="{Binding Value}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Step="{Binding Step}"
-                 AutomationProperties.Name="{Binding Label}" />
+      <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+        <c:Stepper Value="{Binding Value}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Step="{Binding Step}"
+                   AutomationProperties.Name="{Binding Label}" />
+        <TextBlock Classes="dim" MinWidth="20" Text="{Binding Unit}" VerticalAlignment="Center" IsVisible="{Binding HasUnit}" />
+      </StackPanel>
     </DataTemplate>
     <!-- the stepper at the row's right edge, over the switches of the rows under it, so that the pad's down goes
          to the next row (Boost from the start) and not past it; Unlimited's switch to its left. Unlimited: no stepper, the switch comes over the rows under it, so down stops here -->
+    <DataTemplate DataType="vm:NamedNumberRule">
+      <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+        <ToggleSwitch IsChecked="{Binding IsNamed}" OnContent="" OffContent="" AutomationProperties.Name="{Binding Named}"
+                      IsVisible="{Binding !IsOff}" />
+        <TextBlock Classes="dim" Text="{Binding Named}" VerticalAlignment="Center" IsVisible="{Binding !IsOff}" />
+        <!-- a named value "Off": the row's switch, On the number -->
+        <ToggleSwitch IsChecked="{Binding Counted}" OnContent="" OffContent="" AutomationProperties.Name="{Binding Label}"
+                      IsVisible="{Binding IsOff}" />
+        <TextBlock Classes="dim" MinWidth="24" Text="{Binding State}" VerticalAlignment="Center" IsVisible="{Binding IsOff}" />
+        <c:Stepper Value="{Binding Value}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Step="{Binding Step}"
+                   IsVisible="{Binding Counted}" AutomationProperties.Name="{Binding Label}" />
+        <TextBlock Classes="dim" MinWidth="20" Text="{Binding Unit}" VerticalAlignment="Center" IsVisible="{Binding UnitShown}" />
+      </StackPanel>
+    </DataTemplate>
     <DataTemplate DataType="vm:LapsRule">
       <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
         <ToggleSwitch IsChecked="{Binding Unlimited}" OnContent="" OffContent="" AutomationProperties.Name="Unlimited" />

@@ -78,7 +78,7 @@ public sealed partial class PracticeViewModel : ViewModelBase
             var raced = _machineOf();
             return new PracticeSetup(
                 Courses.Picked, raced.Machine, HostRuleRows.Pack(_rules[HostRules.StatPack.Name]), Number(HostRules.MachineSetting),
-                Number(HostRules.Laps), Number(HostRules.Restore) != 0, Number(HostRules.BoostStart) != 0, Number(HostRules.MinesReturn),
+                Number(HostRules.Laps), Number(HostRules.Restore) != 0, Number(HostRules.BoostStart) != 0, Number(HostRules.MinesRespawn),
                 raced.Custom).Kept();
         }
     }

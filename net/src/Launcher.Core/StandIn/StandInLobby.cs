@@ -254,6 +254,10 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
             {
                 return (CustomLobby.BadMode, refusal);   // (the compiler's line, as the service says it)
             }
+            if (StandInService.Against(change.Rules, terms) is { } against)
+            {
+                return (CustomLobby.BadRules, against);
+            }
             room.Name = change.Name is { Length: > 0 } named ? named.Trim() : room.Name;
             room.Terms = terms;
             room.Rules = StandInRooms.Whole(change.Rules, mode, terms);

@@ -36,7 +36,7 @@ public sealed record PracticeSetup(int Course, int Machine, string? StatPack, in
 
     /// <summary>The first course, the first machine, the disc's stats, unlimited laps and Quick Play's other rules.</summary>
     public static PracticeSetup Default { get; } = new(1, 0, null, HostRules.MachineSetting.Default, Unlimited,
-        HostRules.Restore.Default != 0, HostRules.BoostStart.Default != 0, HostRules.MinesReturn.Default);
+        HostRules.Restore.Default != 0, HostRules.BoostStart.Default != 0, HostRules.MinesRespawn.Default);
 
     /// <summary>The race's rules the game applies (a match's <c>setup.rules</c>): the set-up's; no CPUs, no finish
     /// limit (the one racer's finish ends the race).</summary>
@@ -51,7 +51,7 @@ public sealed record PracticeSetup(int Course, int Machine, string? StatPack, in
         Machine = Math.Clamp(Machine, 0, 40),
         MachineSetting = HostRules.MachineSetting.Kept(MachineSetting),
         Laps = Laps == Unlimited ? Unlimited : Math.Clamp(Laps, 1, MostLaps),
-        MineRegenMs = HostRules.MinesReturn.Kept(MineRegenMs),
+        MineRegenMs = HostRules.MinesRespawn.Kept(MineRegenMs),
         StatPack = StatPack is { Length: > 0 and <= 64 } pack && !pack.Any(char.IsControl) ? pack : null,
         Custom = CustomMachine.Checked(Custom),
     };

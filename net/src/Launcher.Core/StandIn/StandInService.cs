@@ -74,11 +74,70 @@ public static class StandInService
         }
     }
 
-    /// <summary>Why the service would refuse a host's rules for a key it takes no value under (restore among them); null: none.</summary>
+    /// <summary>Why the service would refuse a host's rules: a key it takes no value under (restore among them), or a rule
+    /// of the race that is the mode's (<see cref="LobbyRules.OutsideTheMode"/>); null: none.</summary>
     public static string? BadRule(LobbyRules rules)
     {
         ArgumentNullException.ThrowIfNull(rules);
-        return rules.Values.Keys.FirstOrDefault(k => !LobbyRules.Keys.Contains(k)) is { } key ? $"no rule {key}" : null;
+        return rules.Values.Keys.FirstOrDefault(k => !LobbyRules.Keys.Contains(k)) is { } key ? $"no rule {key}" : rules.OutsideTheMode();
+    }
+
+    /// <summary>The stat packs the stand-in names as a server's, by name: the packs that came with the launcher
+    /// (<see cref="PracticePacks"/>, the protocol's, as the service's image has them). Its races name the pack; they do
+    /// not carry it.</summary>
+    public static IReadOnlySet<string> PackNames => Packs.Value;
+
+    private static readonly Lazy<IReadOnlySet<string>> Packs =
+        new(() => PracticePacks.Read(PracticePacks.Folder).Select(p => p.Name).ToHashSet(StringComparer.Ordinal));
+
+    /// <summary>Why the stand-in cannot race a mode's stats ("this mode's stats: ..."); null: it can (the disc's own, the
+    /// host's file, or a pack it names).</summary>
+    private static string? Unraceable(ModeTerms terms) =>
+        terms.MixedPacks == true || terms.Pack is { Length: > 0 } pack && !PackNames.Contains(pack)
+            ? "this mode's stats: this server has no such stat pack" : null;
+
+    /// <summary>The official modes the stand-in offers a host, as the service lists them (<see cref="LobbyList.Modes"/>):
+    /// its rotation's lobby modes this "server" can race on their defaults. Empty: no rotation.</summary>
+    public static IReadOnlyList<LobbyMode> OfficialModes =>
+        [.. (Rotation?.LobbyModes ?? []).Where(m => Unraceable(m.Terms) is null).Select(m => m.Named())];
+
+    /// <summary>Why the host's rules and the lobby's mode do not go together, as the service refuses them
+    /// (<see cref="CustomLobby.BadRules"/>): a pack file the mode's stats choice is not, that choice without a file, a
+    /// fixed course outside the mode's list. Null: they go together.</summary>
+    public static string? Against(LobbyRules rules, ModeTerms? terms)
+    {
+        ArgumentNullException.ThrowIfNull(rules);
+        return terms switch
+        {
+            null => null,
+            { PackFromFile: false } when rules.PackFile is not null => "the mode sets the stats now: choose a mode whose stats are your own file",
+            { PackFromFile: true } when rules.PackFile is null => "this mode races your own stat pack: choose its file",
+            { Course: null, Courses: { Count: > 0 } courses } when rules.Value(HostRules.CourseSelect) == (int)CourseSelectMode.Fixed
+                && rules.Value(LobbyRules.FixedCourseKey) is { } course && !courses.Contains(course) =>
+                $"{CourseNames.Name(course)} is not one of this mode's courses: choose one of them",
+            _ => null,
+        };
+    }
+
+    /// <summary>One of the official modes by its hash, as the service takes it from its catalog: on the host's values;
+    /// another hash is no mode the lobby holds.</summary>
+    private static (LobbyMode? Mode, ModeTerms? Terms, string? Refusal) Official(string hash, IReadOnlyList<int>? values)
+    {
+        if (Rotation?.LobbyModes.FirstOrDefault(m => m.Hash == hash) is not { } official)
+        {
+            return (null, null, "the lobby holds no such mode");
+        }
+        if (values is not null && official.Package.ValuesRefusal(values) is { } refused)
+        {
+            return (null, null, refused);
+        }
+        Packages[official.Hash] = official.Package;
+        var raced = official with { Values = values };
+        if (Unraceable(raced.Terms) is { } stats)
+        {
+            return (null, null, stats);
+        }
+        return (raced.Named(), raced.Terms, null);
     }
 
     /// <summary>The modes the stand-in's lobbies have compiled, by hash: a host's new values go over them, as the
@@ -86,8 +145,8 @@ public static class StandInService
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, ModePackage> Packages = new(StringComparer.Ordinal);
 
     /// <summary>The mode a host's rules give a stand-in lobby, as the service takes it: a mode file compiled (its first error
-    /// refused, <see cref="CustomLobby.BadMode"/>, as a word this "server" cannot honour: it has no stat packs), the mode
-    /// the lobby has named again (kept), or none.</summary>
+    /// refused, <see cref="CustomLobby.BadMode"/>, as a word this "server" cannot honour: a pack it does not name), the mode
+    /// the lobby has named again (kept), an official one by its hash, or none named: Quick Play's normal mode.</summary>
     public static (LobbyMode? Mode, ModeTerms? Terms, string? Refusal) ModeOf(LobbyRules rules, LobbyMode? had, ModeTerms? hadTerms)
     {
         ArgumentNullException.ThrowIfNull(rules);
@@ -104,22 +163,23 @@ public static class StandInService
             }
             var terms = ModeTerms.Of(m, rules.ModeValues);
             Packages[compiled.Hash!] = m;
-            if (terms.Pack is { Length: > 0 } || terms.MixedPacks == true)
+            if (Unraceable(terms) is { } stats)
             {
-                return (null, null, "this mode's stats: this server has no stat packs");
+                return (null, null, stats);
             }
             return (new LobbyMode(compiled.Hash!, compiled.ShareCode!, m.Name, m.Api, m.Badge, m.About, terms.Rules(), terms.Pack,
                 m.Params.Count > 0 ? m.Params : null, m.Params.Count > 0 ? rules.ModeValues ?? [.. m.Params.Select(p => p.Default)] : null,
                 terms.Machines is { Count: > 0 } machines ? machines : null, terms.CustomsOff,
-                terms.Courses is { Count: > 0 } courses ? courses : null), terms, null);
+                terms.Courses is { Count: > 0 } courses ? courses : null, terms.PackParam), terms, null);
         }
         if (rules.Mode is null)
         {
-            return (null, null, null);
+            // none named: Quick Play's normal mode, by its hash (the owner, 2026-11-05); no rotation: none
+            return Rotation?.Normal is { } normal ? Official(normal.Hash, null) : (null, null, null);
         }
         if (rules.Mode.Hash != had?.Hash)
         {
-            return (null, null, "the lobby holds no such mode");
+            return Official(rules.Mode.Hash, rules.ModeValues);
         }
         if (rules.ModeValues is not { } values || !Packages.TryGetValue(had.Hash, out var kept))
         {
@@ -130,6 +190,7 @@ public static class StandInService
             return (null, null, refused);
         }
         var now = ModeTerms.Of(kept, values);
-        return (had with { Terms = now.Rules(), Pack = now.Pack, Values = values }, now, null);
+        return Unraceable(now) is { } unraceable ? (null, null, unraceable)
+            : (had with { Terms = now.Rules(), Pack = now.Pack, Values = values }, now, null);
     }
 }

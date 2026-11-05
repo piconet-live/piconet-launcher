@@ -484,7 +484,7 @@
     <v:LobbyRoster Grid.Row="5" Name="RosterChat" IsVisible="{Binding RosterShown}" />
 
     <!-- In the racers' place: a custom lobby's every rule (its values that differ in green), or the host's panels
-         (the name, the password and the preset; then the rules) with SAVE RULES and Cancel. -->
+         (the name, the password, the mode and its settings; then the lobby's own settings) with SAVE RULES and Cancel. -->
     <Panel Grid.Row="5" c:Motion.Reveal="True" IsVisible="{Binding RulesOpen}">
       <ItemsControl Name="AllRulesList" ItemsSource="{Binding AllRulePanels}" IsVisible="{Binding AllRulesShown}">
         <ItemsControl.ItemsPanel>

@@ -10,11 +10,14 @@ namespace Launcher.Tests;
 /// draw's card names what the course drawn races. The official rotation loads, with no notice. A rotation that does not
 /// load: the stand-in votes on courses alone and says why. A custom lobby's host mode file is compiled as the service compiles it: a file that
 /// does not compile is refused with its line (bad_mode), one that does names the lobby's mode.</summary>
-[Collection(StandInModesTests.Name)]
-public sealed class StandInModesTests
+[Collection(HeadlessApp.Name)]   // the stand-in's rotation is the process's: these take turns with the app's tests
+public sealed class StandInModesTests : IDisposable
 {
-    /// <summary>The stand-in's rotation is the process's: these tests take turns.</summary>
-    public const string Name = "stand-in rotation";
+    /// <summary>The folder the stand-in raced before the test, which it races again after (the app's tests list its
+    /// official modes).</summary>
+    private readonly string _before = StandInService.QuickPlayFolder;
+
+    public void Dispose() => StandInService.UseQuickPlay(_before);
 
     private static string Vectors => RepositoryFolder.Protocol("protocol", "tests", "vectors", "quickplay");
 
@@ -132,10 +135,10 @@ public sealed class StandInModesTests
         var (mode, _, refusal) = StandInService.ModeOf(rules, null, null);
         Assert.Null(refusal);
         Assert.Equal(("Overdrive", "OVERDRIVE", ModeCompiler.Compile(good).Hash), (mode!.Name, mode.Badge, mode.Hash));
-        // named again without the file: kept; another hash: refused; none: no mode
+        // named again without the file: kept; another hash: refused; none: Quick Play's normal mode, as on the service
         Assert.Same(mode, StandInService.ModeOf(new LobbyRules(new Dictionary<string, int>(), Mode: mode), mode, null).Mode);
         Assert.Equal("the lobby holds no such mode", StandInService.ModeOf(new LobbyRules(new Dictionary<string, int>(), Mode: mode), null, null).Refusal);
-        Assert.Null(StandInService.ModeOf(new LobbyRules(new Dictionary<string, int>()), mode, null).Mode);
+        Assert.Equal("Quick Play", StandInService.ModeOf(new LobbyRules(new Dictionary<string, int>()), mode, null).Mode!.Name);
         // the host's values: checked against the package, kept, and over the words
         const string WithParam = "mode \"P\" { api 1; }\nparam n \"Laps\" number 2..10 step 2 default 4;\nlaps n;\n";
         Assert.StartsWith("Laps:", StandInService.ModeOf(new LobbyRules(new Dictionary<string, int>(), ModeFile: WithParam, ModeValues: [3]), null, null).Refusal, StringComparison.Ordinal);
@@ -272,8 +275,8 @@ public sealed class StandInModesTests
         var c = await Connected();
         await using (c.Link)
         {
-            var state = await Created(c, "teams 2..3;", new Dictionary<string, int> { [LobbyRules.TeamsKey] = 9 });
-            Assert.Equal(3, state.Rules!.Value(LobbyRules.TeamsKey));   // (within the mode's word)
+            var state = await Created(c, "teams 2..3;");
+            Assert.Equal(3, state.Rules!.Value(LobbyRules.TeamsKey));   // (the mode's most: the teams are the mode's)
             await c.Link.ChooseTeamAsync(1, null, TestContext.Current.CancellationToken);
             var mine = await Next<LobbyState>(c.Got, s => s.Players.Any(p => p.Team == 1));
             Assert.Single(mine.Players, p => p.Team == 1);

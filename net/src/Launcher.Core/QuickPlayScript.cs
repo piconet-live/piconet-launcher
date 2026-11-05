@@ -175,14 +175,13 @@ public sealed class QuickPlayScript(QuickPlayScriptOptions options, Action<strin
         if (lobby is null && !_lobbyAsked && plan.Create is { } name)
         {
             _lobbyAsked = true;
+            // the lobby's own settings, and the mode: the file, or an official one by its name (none named: the first)
             var values = new Dictionary<string, int>(plan.Rules ?? new Dictionary<string, int>(), StringComparer.Ordinal);
-            if (plan.Teams is { } teams)
-            {
-                values[LobbyRules.TeamsKey] = teams;
-            }
             var text = plan.ModeFile is { } file ? File.ReadAllText(file) : null;
-            Log("press", new { button = "create lobby", name, modeFile = plan.ModeFile, values = plan.Values, rules = values });
-            _ = session.CreateLobbyAsync(name, new LobbyRules(values, null, null, null, text, plan.Values), null);
+            var mode = text is not null ? null
+                : session.OfficialModes.FirstOrDefault(m => plan.Mode is null || m.Name == plan.Mode);
+            Log("press", new { button = "create lobby", name, modeFile = plan.ModeFile, mode = mode?.Name, values = plan.Values, rules = values });
+            _ = session.CreateLobbyAsync(name, new LobbyRules(values, null, null, mode, text, plan.Values), null);
         }
         else if (lobby is null && !_lobbyAsked && plan.Join is { } wanted && session.Lobbies.FirstOrDefault(l => l.Name == wanted) is { } row)
         {

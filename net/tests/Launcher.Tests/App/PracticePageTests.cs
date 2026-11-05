@@ -159,7 +159,7 @@ public sealed class PracticePageTests : IDisposable
         Assert.Equal(PracticeSetup.Default with { Machine = main.Garage.MachineIndex }, main.Practice.Setup);
         var labels = window.GetVisualDescendants().OfType<Grid>().Where(g => g.Classes.Contains("rule"))
             .Select(g => g.Children.OfType<TextBlock>().Single().Text);
-        Assert.Equal(["Machine", "Stats", "Machine setting", "Laps", "Boost from the start", "Restore", "Mines return", "Rewind",
+        Assert.Equal(["Machine", "Stats", "Machine setting", "Laps", "Boost from the start", "Restore", "Mines respawn", "Rewind",
                       "Save · Load"], labels);
         // the host's rules that mean something alone, from the one list a custom lobby shows too; none of the others
         Assert.Equal(HostRules.Alone.Select(r => r.Label).Order(), labels.Except(["Machine", "Rewind", "Save · Load"]).Order());
@@ -213,12 +213,12 @@ public sealed class PracticePageTests : IDisposable
         Assert.True(main.Practice.Setup.BoostFromStart);
 
         // the mines come back after Quick Play's 200 ms; Off: they stay gone, and the delay waits, kept
-        var mines = RowOf(window, "Mines return");
+        var mines = RowOf(window, "Mines respawn");
         Assert.Equal(200, main.Practice.Setup.MineRegenMs);
-        Click(window, Named<ToggleSwitch>(mines, "Mines return"));
+        Click(window, Named<ToggleSwitch>(mines, "Mines respawn"));
         Assert.Equal(0, main.Practice.Setup.MineRegenMs);
         Assert.False(Named<Stepper>(mines, "Delay").IsEffectivelyEnabled);
-        Click(window, Named<ToggleSwitch>(mines, "Mines return"));
+        Click(window, Named<ToggleSwitch>(mines, "Mines respawn"));
         Assert.Equal(200, main.Practice.Setup.MineRegenMs);
         Click(window, Named<Button>(mines, "More"));
         Assert.Equal(250, main.Practice.Setup.MineRegenMs);

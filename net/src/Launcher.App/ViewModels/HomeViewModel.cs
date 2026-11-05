@@ -393,13 +393,13 @@ public sealed partial class HomeViewModel : ViewModelBase
         var parts = new List<string> { $"{r.Laps} {(r.Laps == 1 ? "lap" : "laps")}" };
         if (r.CourseSelect != CourseSelectMode.Vote)
         {
-            parts.Add(r.CourseSelect == CourseSelectMode.Random ? "random course"
+            parts.Add(r.CourseSelect == CourseSelectMode.Random ? $"{HostRules.CourseSelect.Label} Random"
                 : r.FixedCourse is { } c ? CourseNames.Name(c) : "the host's course");
         }
         if (r.CpuFill != CpuFillMode.Vote)
         {
-            parts.Add(r.CpuFill == CpuFillMode.Never ? "no CPUs"
-                : $"CPUs fill empty seats ({LanViewModel.CpuLevels[Math.Clamp(r.Race.CpuLevel, 0, 3)]})");
+            parts.Add(r.CpuFill == CpuFillMode.Never ? $"{HostRules.CpuFill.Label} Off"
+                : $"{HostRules.CpuFill.Label} Always · {HostRules.CpuLevel.Label} {LanViewModel.CpuLevels[Math.Clamp(r.Race.CpuLevel, 0, 3)]}");
         }
         return string.Join(" · ", parts);
     }
