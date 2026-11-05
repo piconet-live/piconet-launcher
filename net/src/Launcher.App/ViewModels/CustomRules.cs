@@ -118,7 +118,7 @@ public static class CustomRules
             "racers" => N($"{v} racers"),
             // (a rule's label and its value, the words its row shows)
             "cpu-level" => $"{HostRules.CpuLevel.Label} {LanViewModel.CpuLevels[Math.Clamp(v, 0, LanViewModel.CpuLevels.Count - 1)]}",
-            "cpu-fill" => $"{HostRules.CpuFill.Label} {(CpuFillMode)v}",
+            "cpu-fill" => $"{HostRules.CpuFill.Label} {CpusText(v)}",
             "course-select" => (CourseSelectMode)v switch
             {
                 CourseSelectMode.Random => $"{HostRules.CourseSelect.Label} Random",
@@ -139,6 +139,14 @@ public static class CustomRules
         };
     }
 
+    /// <summary>The CPU racers as a mode's switch says them: On (players vote CPUs in), Off (none); Always.</summary>
+    private static string CpusText(int v) => (CpuFillMode)v switch
+    {
+        CpuFillMode.Never => "Off",
+        CpuFillMode.Always => "Always",
+        _ => "On",
+    };
+
     /// <summary>A rule's value by itself, for the whole list: "3", "Vote", "On", "200 ms".</summary>
     public static string ValueText(HostRule rule, LobbyRules? rules, LobbyRules? quickPlay)
     {
@@ -149,7 +157,7 @@ public static class CustomRules
             "laps" when v == ModeTerms.LapsByCourse => "By course",
             "laps" when v == 0 => "Unlimited",
             "cpu-level" => LanViewModel.CpuLevels[Math.Clamp(v, 0, LanViewModel.CpuLevels.Count - 1)],
-            "cpu-fill" => ((CpuFillMode)v).ToString(),
+            "cpu-fill" => CpusText(v),
             "course-select" => (CourseSelectMode)v == CourseSelectMode.Fixed
                 ? Courses.Name(Raced(rules, LobbyRules.FixedCourseKey, quickPlay)) : ((CourseSelectMode)v).ToString(),
             "finish-limit" => v == 0 ? "Off" : N($"{v} s"),

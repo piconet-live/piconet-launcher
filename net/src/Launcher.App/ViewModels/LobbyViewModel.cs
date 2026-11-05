@@ -530,7 +530,7 @@ public sealed partial class LobbyViewModel : ViewModelBase
         }
         if (r.CpuFill != CpuFillMode.Vote)
         {
-            parts.Add(r.CpuFill == CpuFillMode.Never ? $"{HostRules.CpuFill.Label} Never"
+            parts.Add(r.CpuFill == CpuFillMode.Never ? $"{HostRules.CpuFill.Label} Off"
                 : $"{HostRules.CpuFill.Label} Always · {HostRules.CpuLevel.Label} {LanViewModel.CpuLevels[Math.Clamp(r.Race.CpuLevel, 0, 3)]}");
         }
         if (r.Race.BoostFromStart)

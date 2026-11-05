@@ -99,7 +99,7 @@ public sealed class CustomLobbiesTests : IDisposable
 
     /// <summary>Quick Play's settings as its official mode declares them (protocol quickplay/competitive.fzmode).</summary>
     private static readonly string[] QuickPlaysSettings =
-        ["Laps", "CPU level", "Boost from the start", "Mines respawn", "Finish limit", "Machine setting from", "Machine setting to", "Stats"];
+        ["Laps", "CPU level", "Boost from the start", "Mines respawn", "Finish limit", "Machine setting from", "Machine setting to", "Stats", "CPU racers"];
 
     [Fact]
     public async Task OnTheStandInTheBrowserJoinsALockedLobbyByItsPasswordAndAHostKicks()
@@ -150,6 +150,8 @@ public sealed class CustomLobbiesTests : IDisposable
             Assert.Equal(labels.Distinct().Count(), labels.Count);
             Assert.Contains(lobby.AllRulePanels.SelectMany(p => p.Groups).SelectMany(g => g.Rows).OfType<ValueRule>(),
                 r => r is { Label: "Mines respawn", Value: "200 ms", Marked: false });
+            Assert.Single(lobby.AllRulePanels.SelectMany(p => p.Groups).SelectMany(g => g.Rows).OfType<ValueRule>(),
+                r => r is { Label: "CPU racers", Value: "On" });
             Shot(window, state, "lobby-all-rules");
             Click(window, Named<Button>(page, "AllRules"));
             Shot(window, state, "lobby-joiner");
@@ -176,10 +178,12 @@ public sealed class CustomLobbiesTests : IDisposable
             Assert.True(Named<RulesPanel>(view, "LobbyPanel").IsEffectivelyVisible);
             // Quick Play's settings: the mode's parameters, on Quick Play's own values; no preset
             Assert.Equal(QuickPlaysSettings, editor.ParamRows.Select(p => p.Row.Label));
-            Assert.Equal(["By course", "Master", "Off", "200 ms", "90 s", "100", "100", "GX Unleashed"],
+            Assert.Equal(["By course", "Master", "Off", "200 ms", "90 s", "100", "100", "GX Unleashed", "On"],
                 editor.ParamRows.Select(p => ModeParamRow.Text(p.Param, p.Value, p.Stats)));
             Assert.Contains(Named<RulesPanel>(view, "CreatePanel").GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "CPU level" && t.IsEffectivelyVisible);
-            Assert.DoesNotContain(view.GetVisualDescendants().OfType<TextBlock>(), t => t.IsEffectivelyVisible && t.Text is "Preset" or "CPU racers" or "Teams");
+            Assert.DoesNotContain(view.GetVisualDescendants().OfType<TextBlock>(), t => t.IsEffectivelyVisible && t.Text is "Preset" or "Teams");
+            Assert.Contains(Named<RulesPanel>(view, "CreatePanel").GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "CPU racers" && t.IsEffectivelyVisible);
+            Assert.DoesNotContain(Named<RulesPanel>(view, "LobbyPanel").GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "CPU racers" && t.IsEffectivelyVisible);
             ((StepperRule)editor.Rule("racers")).Value = 12;
             editor.PasswordRow.Text = "pw";
             Dispatcher.UIThread.RunJobs();
