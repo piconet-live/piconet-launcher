@@ -99,6 +99,19 @@
     </DataTemplate>
     <!-- the stepper at the row's right edge, over the switches of the rows under it, so that the pad's down goes
          to the next row (Boost from the start) and not past it; Unlimited's switch to its left. Unlimited: no stepper, the switch comes over the rows under it, so down stops here -->
+    <DataTemplate DataType="vm:NamedNumberRule">
+      <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+        <ToggleSwitch IsChecked="{Binding IsNamed}" OnContent="" OffContent="" AutomationProperties.Name="{Binding Named}"
+                      IsVisible="{Binding !IsOff}" />
+        <TextBlock Classes="dim" Text="{Binding Named}" VerticalAlignment="Center" IsVisible="{Binding !IsOff}" />
+        <!-- a named value "Off": the row's switch, On the number -->
+        <ToggleSwitch IsChecked="{Binding Counted}" OnContent="" OffContent="" AutomationProperties.Name="{Binding Label}"
+                      IsVisible="{Binding IsOff}" />
+        <TextBlock Classes="dim" MinWidth="24" Text="{Binding State}" VerticalAlignment="Center" IsVisible="{Binding IsOff}" />
+        <c:Stepper Value="{Binding Value}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Step="{Binding Step}"
+                   IsVisible="{Binding Counted}" AutomationProperties.Name="{Binding Label}" />
+      </StackPanel>
+    </DataTemplate>
     <DataTemplate DataType="vm:LapsRule">
       <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
         <ToggleSwitch IsChecked="{Binding Unlimited}" OnContent="" OffContent="" AutomationProperties.Name="Unlimited" />

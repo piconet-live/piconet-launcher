@@ -135,10 +135,10 @@ public sealed class StandInModesTests : IDisposable
         var (mode, _, refusal) = StandInService.ModeOf(rules, null, null);
         Assert.Null(refusal);
         Assert.Equal(("Overdrive", "OVERDRIVE", ModeCompiler.Compile(good).Hash), (mode!.Name, mode.Badge, mode.Hash));
-        // named again without the file: kept; another hash: refused; none: no mode
+        // named again without the file: kept; another hash: refused; none: Quick Play's normal mode, as on the service
         Assert.Same(mode, StandInService.ModeOf(new LobbyRules(new Dictionary<string, int>(), Mode: mode), mode, null).Mode);
         Assert.Equal("the lobby holds no such mode", StandInService.ModeOf(new LobbyRules(new Dictionary<string, int>(), Mode: mode), null, null).Refusal);
-        Assert.Null(StandInService.ModeOf(new LobbyRules(new Dictionary<string, int>()), mode, null).Mode);
+        Assert.Equal("Quick Play", StandInService.ModeOf(new LobbyRules(new Dictionary<string, int>()), mode, null).Mode!.Name);
         // the host's values: checked against the package, kept, and over the words
         const string WithParam = "mode \"P\" { api 1; }\nparam n \"Laps\" number 2..10 step 2 default 4;\nlaps n;\n";
         Assert.StartsWith("Laps:", StandInService.ModeOf(new LobbyRules(new Dictionary<string, int>(), ModeFile: WithParam, ModeValues: [3]), null, null).Refusal, StringComparison.Ordinal);
@@ -275,8 +275,8 @@ public sealed class StandInModesTests : IDisposable
         var c = await Connected();
         await using (c.Link)
         {
-            var state = await Created(c, "teams 2..3;", new Dictionary<string, int> { [LobbyRules.TeamsKey] = 9 });
-            Assert.Equal(3, state.Rules!.Value(LobbyRules.TeamsKey));   // (within the mode's word)
+            var state = await Created(c, "teams 2..3;");
+            Assert.Equal(3, state.Rules!.Value(LobbyRules.TeamsKey));   // (the mode's most: the teams are the mode's)
             await c.Link.ChooseTeamAsync(1, null, TestContext.Current.CancellationToken);
             var mine = await Next<LobbyState>(c.Got, s => s.Players.Any(p => p.Team == 1));
             Assert.Single(mine.Players, p => p.Team == 1);

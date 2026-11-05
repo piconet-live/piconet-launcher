@@ -30,14 +30,14 @@ public sealed class CustomRulesTests
     [Fact]
     public void TheSummaryNamesOnlyWhatDiffersInTheRulesOrder()
     {
-        var rules = Whole(new() { ["latency-limit"] = 150, ["laps"] = 5 }, "GX+");
+        var rules = Whole(new() { ["latency-limit"] = 150, ["racers"] = 12 }, "GX+");
 
-        Assert.Equal("5 laps · GX+ · ping limit 150 ms", CustomRules.Summary(rules, QuickPlay));
+        Assert.Equal("12 racers · Latency limit 150 ms", CustomRules.Summary(rules, QuickPlay));
         Assert.Equal("", CustomRules.Summary(Whole([]), QuickPlay));                          // Quick Play's own
-        Assert.Equal("1 lap · no CPUs · stock stats",
-            CustomRules.Summary(Whole(new() { ["laps"] = 1, ["cpu-fill"] = (int)CpuFillMode.Never }, pack: null), QuickPlay));
-        Assert.Equal("mines stay gone · setting 80-100", CustomRules.Summary(
-            Whole(new() { ["machine-setting"] = 80, [LobbyRules.SettingHighKey] = 100, ["mine-regen"] = 0 }), QuickPlay));
+        // (the race's rules are the mode's, said with its name: the lobby's summary names none of them)
+        Assert.Equal("", CustomRules.Summary(Whole(new() { ["laps"] = 1, ["cpu-fill"] = (int)CpuFillMode.Never }, pack: null), QuickPlay));
+        Assert.Equal("Course vote 20 s · Voting minimum 4", CustomRules.Summary(
+            Whole(new() { ["vote-seconds"] = 20, ["voting-minimum"] = 4, ["mine-regen"] = 0 }), QuickPlay));
     }
 
     [Fact]
@@ -45,16 +45,15 @@ public sealed class CustomRulesTests
     {
         var rules = new LobbyRules(CustomRules.Defaults.Values.ToDictionary(p => p.Key, p => p.Value));
         Assert.Equal("", CustomRules.Summary(rules, null));
-        var five = rules with { Values = rules.Values.ToDictionary(p => p.Key, p => p.Key == "laps" ? 5 : p.Value) };
-        Assert.Equal("5 laps", CustomRules.Summary(five, null));
+        var twelve = rules with { Values = rules.Values.ToDictionary(p => p.Key, p => p.Key == "racers" ? 12 : p.Value) };
+        Assert.Equal("12 racers", CustomRules.Summary(twelve, null));
         Assert.Null(rules.StatPack);   // (no word from a server: no pack, nothing of the launcher's own)
-        Assert.Equal("GX Unleashed", CustomRules.Summary(rules with { StatPack = "GX Unleashed" }, null));
         Assert.Equal(HostRules.LatencyLimit.Default, CustomRules.Value(null, "latency-limit", null));
     }
 
     /// <summary>The server's official modes as its list names them: Quick Play's rules, those with GX+ stats, Knockout with
     /// its settings.</summary>
-    private static readonly LobbyMode Plain = new(new string('f', 64), "FFFFFFFF", "Quick Play", 1, About: "The game's own rules.",
+    private static readonly LobbyMode Plain = new(new string('f', 64), "FFFFFFFF", "Quick Play", 1, About: "Quick Play's rules: laps by course, GX Unleashed stats.",
         Terms: new Dictionary<string, int> { ["finish-limit"] = 90 });
 
     private static readonly LobbyMode PlusStats = new(new string('b', 64), "BBBBBBBB", "Quick Play with GX+ stats", 1,
@@ -66,36 +65,83 @@ public sealed class CustomRulesTests
 
     private static readonly IReadOnlyList<LobbyMode> Official = [Plain, PlusStats, Knockout];
 
-    /// <summary>The stats row offers the mode's stats and the host's own file only; a mode that names a pack, either way,
-    /// takes the row away and says what is raced; a list of machines is said.</summary>
+    /// <summary>The stats are the mode's: no stats row beside it. Its stats parameter says stock and file in words; on
+    /// the file it asks for the host's own pack file (Choose file…), sent whole with its name; another choice sends none.
+    /// What a lobby races is said in its whole list.</summary>
     [Fact]
-    public void TheStatsRowIsTheModesOrAFileAndAModeThatStatesItTakesTheRow()
+    public void TheStatsAreTheModesParameterAndItsFileChoiceAsksForTheFile()
     {
-        string[] Shown(LobbyRulesEditor e) => [.. e.RuleGroups.SelectMany(g => g.Rows).Select(r => r.Label)];
-        var start = new LobbyRulesEditor(null, QuickPlay, Official, "Friday");
-        Assert.Null(start.Rules.StatPack);                                                    // (a pack by name is the mode's)
-        var row = Assert.IsType<PackRule>(start.Rule(HostRules.StatPack.Name));
-        Assert.Equal([LobbyRulesEditor.ModesStats], row.Options);
-        Assert.Contains(HostRules.StatPack.Label, Shown(start));
-        start.ModeRow.Selected = 1;                                                           // GX+ stats: the mode's word
-        Assert.DoesNotContain(HostRules.StatPack.Label, Shown(start));
-        Assert.Null(start.Rules.StatPack);
+        var dir = Directory.CreateTempSubdirectory("host-pack").FullName;
+        try
+        {
+            var (good, bad) = (Path.Combine(dir, "mine.fzstats"), Path.Combine(dir, "bad.fzstats"));
+            File.WriteAllText(good, MyPack);
+            File.WriteAllText(bad, "fzstats 1\nname Bad\nmachine 6 Weight -1e30\n");
+            var editor = new LobbyRulesEditor(null, QuickPlay, [WithStats], "Friday");
+            Assert.DoesNotContain(HostRules.StatPack.Label, editor.RuleGroups.SelectMany(g => g.Rows).Select(r => r.Label));
+            var stats = Assert.IsType<ChoiceRule>(editor.ParamRows.Single(r => r.Stats).Row);
+            Assert.Equal(["GX Unleashed", ModeParamRow.StockWords, ModeParamRow.FileWords], stats.Options);
+            Assert.False(editor.PackFileShown);
+            Assert.Equal((null, null), (editor.Rules.StatPack, editor.Rules.PackFile));
+
+            stats.Selected = 2;                                                              // the host's own file
+            Assert.True(editor.PackFileShown);
+            Assert.Contains(editor.PackFileRow, editor.CreateGroups.SelectMany(g => g.Rows));
+            editor.PackFileRow.Load(bad);                                                    // no pack: said, nothing sent
+            Assert.StartsWith("Not a stat pack: ", editor.PackFileRow.Note, StringComparison.Ordinal);
+            Assert.Equal((null, null), (editor.Rules.StatPack, editor.Rules.PackFile));
+            editor.PackFileRow.Load(good);
+            Assert.Equal(("My Pack", MyPack), (editor.Rules.StatPack, editor.Rules.PackFile));
+            Assert.Null(editor.Rules.OutsideTheMode());
+            stats.Selected = 1;                                                              // stock: no file sent
+            Assert.False(editor.PackFileShown);
+            Assert.Equal((null, null), (editor.Rules.StatPack, editor.Rules.PackFile));
+            Assert.Equal("Quick Play · Stats Stock", editor.Summary);
+
+            // the host's lobby on the file: the panel opens on it
+            var again = new LobbyRulesEditor(new LobbyRules(QuickPlay.Values, "My Pack", Mode: WithStats with { Values = [2], Pack = null }), QuickPlay,
+                [WithStats], "Friday", editing: true, file: new HostPackFile("My Pack", MyPack));
+            Assert.True(again.PackFileShown);
+            Assert.Equal(("My Pack", MyPack), (again.Rules.StatPack, again.Rules.PackFile));
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
 
         LobbyMode Mode(string? pack) => new(new string('d', 64), "DDDDDDDD", "M", 1, Pack: pack, Machines: [6]);
         foreach (var (pack, raced) in new[] { ("", HostRuleRows.Stock), ("GX+", "GX+") })
         {
-            var rules = new LobbyRules(new Dictionary<string, int>(), "GX Unleashed", Mode: Mode(pack));
-            Assert.DoesNotContain(HostRules.StatPack.Label, Shown(new LobbyRulesEditor(rules, null, Official, "Friday", editing: true)));
+            var rules = new LobbyRules(new Dictionary<string, int>(), Mode: Mode(pack));
             var all = CustomRules.AllRules(rules, null).SelectMany(g => g.Rows).OfType<ValueRule>().ToList();
             Assert.Equal(raced, all.Single(r => r.Label == HostRules.StatPack.Label).Value);
             Assert.Equal("Blue Falcon only", all.Single(r => r.Label == "Machines").Value);
         }
-        var open = new LobbyRules(new Dictionary<string, int>(), Mode: Mode(null));
-        Assert.Contains(HostRules.StatPack.Label, Shown(new LobbyRulesEditor(open, null, Official, "Friday", editing: true)));
-        Assert.Equal("M · Blue Falcon only", CustomRules.Summary(open, null));
-        Assert.Equal("", CustomRules.MachinesLine(null));
-        Assert.Equal("", CustomRules.MachinesLine([.. Enumerable.Range(0, Machines.Names.Count)]));
-        Assert.Equal("2 machines", CustomRules.MachinesLine([2, 6]));
+    }
+
+    /// <summary>Quick Play's normal mode with its stats parameter, as a server's list names it.</summary>
+    private static readonly LobbyMode WithStats = new(new string('e', 64), "EEEEEEEE", "Quick Play", 1,
+        Terms: new Dictionary<string, int> { ["finish-limit"] = 90 }, Pack: "GX Unleashed",
+        Params: [new ModeParam("pack", "Stats", ModeParamKind.Choice, ModeType.Int, 0, 2, 1, 0, ["GX Unleashed", "stock", "file"])], Values: [0],
+        PackParam: 0);
+
+    /// <summary>An optional parameter's row: a whole number beside its named value ("By course"), on it by default; a
+    /// number moves it off, and the value sent is the number, or the named value's cell.</summary>
+    [Fact]
+    public void AnOptionalParameterIsANamedValueBesideItsNumber()
+    {
+        var laps = new ModeParam("lap_count", "Laps", ModeParamKind.Number, ModeType.Int, 1, 100, 1, 100, [], "By course");
+        var mode = new LobbyMode(new string('9', 64), "99999999", "Quick Play", 1, Params: [laps], Values: [100]);
+        var editor = new LobbyRulesEditor(null, QuickPlay, [mode], "Friday");
+        var row = Assert.IsType<NamedNumberRule>(editor.ParamRows[0].Row);
+        Assert.Equal(("By course", true, 1, 99), (row.Named, row.IsNamed, row.Minimum, row.Maximum));
+        Assert.Equal([100], editor.Rules.ModeValues!);
+        Assert.Equal("Quick Play", editor.Summary);
+        row.IsNamed = false;
+        row.Value = 5;
+        Assert.Equal([5], editor.Rules.ModeValues!);
+        Assert.Equal("Quick Play · Laps 5", editor.Summary);
+        Assert.Equal("By course", ModeParamRow.Text(laps, 100));
     }
 
     [Fact]
@@ -142,23 +188,23 @@ public sealed class CustomRulesTests
 
         Assert.Equal("ANA's lobby", editor.Name);
         Assert.Equal(["Quick Play", "Quick Play with GX+ stats", "Knockout"], editor.ModeRow.Choices.Select(c => c.Name));
-        Assert.Equal("The game's own rules.", editor.ModeRow.Chosen!.About);
+        Assert.Equal("Quick Play's rules: laps by course, GX Unleashed stats.", editor.ModeRow.Chosen!.About);
         Assert.Empty(editor.Rules.Values);
         Assert.Equal((Plain.Hash, null), (editor.Rules.Mode?.Hash, editor.Rules.ModeFile));
         Assert.Null(editor.Rules.OutsideTheMode());
         Assert.Equal("Quick Play", editor.Summary);
         Assert.Empty(editor.ParamRows);
         Assert.Equal(["Name", "Password"], editor.CreateGroups[0].Rows.Select(r => r.Label));
-        Assert.Equal(("Quick Play", "Teams"), (editor.CreateGroups[1].Heading, editor.CreateGroups[1].Rows[0].Label));
+        Assert.Equal(("Quick Play", "Settings"), (editor.CreateGroups[1].Heading, editor.CreateGroups[1].Rows[0].Label));   // (this mode has none)
 
-        // only the lobby's own settings and the rules with no mode word yet are the host's, in their groups
-        Assert.Equal(["Lobby", "Connection", "Race"], editor.RuleGroups.Select(g => g.Heading));
-        Assert.Equal(["Racers", "Course vote", "Machine choice", "Voting minimum", "Latency limit", "Course", "CPU racers", "Stats"],
+        // only the lobby's own settings are the host's, in their groups: no CPU racers, teams or stats (the mode's)
+        Assert.Equal(["Lobby", "Connection", "Course"], editor.RuleGroups.Select(g => g.Heading));
+        Assert.Equal(["Racers", "Course vote", "Machine choice", "Voting minimum", "Latency limit", "Course"],
             editor.RuleGroups.SelectMany(g => g.Rows).Select(r => r.Label));
         ((StepperRule)editor.Rule("racers")).Value = 12;
         ((StepperRule)editor.Rule("latency-limit")).Value = 150;
         Assert.Equal(new Dictionary<string, int> { ["racers"] = 12, ["latency-limit"] = 150 }, editor.Rules.Values.ToDictionary(p => p.Key, p => p.Value));
-        Assert.Equal("Quick Play · 12 racers · ping limit 150 ms", editor.Summary);
+        Assert.Equal("Quick Play · 12 racers · Latency limit 150 ms", editor.Summary);
 
         // another mode: its settings on their defaults, its courses; the lobby's settings stay
         editor.ModeRow.Selected = 2;
@@ -200,48 +246,6 @@ public sealed class CustomRulesTests
     private const string MyPack = "fzstats 1\nname My Pack\n# heavier\nmachine 6 Weight 2520\n";
 
     [Fact]
-    public void AHostsOwnPackFileIsOfferedByItsNameAndSentWhole()
-    {
-        var dir = Directory.CreateTempSubdirectory("host-pack").FullName;
-        try
-        {
-            var (good, bad) = (Path.Combine(dir, "mine.fzstats"), Path.Combine(dir, "bad.fzstats"));
-            File.WriteAllText(good, MyPack);
-            File.WriteAllText(bad, "fzstats 1\nname Bad\nmachine 6 Weight -1e30\n");
-            var editor = new LobbyRulesEditor(null, QuickPlay, Official, "Friday");
-            var row = Assert.IsType<PackRule>(editor.Rule(HostRules.StatPack.Name));
-            Assert.Equal([LobbyRulesEditor.ModesStats], row.Options);
-            Assert.Null(editor.Rules.PackFile);
-
-            row.Load(bad);                                                                    // no pack: said, nothing chosen
-            Assert.StartsWith("Not a stat pack: ", row.Note, StringComparison.Ordinal);
-            Assert.Equal((null, null), (editor.Rules.StatPack, editor.Rules.PackFile));
-
-            row.Load(good);                                                                   // the file: its pack's name, last
-            Assert.Equal("", row.Note);
-            Assert.Equal([LobbyRulesEditor.ModesStats, "My Pack"], row.Options);
-            Assert.Equal(("My Pack", MyPack), (editor.Rules.StatPack, editor.Rules.PackFile));
-            Assert.Null(editor.Rules.OutsideTheMode());
-            Assert.Equal("Quick Play · My Pack", editor.Summary);
-            editor.ModeRow.Selected = 1;                                                      // a mode that names its pack: no file sent
-            Assert.Equal((null, null), (editor.Rules.StatPack, editor.Rules.PackFile));
-            editor.ModeRow.Selected = 0;
-            row.Selected = 0;                                                                 // the mode's again
-            Assert.Equal((null, null), (editor.Rules.StatPack, editor.Rules.PackFile));
-
-            // the host's lobby, its rules naming the pack the host sent: the panel opens on the file
-            var again = new LobbyRulesEditor(new LobbyRules(QuickPlay.Values, "My Pack"), QuickPlay, Official, "Friday", editing: true,
-                file: new HostPackFile("My Pack", MyPack));
-            Assert.True(Assert.IsType<PackRule>(again.Rule(HostRules.StatPack.Name)).FileChosen);
-            Assert.Equal(("My Pack", MyPack), (again.Rules.StatPack, again.Rules.PackFile));
-        }
-        finally
-        {
-            Directory.Delete(dir, recursive: true);
-        }
-    }
-
-    [Fact]
     public void APackFileTooLongAsJsonIsSaidAndNotSent()
     {
         // within the characters a pack file may be, but outside ASCII: six bytes a character as JSON, past what the
@@ -257,18 +261,19 @@ public sealed class CustomRulesTests
     [Fact]
     public void ALobbysOwnRulesOpenTheHostsPanel()
     {
-        var rules = Whole(new() { ["cpu-fill"] = (int)CpuFillMode.Always, ["course-select"] = (int)CourseSelectMode.Fixed,
-            [LobbyRules.FixedCourseKey] = 1, ["voting-minimum"] = 4 });
+        var rules = Whole(new() { ["racers"] = 12, ["course-select"] = (int)CourseSelectMode.Fixed,
+            [LobbyRules.FixedCourseKey] = 1, ["voting-minimum"] = 4, ["cpu-fill"] = (int)CpuFillMode.Always });
         var editor = new LobbyRulesEditor(rules, QuickPlay, [], "Friday", locked: true, editing: true);
 
-        Assert.Equal(1, ((SegmentedRule)editor.Rule("cpu-fill")).Selected);
+        Assert.Equal(12, ((StepperRule)editor.Rule("racers")).Value);
         Assert.Equal((2, 1, false), editor.CourseRow is var course ? (course.Selected, course.Course, course.Picking) : default);
         Assert.True(editor.LockedRow.On);
+        // (the CPUs are the mode's: an old lobby's cpu-fill is no row and goes with no rules)
         Assert.Equal(new Dictionary<string, int>
         {
-            ["cpu-fill"] = 1, ["course-select"] = 2, [LobbyRules.FixedCourseKey] = 1, ["voting-minimum"] = 4,
+            ["racers"] = 12, ["course-select"] = 2, [LobbyRules.FixedCourseKey] = 1, ["voting-minimum"] = 4,
         }, editor.Rules.Values.ToDictionary(p => p.Key, p => p.Value));
-        Assert.Null(editor.Rules.OutsideTheMode());   // (the rules with no mode word yet stay the host's)
+        Assert.Null(editor.Rules.OutsideTheMode());   // (the lobby's own settings alone)
     }
 
     [Fact]
@@ -290,7 +295,7 @@ public sealed class CustomRulesTests
 
         course.Selected = (int)CourseSelectMode.Random;
         Assert.Null(editor.Rules.Value(LobbyRules.FixedCourseKey));
-        Assert.Equal("random course", editor.Summary);
+        Assert.Equal("Course Random", editor.Summary);
     }
 
     private static LobbyRules ModeRules(string words)

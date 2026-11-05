@@ -421,7 +421,7 @@ public sealed class PadNavigationTests : IDisposable
             Assert.Contains(visited, row.IsVisualAncestorOf);
         }
 
-        var mines = rows.Single(r => r.Children.OfType<TextBlock>().Single().Text == "Mines return");
+        var mines = rows.Single(r => r.Children.OfType<TextBlock>().Single().Text == "Mines respawn");
         var off = mines.GetVisualDescendants().OfType<ToggleSwitch>().Single();
         off.Focus();
         Do(pad, Press(PadButton.A));

@@ -97,6 +97,10 @@ public sealed class CustomLobbiesTests : IDisposable
 
     private static List<SeatRow> Seated(LobbyViewModel lobby) => [.. lobby.SeatColumns.SelectMany(c => c.Seats).Where(s => !s.Open)];
 
+    /// <summary>Quick Play's settings as its official mode declares them (protocol quickplay/competitive.fzmode).</summary>
+    private static readonly string[] QuickPlaysSettings =
+        ["Laps", "CPU level", "Boost from the start", "Mines respawn", "Finish limit", "Machine setting from", "Machine setting to", "Stats"];
+
     [Fact]
     public async Task OnTheStandInTheBrowserJoinsALockedLobbyByItsPasswordAndAHostKicks()
     {
@@ -107,10 +111,10 @@ public sealed class CustomLobbiesTests : IDisposable
             main.Current = main.Lobbies;
             var lobbies = main.Lobbies;
             PumpTelling(state, () => lobbies.Rows.Count == 3, "the browser listed nothing");
-            Assert.Equal(["Big Blue nights", "Friday cup", "Mines stay gone"], lobbies.Rows.Select(r => r.Name));
-            Assert.Equal(("ZOE", "2/12", true, "Waiting", "12 racers · no CPUs · ping limit 150 ms"),
+            Assert.Equal(["Big Blue nights", "Friday cup", "Mines off"], lobbies.Rows.Select(r => r.Name));
+            Assert.Equal(("ZOE", "2/12", true, "Waiting", "Quick Play · 12 racers · Latency limit 150 ms"),
                 lobbies.Rows[1] is var friday ? (friday.Host, friday.Count, friday.Locked, friday.Stage, friday.Rules) : default);
-            Assert.Equal(("Racing", "boost from the start · mines stay gone"), (lobbies.Rows[2].Stage, lobbies.Rows[2].Rules));
+            Assert.Equal(("Racing", "Quick Play · Boost from the start On · Mines respawn Off"), (lobbies.Rows[2].Stage, lobbies.Rows[2].Rules));
             Assert.True(state.Session is { Custom: true, Browsing: true, Lobby: null });
             var view = Page<CustomLobbiesView>(window);
             Shot(window, state, "browser");
@@ -131,7 +135,7 @@ public sealed class CustomLobbiesTests : IDisposable
             // a joiner: the host and the host's mark, the rules that differ; no host controls
             var lobby = main.Lobby;
             PumpTelling(state, () => lobby.Custom && lobby.HostName == "ZOE");
-            Assert.Equal(("Friday cup", "12 racers · no CPUs · ping limit 150 ms", false, false),
+            Assert.Equal(("Friday cup", "Quick Play · 12 racers · Latency limit 150 ms", false, false),
                 (lobby.LobbyName, lobby.RulesSummary, lobby.IsHost, lobby.HostCanEdit));
             Assert.True(Seated(lobby).Single(s => s.Name == "ZOE").Host);
             Assert.DoesNotContain(Seated(lobby), s => s.Kickable);
@@ -150,8 +154,8 @@ public sealed class CustomLobbiesTests : IDisposable
             PumpTelling(state, () => main.Current is CustomLobbiesViewModel && lobbies.Rows.Count == 3, "leaving did not go back to the browser");
             Assert.True(state.Session is { Custom: true, ConnectedTo: not null, Lobby: null });
 
-            // Create: pick a mode, then its settings. The server's official modes (the stand-in races no stat pack, so
-            // Quick Play's rules, Knockout, Ghost race), Quick Play's first and chosen; the lobby's own settings beside
+            // Create: pick a mode, then its settings. The server's official modes (Quick Play, Knockout, Ghost race),
+            // Quick Play's first and chosen; the lobby's own settings beside
             view = Page<CustomLobbiesView>(window);
             Click(window, Named<Button>(view, "CreateButton"));
             Assert.True(lobbies.Creating);
@@ -162,10 +166,15 @@ public sealed class CustomLobbiesTests : IDisposable
             Assert.True(list.IsEffectivelyVisible);
             Assert.Equal(["Quick Play", "Knockout", "Ghost race"], editor.ModeRow.Choices.Select(c => c.Name));
             Assert.Equal(0, list.SelectedIndex);
-            Assert.Equal("The game's own rules.", editor.ModeRow.Chosen!.About);
+            Assert.Equal("Quick Play's rules: laps by course, GX Unleashed stats.", editor.ModeRow.Chosen!.About);
             Assert.True(Named<Button>(view, "ModeFromFile").IsEffectivelyVisible);
             Assert.True(Named<RulesPanel>(view, "LobbyPanel").IsEffectivelyVisible);
-            Assert.DoesNotContain(view.GetVisualDescendants().OfType<TextBlock>(), t => t.IsEffectivelyVisible && t.Text is "Laps" or "Preset");
+            // Quick Play's settings: the mode's parameters, on Quick Play's own values; no preset
+            Assert.Equal(QuickPlaysSettings, editor.ParamRows.Select(p => p.Row.Label));
+            Assert.Equal(["By course", "Master", "Off", "200", "90", "100", "100", "GX Unleashed"],
+                editor.ParamRows.Select(p => ModeParamRow.Text(p.Param, p.Value, p.Stats)));
+            Assert.Contains(Named<RulesPanel>(view, "CreatePanel").GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "CPU level" && t.IsEffectivelyVisible);
+            Assert.DoesNotContain(view.GetVisualDescendants().OfType<TextBlock>(), t => t.IsEffectivelyVisible && t.Text is "Preset" or "CPU racers" or "Teams");
             ((StepperRule)editor.Rule("racers")).Value = 12;
             editor.PasswordRow.Text = "pw";
             Dispatcher.UIThread.RunJobs();
@@ -181,7 +190,7 @@ public sealed class CustomLobbiesTests : IDisposable
             Shot(window, state, "create-official-mode");
             list.SelectedIndex = 0;
             Dispatcher.UIThread.RunJobs();
-            Assert.Empty(editor.ParamRows);
+            Assert.Equal(QuickPlaysSettings, editor.ParamRows.Select(p => p.Row.Label));
 
             // a fixed course: Fixed opens the one-course picker in the rules' place; a course pressed is the lobby's
             var course = editor.CourseRow;
@@ -228,7 +237,11 @@ public sealed class CustomLobbiesTests : IDisposable
             lobby.HostEditor.NameRow.Text = "Saturday cup";
             lobby.HostEditor.LockedRow.On = false;
             Shot(window, state, "lobby-host-rules");
-            Click(window, Named<Button>(Named<RulesPanel>(page, "HostPanel"), "ActionButton"));
+            // (Quick Play's settings make the panel taller than the window: SAVE RULES is scrolled to)
+            var save = Named<Button>(Named<RulesPanel>(page, "HostPanel"), "ActionButton");
+            save.BringIntoView();
+            PumpFor(300, state);
+            Click(window, save);
             PumpTelling(state, () => lobby.RulesSummary == "Quick Play · " + fixedName + " · 10 racers", "SAVE RULES changed nothing");
             PumpTelling(state, () => lobby.LobbyName == "Saturday cup" && !lobby.LobbyLocked, "the rename and the lock did not come back");
 
@@ -259,7 +272,7 @@ public sealed class CustomLobbiesTests : IDisposable
             Assert.Equal(("l1", "pw", 6, new Rgb(1, 2, 3)), server.Of<JoinLobby>()[0] is var j ? (j.LobbyId, j.Password, j.Machine, j.Color) : default);
 
             // BEN hosts: his mark, no host controls for ANA
-            var rules = new LobbyRules(new Dictionary<string, int> { ["laps"] = 4 });
+            var rules = new LobbyRules(new Dictionary<string, int> { ["racers"] = 12 });
             server.SendAsync(LedServer.Lobby(LobbyState.Forming) with { Custom = true, HostId = "p2", Rules = rules, Name = "BEN's lobby" })
                 .GetAwaiter().GetResult();
             main.Current = main.Lobby;
@@ -277,7 +290,7 @@ public sealed class CustomLobbiesTests : IDisposable
             Assert.Equal("Saturday cup", Named<TextBlock>(renamed, "LobbyName").Text);
             Assert.True(Named<Avalonia.Controls.Shapes.Path>(renamed, "LobbyLock").IsEffectivelyVisible);
             Shot(window, state, "joiner-renamed");
-            Assert.Equal((false, false, "4 laps"), (lobby.IsHost, lobby.HostCanEdit, lobby.RulesSummary));
+            Assert.Equal((false, false, "12 racers"), (lobby.IsHost, lobby.HostCanEdit, lobby.RulesSummary));
             Assert.DoesNotContain(Seated(lobby), s => s.Kickable);
             var page = Page<LobbyView>(window);
             Assert.True(Named<TextBlock>(page, "HostName").IsEffectivelyVisible);
@@ -326,22 +339,36 @@ public sealed class CustomLobbiesTests : IDisposable
             PumpFor(200, state);
             var view = Page<CustomLobbiesView>(window);
             Click(window, Named<Button>(view, "CreateButton"));
-            var row = Assert.IsType<PackRule>(main.Lobbies.Editor!.Rule(HostRules.StatPack.Name));
-            var choose = Named<RulesPanel>(view, "LobbyPanel").GetVisualDescendants().OfType<Button>()
+            // the stats are the mode's: a host's own file goes only with a mode whose stats choice is the file
+            var editor = main.Lobbies.Editor!;
+            Assert.False(editor.PackFileShown);
+            var mode = Path.Combine(_dir, "own-stats.fzmode");
+            File.WriteAllText(mode, "mode \"Own stats\" { api 1; }\nparam pack \"Stats\" choice [\"stock\", \"file\"] default \"stock\";\nstats pack;\n");
+            editor.ModeRow.Load(mode);
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(editor.ModeRow.FileChosen, editor.ModeRow.Note);
+            var stats = Assert.IsType<ChoiceRule>(editor.ParamRows.Single(r => r.Stats).Row);
+            Assert.Equal(["Stock", "Your own file"], stats.Options);
+            stats.Selected = 1;
+            Dispatcher.UIThread.RunJobs();
+            Assert.True(editor.PackFileShown);
+            var row = editor.PackFileRow;
+            var choose = Named<RulesPanel>(view, "CreatePanel").GetVisualDescendants().OfType<Button>()
                 .Single(b => b.Name == "PackFile" && b.IsEffectivelyVisible);
             Assert.Equal(("Choose file", row), (choose.Content, choose.DataContext));
             row.Load(file);   // (what Choose file does with the file the system's picker gives)
             Dispatcher.UIThread.RunJobs();
             Assert.Equal("Heavy Blue", row.Chosen);
-            var box = Named<RulesPanel>(view, "LobbyPanel").GetVisualDescendants().OfType<ComboBox>().Single(c => c.DataContext == row);
+            var box = Named<RulesPanel>(view, "CreatePanel").GetVisualDescendants().OfType<ComboBox>().Single(c => c.DataContext == row);
             Assert.Equal("Heavy Blue", box.SelectedItem);
-            Assert.Equal("Heavy Blue", main.Lobbies.Editor.Summary);
+            Assert.Equal("Own stats · Stats Your own file", editor.Summary);
             Shot(window, state, "create-pack-file");
 
             Click(window, Named<Button>(Named<RulesPanel>(view, "CreatePanel"), "ActionButton"));
             Pump(() => server.Of<CreateLobby>().Count == 1, "CREATE sent nothing");
             var sent = server.Of<CreateLobby>()[0].Rules;
             Assert.Equal(("Heavy Blue", Pack), (sent.StatPack, sent.PackFile));
+            Assert.Equal([1], sent.ModeValues!);
             Assert.Equal(new HostPackFile("Heavy Blue", Pack), state.Session!.HostPack);
         });
     }
@@ -417,18 +444,26 @@ public sealed class CustomLobbiesTests : IDisposable
             var view = Page<CustomLobbiesView>(window);
             Click(window, Named<Button>(view, "CreateButton"));
             var editor = main.Lobbies.Editor!;
-            Assert.Equal(["Quick Play", "Quick Play with stock stats", "Quick Play with GX Unleashed stats", "Quick Play with F-Zero GX+ stats",
-                "Knockout", "Ghost race"], editor.ModeRow.Choices.Select(c => c.Name));
-            Assert.Contains(editor.RuleGroups.SelectMany(g => g.Rows), r => r.Label == HostRules.StatPack.Label);
-            Named<ListBox>(view, "ModeList").SelectedIndex = 3;
+            Assert.Equal(["Quick Play", "Knockout", "Ghost race"], editor.ModeRow.Choices.Select(c => c.Name));
+            // Quick Play's settings are its mode's: the stats among them, no stats row of the lobby's
+            Assert.Equal(QuickPlaysSettings, editor.ParamRows.Select(p => p.Row.Label));
+            Assert.DoesNotContain(editor.LobbyGroups.SelectMany(g => g.Rows), r => r.Label == HostRules.StatPack.Label && r is PackRule);
+            var stats = Assert.IsType<ChoiceRule>(editor.ParamRows.Single(p => p.Stats).Row);
+            Assert.Equal(["GX Unleashed", "F-Zero GX+", "Stock", "Your own file"], stats.Options);
+            stats.Selected = 1;
+            var laps = Assert.IsType<NamedNumberRule>(editor.ParamRows[0].Row);
+            laps.IsNamed = false;
+            laps.Value = 5;
             Dispatcher.UIThread.RunJobs();
-            Assert.DoesNotContain(editor.RuleGroups.SelectMany(g => g.Rows), r => r.Label == HostRules.StatPack.Label);
+            Assert.Equal("Quick Play · Laps 5 · Stats F-Zero GX+", editor.Summary);
             Shot(window, state, "create-official-list");
 
             Click(window, Named<Button>(Named<RulesPanel>(view, "CreatePanel"), "ActionButton"));
             Pump(() => server.Of<CreateLobby>().Count == 1, "CREATE sent nothing");
             var sent = server.Of<CreateLobby>()[0].Rules;
-            Assert.Equal((official[3].Hash, null, null), (sent.Mode?.Hash, sent.ModeFile, sent.StatPack));
+            Assert.Equal((official[0].Hash, null, null), (sent.Mode?.Hash, sent.ModeFile, sent.StatPack));
+            Assert.Equal(5, sent.ModeValues![0]);
+            Assert.Equal(1, sent.ModeValues![7]);
             Assert.Null(sent.OutsideTheMode());
         });
     }
@@ -676,17 +711,19 @@ public sealed class CustomLobbiesTests : IDisposable
         var plain = new LobbyMode(new string('b', 64), "BBBBBBBB", "Quick Play", 1, Terms: new Dictionary<string, int> { ["finish-limit"] = 90 });
         var editor = new LobbyRulesEditor(rules, null, [plain], "Friday", editing: true);
         string[] Shown() => [.. editor.RuleGroups.SelectMany(g => g.Rows).Select(r => r.Label)];
-        foreach (var owned in new[] { "Laps", "Racers", "CPU racers", "Finish limit", "Mines return", "Machine setting", "Boost from the start" })
+        foreach (var owned in new[] { "Laps", "CPU racers", "Finish limit", "Mines respawn", "Machine setting", "Boost from the start", "Teams", "Stats" })
         {
             Assert.DoesNotContain(owned, Shown());
         }
         Assert.Contains("Course", Shown());
-        Assert.Contains("Teams", editor.LobbyGroups.SelectMany(g => g.Rows).Select(r => r.Label));
+        // the player limit stays the lobby's, within the mode's racers
+        var racers = Assert.IsType<StepperRule>(editor.Rule("racers"));
+        Assert.Equal((HostRules.Racers.Least, 6, 6), (racers.Minimum, racers.Maximum, racers.Value));
         Assert.Null(editor.Rules.Value("laps"));                       // (never the host's to send)
         Assert.Null(editor.Rules.OutsideTheMode());
-        editor.ModeRow.Selected = 0;                                   // Quick Play's rules: CPUs by vote, the lobby's seats
-        Assert.Contains("Racers", Shown());
-        Assert.Contains("CPU racers", Shown());
+        editor.ModeRow.Selected = 0;                                   // Quick Play's: the lobby's seats up to the most
+        Assert.Equal(HostRules.Racers.Most, ((StepperRule)editor.Rule("racers")).Maximum);
+        Assert.DoesNotContain("CPU racers", Shown());
         Assert.DoesNotContain("Laps", Shown());
 
         var all = CustomRules.AllRules(rules, null).SelectMany(g => g.Rows).OfType<ValueRule>().ToList();
@@ -695,22 +732,21 @@ public sealed class CustomLobbiesTests : IDisposable
         Assert.Equal("M", CustomRules.Summary(rules, new LobbyRules(new Dictionary<string, int> { ["laps"] = 3, ["finish-limit"] = 90 })));
     }
 
+    /// <summary>The teams are the mode's: no row of the lobby's; a mode that lets the host choose them has its parameter.</summary>
     [Fact]
-    public void TheTeamsRowFollowsTheModesWordAndGoesWithTheRules()
+    public void TheTeamsAreTheModesNotALobbyRow()
     {
         var path = Path.Combine(_dir, "teams.fzmode");
         File.WriteAllText(path, "mode \"Duel\" { api 1; }\nteams 2..4;\n");
         var editor = new LobbyRulesEditor(null, null, [], "Friday");
-        Assert.DoesNotContain("Teams", editor.LobbyGroups.SelectMany(g => g.Rows).Select(r => r.Label));
         editor.ModeRow.Load(path);
-        Assert.Equal(["2", "3", "4"], editor.TeamsRow.Options);
-        Assert.Contains(editor.TeamsRow, editor.LobbyGroups.SelectMany(g => g.Rows));
-        editor.TeamsRow.Selected = 1;
-        Assert.Equal(3, editor.Rules.Value(LobbyRules.TeamsKey));
-
-        var free = new LobbyRulesEditor(new LobbyRules(new Dictionary<string, int>(), Mode: new LobbyMode(new string('a', 64), "A", "M", 1)), null, [], "F", editing: true);
-        Assert.Equal(("None", 30), (free.TeamsRow.Options[0], free.TeamsRow.Options.Count));
-        Assert.Null(free.Rules.Value(LobbyRules.TeamsKey));
+        Assert.DoesNotContain("Teams", editor.LobbyGroups.SelectMany(g => g.Rows).Select(r => r.Label));
+        Assert.Null(editor.Rules.Value(LobbyRules.TeamsKey));
+        File.WriteAllText(path, "mode \"Duel\" { api 1; }\nparam n \"Teams\" number 2..4 default 3;\nteams n..n;\n");
+        editor.ModeRow.Load(path);
+        Assert.Contains("Teams", editor.LobbyGroups.SelectMany(g => g.Rows).Select(r => r.Label));
+        Assert.Equal([3], editor.Rules.ModeValues!);
+        Assert.Null(editor.Rules.Value(LobbyRules.TeamsKey));
     }
 
     /// <summary>A lobby with teams on the stand-in: the host's panel with a mode and its teams, each seat's team, the
@@ -719,7 +755,7 @@ public sealed class CustomLobbiesTests : IDisposable
     public async Task TeamsShowOnTheSeatsAndTheHostPressesThem()
     {
         var path = Path.Combine(_dir, "duel.fzmode");
-        File.WriteAllText(path, "mode \"Duel\" { api 1; badge \"DUEL\"; about \"Two teams.\"; }\nteams 2..4;\nlaps 5;\nracers 2..12;\n");
+        File.WriteAllText(path, "mode \"Duel\" { api 1; badge \"DUEL\"; about \"Two teams.\"; }\nparam n \"Teams\" number 2..4 default 3;\nteams n..n;\nlaps 5;\nracers 2..12;\n");
         var state = State(standIn: true);
         await InTheWindow(state, (window, main) =>
         {
@@ -731,8 +767,6 @@ public sealed class CustomLobbiesTests : IDisposable
             Click(window, Named<Button>(view, "CreateButton"));
             var editor = main.Lobbies.Editor!;
             editor.ModeRow.Load(path);
-            Dispatcher.UIThread.RunJobs();
-            editor.TeamsRow.Selected = 1;
             Dispatcher.UIThread.RunJobs();
             Assert.Contains(view.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "Teams" && t.IsEffectivelyVisible);
             Shot(window, state, "create-mode-teams");

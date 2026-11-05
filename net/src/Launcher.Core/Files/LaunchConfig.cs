@@ -1,3 +1,4 @@
+using Online.Protocol;
 using System.Text.Json;
 
 namespace Launcher.Core;
@@ -24,13 +25,16 @@ public sealed record QuickPlayVisit(string Server, int Races = 1, int StartWith 
 /// pages' buttons make.</summary>
 /// <param name="Create">It makes a lobby of this name, as its host (<c>"create"</c>).</param>
 /// <param name="Join">It joins the lobby of this name when the list shows it (<c>"join"</c>).</param>
-/// <param name="ModeFile">The host's mode file, as Choose file (<c>"modeFile"</c>).</param>
-/// <param name="Values">The mode's parameters, in the package's order (<c>"values"</c>).</param>
-/// <param name="Teams">The lobby's teams (<c>"teams"</c>).</param>
+/// <param name="ModeFile">The host's mode file, as From file… (<c>"modeFile"</c>).</param>
+/// <param name="Values">The mode's parameters, in the package's order (<c>"values"</c>): the race's rules, the teams among
+/// them, are the mode's.</param>
+/// <param name="Mode">One of the server's official modes by its name, as the create screen lists them (<c>"mode"</c>);
+/// neither this nor a file: the first, Quick Play's normal mode.</param>
 /// <param name="Team">The team this player takes (<c>"team"</c>).</param>
-/// <param name="Rules">More of the lobby's rules, by name (<c>"rules"</c>).</param>
+/// <param name="Rules">The lobby's own settings, by name (<c>"rules"</c>: <see cref="LobbyRules.LobbyKeys"/> only; a
+/// rule of the race is the mode's and is refused with the file).</param>
 public sealed record QuickPlayCustom(string? Create = null, string? Join = null, string? ModeFile = null,
-    IReadOnlyList<int>? Values = null, int? Teams = null, int? Team = null, IReadOnlyDictionary<string, int>? Rules = null);
+    IReadOnlyList<int>? Values = null, string? Mode = null, int? Team = null, IReadOnlyDictionary<string, int>? Rules = null);
 
 /// <summary>
 /// The test settings of one start of the launcher: a launch file's <c>"debug"</c> object (<see cref="LaunchConfig"/>).
@@ -261,9 +265,9 @@ public sealed record LaunchConfig(string About, DebugSettings Debug)
                 "join" => c with { Join = Text(member) },
                 "modeFile" => c with { ModeFile = Text(member) },
                 "values" => c with { Values = [.. member.Value.EnumerateArray().Select(n => n.GetInt32())] },
-                "teams" => c with { Teams = Whole(member, 0, 30) },
+                "mode" => c with { Mode = Text(member) },
                 "team" => c with { Team = Whole(member, 0, 29) },
-                "rules" => c with { Rules = member.Value.EnumerateObject().ToDictionary(r => r.Name, r => r.Value.GetInt32(), StringComparer.Ordinal) },
+                "rules" => c with { Rules = LobbySettings(member) },
                 _ => throw Unknown(member, "debug.quickPlay.custom."),
             };
         }
@@ -280,6 +284,15 @@ public sealed record LaunchConfig(string About, DebugSettings Debug)
         return members.Select(m => m.Name).Distinct(StringComparer.Ordinal).Count() == members.Count
             ? members
             : throw new FormatException($"{what} names a setting twice");
+    }
+
+    /// <summary>A custom lobby's own settings by name; a rule of the race (the mode's) is refused, as the server refuses it.</summary>
+    private static Dictionary<string, int> LobbySettings(JsonProperty member)
+    {
+        var rules = member.Value.EnumerateObject().ToDictionary(r => r.Name, r => r.Value.GetInt32(), StringComparer.Ordinal);
+        return rules.Keys.FirstOrDefault(k => !LobbyRules.LobbyKeys.Contains(k)) is { } key
+            ? throw new FormatException($"\"debug.quickPlay.custom.rules.{key}\" is no lobby setting: the race's rules are the mode's (its \"values\")")
+            : rules;
     }
 
     private static FormatException Unknown(JsonProperty member, string under) =>

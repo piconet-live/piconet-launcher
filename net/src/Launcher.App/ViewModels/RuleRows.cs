@@ -102,7 +102,7 @@ public sealed partial class PackRule : RuleRow
     {
         (_served, File) = (served, file);
         Options = Offered();
-        Selected = Math.Clamp(selected, 0, Options.Count - 1);
+        Selected = Options.Count == 0 ? -1 : Math.Clamp(selected, 0, Options.Count - 1);   // (-1: nothing to choose yet)
     }
 
     /// <summary>The host's own pack file (null: none chosen this session).</summary>
@@ -122,9 +122,9 @@ public sealed partial class PackRule : RuleRow
 
     partial void OnSelectedChanged(int value)
     {
-        if (value < 0 || value >= Options.Count)
+        if ((value < 0 || value >= Options.Count) && Options.Count > 0)
         {
-            Selected = Math.Clamp(value, 0, Math.Max(0, Options.Count - 1));
+            Selected = Math.Clamp(value, 0, Options.Count - 1);
         }
         OnPropertyChanged(nameof(Chosen));
         OnPropertyChanged(nameof(FileChosen));
@@ -327,6 +327,55 @@ public sealed partial class LapsRule(string label, int value, int maximum) : Rul
     }
 }
 
+/// <summary>A whole number between - and +, or beside it the value with a name that states no number ("By course"): a mode's
+/// optional parameter (<see cref="ModeParam.Or"/>), as Laps' Unlimited sits beside its stepper.</summary>
+public sealed partial class NamedNumberRule(string label, string named, bool isNamed, int value, int minimum, int maximum) : RuleRow(label)
+{
+    /// <summary>The named value's words.</summary>
+    public string Named { get; } = named;
+
+    public int Minimum { get; } = minimum;
+
+    public int Maximum { get; } = maximum;
+
+    /// <summary>How much a press changes it.</summary>
+    public int Step { get; init; } = 1;
+
+    [ObservableProperty]
+    public partial int Value { get; set; } = Math.Clamp(value, minimum, maximum);
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Counted), nameof(State))]
+    public partial bool IsNamed { get; set; } = isNamed;
+
+    /// <summary>The stepper is in use: a number. A named value "Off" makes this the row's switch (On: the number).</summary>
+    public bool Counted
+    {
+        get => !IsNamed;
+        set => IsNamed = !value;
+    }
+
+    /// <summary>The named value is "Off": the row is a switch and its number, as any on/off row.</summary>
+    public bool IsOff => Named == "Off";
+
+    /// <summary>The switch's state in words, when <see cref="IsOff"/>.</summary>
+    public string State => Counted ? "On" : "Off";
+
+    partial void OnValueChanged(int value)
+    {
+        var kept = Math.Clamp(value, Minimum, Maximum);
+        if (Step > 1)
+        {
+            kept = Minimum + ((int)Math.Round((kept - (double)Minimum) / Step) * Step);
+            kept = Math.Min(kept, Maximum);
+        }
+        if (kept != value)
+        {
+            Value = kept;
+        }
+    }
+}
+
 /// <summary>A whole number along a bar, with its figure.</summary>
 public sealed partial class SliderRule(string label, int value, int minimum, int maximum) : RuleRow(label)
 {
@@ -361,7 +410,7 @@ public sealed partial class SwitchRule(string label, bool on) : RuleRow(label)
 }
 
 /// <summary>A time in milliseconds between - and +, on its steps, that can be typed too, with a switch that turns it
-/// off ("Mines return": 200 ms, or off).</summary>
+/// off ("Mines respawn": 200 ms, or off).</summary>
 public sealed partial class DelayRule(string label, int ms, int minimum, int maximum, int step, int fallback) : RuleRow(label)
 {
     public int Minimum { get; } = minimum;

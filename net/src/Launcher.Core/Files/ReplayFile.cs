@@ -247,7 +247,7 @@ public static class ReplayFile
         header.TryGetProperty(ReplayFormat.Header.Match, out var match) && match.ValueKind == JsonValueKind.Object &&
         match.TryGetProperty("setup", out var setup) && setup.ValueKind == JsonValueKind.Object &&
         setup.TryGetProperty("rules", out var rules)
-            ? (int)RaceWords.Word(HostRules.MinesReturn, rules)
+            ? (int)RaceWords.Word(HostRules.MinesRespawn, rules)
             : 0;
 
     public const string MinesDisagree = "This replay's mine rule and its format disagree: the game does not play it.";
