@@ -159,6 +159,31 @@ public sealed class QuickPlayScript(QuickPlayScriptOptions options, Action<strin
         }
     }
 
+    /// <summary>Create: the lobby's own settings, and the mode: the file, or an official one by its name (none named: the
+    /// first). An official mode is the server's list's (the browser's first lobby list), as the create screen shows it:
+    /// pressed before the list came, the lobby went without its mode and its values (Quick Play's own race). False: not
+    /// pressed yet (the list has not come).</summary>
+    private bool PressCreate(QuickPlaySession session, QuickPlayCustom plan, string name)
+    {
+        var values = new Dictionary<string, int>(plan.Rules ?? new Dictionary<string, int>(), StringComparer.Ordinal);
+        var text = plan.ModeFile is { } file ? File.ReadAllText(file) : null;
+        if (text is null && session.OfficialModes.Count == 0)
+        {
+            return false;
+        }
+        _lobbyAsked = true;
+        var mode = text is not null ? null
+            : session.OfficialModes.FirstOrDefault(m => plan.Mode is null || m.Name == plan.Mode);
+        if (text is null && mode is null)
+        {
+            Fail($"the server offers no official mode {plan.Mode}");
+            return false;
+        }
+        Log("press", new { button = "create lobby", name, modeFile = plan.ModeFile, mode = mode?.Name, values = plan.Values, rules = values });
+        _ = session.CreateLobbyAsync(name, new LobbyRules(values, null, null, mode, text, plan.Values), null);
+        return true;
+    }
+
     /// <summary>The custom lobby pages' buttons: make or join the lobby, take a team, the host's Start.</summary>
     private void PressCustom(QuickPlaySession session, LobbyState? lobby, bool gameRunning)
     {
@@ -174,14 +199,10 @@ public sealed class QuickPlayScript(QuickPlayScriptOptions options, Action<strin
         }
         if (lobby is null && !_lobbyAsked && plan.Create is { } name)
         {
-            _lobbyAsked = true;
-            // the lobby's own settings, and the mode: the file, or an official one by its name (none named: the first)
-            var values = new Dictionary<string, int>(plan.Rules ?? new Dictionary<string, int>(), StringComparer.Ordinal);
-            var text = plan.ModeFile is { } file ? File.ReadAllText(file) : null;
-            var mode = text is not null ? null
-                : session.OfficialModes.FirstOrDefault(m => plan.Mode is null || m.Name == plan.Mode);
-            Log("press", new { button = "create lobby", name, modeFile = plan.ModeFile, mode = mode?.Name, values = plan.Values, rules = values });
-            _ = session.CreateLobbyAsync(name, new LobbyRules(values, null, null, mode, text, plan.Values), null);
+            if (!PressCreate(session, plan, name))
+            {
+                return;
+            }
         }
         else if (lobby is null && !_lobbyAsked && plan.Join is { } wanted && session.Lobbies.FirstOrDefault(l => l.Name == wanted) is { } row)
         {
