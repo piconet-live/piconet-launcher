@@ -84,13 +84,11 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         new(() => _state.Settings.Racer.Raced with { Machine = Garage.ChosenIndex }, () => Current = Garage,
             [.. state.PracticePackList.Select(p => p.Name)], state.StartPractice, state.Settings.Practice);
 
-    /// <summary>The Custom lobbies page, and the lobby page's ways to it (leaving a custom lobby, the host's presets).</summary>
+    /// <summary>The Custom lobbies page, and the lobby page's way to it (leaving a custom lobby).</summary>
     private CustomLobbiesViewModel CustomLobbies(AppState state)
     {
-        IReadOnlyList<string> Packs() => [.. state.PracticePackList.Select(p => p.Name)];
-        var lobbies = new CustomLobbiesViewModel(state, () => Current = Lobby, Packs);
+        var lobbies = new CustomLobbiesViewModel(state, () => Current = Lobby);
         Lobby.ToBrowser = () => Current = lobbies;
-        Lobby.PackNames = Packs;
         return lobbies;
     }
 

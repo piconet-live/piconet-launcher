@@ -6,12 +6,13 @@ namespace Launcher.Core;
 
 /// <summary>
 /// A custom lobby host's own game mode: a <c>.fzmode</c> file they chose (piconet-docs research/game-modes/), the
-/// mode's name and badge as its header says them, and the file's text whole. The text goes to the server with the
+/// mode's name, badge and line of what it is as its header says them, its parameters (the settings a host changes in
+/// the lobby, on their defaults), and the file's text whole. A mode file is one choice: a variant is a file of its own. The text goes to the server with the
 /// lobby's rules (<see cref="LobbyRules.ModeFile"/>), which compiles it with the same compiler and sends the package
 /// to every member with the race. The launcher compiles it first (<see cref="ModeCompiler"/>), so a file that does not
 /// compile is said at once, beside the rule, with its line.
 /// </summary>
-public sealed record HostModeFile(string Name, string Badge, string Text, ModeTerms Terms, IReadOnlyList<ModeParam> Params, IReadOnlyList<ModePreset> Presets)
+public sealed record HostModeFile(string Name, string Badge, string Text, ModeTerms Terms, IReadOnlyList<ModeParam> Params, string About = "")
 {
     /// <summary>The extension of a mode file.</summary>
     public const string Extension = ".fzmode";
@@ -55,7 +56,7 @@ public sealed record HostModeFile(string Name, string Badge, string Text, ModeTe
         }
         var compiled = ModeCompiler.Compile(text);
         return compiled.Mode is { } mode
-            ? (new HostModeFile(mode.Name, mode.Badge, text, ModeTerms.Of(mode), mode.Params, mode.Presets), null)
+            ? (new HostModeFile(mode.Name, mode.Badge, text, ModeTerms.Of(mode), mode.Params, mode.About), null)
             : (null, $"Not a mode: {compiled.Errors[0]}");
     }
 

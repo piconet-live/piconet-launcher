@@ -109,7 +109,7 @@ internal sealed class StandInRooms(string name, Action<ServerMessage> send, Canc
             }
             rooms = [.. _rooms];
         }
-        send(new LobbyList([.. rooms.Select(Summary)], QuickPlay));
+        send(new LobbyList([.. rooms.Select(Summary)], QuickPlay, StandInService.OfficialModes));
     }
 
     private static LobbySummary Summary(StandInRoom r)

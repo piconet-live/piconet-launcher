@@ -14,8 +14,9 @@ public sealed record CustomLobbyRow(string Id, string Name, string Host, string 
 
 /// <summary>
 /// Play's Custom lobbies page, with two faces. The browser: every custom lobby the server lists, a row each; a row
-/// pressed joins it, asking for the password first when it is locked. Create: the name ("ANA's lobby"), the password,
-/// a preset, Edit rules (the rules panel, in its groups), then CREATE. The page is a visit of its own to the server
+/// pressed joins it, asking for the password first when it is locked. Create: pick a mode (the server's official modes,
+/// or From file… for the host's own), then its settings beside the name ("ANA's lobby") and the password, the lobby's
+/// own settings beside them, then CREATE. The page is a visit of its own to the server
 /// (<see cref="QuickPlaySession.Custom"/>): made when the page shows, the list asked for while it shows
 /// (BrowseLobbies on and off), and ended when the player goes elsewhere in no lobby. In a lobby, the lobby page.
 /// Refusals (a wrong password, a full or closed lobby) and why the player left the last lobby (the host removed
@@ -25,17 +26,15 @@ public sealed partial class CustomLobbiesViewModel : ViewModelBase
 {
     private readonly AppState _state;
     private readonly Action _showLobby;
-    private readonly Func<IReadOnlyList<string>> _packs;
     private QuickPlaySession? _session;
     private bool _shown;
     private bool _awaiting;   // a create or a join is on its way: the lobby page once it is taken
 
     /// <param name="showLobby">Shows the lobby page.</param>
-    /// <param name="packs">The stat packs the host's presets offer, by name.</param>
-    public CustomLobbiesViewModel(AppState state, Action showLobby, Func<IReadOnlyList<string>> packs)
+    public CustomLobbiesViewModel(AppState state, Action showLobby)
     {
         ArgumentNullException.ThrowIfNull(state);
-        (_state, _showLobby, _packs) = (state, showLobby, packs);
+        (_state, _showLobby) = (state, showLobby);
         state.Changed += () => OnUi(Attach);
     }
 
@@ -56,32 +55,21 @@ public sealed partial class CustomLobbiesViewModel : ViewModelBase
 
     public bool Browsing => !Creating;
 
-    /// <summary>On the create face, every rule shows beside the panel (the preset's toggle).</summary>
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(RulePanelsShown), nameof(PickerShown))]
-    public partial bool EditingRules { get; set; }
+    /// <summary>The lobby's own settings show beside the mode's, the course picker not over them.</summary>
+    public bool RulePanelsShown => Editor is not { Picking: true };
 
-    /// <summary>The rules show beside the panel, the course picker not over them.</summary>
-    public bool RulePanelsShown => EditingRules && Editor is not { Picking: true };
-
-    /// <summary>The fixed course's picker shows in the rules' place.</summary>
-    public bool PickerShown => EditingRules && Editor is { Picking: true };
+    /// <summary>The fixed course's picker shows in the settings' place.</summary>
+    public bool PickerShown => Editor is { Picking: true };
 
     /// <summary>The new lobby's settings (the create face).</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RulePanelsShown), nameof(PickerShown))]
     public partial LobbyRulesEditor? Editor { get; set; }
 
-    /// <summary>The new lobby's rules, in panels side by side (behind Edit rules).</summary>
+    /// <summary>The new lobby's own settings beside the mode's (the lobby, the connection, the race's rules that have no
+    /// mode word yet), in one panel.</summary>
     [ObservableProperty]
-    public partial IReadOnlyList<RulePanel> RulePanels { get; set; } = [];
-
-    partial void OnEditingRulesChanged(bool value)
-    {
-        if (Editor is { } editor)
-        {
-            editor.PresetRow.RulesShown = value;
-        }
-    }
+    public partial IReadOnlyList<RuleGroup> RuleGroups { get; set; } = [];
 
     /// <summary>The locked lobby whose password is asked for (null: none).</summary>
     [ObservableProperty]
@@ -128,7 +116,7 @@ public sealed partial class CustomLobbiesViewModel : ViewModelBase
     public void Hidden()
     {
         _shown = false;
-        (AskingFor, Creating, EditingRules) = (null, false, false);
+        (AskingFor, Creating) = (null, false);
         if (_state.Session is { Custom: true } session)
         {
             if (session.Lobby is null && !_awaiting)
@@ -213,7 +201,7 @@ public sealed partial class CustomLobbiesViewModel : ViewModelBase
         if (_awaiting && session.InCustomLobby)
         {
             _awaiting = false;
-            (AskingFor, Password, Creating, EditingRules, Notice) = (null, "", false, false, "");
+            (AskingFor, Password, Creating, Notice) = (null, "", false, "");
             _showLobby();
         }
     }
@@ -299,16 +287,17 @@ public sealed partial class CustomLobbiesViewModel : ViewModelBase
         return session.JoinLobbyAsync(id, password);
     }
 
-    /// <summary>Create: the create face, on Quick Play's rules and the player's lobby's name.</summary>
+    /// <summary>Create: the create face, on the server's first official mode (Quick Play's rules) and the player's
+    /// lobby's name.</summary>
     [RelayCommand]
     private void ShowCreate()
     {
-        var editor = new LobbyRulesEditor(null, _session?.QuickPlayRules, _packs(), DefaultName(_state.Settings.Racer.Name));
+        var editor = new LobbyRulesEditor(null, _session?.QuickPlayRules, _session?.OfficialModes ?? [], DefaultName(_state.Settings.Racer.Name));
         editor.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(LobbyRulesEditor.RuleGroups))
             {
-                RulePanels = LobbyViewModel.Panels(editor.RuleGroups);   // (a preset chosen)
+                RuleGroups = editor.RuleGroups;   // (another mode chosen: the rows it owns go)
             }
             if (e.PropertyName == nameof(LobbyRulesEditor.Picking))
             {
@@ -316,16 +305,11 @@ public sealed partial class CustomLobbiesViewModel : ViewModelBase
                 OnPropertyChanged(nameof(PickerShown));
             }
         };
-        editor.PresetRow.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(PresetRule.RulesShown))
-            {
-                EditingRules = editor.PresetRow.RulesShown;
-            }
-        };
         Editor = editor;
-        RulePanels = LobbyViewModel.Panels(editor.RuleGroups);
-        (Creating, EditingRules, AskingFor, Notice) = (true, false, null, "");
+        RuleGroups = editor.RuleGroups;
+        (Creating, AskingFor, Notice) = (true, null, "");
+        OnPropertyChanged(nameof(RulePanelsShown));
+        OnPropertyChanged(nameof(PickerShown));
     }
 
     /// <summary>"ANA's lobby" (a long name cut so that the whole fits a lobby's name).</summary>
@@ -337,10 +321,7 @@ public sealed partial class CustomLobbiesViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void ToggleRules() => EditingRules = !EditingRules;
-
-    [RelayCommand]
-    private void Back() => (Creating, EditingRules) = (false, false);
+    private void Back() => Creating = false;
 
     [RelayCommand]
     private Task CreateAsync()

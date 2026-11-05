@@ -27,6 +27,10 @@ public sealed partial class QuickPlaySession
     /// with. Null until a list names them (the rules' own defaults stand in: <see cref="HostRules"/>).</summary>
     public LobbyRules? QuickPlayRules { get; private set; }
 
+    /// <summary>The server's official modes a host may give a lobby, in its order, as the list carries them (by name and
+    /// hash, never a list of the launcher's own): the create face's list. Empty until a list names them.</summary>
+    public IReadOnlyList<LobbyMode> OfficialModes { get; private set; } = [];
+
     /// <summary>The browser shows: the server sends the list and its changes.</summary>
     public bool Browsing { get; private set; }
 
@@ -68,6 +72,7 @@ public sealed partial class QuickPlaySession
     {
         Lobbies = list.Lobbies;
         QuickPlayRules = list.QuickPlay ?? QuickPlayRules;
+        OfficialModes = list.Modes ?? OfficialModes;
         Changed?.Invoke();
     }
 

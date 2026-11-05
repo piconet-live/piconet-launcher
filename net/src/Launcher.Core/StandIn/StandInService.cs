@@ -74,11 +74,35 @@ public static class StandInService
         }
     }
 
-    /// <summary>Why the service would refuse a host's rules for a key it takes no value under (restore among them); null: none.</summary>
+    /// <summary>Why the service would refuse a host's rules: a key it takes no value under (restore among them), or a rule
+    /// of the race that is the mode's (<see cref="LobbyRules.OutsideTheMode"/>); null: none.</summary>
     public static string? BadRule(LobbyRules rules)
     {
         ArgumentNullException.ThrowIfNull(rules);
-        return rules.Values.Keys.FirstOrDefault(k => !LobbyRules.Keys.Contains(k)) is { } key ? $"no rule {key}" : null;
+        return rules.Values.Keys.FirstOrDefault(k => !LobbyRules.Keys.Contains(k)) is { } key ? $"no rule {key}" : rules.OutsideTheMode();
+    }
+
+    /// <summary>The official modes the stand-in offers a host, as the service lists them (<see cref="LobbyList.Modes"/>):
+    /// its rotation's lobby modes this "server" can race (it has no stat packs: none that names one, and not the stock
+    /// variant, which its Quick Play rules race already). Empty: no rotation.</summary>
+    public static IReadOnlyList<LobbyMode> OfficialModes =>
+        [.. (Rotation?.LobbyModes ?? []).Where(m => m.Terms.Pack is null && m.Terms.MixedPacks != true).Select(m => m.Named())];
+
+    /// <summary>One of the official modes by its hash, as the service takes it from its catalog: on the host's values;
+    /// another hash is no mode the lobby holds.</summary>
+    private static (LobbyMode? Mode, ModeTerms? Terms, string? Refusal) Official(string hash, IReadOnlyList<int>? values)
+    {
+        if (Rotation?.LobbyModes.FirstOrDefault(m => m.Hash == hash) is not { } official)
+        {
+            return (null, null, "the lobby holds no such mode");
+        }
+        if (values is not null && official.Package.ValuesRefusal(values) is { } refused)
+        {
+            return (null, null, refused);
+        }
+        Packages[official.Hash] = official.Package;
+        var raced = official with { Values = values };
+        return (raced.Named(), raced.Terms, null);
     }
 
     /// <summary>The modes the stand-in's lobbies have compiled, by hash: a host's new values go over them, as the
@@ -119,7 +143,7 @@ public static class StandInService
         }
         if (rules.Mode.Hash != had?.Hash)
         {
-            return (null, null, "the lobby holds no such mode");
+            return Official(rules.Mode.Hash, rules.ModeValues);
         }
         if (rules.ModeValues is not { } values || !Packages.TryGetValue(had.Hash, out var kept))
         {

@@ -23,6 +23,20 @@ public static class CustomRules
         ("Connection", ["latency-limit"]),
     ];
 
+    /// <summary>The rules a host sets beside the mode, in the host's panel's groups: the lobby's own settings
+    /// (<see cref="LobbyRules.LobbyKeys"/>), and the race's rules that have no mode word yet
+    /// (<see cref="LobbyRules.NoModeWordYet"/>) with the host's own stats file. How the race plays is the mode's.</summary>
+    private static readonly (string Heading, string[] Names)[] HostGrouped =
+    [
+        ("Lobby", ["racers", "vote-seconds", "choose-seconds", "voting-minimum"]),
+        ("Connection", ["latency-limit"]),
+        ("Race", ["course-select", "cpu-fill", "stat-pack"]),
+    ];
+
+    /// <summary>The rules a host sets beside the mode, in their groups (<see cref="HostGrouped"/>).</summary>
+    public static IReadOnlyList<(string Heading, IReadOnlyList<HostRule> Rules)> HostGroups { get; } =
+        [.. HostGrouped.Select(g => (g.Heading, (IReadOnlyList<HostRule>)[.. g.Names.Select(n => HostRules.Named(n)!)]))];
+
     /// <summary>The settable rules in their groups: each group's heading and rules.</summary>
     public static IReadOnlyList<(string Heading, IReadOnlyList<HostRule> Rules)> Groups { get; } = MakeGroups();
 
