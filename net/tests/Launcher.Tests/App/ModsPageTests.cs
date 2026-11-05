@@ -118,9 +118,10 @@ public sealed class ModsPageTests : IDisposable
             Assert.Contains("Looks", texts);
             Assert.Contains("Single player", texts);
             Assert.Contains("Code not used", texts);
+            Assert.Contains("Mods on top take priority", texts);
             Shot(window, "mods-made-up");
 
-            // the first card's Down: the order is saved, and the later mod's files win
+            // the first card's Down: the order is saved (the mod on top's files win)
             Click(window, window.GetVisualDescendants().OfType<Button>().First(b => AutomationProperties.GetName(b) == "Down" && b.IsEffectivelyVisible));
             Pump(() => state.Mods![0].Manifest.Name == "Ghosts");
             Assert.Equal(["bbbbbbbbbbbb", "aaaaaaaaaaaa"], new ModLibrary(Data).Read().Select(m => m.Manifest.Id));

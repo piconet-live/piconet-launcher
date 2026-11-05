@@ -15,8 +15,9 @@ public enum OverlayUse
 }
 
 /// <summary>
-/// The overlays of the mods that are on, in the player's order, a later mod's file over an earlier one's (and in a
-/// mod, its ticked parts' files: <see cref="ModManifest.Files"/>): the
+/// The overlays of the mods that are on, in the player's order, the file of a mod higher on the Mods page over a lower
+/// one's (the owner, 2026-11-05: mods on top take priority; and in a mod, its ticked parts' files:
+/// <see cref="ModManifest.Files"/>): the
 /// launch file's <c>overlay</c> (protocol/launch.toml) for each kind of start. With no mod on, none, and the launch
 /// file is as it was. Code is never in either; the runner refuses it too.
 /// </summary>
@@ -42,7 +43,8 @@ public sealed record ModOverlay(IReadOnlyList<OverlayFile> Offline, IReadOnlyLis
         ArgumentNullException.ThrowIfNull(mods);
         var offline = new List<OverlayFile>();
         var guarded = new List<OverlayFile>();
-        foreach (var mod in mods.Where(m => m.On))
+        // the bottom mod first, so the top one's file is the last of its disc path, the one kept
+        foreach (var mod in mods.Where(m => m.On).Reverse())
         {
             foreach (var file in mod.Manifest.Files.Where(f => f.Class != ModFileClass.Code))
             {

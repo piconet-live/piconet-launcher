@@ -6,7 +6,7 @@ namespace Launcher.Tests;
 /// <summary>
 /// The mod guard (<see cref="ModGuard"/>) on made-up files: car data passes for the race only when every field the
 /// race reads is the disc's, a course file only when nothing but its fog differs; and the overlays a start is given
-/// (<see cref="ModOverlay"/>): code never, single-player files offline only, a later mod's file over an earlier one's.
+/// (<see cref="ModOverlay"/>): code never, single-player files offline only, the file of a mod on top over a lower one's.
 /// </summary>
 public sealed class ModGuardTests
 {
@@ -133,10 +133,24 @@ public sealed class ModGuardTests
 
         var overlay = ModOverlay.Of([first, second, off]);
 
-        Assert.Equal(["game/cardata.lz", "staff_ghost/ghost1.dat", "bg/bg_tow.tpl.lz", "stage/st05.tpl.lz"], overlay.Offline.Select(f => f.Disc));
+        Assert.Equal(["bg/bg_tow.tpl.lz", "game/cardata.lz", "staff_ghost/ghost1.dat", "stage/st05.tpl.lz"], overlay.Offline.Select(f => f.Disc));
         Assert.Equal(["bg/bg_tow.tpl.lz", "stage/st05.tpl.lz"], overlay.Guarded.Select(f => f.Disc));
-        // the later mod's file wins
-        Assert.Contains(Path.Combine("mods", "b", ModManifest.StoreFolder), overlay.Guarded.Single(f => f.Disc == "stage/st05.tpl.lz").From, StringComparison.Ordinal);
+        // the mod on top's file wins
+        Assert.Contains(Path.Combine("mods", "a", ModManifest.StoreFolder), overlay.Guarded.Single(f => f.Disc == "stage/st05.tpl.lz").From, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TheModOnTopTakesPriority()
+    {
+        var look = File("stage/st05.tpl.lz", ModFileClass.Look, true);
+        InstalledMod top = Mod("top", true, look), middle = Mod("middle", true, look, File("bg/bg_tow.tpl.lz", ModFileClass.Look, true)),
+            bottom = Mod("bottom", true, look);
+        string From(ModOverlay o, string disc) => Path.GetFileName(Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(o.Offline.Single(f => f.Disc == disc).From))!)!;
+        Assert.Equal("top", From(ModOverlay.Of([top, middle, bottom]), "stage/st05.tpl.lz"));
+        Assert.Equal("middle", From(ModOverlay.Of([top, middle, bottom]), "bg/bg_tow.tpl.lz"));
+        // moved down below the others: the one now on top wins; switched off: the next one down
+        Assert.Equal("middle", From(ModOverlay.Of([middle, bottom, top]), "stage/st05.tpl.lz"));
+        Assert.Equal("bottom", From(ModOverlay.Of([top with { On = false }, middle with { On = false }, bottom]), "stage/st05.tpl.lz"));
     }
 
     [Fact]

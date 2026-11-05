@@ -89,7 +89,7 @@ public sealed partial class AppState
     public void SetModParts(string id, IReadOnlySet<string> on) =>
         ChangeMods(list => [.. list.Select(m => m.Manifest.Id == id ? m with { Manifest = m.Manifest.WithOn(on) } : m)]);
 
-    /// <summary>A mod moved one place up (-1) or down (1): a later mod's files win.</summary>
+    /// <summary>A mod moved one place up (-1) or down (1): a mod higher up's files win.</summary>
     public void MoveMod(string id, int by) => ChangeMods(list =>
     {
         var mods = list.ToList();

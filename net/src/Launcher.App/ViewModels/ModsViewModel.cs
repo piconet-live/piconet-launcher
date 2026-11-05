@@ -165,7 +165,7 @@ public sealed partial class ModCard : ObservableObject
 }
 
 /// <summary>
-/// The Mods page: the player's mods as cards in their order (a later one's files win), each with its switch, up and
+/// The Mods page: the player's mods as cards in their order (a higher one's files win), each with its switch, up and
 /// down, and remove, and its tree of parts; and the import (a .zip, a .7z or a folder): where the mod has several
 /// parts the same tree to tick, then the unpacking with its bar and Cancel. Every read and write runs off the window's thread.
 /// </summary>
@@ -334,7 +334,7 @@ public sealed partial class ModsViewModel : ViewModelBase
             Choosing = true;
             return;
         }
-        await ImportAsync(survey.OnByDefault).ConfigureAwait(true);
+        await ImportAsync(survey.Roots.Select(r => r.Path).ToHashSet(StringComparer.Ordinal)).ConfigureAwait(true);
     }
 
     /// <summary>The chooser's IMPORT: the whole mod, the parts ticked on.</summary>

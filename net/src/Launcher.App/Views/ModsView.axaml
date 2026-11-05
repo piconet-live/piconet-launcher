@@ -5,8 +5,8 @@
              x:Class="Launcher.App.Views.ModsView"
              x:DataType="vm:ModsViewModel"
              x:Name="Root">
-  <!-- The Mods page (direction D): Import and Folder over the list; the player's mods as cards in their order (a
-       later one's files win): the mod's picture, its name, small tags for what it cannot do online (the reasons when
+  <!-- The Mods page (direction D): Import and Folder over the list; the player's mods as cards in their order, under
+       a quiet line that says the top one's files win: the mod's picture, its name, small tags for what it cannot do online (the reasons when
        pointed at), and at its end Stat pack where its car data changes the race, the switch, up and down, and remove.
        Pressed, a card with several parts opens its tree. While a mod is looked at or unpacked: its name, the bar and
        Cancel; where it has several parts, its tree to tick and IMPORT. A tree: the mod's row (all of it), its folders
@@ -177,6 +177,8 @@
     </Border>
 
     <TextBlock Classes="faint" Text="No mods" IsVisible="{Binding NoCards}" Margin="0,8,0,0" />
+
+    <TextBlock Name="Priority" Classes="faint" FontSize="{StaticResource Size13}" Text="Mods on top take priority" IsVisible="{Binding HasCards}" Margin="2,0,0,-4" />
 
     <ItemsControl Name="ModList" ItemsSource="{Binding Cards}">
       <ItemsControl.ItemsPanel>
