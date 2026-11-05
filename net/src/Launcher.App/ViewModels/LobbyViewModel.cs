@@ -498,13 +498,13 @@ public sealed partial class LobbyViewModel : ViewModelBase
     public static int QuickPlayMinesMs => HostRules.MinesRespawn.Default;
 
     /// <summary>The mines' rule as the rules line says it, only when it is not Quick Play's:
-    /// "Mines respawn Off" (0: the game's own way), "Mines respawn 0.5 s"; null at Quick Play's 0.2 s. The rule's label
+    /// "Mines respawn Off" (0: the game's own way), "Mines respawn 500 ms"; null at Quick Play's 0.2 s. The rule's label
     /// and its value, as every rule the line names.</summary>
     public static string? MinesRule(int ms) => ms == QuickPlayMinesMs ? null : MinesText(ms);
 
-    /// <summary>The mines' rule in words whatever its value: "Mines respawn Off", "Mines respawn 0.2 s".</summary>
+    /// <summary>The mines' rule in words whatever its value: "Mines respawn Off", "Mines respawn 200 ms".</summary>
     public static string MinesText(int ms) => HostRules.MinesRespawn.Label + (ms <= 0 ? " Off"
-        : " " + (ms / 1000.0).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + " s");
+        : FormattableString.Invariant($" {ms} {HostRules.MinesRespawn.Unit}"));
 
     /// <summary>The machine setting's rule as the rules line says it, when it is not Quick Play's (100 for everyone):
     /// "Machine setting 80-100", "Machine setting 50", "Machine setting 0-100" (each racer's own); null: Quick Play's.</summary>

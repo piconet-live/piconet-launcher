@@ -280,6 +280,11 @@ public sealed partial class StepperRule(string label, int value, int minimum, in
     /// <summary>How much a press changes it; a typed value goes to the nearest step from the least.</summary>
     public int Step { get; init; } = 1;
 
+    /// <summary>What the number counts ("ms", "s"), shown after it; "": a plain number.</summary>
+    public string Unit { get; init; } = "";
+
+    public bool HasUnit => Unit.Length > 0;
+
     [ObservableProperty]
     public partial int Value { get; set; } = Math.Clamp(value, minimum, maximum);
 
@@ -334,6 +339,12 @@ public sealed partial class NamedNumberRule(string label, string named, bool isN
     /// <summary>The named value's words.</summary>
     public string Named { get; } = named;
 
+    /// <summary>What the number counts ("ms", "s"), shown after it; "": a plain number.</summary>
+    public string Unit { get; init; } = "";
+
+    /// <summary>The unit shows: there is one and the number is in use.</summary>
+    public bool UnitShown => Unit.Length > 0 && Counted;
+
     public int Minimum { get; } = minimum;
 
     public int Maximum { get; } = maximum;
@@ -345,7 +356,7 @@ public sealed partial class NamedNumberRule(string label, string named, bool isN
     public partial int Value { get; set; } = Math.Clamp(value, minimum, maximum);
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Counted), nameof(State))]
+    [NotifyPropertyChangedFor(nameof(Counted), nameof(State), nameof(UnitShown))]
     public partial bool IsNamed { get; set; } = isNamed;
 
     /// <summary>The stepper is in use: a number. A named value "Off" makes this the row's switch (On: the number).</summary>

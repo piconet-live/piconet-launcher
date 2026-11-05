@@ -35,9 +35,9 @@ public sealed class ModeParamRow
             { Kind: ModeParamKind.Switch } => (new SwitchRule(param.Label, value != 0), null),
             { Kind: ModeParamKind.Choice } => (new ChoiceRule(param.Label, [.. Choices(param, stats)], value), null),
             { Or: { } or, Kind: ModeParamKind.Number } => (new NamedNumberRule(param.Label, or, param.StatesNothing(value),
-                param.StatesNothing(value) ? param.Default == param.Most ? param.Least : param.Default : value, param.Least, param.Top) { Step = Math.Max(1, param.Step) }, null),
+                param.StatesNothing(value) ? param.Default == param.Most ? param.Least : param.Default : value, param.Least, param.Top) { Step = Math.Max(1, param.Step), Unit = param.Unit }, null),
             { Kind: ModeParamKind.Number, Type: ModeType.Int } =>
-                (new StepperRule(param.Label, value, param.Least, param.Most) { Step = Math.Max(1, param.Step) }, null),
+                (new StepperRule(param.Label, value, param.Least, param.Most) { Step = Math.Max(1, param.Step), Unit = param.Unit }, null),
             _ => Offered(param, value),
         };
     }
@@ -120,7 +120,7 @@ public sealed class ModeParamRow
             ModeParamKind.Choice => value >= 0 && value < param.Choices.Count ? Said(param.Choices[value], stats) : "",
             ModeParamKind.Delay => string.Create(CultureInfo.InvariantCulture, $"{value / (double)Steps:0.##} s"),
             _ when param.Type == ModeType.Real => BitConverter.Int32BitsToSingle(value).ToString("0.###", CultureInfo.InvariantCulture),
-            _ => value.ToString(CultureInfo.InvariantCulture),
+            _ => param.Unit.Length > 0 ? $"{value.ToString(CultureInfo.InvariantCulture)} {param.Unit}" : value.ToString(CultureInfo.InvariantCulture),
         };
     }
 

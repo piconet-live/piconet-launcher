@@ -145,6 +145,11 @@ public sealed class CustomLobbiesTests : IDisposable
             Assert.True(lobby.AllRulesShown);
             Assert.Contains(lobby.AllRulePanels.SelectMany(p => p.Groups).SelectMany(g => g.Rows).OfType<ValueRule>(),
                 r => r is { Label: "Racers", Value: "12", Marked: true });
+            // each setting once, with its unit: Quick Play's settings show as the rules they set
+            var labels = lobby.AllRulePanels.SelectMany(p => p.Groups).SelectMany(g => g.Rows).Select(r => r.Label).ToList();
+            Assert.Equal(labels.Distinct().Count(), labels.Count);
+            Assert.Contains(lobby.AllRulePanels.SelectMany(p => p.Groups).SelectMany(g => g.Rows).OfType<ValueRule>(),
+                r => r is { Label: "Mines respawn", Value: "200 ms", Marked: false });
             Shot(window, state, "lobby-all-rules");
             Click(window, Named<Button>(page, "AllRules"));
             Shot(window, state, "lobby-joiner");
@@ -171,7 +176,7 @@ public sealed class CustomLobbiesTests : IDisposable
             Assert.True(Named<RulesPanel>(view, "LobbyPanel").IsEffectivelyVisible);
             // Quick Play's settings: the mode's parameters, on Quick Play's own values; no preset
             Assert.Equal(QuickPlaysSettings, editor.ParamRows.Select(p => p.Row.Label));
-            Assert.Equal(["By course", "Master", "Off", "200", "90", "100", "100", "GX Unleashed"],
+            Assert.Equal(["By course", "Master", "Off", "200 ms", "90 s", "100", "100", "GX Unleashed"],
                 editor.ParamRows.Select(p => ModeParamRow.Text(p.Param, p.Value, p.Stats)));
             Assert.Contains(Named<RulesPanel>(view, "CreatePanel").GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "CPU level" && t.IsEffectivelyVisible);
             Assert.DoesNotContain(view.GetVisualDescendants().OfType<TextBlock>(), t => t.IsEffectivelyVisible && t.Text is "Preset" or "CPU racers" or "Teams");

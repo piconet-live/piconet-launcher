@@ -144,7 +144,7 @@ public sealed partial class LobbyRulesEditor : ObservableObject
             return;
         }
         old.PropertyChanged -= OnRowChanged;
-        var row = new StepperRule(old.Label, old.Value, least, most) { Step = old.Step };
+        var row = new StepperRule(old.Label, old.Value, least, most) { Step = old.Step, Unit = old.Unit };
         row.PropertyChanged += OnRowChanged;
         _rows[name] = row;
     }

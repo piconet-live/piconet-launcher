@@ -184,18 +184,31 @@ public static class CustomRules
         }).Select(r => r.Name), StringComparer.Ordinal);
     }
 
-    /// <summary>Every rule of a lobby, in its groups, a value each; those that differ from Quick Play's marked.</summary>
+    /// <summary>Every rule of a lobby, in its groups, a value each, each setting once. Without a mode, those that differ
+    /// from Quick Play's are marked. With one, its name, about line and code come first, with its settings that set no
+    /// rule; a setting that sets a rule shows as that rule, marked when the host moved it from the mode's default, and
+    /// the lobby's own settings are marked when they differ from Quick Play's.</summary>
     public static IReadOnlyList<RuleGroup> AllRules(LobbyRules? rules, LobbyRules? quickPlay)
     {
         var differing = Moved(rules, quickPlay ?? Defaults);
+        if (rules?.Mode is { Params: { } declared, Values: { } values } held && values.Count == declared.Count)
+        {
+            // the mode's: marked when a setting of the host's moved it, not when it differs from Quick Play's
+            var moved = declared.Select((p, i) => (p, v: values[i])).Where(x => x.p.Rule.Length > 0 && x.v != x.p.Default).Select(x => x.p.Rule).ToHashSet(StringComparer.Ordinal);
+            differing = [.. differing.Where(LobbyRules.LobbyKeys.Contains), .. moved];
+        }
+        else if (rules?.Mode is not null)
+        {
+            differing = [.. differing.Where(LobbyRules.LobbyKeys.Contains)];
+        }
         IReadOnlyList<RuleGroup> groups = [.. Groups.Select((g, i) => new RuleGroup([.. g.Rules.Select(r =>
             (RuleRow)new ValueRule(r.Label, ValueText(r, rules, quickPlay)) { Marked = differing.Contains(r.Name) })])
         {
             Later = i > 0,
             Heading = g.Heading,
         })];
-        // a game mode: its own group first, its name and what it changes, and its share code (language 12: the same
-        // code is the same file)
+        // a game mode: its own group first, its name and what it is, and its share code (language 12: the same code is
+        // the same file)
         return rules?.Mode is { } mode
             ? [new RuleGroup([new ValueRule("Mode", mode.Name) { Marked = true, Note = mode.About },
                 .. mode.ShareCode.Length > 0 ? [new ValueRule("Mode code", mode.ShareCode)] : (RuleRow[])[],
@@ -208,10 +221,12 @@ public static class CustomRules
             : groups;
     }
 
-    /// <summary>A mode's settings as the whole list shows them; those moved from their defaults marked.</summary>
+    /// <summary>A mode's settings that set no rule (a rule's shows as the rule), as the whole list shows them; those
+    /// moved from their defaults marked.</summary>
     private static IEnumerable<RuleRow> ParamValues(LobbyMode mode) =>
         mode is { Params: { } declared, Values: { } values } && values.Count == declared.Count
-            ? declared.Select((p, i) => new ValueRule(p.Label, ModeParamRow.Text(p, values[i], i == mode.PackParam)) { Marked = values[i] != p.Default })
+            ? declared.Select((p, i) => (p, i)).Where(x => x.p.Rule.Length == 0)
+                .Select(x => new ValueRule(x.p.Label, ModeParamRow.Text(x.p, values[x.i], x.i == mode.PackParam)) { Marked = values[x.i] != x.p.Default })
             : [];
 
     /// <summary>The machine setting's range of a lobby's rules.</summary>

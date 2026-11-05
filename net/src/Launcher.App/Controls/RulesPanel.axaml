@@ -94,8 +94,11 @@
                AutomationProperties.Name="{Binding Label}" />
     </DataTemplate>
     <DataTemplate DataType="vm:StepperRule">
-      <c:Stepper Value="{Binding Value}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Step="{Binding Step}"
-                 AutomationProperties.Name="{Binding Label}" />
+      <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+        <c:Stepper Value="{Binding Value}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Step="{Binding Step}"
+                   AutomationProperties.Name="{Binding Label}" />
+        <TextBlock Classes="dim" MinWidth="20" Text="{Binding Unit}" VerticalAlignment="Center" IsVisible="{Binding HasUnit}" />
+      </StackPanel>
     </DataTemplate>
     <!-- the stepper at the row's right edge, over the switches of the rows under it, so that the pad's down goes
          to the next row (Boost from the start) and not past it; Unlimited's switch to its left. Unlimited: no stepper, the switch comes over the rows under it, so down stops here -->
@@ -110,6 +113,7 @@
         <TextBlock Classes="dim" MinWidth="24" Text="{Binding State}" VerticalAlignment="Center" IsVisible="{Binding IsOff}" />
         <c:Stepper Value="{Binding Value}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Step="{Binding Step}"
                    IsVisible="{Binding Counted}" AutomationProperties.Name="{Binding Label}" />
+        <TextBlock Classes="dim" MinWidth="20" Text="{Binding Unit}" VerticalAlignment="Center" IsVisible="{Binding UnitShown}" />
       </StackPanel>
     </DataTemplate>
     <DataTemplate DataType="vm:LapsRule">
