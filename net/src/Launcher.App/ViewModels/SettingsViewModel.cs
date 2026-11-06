@@ -72,6 +72,13 @@ public sealed partial class SettingsViewModel : ViewModelBase
                 DiscPath = disc;
             }
             ShowServer();
+            if (_state.Settings.RayTracing != RayTracing && !_askingRays)
+            {
+                // turned on elsewhere (Build, the question's answer): the box follows, nothing saved again
+                _following = true;
+                RayTracing = _state.Settings.RayTracing;
+                _following = false;
+            }
             if (_state.Settings.ShownInterfaceScale != _scale)
             {
                 // set elsewhere (the keys): the slider shows it, and what was pending there is dropped
@@ -208,8 +215,8 @@ public sealed partial class SettingsViewModel : ViewModelBase
     public partial bool ShowInputs { get; set; }
 
     /// <summary>The picture engine rows show only in a test build until Aurora ships; the launch keys go with them
-    /// (AppState's game window).</summary>
-    public bool PictureEngineOffered { get; } = StackStamp.Current.Test;
+    /// (AppState's game window, <see cref="AppState.AuroraOffer"/>).</summary>
+    public bool PictureEngineOffered => _state.AuroraOffer().Offered;
 
     public static IReadOnlyList<string> PictureEngineChoices { get; } = LauncherSettings.PictureEngines.Select(e => e.Words).ToList();
 
@@ -259,6 +266,41 @@ public sealed partial class SettingsViewModel : ViewModelBase
     public partial string RayTracingReason { get; set; } = "";
 
     public bool RayTracingReasonShown => RayTracingReason.Length > 0;
+
+    /// <summary>The box follows the setting (<see cref="RayTracing"/>): nothing to save.</summary>
+    private bool _following;
+
+    /// <summary>The box was ticked and whether ray tracing's graphics are ready is being looked at.</summary>
+    private bool _askingRays;
+
+    /// <summary>Ray tracing ticked: on at once when its graphics cache is ready (or none is built: Aurora does not draw);
+    /// otherwise the box goes back off and the question is asked (Build turns it on, <see cref="AppState.AnswerRays"/>).</summary>
+    private async Task TurnOnRaysAsync()
+    {
+        _askingRays = true;
+        bool ready;
+        try
+        {
+            ready = await _state.RaysReadyAsync().ConfigureAwait(true);
+        }
+        finally
+        {
+            _askingRays = false;
+        }
+        if (!RayTracing || _state.Settings.RayTracing)
+        {
+            return;   // unticked meanwhile, or on already
+        }
+        if (ready)
+        {
+            Save();
+            return;
+        }
+        _following = true;
+        RayTracing = false;
+        _following = false;
+        _state.AskForRays();
+    }
 
     /// <summary>The card's answer, from the check the launcher asks once (off the window's thread).</summary>
     private async Task HearTheCardAsync()
@@ -417,7 +459,19 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
     partial void OnAuroraHighRefreshIndexChanged(int value) => Save();
 
-    partial void OnRayTracingChanged(bool value) => Save();
+    partial void OnRayTracingChanged(bool value)
+    {
+        if (_loading || _following)
+        {
+            return;
+        }
+        if (value && !_state.Settings.RayTracing && _state.RaysBuildFirst)
+        {
+            _ = TurnOnRaysAsync();
+            return;
+        }
+        Save();
+    }
 
     partial void OnRumbleChanged(bool value) => Save();
 

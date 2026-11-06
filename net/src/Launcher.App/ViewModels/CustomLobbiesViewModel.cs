@@ -282,6 +282,11 @@ public sealed partial class CustomLobbiesViewModel : ViewModelBase
         {
             return Task.CompletedTask;
         }
+        if (_state.PipelinesBlock is { } preparing)
+        {
+            Notice = preparing;   // (no game starts while the graphics cache is built: a lobby's race would not)
+            return Task.CompletedTask;
+        }
         _awaiting = true;
         Notice = "";
         return session.JoinLobbyAsync(id, password);
@@ -333,6 +338,11 @@ public sealed partial class CustomLobbiesViewModel : ViewModelBase
         if (!editor.NameValid)
         {
             Notice = RefusalText(CustomLobby.BadName);
+            return Task.CompletedTask;
+        }
+        if (_state.PipelinesBlock is { } preparing)
+        {
+            Notice = preparing;
             return Task.CompletedTask;
         }
         _awaiting = true;

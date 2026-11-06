@@ -26,8 +26,8 @@ public sealed partial class AppState
     /// tracing is left out on a graphics card the check found cannot (<see cref="RayTracingCard"/>).</summary>
     private GameWindow WithAurora(GameWindow window)
     {
-        var (engine, size, edges, textures, colourblind, highRefresh, rays) = Settings.AuroraLaunchKeys(offered: StackStamp.Current.Test,
-            cardRayTraces: RayTracingCard.Known?.Can != false);
+        var (offered, card) = AuroraOffer();
+        var (engine, size, edges, textures, colourblind, highRefresh, rays) = Settings.AuroraLaunchKeys(offered, card);
         return window with { Renderer = engine, AuroraSize = size, AuroraEdges = edges, AuroraTextures = textures, AuroraColourblind = colourblind,
             AuroraHighRefresh = highRefresh, AuroraRayTracing = rays };
     }

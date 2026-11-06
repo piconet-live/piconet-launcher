@@ -80,6 +80,7 @@ public sealed partial class AppState
             }
         }
         ModsChanged?.Invoke();
+        _ = CheckPipelinesAsync();   // the mods' models are in the graphics cache's stamp
     }
 
     /// <summary>A mod switched on or off.</summary>

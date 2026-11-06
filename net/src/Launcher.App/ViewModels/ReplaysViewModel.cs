@@ -221,7 +221,7 @@ public sealed partial class ReplaysViewModel : ViewModelBase
     {
         var read = ++_reads;
         Loading = true;
-        Notice = "";
+        Notice = _blocked ?? "";
         var (folder, index) = (_state.Settings.ReplayFolder, ReplayIndex.FileIn(_state.DataFolder));
         _ = Task.Run(() => ReplayIndex.Listings(folder, index)).ContinueWith(done =>
         {
@@ -281,7 +281,32 @@ public sealed partial class ReplaysViewModel : ViewModelBase
         OnPropertyChanged(nameof(Items));
     }
 
-    [RelayCommand]
+    private string? _blocked;
+
+    private bool CanPlay(string? path) => _blocked is null;
+
+    /// <summary>No game starts now (<see cref="AppState.PipelinesBlock"/>): every Play is off and the page's line says
+    /// why; null: they play again.</summary>
+    public void Block(string? why)
+    {
+        if (why == _blocked)
+        {
+            return;
+        }
+        var before = _blocked;
+        _blocked = why;
+        PlayCommand.NotifyCanExecuteChanged();
+        if (why is not null)
+        {
+            Notice = why;
+        }
+        else if (Notice == before)
+        {
+            Notice = "";
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanPlay))]
     private void Play(string path)
     {
         try

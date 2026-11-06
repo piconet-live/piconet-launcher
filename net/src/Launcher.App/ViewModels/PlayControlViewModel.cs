@@ -295,7 +295,7 @@ public sealed partial class PlayControlViewModel : ViewModelBase
         // off, with the reason, while a game is open, while a join is on its way, and while the game could not be
         // started (no game program, or its files not prepared from the disc); while it could not, the launcher
         // looks again from time to time
-        if (_state.RaceProblem is not null)
+        if (_state.RaceProblem is not null && _state.PipelinesBlock is null)
         {
             _state.LookAgainSoon();
         }
