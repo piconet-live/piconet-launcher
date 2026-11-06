@@ -75,7 +75,8 @@ public sealed partial class AppState
     {
         var paths = GamePaths;
         var drivers = PipelineDrivers;
-        return Task.Run(() => PipelineCache.Why(paths, PipelineCache.Want(paths, PipelineCache.Rays, drivers())) is null);
+        return Task.Run(() => !PipelineCache.AuroraDraws(paths)   // (no Aurora beside the runner: no cache to build)
+            || PipelineCache.Why(paths, PipelineCache.Want(paths, PipelineCache.Rays, drivers())) is null);
     }
 
     /// <summary>The question before ray tracing is turned on with its cache not built yet (Settings): Build or Cancel.</summary>
@@ -102,7 +103,7 @@ public sealed partial class AppState
     }
 
     /// <summary>Looks at the cache of the look in use and builds it when it is not ready. Nothing while the game is not set
-    /// up or Aurora does not draw; once a game of this launcher has ended when one is running, and once the lobby is left
+    /// up or Aurora does not draw (<see cref="PipelineCache.AuroraDraws"/>); once a game of this launcher has ended when one is running, and once the lobby is left
     /// when the player is in one (a build there would keep its next race from starting). A build of another look is
     /// ended first. Returns when the look was looked at (a build goes on in the background).</summary>
     public async Task CheckPipelinesAsync()
@@ -118,9 +119,10 @@ public sealed partial class AppState
             _checkAfterGame = true;
             return;
         }
-        if (PipelineLook is not { } look)
+        var runner = GamePaths;
+        if (PipelineLook is not { } look || !await Task.Run(() => PipelineCache.AuroraDraws(runner)).ConfigureAwait(false))
         {
-            StopBuild();   // Aurora does not draw: no cache, and the game's files are not looked at for it
+            StopBuild();   // Aurora does not draw (no library beside the runner): no cache, and the game's files are not looked at for it
             Show(PipelineStatus.Nothing);
             return;
         }

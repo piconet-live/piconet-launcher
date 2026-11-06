@@ -17,7 +17,8 @@ namespace Launcher.Tests;
 /// hold file is there, then says done. The window is on Quick Play's page, as after the first screen (the first start's
 /// own build: FirstScreenTests.Graphics.cs). Ray tracing ticked in Settings asks first (Cancel: off, nothing built;
 /// Build: on, and its look built while every start waits, the column saying so); once built, ticking it asks nothing.
-/// Another Aurora (its library changed) clears Dawn's cache and builds again, saying why. With <c>PIPELINE_SHOTS</c> set
+/// Another Aurora (its library changed) clears Dawn's cache and builds again, saying why; no Aurora beside the runner builds
+/// nothing. With <c>PIPELINE_SHOTS</c> set
 /// to a folder, the window is kept there as PNGs at each of those moments.
 /// </summary>
 [Collection(ControllerPageTests.Name)]
@@ -128,6 +129,27 @@ public sealed class GraphicsCacheTests : IDisposable
         finally
         {
             await ui.DisposeAsync();
+            state.Shutdown();
+        }
+    }
+
+    /// <summary>A runner with no Aurora library beside it draws the emulator's own pictures: no cache, nothing waits, and ray
+    /// tracing would turn on with no question.</summary>
+    [Fact]
+    public async Task WithoutAuroraBesideTheRunnerNothingIsBuiltAndNothingWaits()
+    {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "the runner is a shell script here");
+        var state = State();
+        try
+        {
+            File.Delete(Path.Combine(_dir, "aurora-present.dll"));
+            await state.CheckPipelinesAsync();
+            Assert.Equal((PipelinePhase.None, (string?)null), (state.Pipelines.Phase, state.PipelinesBlock));
+            Assert.False(File.Exists(Builds));
+            Assert.True(await state.RaysReadyAsync());
+        }
+        finally
+        {
             state.Shutdown();
         }
     }

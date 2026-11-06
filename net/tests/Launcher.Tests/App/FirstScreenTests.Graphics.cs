@@ -31,6 +31,7 @@ public sealed partial class FirstScreenTests
         {
             File.SetUnixFileMode(runner, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         }
+        File.WriteAllText(Path.Combine(Path.GetDirectoryName(runner)!, "aurora-present.dll"), "aurora 1");   // Aurora draws
         state.CardRayTraces = () => true;
         state.PipelineDrivers = () => "Made-up Graphics 1.0";
     }

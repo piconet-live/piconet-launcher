@@ -82,7 +82,8 @@ public sealed class StandInModesTests : IDisposable
                 var vote = await Next<CourseVote>(got);
                 var cards = vote.Cards!;
                 var spicy = Assert.Single(cards, c => c.Badge is not null);
-                Assert.Equal(("KNOCKOUT", 0, 8), (spicy.Badge, spicy.Laps, vote.Options[cards.ToList().IndexOf(spicy)]));
+                Assert.Equal(("KNOCKOUT", 0), (spicy.Badge, spicy.Laps));
+                Assert.Contains(vote.Options[cards.ToList().IndexOf(spicy)], CoursePool.Default);   // any course (protocol 9710f66)
                 var normal = StandInService.Rotation!.Normal;
                 for (var i = 0; i < 5; i++)
                 {

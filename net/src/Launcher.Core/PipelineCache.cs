@@ -56,6 +56,16 @@ public static class PipelineCache
         return Path.Combine(paths.UserFolder, "pipelines-launch.json");
     }
 
+    /// <summary>Whether Aurora draws the games this runner starts: its library beside the runner. Without it the runner draws
+    /// the emulator's own pictures (piconet-runner's aurora.cpp, "the library is missing"), which need no cache. Reads the
+    /// runner's folder: off the window's thread.</summary>
+    public static bool AuroraDraws(RecompPaths paths)
+    {
+        ArgumentNullException.ThrowIfNull(paths);
+        var beside = Path.GetDirectoryName(Path.GetFullPath(paths.Runner)) ?? ".";
+        return File.Exists(Path.Combine(beside, AuroraFiles[0]));
+    }
+
     /// <summary>The stamp a look's cache must have now. It reads Aurora's two files beside the runner and the mods' files'
     /// sizes and times: off the window's thread.</summary>
     /// <param name="drivers">The graphics drivers' words (<see cref="Drivers"/>; a test's own).</param>
