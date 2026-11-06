@@ -1,0 +1,13 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:c="using:Launcher.App.Controls"
+        x:Class="Launcher.App.Views.InputsWindow"
+        Title="Inputs" Icon="/Assets/Icon/app.ico" Width="480" Height="256" MinWidth="200" MinHeight="112"
+        Background="{StaticResource GroundBrush}" Foreground="{StaticResource TextBrush}">
+  <!-- "Show inputs": the player's controller as the game reads it, live, in a window of its own beside the game (as
+       M'Overlay draws apart from Melee), over the launcher's ground: a solid colour that a window capture takes as it is.
+       The skin keeps its shape, 2 to 1, at any size of the window. -->
+  <Viewbox Stretch="Uniform" Margin="16">
+    <c:PadOverlay Name="Pad" Width="512" />
+  </Viewbox>
+</Window>

@@ -105,6 +105,10 @@ public sealed record RacerProfile(string Name, int Machine, Rgb Color, int Setti
     public override int GetHashCode() => HashCode.Combine(Name, Machine, Color, Setting, StockColor, Looks?.Count ?? 0);
 }
 
+/// <summary>Where the Inputs window stands and its size, in the screen's pixels (<see cref="LauncherSettings.InputsWindow"/>).
+/// A file edited by hand may hold anything: the window keeps only a place on a screen and a size within its bounds.</summary>
+public sealed record InputsPlace(int X, int Y, int Width, int Height);
+
 /// <summary>Everything the launcher keeps between runs. Paths are local to this computer.</summary>
 public sealed record LauncherSettings
 {
@@ -190,9 +194,15 @@ public sealed record LauncherSettings
     /// a test game show it whatever this says: <see cref="FrameRateShown"/>.</summary>
     public bool ShowFrameRate { get; init; }
 
-    /// <summary>A controller drawn in the game's picture shows the inputs of the racer in view (off by default;
-    /// the launch file's <c>"showInputs"</c>, written only when on).</summary>
+    /// <summary>"Show inputs": the launcher's Inputs window, the controller live as the game reads it, opens with each
+    /// game start (off by default; the status board's LocalPad: <see cref="GameBoard.Pad"/>). Never in the game's picture.</summary>
     public bool ShowInputs { get; init; }
+
+    /// <summary>Where the Inputs window was last, and its size (in the screen's pixels); null: none yet, and it opens at its
+    /// own size beside the launcher.</summary>
+    [JsonConverter(typeof(SettingAsWritten.Whole<InputsPlace>))]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public InputsPlace? InputsWindow { get; init; }
 
     /// <summary>Aurora's picture size (<c>"auroraSize"</c>): one of <see cref="AuroraSizes"/>; the default, Auto, is the
     /// window's own pixels and follows its size. An older file's <c>"native"</c> is that same thing, so it reads as Auto.</summary>

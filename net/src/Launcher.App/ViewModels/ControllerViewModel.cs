@@ -102,7 +102,11 @@ public sealed partial class ControllerViewModel : ViewModelBase
 
     /// <summary>What the game reads from the port now; null: nothing known.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PadShown))]
     public partial HelperPad? Pad { get; set; }
+
+    /// <summary><see cref="Pad"/> as the test's controller draws it (clamped as the game reads it; null at rest).</summary>
+    public Controls.PadPicture? PadShown => Controls.PadPicture.Of(Pad);
 
     [ObservableProperty]
     public partial string PadNote { get; set; } = "";

@@ -83,6 +83,19 @@ public sealed class SettingsTabsTests : IDisposable
         }
     }
 
+    /// <summary>With INPUTS_SHOTS naming a folder, the window there as a PNG.</summary>
+    private static void Shot(Window window, string name)
+    {
+        if (Environment.GetEnvironmentVariable("INPUTS_SHOTS") is not { Length: > 0 } folder)
+        {
+            return;
+        }
+        PumpFor(300);
+        Avalonia.Headless.AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+        Directory.CreateDirectory(folder);
+        window.CaptureRenderedFrame()?.Save(Path.Combine(folder, name + ".png"), new Avalonia.Media.Imaging.PngBitmapEncoderOptions());
+    }
+
     /// <summary>A tab of the window's top row by its word.</summary>
     /// <summary>A tab above the page; Settings: its button at the left column's foot.</summary>
     private static Button TopTab(MainWindow window, string word) => word == "Settings"
@@ -111,6 +124,7 @@ public sealed class SettingsTabsTests : IDisposable
         Assert.Equal(["Widescreen", "Full screen mode", "Vertical sync", "Frame rate", "Volume", "Other racers' sounds", "Rumble", "Show inputs",
             "Picture size", "Smooth edges", "Sharper textures", "Colourblind filter", "High refresh"], Rows(window));
         Assert.DoesNotContain(window.GetVisualDescendants().OfType<Control>(), c => Equals(AutomationProperties.GetName(c), "Picture engine"));
+        Shot(window, "settings-game");
         Assert.Contains("on", Heading(window, "Game").Classes);
 
         Click(window, Heading(window, "Online"));

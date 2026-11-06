@@ -28,11 +28,14 @@ public sealed class GameBoard : IDisposable
     private readonly BoardMailbox _mail = new();
     private readonly BoardModeHead _modeHead = new BoardModeHead();
     private readonly BoardModeValues _modeValues = new();
+    private readonly BoardLocalPad _pad = new();
     private readonly CancellationTokenSource _stop = new();
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private readonly object _writing = new();
     private uint _serial;
     private uint _modeSerial;
+    private uint _padSerial;
+    private volatile PadReading? _padNow;
     private ModeBoardHead? _mode;
     private ulong _nextEvent;
     private int _disposed;
@@ -82,6 +85,11 @@ public sealed class GameBoard : IDisposable
     /// <summary>The race's mode values at the newest picture (null: no mode, no <c>board</c> line, or none written yet).
     /// Picture only, as the snapshot is: rollback can correct them a moment later.</summary>
     public ModeBoardNow? Mode { get; private set; }
+
+    /// <summary>The local player's controller as the game read it at its newest frame (the board's LocalPad), for the Inputs
+    /// window; null while the game says it has none (no race or practice of the player's own: a menu, a replay, a watched
+    /// race). Read from any thread: the board's look sets it whole.</summary>
+    public PadReading? Pad => _padNow;
 
     /// <summary>Why the game was asked to stop, first ask (None: not asked).</summary>
     public BoardStopReason StopReason { get; private set; }
@@ -174,6 +182,7 @@ public sealed class GameBoard : IDisposable
             told.Add(() => FrozenChanged?.Invoke(frozen));
         }
         LookAtMode();
+        LookAtPad();
         if (_view.TryReadSnapshot(_snapshot) && _snapshot.Serial != _serial && _snapshot.Serial != 0)
         {
             _serial = _snapshot.Serial;
@@ -226,6 +235,16 @@ public sealed class GameBoard : IDisposable
         }
     }
 
+    /// <summary>The local pad, each new one the game wrote (for the Inputs window).</summary>
+    private void LookAtPad()
+    {
+        if (_view.TryReadLocalPad(_pad) && _pad.Serial != 0 && _pad.Serial != _padSerial)
+        {
+            _padSerial = _pad.Serial;
+            _padNow = PadReading.Of(_pad);
+        }
+    }
+
     private ulong _lastBeat;
     private uint _watchAtBeat;
 
@@ -271,6 +290,7 @@ public sealed class GameBoard : IDisposable
                 return;
             }
             _disposed = 1;
+            _padNow = null;
             _stop.Cancel();
             _accessor.SafeMemoryMappedViewHandle.ReleasePointer();
             _accessor.Dispose();

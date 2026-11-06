@@ -73,7 +73,6 @@ public sealed record TaskbarGroup(string Id, string Program, string Name)
 /// <param name="Title">The window's title, the runner's <c>--title</c>.</param>
 /// <param name="Name">The name in the strip (the launch file's <c>"windowName"</c>); null: none.</param>
 /// <param name="ShowFrameRate">The strip shows the frame rate (<c>"showFrameRate"</c>).</param>
-/// <param name="ShowInputs">A controller over the picture shows the inputs (<c>"showInputs"</c>).</param>
 /// <param name="AuroraSize">Aurora's picture size (<c>"auroraSize"</c>); null: Auto.</param>
 /// <param name="AuroraEdges">Aurora's samples for each pixel (<c>"auroraEdges"</c>); 0: left out.</param>
 /// <param name="AuroraTextures">Aurora's anisotropic filtering (<c>"auroraTextures"</c>); 0: left out.</param>
@@ -101,7 +100,7 @@ public sealed record TaskbarGroup(string Id, string Program, string Name)
 /// view: a runner from before the key refuses it). 0: the game's own.</param>
 public sealed record GameWindow(string Title, string? Name = null, bool ShowFrameRate = false, Picture? NamePicture = null,
     TaskbarGroup? Taskbar = null, string? Present = null, bool VerticalSync = false, string? FullScreen = null,
-    string? Board = null, bool Rumble = true, int Camera = 0, bool ShowInputs = false,
+    string? Board = null, bool Rumble = true, int Camera = 0,
     string? AuroraSize = null, int AuroraEdges = 0, int AuroraTextures = 0, string? AuroraColourblind = null, int AuroraHighRefresh = 0, bool AuroraRayTracing = false)
 {
     /// <summary>The largest name picture the game's reader takes.</summary>
@@ -121,7 +120,6 @@ public sealed record GameWindow(string Title, string? Name = null, bool ShowFram
             ? new LaunchNamePicture(picture.Width, picture.Height, Convert.ToBase64String(picture.Rgba))
             : null,
         ShowFrameRate = ShowFrameRate,
-        ShowInputs = ShowInputs,
         Renderer = Renderer,
         AuroraSize = AuroraSize,
         AuroraEdges = AuroraEdges,
