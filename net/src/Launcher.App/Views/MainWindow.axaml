@@ -132,6 +132,15 @@
                         Classes.on="{Binding Tab, Converter={x:Static v:Equal.Instance}, ConverterParameter=mods}" />
               </StackPanel>
               <v:ColumnNoticeView DataContext="{Binding Control}" />
+              <!-- the graphics cache while it is built: the words and the share, the bar, why (GraphicsViewModel) -->
+              <Border Name="Graphics" Classes="columnnotice" IsVisible="{Binding Graphics.Building}">
+                <StackPanel Spacing="6">
+                  <TextBlock Text="{Binding Graphics.Line}" FontFeatures="tnum" />
+                  <ProgressBar Classes="prepare" Minimum="0" Maximum="1" Value="{Binding Graphics.Fraction}" />
+                  <TextBlock Classes="dim" Text="{Binding Graphics.Why}" TextWrapping="Wrap"
+                             IsVisible="{Binding Graphics.Why, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                </StackPanel>
+              </Border>
               <!-- a lobby's stage with a decision the player was not brought to (a change not saved in the builder):
                    its name, a link there (MainViewModel.Decision.cs) -->
               <Button Name="Decision" Classes="secondary wide" IsVisible="{Binding DecisionShown}"
@@ -218,6 +227,23 @@
           <v:NoticesList Name="Notices" DataContext="{Binding Notices}" />
         </Panel>
       </Grid>
+
+      <!-- The question before ray tracing is turned on with its graphics not prepared yet (GraphicsViewModel), over the
+           page: Build prepares them (no game starts meanwhile), Cancel leaves ray tracing off. -->
+      <Panel Name="RaysQuestion" Grid.ColumnSpan="2" c:Motion.Reveal="True" IsVisible="{Binding Graphics.Asking}" c:PadNav.Scope="True">
+        <Border Background="{StaticResource GroundBrush}" Opacity="0.86" />
+        <Border Width="440" Background="{StaticResource RaisedBrush}" Padding="24" CornerRadius="{DynamicResource StaticExtraLargeCornerRadius}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                BoxShadow="0 8 24 0 #80000000">
+          <StackPanel>
+            <TextBlock Classes="head" FontWeight="SemiBold" Text="{x:Static vm:GraphicsViewModel.AskTitle}" TextWrapping="Wrap" />
+            <TextBlock Classes="dim" Text="{x:Static vm:GraphicsViewModel.AskLine}" TextWrapping="Wrap" Margin="0,8,0,0" />
+            <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,18,0,0">
+              <Button Classes="primary" Height="32" Content="Build" Command="{Binding Graphics.BuildCommand}" AutomationProperties.Name="Build" />
+              <Button Classes="secondary" Height="32" Content="Cancel" Command="{Binding Graphics.CancelCommand}" AutomationProperties.Name="Cancel" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+      </Panel>
 
       <!-- The question before leaving a lobby for the game, over the page. -->
       <Panel Grid.ColumnSpan="2" c:Motion.Reveal="True" IsVisible="{Binding Control.Asking}" c:PadNav.Scope="True">

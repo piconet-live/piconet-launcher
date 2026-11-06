@@ -93,7 +93,30 @@ public sealed partial class PracticeViewModel : ViewModelBase
     /// the disc's tables are read).</summary>
     private string NameOf(RacedMachine raced) => Theme.GameSkin.NameOf(raced, () => OnUi(Shown));
 
-    private bool CanStart => _start is not null;
+    private string? _blocked;
+
+    private bool CanStart => _start is not null && _blocked is null;
+
+    /// <summary>No game starts now (<see cref="AppState.PipelinesBlock"/>): START PRACTICE is off and the line under it
+    /// says why; null: it starts again.</summary>
+    public void Block(string? why)
+    {
+        if (why == _blocked)
+        {
+            return;
+        }
+        var before = _blocked;
+        _blocked = why;
+        StartCommand.NotifyCanExecuteChanged();
+        if (why is not null)
+        {
+            Notice = why;
+        }
+        else if (Notice == before)
+        {
+            Notice = "";
+        }
+    }
 
     [RelayCommand(CanExecute = nameof(CanStart))]
     private void Start() => Notice = _start?.Invoke(Setup) ?? "";

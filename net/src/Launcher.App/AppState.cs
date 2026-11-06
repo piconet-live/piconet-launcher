@@ -158,10 +158,13 @@ public sealed partial class AppState(SettingsStore store, string dataFolder)
     public void Update(Func<LauncherSettings, LauncherSettings> change)
     {
         ArgumentNullException.ThrowIfNull(change);
+        bool lookChanged;
         lock (_settingsGate)
         {
             var noServer = Settings.NoServer;
+            var before = Settings;
             Settings = change(Settings);
+            lookChanged = PipelineLookOf(before) != PipelineLookOf(Settings) || before.Recomp != Settings.Recomp;
             if (noServer && !Settings.NoServer && Problem == store.Notice && !store.LeftAlone)
             {
                 // the notice of settings that could not be read asked for a server, and the player has chosen one
@@ -175,6 +178,10 @@ public sealed partial class AppState(SettingsStore store, string dataFolder)
             }
         }
         Changed?.Invoke();
+        if (lookChanged)
+        {
+            _ = CheckPipelinesAsync();   // another look (ray tracing, the picture engine) or another game: its cache
+        }
     }
 
     /// <summary>The settings written to the file (under <see cref="_settingsGate"/>).</summary>
@@ -253,6 +260,7 @@ public sealed partial class AppState(SettingsStore store, string dataFolder)
         Session = null;
         Problem = problem;
         Changed?.Invoke();
+        PipelinesAfterLobby();
         try
         {
             await session.LeaveAsync().ConfigureAwait(false);
@@ -275,7 +283,7 @@ public sealed partial class AppState(SettingsStore store, string dataFolder)
             return Racing ? GameOpenText : InQuickPlayText;
         }
         var paths = GamePaths;
-        if (RecompLaunch.Problem(paths) is { } problem)
+        if ((PipelinesBlock ?? RecompLaunch.Problem(paths)) is { } problem)
         {
             return problem;
         }
@@ -302,7 +310,7 @@ public sealed partial class AppState(SettingsStore store, string dataFolder)
             return GameOpenText;
         }
         var paths = GamePaths;
-        if (RecompLaunch.RaceProblem(paths) is { } problem)
+        if ((PipelinesBlock ?? RecompLaunch.RaceProblem(paths)) is { } problem)
         {
             return problem;
         }
@@ -350,7 +358,7 @@ public sealed partial class AppState(SettingsStore store, string dataFolder)
             return Racing ? "In a race" : InQuickPlayText;   // (a replay is a game start like any other)
         }
         var paths = PathsOf(s.Recomp);
-        if (RecompLaunch.PlaybackProblem(paths, replayFile) is { } problem)
+        if ((PipelinesBlock ?? RecompLaunch.PlaybackProblem(paths, replayFile)) is { } problem)
         {
             return problem;
         }
@@ -399,6 +407,7 @@ public sealed partial class AppState(SettingsStore store, string dataFolder)
     {
         PadsMade?.Dispose();
         EndControllerCheck();
+        StopBuild();   // a graphics cache build ends with the launcher (what it compiled stays)
         _cleanup.Wait(TimeSpan.FromSeconds(3));
         Session?.DisposeAsync().AsTask().Wait(TimeSpan.FromSeconds(2));
         Presence?.Dispose();
@@ -457,7 +466,7 @@ public sealed partial class AppState(SettingsStore store, string dataFolder)
             Noted?.Invoke($"the race of match {race.Start.MatchId} was not started: a game of this launcher was already running");
             _ = session?.RaceOverAsync();
         }
-        else if (RecompLaunch.RaceProblem(paths) is { } problem)
+        else if ((PipelinesBlock ?? RecompLaunch.RaceProblem(paths)) is { } problem)
         {
             Problem = problem;
             // no game will run this race: the player is back in the lobby (the relay's AI takes the seat)

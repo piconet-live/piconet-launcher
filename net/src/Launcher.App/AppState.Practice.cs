@@ -21,6 +21,10 @@ public sealed partial class AppState
         {
             return GameOpenText;
         }
+        if (PipelinesBlock is { } preparing)
+        {
+            return preparing;
+        }
         var racer = Settings.Racer;
         var file = Path.Combine(dataFolder, "practice-match.json");
         var pack = setup.StatPack is { } named ? PracticePackList.FirstOrDefault(p => p.Name == named) : null;

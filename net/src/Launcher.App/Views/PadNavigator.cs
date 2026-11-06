@@ -183,11 +183,15 @@ public sealed partial class PadNavigator
         }
     }
 
-    /// <summary>B: what is open over the page closes (the question before leaving a lobby: stay; the notices'
-    /// list; a replay's file actions or results), else the page goes one step up.</summary>
+    /// <summary>B: what is open over the page closes (the question before ray tracing: cancel; the question before
+    /// leaving a lobby: stay; the notices' list; a replay's file actions or results), else the page goes one step up.</summary>
     private void Back(Control? on)
     {
-        if (_main.Control.Asking)
+        if (_main.Graphics.Asking)
+        {
+            _main.Graphics.CancelCommand.Execute(null);
+        }
+        else if (_main.Control.Asking)
         {
             _main.Control.StayCommand.Execute(null);
         }

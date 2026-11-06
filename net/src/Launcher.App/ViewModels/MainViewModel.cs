@@ -50,6 +50,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         Control = new PlayControlViewModel(state, _feed, Lobby, () => Current = Lobby, ShowSettings);
         Control.ShowFirstScreen = () => Current = Disc;
         Notices = new NoticesViewModel(state, noticeTime);
+        Graphics = new GraphicsViewModel(state);
         // the message of the day the status shows goes into the bell's list too (Home shows it: HomeViewModel.Motd)
         _feed.Changed += () => OnUi(() =>
         {
@@ -138,6 +139,9 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     /// <summary>The play control: RACE or what the lobby is doing (Quick Play's page), and "Start F-Zero GX" (the left
     /// column's foot).</summary>
     public PlayControlViewModel Control { get; }
+
+    /// <summary>The graphics cache: its build in the left column, the question before ray tracing.</summary>
+    public GraphicsViewModel Graphics { get; }
 
     /// <summary>The server's notices: the banner, the bell and its list.</summary>
     public NoticesViewModel Notices { get; }
@@ -452,6 +456,9 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         _lobbyScreen = screen;
         // the server is not asked while the game runs
         _feed.Watching = !_state.Racing;
+        // no game starts while the graphics cache is built: Practice's start and the replays' Play are off, with why
+        Practice.Block(_state.PipelinesBlock);
+        Replays.Block(_state.PipelinesBlock);
         Scale = _state.Settings.ShownInterfaceScale / 100.0;
         RefreshSections();
         RefreshMachine();

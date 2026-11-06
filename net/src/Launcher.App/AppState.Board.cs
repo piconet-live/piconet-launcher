@@ -90,6 +90,7 @@ public sealed partial class AppState
     private void GameEnded(GameBoard? board)
     {
         board?.Dispose();
+        PipelinesAfterGame();
         if (Problem == HungText)
         {
             Problem = null;

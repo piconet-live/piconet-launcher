@@ -47,15 +47,20 @@ public sealed partial class MainWindow : AppWindow
         AddHandler(PointerPressedEvent, OnPressOutside, RoutingStrategies.Tunnel);
     }
 
-    /// <summary>Escape closes what is open over the page: the question before leaving a lobby (stay), else the
-    /// bell's list. A text box or a menu that takes Escape for itself keeps it.</summary>
+    /// <summary>Escape closes what is open over the page: the question before ray tracing (cancel), the question before
+    /// leaving a lobby (stay), else the bell's list. A text box or a menu that takes Escape for itself keeps it.</summary>
     private void OnEscape(object? sender, KeyEventArgs e)
     {
         if (e.Key != Key.Escape || e.Handled || _heard is not { } main)
         {
             return;
         }
-        if (main.Control.Asking)
+        if (main.Graphics.Asking)
+        {
+            main.Graphics.CancelCommand.Execute(null);
+            e.Handled = true;
+        }
+        else if (main.Control.Asking)
         {
             main.Control.StayCommand.Execute(null);
             e.Handled = true;
