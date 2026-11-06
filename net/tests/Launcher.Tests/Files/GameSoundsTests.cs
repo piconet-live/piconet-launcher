@@ -255,14 +255,14 @@ public sealed class GameSoundsTests : IDisposable
     }
 
     [Fact]
-    public void TheNavigationIsHeardOnlyWhenSwitchedOnAndNothingWhenMuted()
+    public void TheNavigationIsHeardOnlyWhileThePadWorksThePagesAndNothingWhenMuted()
     {
         var settings = new LauncherSettings();
-        Assert.False(settings.NavigationSounds);
+        Assert.False(settings.PadNavigation);
         Assert.True(LauncherSounds.Heard(LauncherSound.DrawHop, settings));
         Assert.False(LauncherSounds.Heard(LauncherSound.Cursor, settings));
         Assert.False(LauncherSounds.Heard(LauncherSound.Back, settings));
-        settings = settings with { NavigationSounds = true };
+        settings = settings with { PadNavigation = true };
         Assert.True(LauncherSounds.Heard(LauncherSound.Cursor, settings));
         Assert.True(LauncherSounds.Heard(LauncherSound.Back, settings));
         foreach (var sound in Enum.GetValues<LauncherSound>())

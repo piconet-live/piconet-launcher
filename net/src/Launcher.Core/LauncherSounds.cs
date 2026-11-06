@@ -1,7 +1,7 @@
 namespace Launcher.Core;
 
 /// <summary>Every sound the launcher makes: the lobby's moments (<see cref="LobbyMoment"/>), the draw's blip on every
-/// hop and its chime on the course drawn, and the navigation's cursor and back (Settings, "Navigation sounds").</summary>
+/// hop and its chime on the course drawn, and the navigation's cursor and back (the pad's, with Settings' "Controller navigation").</summary>
 public enum LauncherSound
 {
     CourseVote,
@@ -44,11 +44,12 @@ public static class LauncherSounds
     };
 
     /// <summary>Whether the sound is heard with these settings: not muted, louder than nothing, and for the
-    /// navigation's two only with "Navigation sounds" on (off by default: minimal sounds).</summary>
+    /// navigation's two only while the pad works the pages (<see cref="LauncherSettings.PadNavigation"/>, off by
+    /// default: minimal sounds).</summary>
     public static bool Heard(LauncherSound sound, LauncherSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
-        return LobbyTones.Heard(settings) && (sound is not (LauncherSound.Cursor or LauncherSound.Back) || settings.NavigationSounds);
+        return LobbyTones.Heard(settings) && (sound is not (LauncherSound.Cursor or LauncherSound.Back) || settings.PadNavigation);
     }
 
     /// <summary>The wave file to play at a volume of 0 to 100: the draw's own sound, else the game's, else the

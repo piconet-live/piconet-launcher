@@ -57,7 +57,6 @@ public sealed partial class SettingsViewModel : ViewModelBase
         GameVolume = s.GameVolume;
         SoundVolume = s.SoundVolume;
         SoundMuted = s.SoundMuted;
-        NavigationSounds = s.NavigationSounds;
         PadNavigation = s.PadNavigation;
         PendingScale = _scale = s.ShownInterfaceScale;
         _loading = false;
@@ -324,11 +323,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     public partial bool SoundMuted { get; set; }
 
-    /// <summary>The game's cursor and cancel as the pad or the keyboard moves (<see cref="LauncherSettings.NavigationSounds"/>).</summary>
-    [ObservableProperty]
-    public partial bool NavigationSounds { get; set; }
-
-    /// <summary>The pad works the launcher's pages (<see cref="LauncherSettings.PadNavigation"/>).</summary>
+    /// <summary>The pad works the launcher's pages, with the game's cursor and cancel as it moves (<see cref="LauncherSettings.PadNavigation"/>).</summary>
     [ObservableProperty]
     public partial bool PadNavigation { get; set; }
 
@@ -472,8 +467,6 @@ public sealed partial class SettingsViewModel : ViewModelBase
         _ = HearSoonAsync(++_soundChanges);
     }
 
-    partial void OnNavigationSoundsChanged(bool value) => Save();
-
     partial void OnPadNavigationChanged(bool value) => Save();
 
     private async Task HearSoonAsync(int change)
@@ -546,7 +539,6 @@ public sealed partial class SettingsViewModel : ViewModelBase
             GameVolume = Math.Clamp(GameVolume, 0, 100),
             SoundVolume = Math.Clamp(SoundVolume, 0, 100),
             SoundMuted = SoundMuted,
-            NavigationSounds = NavigationSounds,
             PadNavigation = PadNavigation,
         });
     }

@@ -74,7 +74,7 @@
                AutomationProperties.Name="Anisotropic filtering" />
       <!-- the launch file's "auroraRayTracing": the runner's tested set of ray switches. The box can be ticked on a graphics
            card the launcher's check found can ray trace (Launcher.Core/RayTracingCard.cs); beside it, why it cannot. The box
-           names itself, as Navigation sounds does on the Launcher page -->
+           names itself -->
       <StackPanel Grid.Row="10" Grid.Column="1" Orientation="Horizontal" Spacing="12">
         <CheckBox Classes="box" Name="RayTracing" Content="Ray tracing" IsChecked="{Binding RayTracing}"
                   IsEnabled="{Binding RayTracingPossible}" AutomationProperties.Name="Ray tracing" />
@@ -173,7 +173,7 @@
     <!-- Launcher: General (the disc, updates, an older copy), Interface (the launcher's own sounds: the lobby's moments;
          the menus; its size), Replays -->
     <Grid Name="LauncherPage" Classes="form" ColumnDefinitions="148,*" MaxWidth="620" HorizontalAlignment="Left"
-          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" IsVisible="{Binding OnLauncher}">
+          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" IsVisible="{Binding OnLauncher}">
       <Border Grid.ColumnSpan="2" Classes="group">
         <TextBlock Classes="section" FontSize="18" Text="General" />
       </Border>
@@ -234,13 +234,10 @@
                      AutomationProperties.Name="Launcher sounds volume number" />
         <CheckBox Name="SoundMuted" Classes="box" Content="Mute" IsChecked="{Binding SoundMuted}" />
       </StackPanel>
-      <!-- the game's cursor and cancel for the pad's and the keyboard's moves; never the mouse's (off by default) -->
-      <CheckBox Grid.Row="7" Grid.Column="1" Name="NavigationSounds" Classes="box" Content="Navigation sounds"
-                IsChecked="{Binding NavigationSounds}" IsEnabled="{Binding !SoundMuted}"
-                AutomationProperties.Name="Navigation sounds" />
-      <!-- the pad works the launcher's pages (D-pad, A, B, L and R); off by default: the controller is the game's -->
-      <TextBlock Grid.Row="8" Classes="label" Text="Menus" />
-      <StackPanel Grid.Row="8" Grid.Column="1" Spacing="8">
+      <!-- the pad works the launcher's pages (D-pad, A, B, L and R), its moves with the game's cursor and cancel; off by
+           default: the controller is the game's. The keyboard and the mouse never sound -->
+      <TextBlock Grid.Row="7" Classes="label" Text="Menus" />
+      <StackPanel Grid.Row="7" Grid.Column="1" Spacing="8">
         <CheckBox Name="PadNavigation" Classes="box" Content="Controller navigation"
                   IsChecked="{Binding PadNavigation}" AutomationProperties.Name="Controller menu navigation" />
         <!-- the launcher's animations (Controls/Motion.cs) -->
@@ -248,8 +245,8 @@
                   IsChecked="{Binding ReducedMotion}" AutomationProperties.Name="Reduced motion" />
       </StackPanel>
       <!-- the launcher's size on top of the system's scaling: set by Apply; Ctrl+0, Ctrl+plus, Ctrl+minus at once -->
-      <TextBlock Grid.Row="9" Classes="label" Text="Interface scale" />
-      <StackPanel Grid.Row="9" Grid.Column="1" Orientation="Horizontal" Spacing="12">
+      <TextBlock Grid.Row="8" Classes="label" Text="Interface scale" />
+      <StackPanel Grid.Row="8" Grid.Column="1" Orientation="Horizontal" Spacing="12">
         <Slider Name="InterfaceScale" Classes="bar" Width="220" Minimum="{x:Static vm:SettingsViewModel.LeastScale}"
                 Maximum="{x:Static vm:SettingsViewModel.MostScale}" Value="{Binding PendingScale}"
                 TickFrequency="{x:Static vm:SettingsViewModel.ScaleStep}" IsSnapToTickEnabled="True"
@@ -263,21 +260,21 @@
                 IsEnabled="{Binding CanApplyScale}" AutomationProperties.Name="Apply the interface scale" />
       </StackPanel>
 
-      <Border Grid.Row="10" Grid.ColumnSpan="2" Classes="group">
+      <Border Grid.Row="9" Grid.ColumnSpan="2" Classes="group">
         <TextBlock Classes="section" FontSize="18" Text="Replays" />
       </Border>
-      <TextBlock Grid.Row="11" Classes="label" Text="Recording" />
-      <StackPanel Grid.Row="11" Grid.Column="1" Orientation="Horizontal" Spacing="24">
+      <TextBlock Grid.Row="10" Classes="label" Text="Recording" />
+      <StackPanel Grid.Row="10" Grid.Column="1" Orientation="Horizontal" Spacing="24">
         <CheckBox Classes="box" Content="Record my races" IsChecked="{Binding RecordReplays}" />
         <CheckBox Classes="box" Content="Record practice" IsChecked="{Binding RecordPractice}" />
       </StackPanel>
-      <TextBlock Grid.Row="12" Classes="label" Text="Folder" />
-      <Grid Grid.Row="12" Grid.Column="1" ColumnDefinitions="*,8,Auto">
+      <TextBlock Grid.Row="11" Classes="label" Text="Folder" />
+      <Grid Grid.Row="11" Grid.Column="1" ColumnDefinitions="*,8,Auto">
         <TextBox Classes="field" Text="{Binding ReplayFolder}" AutomationProperties.Name="Replay folder" />
         <Button Grid.Column="2" Classes="secondary" Content="Open" Command="{Binding OpenReplayFolderCommand}"
                 AutomationProperties.Name="Open the replay folder" />
       </Grid>
-      <Grid Grid.Row="13" Grid.Column="1" Classes="warnline" ColumnDefinitions="Auto,*"
+      <Grid Grid.Row="12" Grid.Column="1" Classes="warnline" ColumnDefinitions="Auto,*"
             IsVisible="{Binding FolderNotice, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
         <Path Classes="warnmark" />
         <TextBlock Grid.Column="1" Text="{Binding FolderNotice}" />
