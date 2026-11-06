@@ -52,7 +52,7 @@ public sealed class LaunchVectorsTests
         yield return ("window-every-member", GameLaunchFile.Offline("b", window: new GameWindow("F-Zero GX", "Piconet", true, picture,
             Taskbar, LauncherSettings.PresentAsBefore, true, LauncherSettings.FullScreenExclusive, @"C:\data\boards\game-1.board",
             LauncherSettings.Refresh240, Rumble: false, ShowInputs: true,
-            Renderer: "aurora", AuroraSize: "native", AuroraEdges: 4, AuroraTextures: 16, AuroraColourblind: "deuteranopia", AuroraHighRefresh: 240, AuroraRayTracing: true)));
+            AuroraSize: "native", AuroraEdges: 4, AuroraTextures: 16, AuroraColourblind: "deuteranopia", AuroraHighRefresh: 240, AuroraRayTracing: true)));
         yield return ("window-race", GameLaunchFile.Race("b", Match, record: "race.fzrp", debug: debug, window: new GameWindow("F-Zero GX",
             "Piconet", false, picture, Taskbar, LauncherSettings.PresentAtTheCopy, false, LauncherSettings.FullScreenBorderless,
             "g.board", LauncherSettings.Refresh120)));

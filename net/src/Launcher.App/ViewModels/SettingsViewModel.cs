@@ -42,7 +42,6 @@ public sealed partial class SettingsViewModel : ViewModelBase
         WidescreenIndex = Enum.IsDefined(s.Widescreen) ? (int)s.Widescreen : (int)WidescreenMode.Game;
         ShowFrameRate = s.ShowFrameRate || FrameRateAlwaysShown;
         ShowInputs = s.ShowInputs;
-        PictureEngineIndex = Math.Max(0, LauncherSettings.PictureEngines.ToList().FindIndex(e => e.Name == s.PictureEngine));
         AuroraSizeIndex = Math.Max(0, LauncherSettings.AuroraSizes.ToList().FindIndex(a => a.Name == s.AuroraSize));
         AuroraEdgesIndex = Math.Max(0, LauncherSettings.AuroraEdgeCounts.ToList().FindIndex(a => a.Count == s.AuroraEdges));
         AuroraTexturesIndex = Math.Max(0, LauncherSettings.AuroraTextureLevels.ToList().FindIndex(a => a.Level == s.AuroraTextures));
@@ -207,24 +206,11 @@ public sealed partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     public partial bool ShowInputs { get; set; }
 
-    /// <summary>The picture engine rows show only in a test build until Aurora ships; the launch keys go with them
-    /// (AppState's game window).</summary>
-    public bool PictureEngineOffered { get; } = StackStamp.Current.Test;
-
-    public static IReadOnlyList<string> PictureEngineChoices { get; } = LauncherSettings.PictureEngines.Select(e => e.Words).ToList();
-
     public static IReadOnlyList<string> AuroraSizeChoices { get; } = LauncherSettings.AuroraSizes.Select(a => a.Words).ToList();
 
     public static IReadOnlyList<string> AuroraEdgesChoices { get; } = LauncherSettings.AuroraEdgeCounts.Select(a => a.Words).ToList();
 
     public static IReadOnlyList<string> AuroraTexturesChoices { get; } = LauncherSettings.AuroraTextureLevels.Select(a => a.Words).ToList();
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(AuroraRowsShown))]
-    public partial int PictureEngineIndex { get; set; }
-
-    /// <summary>Aurora's own rows show when it is the engine chosen.</summary>
-    public bool AuroraRowsShown => PictureEngineOffered && PictureEngineIndex == 1;
 
     [ObservableProperty]
     public partial int AuroraSizeIndex { get; set; }
@@ -245,7 +231,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     public partial int AuroraHighRefreshIndex { get; set; }
 
-    /// <summary>Ray tracing (<c>"auroraRayTracing"</c>), with Aurora's rows. Its box can be ticked once the check of the
+    /// <summary>Ray tracing (<c>"auroraRayTracing"</c>). Its box can be ticked once the check of the
     /// graphics card has said it can (<see cref="RayTracingCard"/>); until then, and on a card that cannot, it cannot be
     /// changed, and <see cref="RayTracingReason"/> says why beside it.</summary>
     [ObservableProperty]
@@ -405,8 +391,6 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
     partial void OnShowInputsChanged(bool value) => Save();
 
-    partial void OnPictureEngineIndexChanged(int value) => Save();
-
     partial void OnAuroraSizeIndexChanged(int value) => Save();
 
     partial void OnAuroraEdgesIndexChanged(int value) => Save();
@@ -503,7 +487,6 @@ public sealed partial class SettingsViewModel : ViewModelBase
             ShowFrameRate = FrameRateAlwaysShown ? s.ShowFrameRate : ShowFrameRate,
             ShowInputs = ShowInputs,
             // (a list with nothing selected says -1: the setting stays what it is)
-            PictureEngine = PictureEngineIndex >= 0 && PictureEngineIndex < LauncherSettings.PictureEngines.Count ? LauncherSettings.PictureEngines[PictureEngineIndex].Name : s.PictureEngine,
             AuroraSize = AuroraSizeIndex >= 0 && AuroraSizeIndex < LauncherSettings.AuroraSizes.Count ? LauncherSettings.AuroraSizes[AuroraSizeIndex].Name : s.AuroraSize,
             AuroraEdges = AuroraEdgesIndex >= 0 && AuroraEdgesIndex < LauncherSettings.AuroraEdgeCounts.Count ? LauncherSettings.AuroraEdgeCounts[AuroraEdgesIndex].Count : s.AuroraEdges,
             AuroraTextures = AuroraTexturesIndex >= 0 && AuroraTexturesIndex < LauncherSettings.AuroraTextureLevels.Count ? LauncherSettings.AuroraTextureLevels[AuroraTexturesIndex].Level : s.AuroraTextures,

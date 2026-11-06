@@ -22,13 +22,12 @@ public sealed partial class AppState
             Settings.GamePresent, Settings.VerticalSync, Settings.GameFullScreen, RefreshRate: Settings.GameRefreshRate,
             Rumble: Settings.Rumble, Camera: Settings.StartCamera, ShowInputs: Settings.ShowInputs));
 
-    /// <summary>The picture engine's keys: left out in a build that does not offer Aurora, and at their defaults. Ray
-    /// tracing is left out on a graphics card the check found cannot (<see cref="RayTracingCard"/>).</summary>
+    /// <summary>Aurora's keys (Aurora draws every start: <see cref="GameWindow.Renderer"/>), left out at their defaults.
+    /// Ray tracing is left out on a graphics card the check found cannot (<see cref="RayTracingCard"/>).</summary>
     private GameWindow WithAurora(GameWindow window)
     {
-        var (engine, size, edges, textures, colourblind, highRefresh, rays) = Settings.AuroraLaunchKeys(offered: StackStamp.Current.Test,
-            cardRayTraces: RayTracingCard.Known?.Can != false);
-        return window with { Renderer = engine, AuroraSize = size, AuroraEdges = edges, AuroraTextures = textures, AuroraColourblind = colourblind,
+        var (size, edges, textures, colourblind, highRefresh, rays) = Settings.AuroraLaunchKeys(cardRayTraces: RayTracingCard.Known?.Can != false);
+        return window with { AuroraSize = size, AuroraEdges = edges, AuroraTextures = textures, AuroraColourblind = colourblind,
             AuroraHighRefresh = highRefresh, AuroraRayTracing = rays };
     }
 }
