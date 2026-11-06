@@ -89,7 +89,7 @@ public sealed class GraphicsCacheTests : IDisposable
     private int BuildsRun => File.Exists(Builds) ? File.ReadAllLines(Builds).Length : 0;
 
     /// <summary>The left column's block while the cache is built: its words and why; null: it does not show.</summary>
-    private static (string? Line, string? Why, double Bar)? Column(Window window)
+    private static (string? Line, string? Below, double Bar)? Column(Window window)
     {
         var block = Named<Border>(window, "Graphics");
         if (!block.IsEffectivelyVisible)
@@ -190,7 +190,7 @@ public sealed class GraphicsCacheTests : IDisposable
             PumpTelling(state, () => state.Pipelines is { Phase: PipelinePhase.Building, Look: PipelineCache.Rays, Fraction: > 0.4 }, "the rays' build did not start");
             Assert.True(state.Settings.RayTracing);
             Pump(() => box.IsChecked == true && Column(window)?.Bar > 0.4);
-            Assert.Equal(("Preparing graphics · 42%", "For ray tracing, once", 0.42), Column(window));
+            Assert.Equal(("Preparing graphics · 42%", (string?)null, 0.42), Column(window));
             Assert.Equal(AppState.PreparingText, state.PlayOffline());
             Shot(window, "5-rays-progress");
             main.Current = main.Home;
@@ -235,7 +235,7 @@ public sealed class GraphicsCacheTests : IDisposable
             PumpTelling(again, () => again.Pipelines is { Phase: PipelinePhase.Building, Fraction: > 0.4 }, "the build did not start again");
             Assert.Equal(PipelineWhy.Aurora, again.Pipelines.Why);
             Assert.False(File.Exists(dawn));                                      // nothing of the old Aurora's is of use
-            Pump(() => Column(window)?.Why == "The game was updated");
+            Pump(() => Column(window) is { Line: not null, Below: null });
             Shot(window, "7-stamp-change-build");
             File.Delete(Hold);
             PumpTelling(again, () => again.Pipelines.Phase == PipelinePhase.Ready, "the build did not end");

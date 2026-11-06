@@ -58,7 +58,7 @@ public sealed partial class FirstScreenTests
                 Assert.Equal((PipelineCache.Plain, PipelineWhy.First), (state.Pipelines.Look, state.Pipelines.Why));
                 Assert.False(screen.Main.Graphics.Asking);                       // the plain look asks nothing
                 Until(() => Column(screen.Window) is { Bar: > 0.4 }, "the column shows the build");
-                Assert.Equal(("Preparing graphics · 42%", "First start, once", 0.42), Column(screen.Window));
+                Assert.Equal(("Preparing graphics · 42%", (string?)null, 0.42), Column(screen.Window));
 
                 // nothing starts a game meanwhile, and each says why
                 Assert.Equal((false, AppState.PreparingText, false, null), Buttons(screen));   // (said once, under RACE)
@@ -103,7 +103,7 @@ public sealed partial class FirstScreenTests
 
     /// <summary>The left column's block while the graphics cache is built: its words, why, and its bar; null: it does
     /// not show.</summary>
-    private static (string? Line, string? Why, double Bar)? Column(Window window)
+    private static (string? Line, string? Below, double Bar)? Column(Window window)
     {
         var block = window.GetVisualDescendants().OfType<Border>().Single(b => b.Name == "Graphics");
         if (!block.IsEffectivelyVisible)
