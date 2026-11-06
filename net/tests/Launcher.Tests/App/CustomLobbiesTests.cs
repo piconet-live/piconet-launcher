@@ -99,7 +99,7 @@ public sealed class CustomLobbiesTests : IDisposable
 
     /// <summary>Quick Play's settings as its official mode declares them (protocol quickplay/competitive.fzmode).</summary>
     private static readonly string[] QuickPlaysSettings =
-        ["Laps", "CPU level", "Boost from the start", "Mines respawn", "Finish limit", "Machine setting from", "Machine setting to", "Stats", "CPU racers"];
+        ["Laps", "CPU level", "Boost from the start", "Mines respawn", "Finish limit", "Machine setting from", "Machine setting to", "Stats", "CPU racers", "Lives"];
 
     [Fact]
     public async Task OnTheStandInTheBrowserJoinsALockedLobbyByItsPasswordAndAHostKicks()
@@ -173,12 +173,12 @@ public sealed class CustomLobbiesTests : IDisposable
             Assert.True(list.IsEffectivelyVisible);
             Assert.Equal(["Quick Play", "Knockout", "Ghost race", "Death Race"], editor.ModeRow.Choices.Select(c => c.Name));
             Assert.Equal(0, list.SelectedIndex);
-            Assert.Equal("Quick Play's rules: laps by course, GX Unleashed stats.", editor.ModeRow.Chosen!.About);
+            Assert.Equal("Quick Play's rules: laps by course, GX Unleashed stats, three lives.", editor.ModeRow.Chosen!.About);
             Assert.True(Named<Button>(view, "ModeFromFile").IsEffectivelyVisible);
             Assert.True(Named<RulesPanel>(view, "LobbyPanel").IsEffectivelyVisible);
             // Quick Play's settings: the mode's parameters, on Quick Play's own values; no preset
             Assert.Equal(QuickPlaysSettings, editor.ParamRows.Select(p => p.Row.Label));
-            Assert.Equal(["By course", "Master", "Off", "200 ms", "90 s", "100", "100", "GX Unleashed", "On"],
+            Assert.Equal(["By course", "Master", "Off", "200 ms", "90 s", "100", "100", "GX Unleashed", "On", "3"],
                 editor.ParamRows.Select(p => ModeParamRow.Text(p.Param, p.Value, p.Stats)));
             Assert.Contains(Named<RulesPanel>(view, "CreatePanel").GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "CPU level" && t.IsEffectivelyVisible);
             Assert.DoesNotContain(view.GetVisualDescendants().OfType<TextBlock>(), t => t.IsEffectivelyVisible && t.Text is "Preset" or "Teams");
