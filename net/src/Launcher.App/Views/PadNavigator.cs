@@ -19,8 +19,8 @@ namespace Launcher.App.Views;
 /// tabs (on the Garage roster's tiles: its shelves), Z through a tab's pages; Start
 /// presses the page's main action (<c>PadNav.Main</c>); left and right change a value; the C-stick scrolls. The
 /// focus shows as a soft mark (<see cref="PadMark"/>) from the pad's first press until the mouse moves. The pad is
-/// read by <see cref="PadReader"/> only while the window is in front and no game runs (this tells it when the
-/// window is in front), and works the pages only with "Controller navigation" on (Settings, Launcher; off by default). With "Navigation sounds" on (Settings, Launcher; off by default) a move between controls
+/// read from the launcher's helper (<see cref="PadReader"/>, which holds the devices while no game runs) and acts only
+/// while the window is in front (this tells it when the window is in front), and works the pages only with "Controller navigation" on (Settings, Launcher; off by default). With "Navigation sounds" on (Settings, Launcher; off by default) a move between controls
 /// sounds the game's cursor, by the pad or by the keyboard's Tab, and the pad's B the game's cancel when it closed
 /// or left something; the mouse never sounds (<see cref="LauncherSound"/>).
 /// </summary>

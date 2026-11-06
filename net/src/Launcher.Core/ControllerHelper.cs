@@ -12,7 +12,9 @@ namespace Launcher.Core;
 /// check before a start ask it which devices are plugged in, what the GameCube adapter says, which input the player
 /// just moved, and what the game would read from a port; so a name or a reading on the page is the one a race has.
 /// It ends when its input closes, and no helper of this launcher is left running when a game starts
-/// (<see cref="StopAll"/>): the game must find every device free.
+/// (<see cref="StopAll"/>): the game must find every device free. One runs at a time (<see cref="Start"/>): the
+/// launcher's own, for as long as the launcher runs and no game does (<see cref="Pads.PadReader"/>, which the Controller
+/// page uses too), or the check before a start's (<see cref="StartAlone"/>).
 /// </summary>
 public sealed class ControllerHelper : IDisposable
 {
@@ -89,30 +91,65 @@ public sealed class ControllerHelper : IDisposable
 
     public static IReadOnlyList<string> Arguments(string userFolder) => ["--controllers", userFolder];
 
-    /// <summary>Starts the helper on the game's user folder; null when the runner is not there or did not start, and
-    /// while a game of this launcher is starting or running (<see cref="Held"/>).</summary>
+    /// <summary>Starts the helper on the game's user folder; null when the runner is not there or did not start, while
+    /// a game of this launcher is starting or running (<see cref="Held"/>), and while another helper of this launcher
+    /// runs or is ending (<see cref="AnyRunning"/>): one program at a time holds the devices (the GameCube adapter opens
+    /// for one only) and reads the game's settings.</summary>
     public static ControllerHelper? Start(RecompPaths paths)
     {
         ArgumentNullException.ThrowIfNull(paths);
-        var info = RecompLaunch.StartInfo(paths, Arguments(paths.UserFolder));
-        info.RedirectStandardInput = true;
-        info.RedirectStandardOutput = true;
-        info.StandardOutputEncoding = Encoding.UTF8;
-        info.StandardInputEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);   // no mark before the first line
+        var info = Info(paths);
+        lock (Starting)
+        {
+            return Held || AnyRunning ? null : StartLocked(info);
+        }
+    }
+
+    /// <summary>Starts a helper of its own for the check before a start (<see cref="ControllerStart"/>): every other
+    /// helper (the launcher's, <see cref="Pads.PadReader"/>) is ended first, and none can start between the two. Null as
+    /// for <see cref="Start"/>; the ended helper's owner starts its own again once this one has gone.</summary>
+    public static ControllerHelper? StartAlone(RecompPaths paths)
+    {
+        ArgumentNullException.ThrowIfNull(paths);
+        var info = Info(paths);
         lock (Starting)
         {
             if (Held)
             {
                 return null;
             }
-            try
+            ControllerHelper[] running;
+            lock (Running)
             {
-                return Process.Start(info) is { } process ? new ControllerHelper(process.StandardInput, process.StandardOutput, process) : null;
+                running = [.. Running];
             }
-            catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException or IOException)
+            foreach (var helper in running)
             {
-                return null;
+                helper.Dispose();   // (it comes back once the program has gone)
             }
+            return StartLocked(info);
+        }
+    }
+
+    private static ProcessStartInfo Info(RecompPaths paths)
+    {
+        var info = RecompLaunch.StartInfo(paths, Arguments(paths.UserFolder));
+        info.RedirectStandardInput = true;
+        info.RedirectStandardOutput = true;
+        info.StandardOutputEncoding = Encoding.UTF8;
+        info.StandardInputEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);   // no mark before the first line
+        return info;
+    }
+
+    private static ControllerHelper? StartLocked(ProcessStartInfo info)
+    {
+        try
+        {
+            return Process.Start(info) is { } process ? new ControllerHelper(process.StandardInput, process.StandardOutput, process) : null;
+        }
+        catch (Exception e) when (e is System.ComponentModel.Win32Exception or InvalidOperationException or IOException)
+        {
+            return null;
         }
     }
 
