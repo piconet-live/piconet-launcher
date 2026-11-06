@@ -196,20 +196,19 @@ public sealed class PracticePageTests : IDisposable
         }, main.Practice.Setup);
         var labels = window.GetVisualDescendants().OfType<Grid>().Where(g => g.Classes.Contains("rule"))
             .Select(g => g.Children.OfType<TextBlock>().Single().Text).ToList();
-        // the machine; under Practice the mode's parameters in the file's order, then its rewind and save; under Race
+        // the machine; under Practice the mode's parameters in the file's order, then its rewind; under Race
         // rules the host's other rules
         string[] modeRows = [.. mode.Params.Select(p => p.Label)];
-        Assert.Equal(["Machine", "Stats", "Machine setting", .. modeRows, "Rewind", "Save · Load", "Boost from the start", "Mines respawn"], labels);
+        Assert.Equal(["Machine", "Stats", "Machine setting", .. modeRows, "Rewind", "Boost from the start", "Mines respawn"], labels);
         Assert.Equal(["Laps", "Restore", "Resume countdown"], modeRows);
         Assert.Equal(["PRACTICE", "RACE RULES"], window.GetVisualDescendants().OfType<TextBlock>()
             .Where(t => t.Classes.Contains("grouphead") && t.IsEffectivelyVisible).Select(t => t.Text));
         // the host's rules that mean something alone, from the one list a custom lobby shows too, but those the mode
         // states (the laps) and its own Restore; none of the others
         Assert.Equal(HostRules.Alone.Where(r => r.Reach == RuleReach.Alone && !PracticeMode.States(mode, r)).Select(r => r.Label).Order(),
-            labels.Except(["Machine", "Rewind", "Save · Load", .. modeRows]).Order());
+            labels.Except(["Machine", "Rewind", .. modeRows]).Order());
         Assert.DoesNotContain(labels, l => HostRules.All.Any(r => r.Reach != RuleReach.Alone && r.Label == l));
         Assert.Contains(RowOf(window, "Rewind").GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "5'00\"");
-        Assert.Contains(RowOf(window, "Save · Load").GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "D-pad right · left");
 
         // a cup's chip shows its five cards; a card pressed is the course, and the only one framed
         Assert.Equal(30, window.GetVisualDescendants().OfType<Button>().Count(b => b.Classes.Contains("card")));

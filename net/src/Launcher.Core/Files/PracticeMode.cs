@@ -90,9 +90,6 @@ public static class PracticeMode
     public static int? RewindSeconds(ModePackage mode, IReadOnlyList<int> values) =>
         Word(mode, values, ModeSetup.Rewind) is { } steps ? steps / Steps : null;
 
-    /// <summary>The mode keeps a saved moment (<c>save_state</c> on, on the parameters' values).</summary>
-    public static bool Saves(ModePackage mode, IReadOnlyList<int> values) => Word(mode, values, ModeSetup.SaveState) is > 0;
-
     /// <summary>A setup word's first value on the parameters' values; null: the mode does not write it.</summary>
     private static int? Word(ModePackage mode, IReadOnlyList<int> values, ModeSetup id)
     {

@@ -71,7 +71,7 @@ public sealed class PracticeModeTests : IDisposable
         var page = new PracticeViewModel(() => new RacedMachine(0, null), () => { }, [], mode);
 
         var practice = page.Groups.Single(g => g.Heading == PracticeViewModel.ModeHeading);
-        Assert.Equal([.. mode.Params.Select(p => p.Label), "Rewind", "Save · Load"], practice.Rows.Select(r => r.Label));
+        Assert.Equal([.. mode.Params.Select(p => p.Label), "Rewind"], practice.Rows.Select(r => r.Label));
         Assert.Contains("Wobble", practice.Rows.Select(r => r.Label));
         var rules = page.Groups.Single(g => g.Heading == PracticeViewModel.RulesHeading);
         Assert.Equal([HostRules.BoostStart.Label], rules.Rows.Select(r => r.Label));   // (the mines are the mode's now)

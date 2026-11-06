@@ -66,10 +66,6 @@ public sealed partial class PracticeViewModel : ViewModelBase
         {
             fixedWords.Add(new ValueRule("Rewind", Clock(rewind)));
         }
-        if (mode is not null && PracticeMode.Saves(mode, values))
-        {
-            fixedWords.Add(new ValueRule("Save · Load", "D-pad right · left"));
-        }
         RuleRow[] practice = [.. Params.Select(p => p.Row), .. fixedWords];
         RuleRow[] race = [.. RaceRules.Where(r => _rules.ContainsKey(r.Name)).Select(r => _rules[r.Name])];
         Groups = [.. new (string? Heading, RuleRow[] Rows)[]
