@@ -374,6 +374,31 @@
     <Setter Property="StrokeJoin" Value="Round" />
   </Style>
   <!-- The one notice of the left column: its mark, its words in amber, a link to its folder. -->
+  <!-- A preparation's bar, a mark of the design language (the game's files on the first screen, the graphics cache in
+       the left column): a 4 px track, fully rounded, green up to the share done, growing to each new value with the
+       emphasis' easing. -->
+  <Style Selector="ProgressBar.prepare">
+    <Setter Property="Height" Value="4" />
+    <Setter Property="MinHeight" Value="4" />
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="#1FFFFFFF" CornerRadius="{DynamicResource StaticFullCornerRadius}" ClipToBounds="True">
+          <Panel>
+            <Border Name="PART_Indicator" Width="0" Background="{StaticResource AccentBrush}" CornerRadius="{DynamicResource StaticFullCornerRadius}"
+                    HorizontalAlignment="Left">
+              <Border.Transitions>
+                <Transitions>
+                  <DoubleTransition Property="Width" Duration="0:0:0.42" Easing="{StaticResource EaseOut}" />
+                </Transitions>
+              </Border.Transitions>
+            </Border>
+          </Panel>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
   <Style Selector="Border.columnnotice">
     <Setter Property="Padding" Value="16,8" />
     <Setter Property="Background" Value="{StaticResource WellBrush}" />
