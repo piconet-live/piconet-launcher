@@ -124,9 +124,14 @@ public sealed partial class AppState
             _checkAfterGame = true;
             return;
         }
-        var look = PipelineLook;
+        if (PipelineLook is not { } look)
+        {
+            StopBuild();   // Aurora does not draw: no cache, and the game's files are not looked at for it
+            Show(PipelineStatus.Nothing);
+            return;
+        }
         var game = await LookForTheGameOnce().ConfigureAwait(false);
-        if (look is null || game.Problem is not null)
+        if (game.Problem is not null)
         {
             StopBuild();
             Show(PipelineStatus.Nothing);
