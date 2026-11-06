@@ -218,9 +218,10 @@ public sealed record LauncherSettings
         [("off", "Off"), ("deuteranopia", "Deuteranopia"), ("protanopia", "Protanopia"), ("tritanopia", "Tritanopia")];
 
     /// <summary>Pictures between the game's own steps (the Settings page's "High refresh", Game): one of
-    /// <see cref="AuroraHighRefreshes"/>, off by default. It is the launch file's <c>"auroraHighRefresh"</c> and its
-    /// <c>"refreshRate"</c> both (<see cref="GameRefreshRate"/>). A settings file of before 0.6.0 may hold
-    /// <c>"refreshRate"</c>, the setting of its own that this one took over: the higher of the two is kept (<see cref="SettingsStore.Load"/>).</summary>
+    /// <see cref="AuroraHighRefreshes"/>, off by default; the launch file's <c>"auroraHighRefresh"</c> (off: left out). The
+    /// launcher writes no <c>"refreshRate"</c> since 0.6.0 (the emulator's re-draw, never shown with Aurora). A settings
+    /// file of before 0.6.0 may hold <c>"refreshRate"</c>, the setting of its own that this one took over: the higher of
+    /// the two is kept, and it is not written back (<see cref="SettingsStore.Load"/>).</summary>
     public int AuroraHighRefresh { get; init; } = AuroraHighRefreshes[0].Rate;
 
     public static IReadOnlyList<(int Rate, string Words)> AuroraHighRefreshes { get; } = [(0, "Off"), (120, "Up to 120"), (240, "Up to 240")];
@@ -241,17 +242,6 @@ public sealed record LauncherSettings
             AuroraColourblind != AuroraColourblindFilters[0].Name && AuroraColourblindFilters.Any(a => a.Name == AuroraColourblind) ? AuroraColourblind : null,
             AuroraHighRefreshes.Any(a => a.Rate == AuroraHighRefresh) ? AuroraHighRefresh : 0,
             RayTracing && cardRayTraces);
-
-    /// <summary>The launch file's <c>"refreshRate"</c> beside its <c>"auroraHighRefresh"</c>, from the one setting
-    /// (<see cref="AuroraHighRefresh"/>): "120" with 120, "240" with 240; off (and anything not on the list): null, and
-    /// neither is written.</summary>
-    [JsonIgnore]
-    public string? GameRefreshRate => AuroraLaunchKeys().HighRefresh switch
-    {
-        120 => GameWindow.Redraw120,
-        240 => GameWindow.Redraw240,
-        _ => null,
-    };
 
     /// <summary>What a settings file of before 0.6.0 said in its <c>"refreshRate"</c>, as <see cref="AuroraHighRefresh"/>:
     /// "120" is 120, "240" and "display" (the display's own rate) are 240, anything else 0.</summary>

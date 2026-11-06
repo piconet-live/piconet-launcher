@@ -219,7 +219,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
     public static IReadOnlyList<string> AuroraHighRefreshChoices { get; } = LauncherSettings.AuroraHighRefreshes.Select(a => a.Words).ToList();
 
     /// <summary>High refresh (<see cref="LauncherSettings.AuroraHighRefresh"/>): 0 off, 1 up to 120, 2 up to 240; the one
-    /// setting of pictures between the game's steps (the launch file's two keys of them: <see cref="LauncherSettings.GameRefreshRate"/>).</summary>
+    /// setting of pictures between the game's steps.</summary>
     [ObservableProperty]
     public partial int AuroraHighRefreshIndex { get; set; }
 

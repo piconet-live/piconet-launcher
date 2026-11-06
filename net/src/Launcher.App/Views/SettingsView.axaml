@@ -78,8 +78,8 @@
       <ListBox Grid.Row="11" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.AuroraColourblindChoices}"
                SelectedIndex="{Binding AuroraColourblindIndex}"
                AutomationProperties.Name="Colourblind filter" />
-      <!-- pictures between the game's 60 steps a second, the one setting of them: the launch file's "auroraHighRefresh" and
-           its "refreshRate" alike (Off: neither; Up to 120: 120 and "120"; Up to 240: 240 and "240") -->
+      <!-- pictures between the game's 60 steps a second, the one setting of them: the launch file's "auroraHighRefresh"
+           (Off: left out). The launcher writes no "refreshRate" since 0.6.0 -->
       <TextBlock Grid.Row="12" Classes="label" Text="High refresh"
                  ToolTip.Tip="Pictures between the game's own steps, for a screen above 60 Hz. No added input delay. The race stays at 60 steps a second; when there is no time for one, it is left out." />
       <ListBox Grid.Row="12" Grid.Column="1" Classes="seg tall" Name="HighRefresh" ItemsSource="{x:Static vm:SettingsViewModel.AuroraHighRefreshChoices}"

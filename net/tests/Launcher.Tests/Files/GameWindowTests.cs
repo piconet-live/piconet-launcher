@@ -202,18 +202,13 @@ public sealed class GameWindowTests : IDisposable
         Assert.Null(JsonNode.Parse(GameLaunchFile.Playback("b", "r.fzrp", window: window))!["verticalSync"]);
     }
 
-    /// <summary>High refresh is the one setting of pictures between steps: it gives the launch file's
-    /// <c>"refreshRate"</c> beside its <c>"auroraHighRefresh"</c> (120 with "120", 240 with "240", off neither). A settings
-    /// file of before 0.6.0 with a <c>"refreshRate"</c> of its own keeps the higher of the two ("display" is 240), and
-    /// the next save no longer writes it. The launch file still takes any of its refresh rates from a window.</summary>
+    /// <summary>High refresh is the one setting of pictures between steps, the launch file's <c>"auroraHighRefresh"</c>;
+    /// the launcher writes no <c>"refreshRate"</c> since 0.6.0. A settings file of before 0.6.0 with a <c>"refreshRate"</c>
+    /// of its own keeps the higher of the two ("display" is 240), and the next save no longer writes it.</summary>
     [Fact]
-    public void HighRefreshGivesTheRefreshRateAndAnOldRefreshRateIsTakenIntoIt()
+    public void HighRefreshIsTheOneSettingAndAnOldRefreshRateIsTakenIntoIt()
     {
-        Assert.Equal((0, null), (new LauncherSettings().AuroraHighRefresh, new LauncherSettings().GameRefreshRate));
-        foreach (var (rate, redraw) in new (int, string?)[] { (0, null), (120, "120"), (240, "240"), (77, null) })
-        {
-            Assert.Equal(redraw, new LauncherSettings { AuroraHighRefresh = rate }.GameRefreshRate);
-        }
+        Assert.Equal(0, new LauncherSettings().AuroraHighRefresh);
         var file = Path.Combine(_dir, "settings.json");
         var store = new SettingsStore(file);
         foreach (var (written, high, read) in new[]
@@ -230,11 +225,10 @@ public sealed class GameWindowTests : IDisposable
             Assert.Null(JsonNode.Parse(File.ReadAllText(file))!["refreshRate"]);
             Assert.Equal(read, store.Load().AuroraHighRefresh);
         }
-        var window = new GameWindow("F-Zero GX", "Piconet");
-        Assert.Null(JsonNode.Parse(GameLaunchFile.Race("b", Match, window: window))!["refreshRate"]);
-        Assert.Null(JsonNode.Parse(GameLaunchFile.Race("b", Match, window: window with { RefreshRate = "60" }))!["refreshRate"]);
-        Assert.Equal("240", (string)JsonNode.Parse(GameLaunchFile.Race("b", Match, window: window with { RefreshRate = GameWindow.Redraw240 }))!["refreshRate"]!);
-        Assert.Equal("display", (string)JsonNode.Parse(GameLaunchFile.Playback("b", "r.fzrp", window: window with { RefreshRate = GameWindow.RedrawAsTheDisplay }))!["refreshRate"]!);
+        var window = new GameWindow("F-Zero GX", "Piconet", AuroraHighRefresh: 240);
+        var race = JsonNode.Parse(GameLaunchFile.Race("b", Match, window: window))!;
+        Assert.Equal((240, null), ((int?)race["auroraHighRefresh"], race["refreshRate"]));
+        Assert.Null(JsonNode.Parse(GameLaunchFile.Playback("b", "r.fzrp", window: window))!["refreshRate"]);
     }
 
     /// <summary>The kind of full screen: one default in one place (<see cref="LauncherSettings.FullScreenDefault"/>,

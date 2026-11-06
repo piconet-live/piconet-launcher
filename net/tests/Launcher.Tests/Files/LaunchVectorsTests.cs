@@ -51,18 +51,18 @@ public sealed class LaunchVectorsTests
         yield return ("window-plain", GameLaunchFile.Offline(null, window: new GameWindow("Port test")));
         yield return ("window-every-member", GameLaunchFile.Offline("b", window: new GameWindow("F-Zero GX", "Piconet", true, picture,
             Taskbar, LauncherSettings.PresentAsBefore, true, LauncherSettings.FullScreenExclusive, @"C:\data\boards\game-1.board",
-            GameWindow.Redraw240, Rumble: false, ShowInputs: true,
+            Rumble: false, ShowInputs: true,
             AuroraSize: "native", AuroraEdges: 4, AuroraTextures: 16, AuroraColourblind: "deuteranopia", AuroraHighRefresh: 240, AuroraRayTracing: true)));
         yield return ("window-race", GameLaunchFile.Race("b", Match, record: "race.fzrp", debug: debug, window: new GameWindow("F-Zero GX",
             "Piconet", false, picture, Taskbar, LauncherSettings.PresentAtTheCopy, false, LauncherSettings.FullScreenBorderless,
-            "g.board", GameWindow.Redraw120)));
+            "g.board")));
         yield return ("window-playback", GameLaunchFile.Playback("b", "r.fzrp", window: new GameWindow("F-Zero GX", "Piconet",
-            RefreshRate: GameWindow.RedrawAsTheDisplay, FullScreen: LauncherSettings.FullScreenDefault)));
+            FullScreen: LauncherSettings.FullScreenDefault)));
         // what the game would refuse, or what is its default, is left out: the name of spaces, a picture too large
-        // or not its size, a taskbar group not of this computer, the console's moment, 60 a second, no full screen
+        // or not its size, a taskbar group not of this computer, the console's moment, no full screen
         yield return ("window-left-out", GameLaunchFile.Offline(null, window: new GameWindow("t", "  ", true,
             new Picture(513, 1, new byte[513 * 4]), Taskbar with { Program = @"\\server\Launcher.App.exe" },
-            LauncherSettings.PresentAsAConsole, false, "window", null, "60")));
+            LauncherSettings.PresentAsAConsole, false, "window", null)));
         yield return ("window-picture-not-its-size", GameLaunchFile.Offline(null, window: new GameWindow("t", "Piconet",
             NamePicture: new Picture(2, 2, new byte[4]))));
     }

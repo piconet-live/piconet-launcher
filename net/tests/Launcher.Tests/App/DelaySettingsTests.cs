@@ -70,8 +70,8 @@ public sealed class DelaySettingsTests : IDisposable
     }
 
     // High refresh, the one setting of pictures between steps: a label and three values, off until the player picks,
-    // and each the launch file's two keys of them together (Aurora's run-ahead and the re-draw's "refreshRate"); off
-    // writes neither. It is left at Up to 240.
+    // each the launch file's "auroraHighRefresh" (off: left out), and never a "refreshRate" (the emulator's re-draw, not
+    // written since 0.6.0). It is left at Up to 240.
     private void TheHighRefreshRow(Window window, Control view, AppState state)
     {
         var refresh = Named<ListBox>(view, "HighRefresh");
@@ -79,11 +79,11 @@ public sealed class DelaySettingsTests : IDisposable
         Assert.Equal((0, 0), (refresh.SelectedIndex, state.Settings.AuroraHighRefresh));
         Assert.Contains(view.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "High refresh");
         Assert.DoesNotContain(view.GetVisualDescendants().OfType<TextBlock>(), t => t.Text?.Contains("Refresh rate", StringComparison.Ordinal) == true);
-        foreach (var (index, aurora, redraw) in new (int, int?, string?)[] { (0, null, null), (1, 120, "120"), (2, 240, "240"), (0, null, null), (2, 240, "240") })
+        foreach (var (index, aurora) in new (int, int?)[] { (0, null), (1, 120), (2, 240), (0, null), (2, 240) })
         {
             Click(window, Value(refresh, index));
             var launch = LaunchFileOfAStart(state);
-            Assert.Equal((index, aurora, redraw), (refresh.SelectedIndex, (int?)launch["auroraHighRefresh"], (string?)launch["refreshRate"]));
+            Assert.Equal((index, aurora, false), (refresh.SelectedIndex, (int?)launch["auroraHighRefresh"], launch.ContainsKey("refreshRate")));
         }
     }
 
