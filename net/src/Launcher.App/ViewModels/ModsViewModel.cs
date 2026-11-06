@@ -123,8 +123,8 @@ public sealed partial class ModCard : ObservableObject
     [ObservableProperty]
     public partial bool Removing { get; set; }
 
-    /// <summary>The mod has parts to tick: more than one.</summary>
-    public bool HasTree => Mod.Manifest.Parts.Count > 1;
+    /// <summary>The mod has a tree to open: parts to tick (more than one), or text files of its own to read.</summary>
+    public bool HasTree => Mod.Manifest.Parts.Count > 1 || Mod.Manifest.Texts.Count > 0;
 
     /// <summary>The tree, made when it is first opened.</summary>
     [ObservableProperty]
@@ -140,8 +140,9 @@ public sealed partial class ModCard : ObservableObject
         {
             return;
         }
-        Tree ??= new ModTreeChoice(ModTree.Of(Name, Mod.Manifest.Parts.Select(p => p.Path)), Mod.Manifest.PartsOn, !Mod.Manifest.Fixed,
-            on => _page.SetParts(this, on));
+        var mod = Mod;
+        Tree ??= new ModTreeChoice(ModTree.Of(Name, mod.Manifest.Parts.Select(p => p.Path), mod.Manifest.Texts.Select(t => t.Path)), mod.Manifest.PartsOn,
+            !mod.Manifest.Fixed, on => _page.SetParts(this, on), mod.ReadText);
         TreeOpen = !TreeOpen;
     }
 
@@ -330,7 +331,7 @@ public sealed partial class ModsViewModel : ViewModelBase
         ImportName = survey.Name;
         if (survey.AsksChoice)
         {
-            Choice = new ModTreeChoice(survey.Tree, survey.OnByDefault);
+            Choice = new ModTreeChoice(survey.Tree, survey.OnByDefault, read: path => ModImport.ReadText(survey, path));
             Choosing = true;
             return;
         }

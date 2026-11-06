@@ -7,7 +7,8 @@ using Launcher.Core;
 namespace Launcher.App.ViewModels;
 
 /// <summary>One row of a mod's tree: a folder's name as the mod ships it (the top row: the mod's), its tick (all,
-/// some or none of it; null: some), and its arrow where it holds folders.</summary>
+/// some or none of it; null: some) where it holds parts, and its arrow where it holds something; or one of the mod's
+/// text files, which its arrow opens to read.</summary>
 public sealed partial class ModTreeRow : ObservableObject
 {
     private readonly ModTreeChoice _tree;
@@ -20,11 +21,27 @@ public sealed partial class ModTreeRow : ObservableObject
 
     public bool HasChildren => Node.Children.Count > 0;
 
+    /// <summary>The row has a tick: there are parts in it.</summary>
+    public bool HasBox => Node.HasParts;
+
+    /// <summary>A text file's row.</summary>
+    public bool IsText => Node.Text is not null;
+
+    /// <summary>A folder with nothing to tick in it (only text files).</summary>
+    public bool IsPlainFolder => !IsText && !HasBox;
+
+    /// <summary>The arrow: a folder with something in it, or a text file.</summary>
+    public bool HasArrow => HasChildren || IsText;
+
+    /// <summary>A text file's words, once it has been opened.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsText))]
+    public partial string? Words { get; set; }
+
+    public bool ShowsText => IsText && Expanded && Words is not null;
+
     /// <summary>The mod's own row.</summary>
     public bool IsTop => Node.Depth == 0;
-
-    /// <summary>One of lettered alternatives: its box is round.</summary>
-    public bool IsAlternative => Node.Group is not null;
 
     /// <summary>The row's indent: its depth.</summary>
     public Thickness Indent => new(Node.Depth * 22, 0, 0, 0);
@@ -32,6 +49,7 @@ public sealed partial class ModTreeRow : ObservableObject
     public bool CanChange => _tree.Editable;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsText))]
     public partial bool Expanded { get; set; }
 
     /// <summary>The tick: pressed, the row is all ticked, or none of it when it was all ticked.</summary>
@@ -55,16 +73,20 @@ public sealed partial class ModTreeRow : ObservableObject
 /// <summary>
 /// A mod's parts as a tree to tick (<see cref="ModTree"/>): the import's chooser, and a card's tree, which says each
 /// change to <c>changed</c> (the mods' list saves it at once; the next game start uses it). The top row and its own
-/// folders show; a folder opens with its arrow. A tree that cannot change (a mod imported before the tree) shows its
+/// folders show; a folder opens with its arrow, and a text file of the mod opens to its words (read by <c>read</c>,
+/// off the window's thread, the first time). A tree that cannot change (a mod imported before the tree) shows its
 /// ticks only.
 /// </summary>
 public sealed class ModTreeChoice : ObservableObject
 {
     private readonly Action<IReadOnlySet<string>>? _changed;
+    private readonly Func<string, string?>? _read;
     private readonly Dictionary<ModTreeNode, ModTreeRow> _rows = [];
 
-    public ModTreeChoice(ModTree tree, IReadOnlySet<string> on, bool editable = true, Action<IReadOnlySet<string>>? changed = null)
+    public ModTreeChoice(ModTree tree, IReadOnlySet<string> on, bool editable = true, Action<IReadOnlySet<string>>? changed = null,
+        Func<string, string?>? read = null)
     {
+        _read = read;
         ArgumentNullException.ThrowIfNull(tree);
         ArgumentNullException.ThrowIfNull(on);
         Tree = tree;
@@ -126,6 +148,16 @@ public sealed class ModTreeChoice : ObservableObject
 
     internal void Expand(ModTreeRow row)
     {
+        if (row.IsText)
+        {
+            row.Expanded = !row.Expanded;
+            if (row.Expanded && row.Words is null && _read is { } read && row.Node.Text is { } path)
+            {
+                _ = Task.Run(() => read(path)).ContinueWith(t => row.Words = t.IsCompletedSuccessfully ? t.Result ?? "" : "",
+                    TaskScheduler.FromCurrentSynchronizationContext());
+            }
+            return;
+        }
         if (!row.HasChildren)
         {
             return;
@@ -133,6 +165,9 @@ public sealed class ModTreeChoice : ObservableObject
         row.Expanded = !row.Expanded;
         Show();
     }
+
+    /// <summary>Every text row that is open has its words.</summary>
+    public bool TextsRead => _rows.Values.Where(r => r.IsText && r.Expanded).All(r => r.Words is not null);
 
     /// <summary>The rows shown made what they should be, the rows that stay kept as they are.</summary>
     private void Show()

@@ -18,7 +18,7 @@ namespace Launcher.Tests;
 /// single-player part shows the tag; a card pressed opens the mod's tree, and a tick in it is saved and changes the
 /// start. LOBBY_SHOTS keeps pictures; MODS_SHOTS_DATA (a data folder RealModsTests filled) with MODS_DOWNLOADS and
 /// MODS_DISC pictures the five real mods and Unleashed's chooser; MODS_DOWNLOADS and MODS_DISC alone, GXtreme's and
-/// Unleashed's trees, in the chooser and on their cards after an import into the test's own folder.
+/// Unleashed's trees with a text file open, in the chooser and on their cards after an import into the test's own folder.
 /// </summary>
 [Collection(ControllerPageTests.Name)]
 public sealed class ModsPageTests : IDisposable
@@ -141,10 +141,6 @@ public sealed class ModsPageTests : IDisposable
     private static CheckBox Tick(Window window, string name) =>
         window.GetVisualDescendants().OfType<CheckBox>().Single(c => c.IsEffectivelyVisible && AutomationProperties.GetName(c) == name);
 
-    private static void Open(Window window, string name) =>
-        Click(window, window.GetVisualDescendants().OfType<Button>().Single(b => b.Classes.Contains("arrow") && b.IsEffectivelyVisible &&
-            AutomationProperties.GetName(b) == name));
-
     [Fact]
     public async Task ACardsTreeTicksAPartAndTheStartFollows()
     {
@@ -226,41 +222,65 @@ public sealed class ModsPageTests : IDisposable
                 }
                 Assert.True(done(), what + ": " + page.Notice);
             }
-            void Import(string file, string shot, Action? open = null)
+            // a text row pressed: its words read (from the archive in the chooser, from the store on the card)
+            void Read(string name, Func<ModTreeChoice?> tree)
+            {
+                Click(window, window.GetVisualDescendants().OfType<Button>().Single(b => b.Classes.Contains("treefile") && b.IsEffectivelyVisible &&
+                    AutomationProperties.GetName(b) == name));
+                Wait(() => tree() is { TextsRead: true } t && t.Rows.Any(r => r.Name == name && r.Words is { Length: > 0 }), "not read");
+                Frame();
+            }
+            void OpenLast(string name)
+            {
+                Click(window, window.GetVisualDescendants().OfType<Button>().Where(b => b.Classes.Contains("arrow") && b.IsEffectivelyVisible &&
+                    AutomationProperties.GetName(b) == name).Last());
+                Frame();
+            }
+            void Import(string file, string shot, Action chooser, Action card)
             {
                 var picked = page.PickedAsync(Path.Combine(downloads!, file));
                 Wait(() => page.Choosing, "the chooser did not open");
-                open?.Invoke();
-                Shot(window, shot + "-import");
+                chooser();
+                Shot(window, shot + "-text-import");
                 Click(window, window.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "ImportChosen"));
                 Wait(() => picked.IsCompleted && !page.Importing && page.Cards.Count > 0 && page.Cards[^1].HasTree, "not imported");
-                var card = page.Cards[^1];
+                var mod = page.Cards[^1];
                 foreach (var other in page.Cards.Where(c => c.TreeOpen))
                 {
                     other.ToggleTreeCommand.Execute(null);
                 }
-                Click(window, window.GetVisualDescendants().OfType<Button>().Single(b => b.Classes.Contains("cardface") && AutomationProperties.GetName(b) == card.Name));
-                Pump(() => card.TreeOpen);
-                open?.Invoke();
-                Shot(window, shot + "-card");
+                Click(window, window.GetVisualDescendants().OfType<Button>().Single(b => b.Classes.Contains("cardface") && AutomationProperties.GetName(b) == mod.Name));
+                Pump(() => mod.TreeOpen);
+                card();
+                Shot(window, shot + "-text-card");
             }
-            Import("gxtreme_v5.zip", "gxtreme");
+            Import("gxtreme_v5.zip", "gxtreme", () => Read("contents.txt", () => page.Choice), () =>
+            {
+                OpenLast("Story Course Replacements");
+                Read("story_install.txt", () => page.Cards[^1].Tree);
+            });
             var gx = state.Mods!.Single();
             Assert.Equal(["_XTREMEv5/root", "Story Course Replacements/root"], gx.Manifest.PartsOn.Order(ExplorerOrder.Paths));
             Assert.Equal(3, gx.Manifest.Parts.Count);
+            Assert.Equal(8, gx.Manifest.Texts.Count);
             Assert.Null(Tick(window, gx.Manifest.Name).IsChecked);
 
             Import("f-zero_gx_unleashed_504_all_versions_.zip", "unleashed", () =>
             {
-                Open(window, "2A - Standard Unleashed");
-                Frame();
+                OpenLast("2A - Standard Unleashed");
                 // the version's own "2A - Standard Unleashed" (the second row of that name, now shown)
-                Click(window, window.GetVisualDescendants().OfType<Button>().Where(b => b.Classes.Contains("arrow") && b.IsEffectivelyVisible &&
-                    AutomationProperties.GetName(b) == "2A - Standard Unleashed").Last());
-                Frame();
+                OpenLast("2A - Standard Unleashed");
+                OpenLast("Step 3 - Rename game and choose Game ID");
+                Read("ISO file Insructions README.txt", () => page.Choice);
+            }, () =>
+            {
+                OpenLast("2A - Standard Unleashed");
+                OpenLast("1 (Optional) - Boost Fire Recolor and Machine Textures");
+                Read("ReadMe.txt", () => page.Cards[^1].Tree);
             });
             var unleashed = state.Mods![^1];
             Assert.Equal(49, unleashed.Manifest.Parts.Count);
+            Assert.Equal(20, unleashed.Manifest.Texts.Count);
             Assert.Contains(unleashed.Manifest.Files, f => f.Class == ModFileClass.Code);
         }, image, height: 1400);
     }

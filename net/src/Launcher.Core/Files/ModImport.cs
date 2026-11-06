@@ -7,14 +7,16 @@ namespace Launcher.Core;
 /// <paramref name="Path"/> is its place in the mod ("" its top).</summary>
 public sealed record ModRoot(string Path, int Files, bool OnByDefault);
 
-/// <summary>What a first look at a mod found: its name, its folders laid out like the disc, and its own picture.</summary>
-public sealed record ModSurvey(string Source, string Name, IReadOnlyList<ModRoot> Roots, string? Picture, IReadOnlyList<ModEntry> Entries)
+/// <summary>What a first look at a mod found: its name, its folders laid out like the disc, and its own picture.
+/// <paramref name="Texts"/>: the mod's own text files (a readme, the author's notes; no game file), by path in the mod.</summary>
+public sealed record ModSurvey(string Source, string Name, IReadOnlyList<ModRoot> Roots, string? Picture, IReadOnlyList<ModEntry> Entries,
+    IReadOnlyList<string> Texts)
 {
     /// <summary>The player has a choice to make: more than one folder.</summary>
     public bool AsksChoice => Roots.Count > 1;
 
     /// <summary>The mod's parts as a tree to tick.</summary>
-    public ModTree Tree => ModTree.Of(Name, Roots.Select(r => r.Path));
+    public ModTree Tree => ModTree.Of(Name, Roots.Select(r => r.Path), Texts);
 
     /// <summary>The parts ticked until the player says otherwise (<see cref="ModImport.Defaults"/>).</summary>
     public HashSet<string> OnByDefault => Roots.Where(r => r.OnByDefault).Select(r => r.Path).ToHashSet(StringComparer.Ordinal);
@@ -100,7 +102,10 @@ public static class ModImport
         var name = tops.Count == 1 && entries.All(e => e.Path.Contains('/', StringComparison.Ordinal)) && !top.Contains(tops[0])
             ? tops[0]
             : Directory.Exists(source) ? Path.GetFileName(Path.TrimEndingDirectorySeparator(source)) : Path.GetFileNameWithoutExtension(source);
-        return (new ModSurvey(source, NameOf(name), list, Picture(entries, roots.Keys), entries), null);
+        // the author's text files: a .txt or .md that is no file of the disc's in a part, small, at most so many
+        var texts = entries.Where(e => IsText(e.Path) && e.Size <= MostText && !(PartOf(e.Path, top, disc) is { } at && disc.ContainsKey(at.Inside)))
+            .Select(e => e.Path).Take(MostTexts).ToList();
+        return (new ModSurvey(source, NameOf(name), list, Picture(entries, roots.Keys), entries, texts), null);
     }
 
     /// <summary>The part an entry of the mod is in and its path from there: the folder above its first disc folder
@@ -116,6 +121,33 @@ public static class ModImport
             }
         }
         return null;
+    }
+
+    /// <summary>The largest text file of a mod's that is kept, and how many at most.</summary>
+    public const int MostText = 1 << 20, MostTexts = 500;
+
+    private static bool IsText(string path) =>
+        path.EndsWith(".txt", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".md", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>A text file of the mod read from the mod itself (in the chooser, before the import); null: it cannot be.</summary>
+    public static string? ReadText(ModSurvey survey, string path)
+    {
+        ArgumentNullException.ThrowIfNull(survey);
+        if (!survey.Texts.Contains(path, StringComparer.Ordinal))
+        {
+            return null;
+        }
+        byte[]? found = null;
+        try
+        {
+            ModArchive.Each(survey.Source, p => p == path && found is null, (_, bytes) => found = bytes, CancellationToken.None);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException
+                                      or NotSupportedException or InvalidDataException or SharpCompress.Common.ArchiveException)
+        {
+            return null;
+        }
+        return found is null ? null : ModText.Decode(found);
     }
 
     /// <summary>A name to show: underscores as spaces, a trailing "complete" or "all versions" dropped, and words
@@ -216,8 +248,14 @@ public static class ModImport
                 Directory.Delete(part, true);
             }
             Directory.CreateDirectory(store);
-            ModArchive.Each(survey.Source, p => plan.ContainsKey(p) || p == survey.Picture, (path, bytes) =>
+            var texts = new HashSet<string>(survey.Texts, StringComparer.Ordinal);
+            var kept = new List<ModText>();
+            ModArchive.Each(survey.Source, p => plan.ContainsKey(p) || p == survey.Picture || texts.Contains(p), (path, bytes) =>
             {
+                if (texts.Contains(path) && bytes.Length <= MostText)
+                {
+                    kept.Add(KeepText(path, bytes, store));
+                }
                 if (path == survey.Picture && picture is null)
                 {
                     File.WriteAllBytes(Path.Combine(part, ModManifest.PictureFile), bytes);
@@ -226,7 +264,8 @@ public static class ModImport
                 if (plan.TryGetValue(path, out var at) && parts.TryGetValue(at.Part, out var into))
                 {
                     progress?.Report(new ModProgress(++done, plan.Count));
-                    if (LeftOut(at.Disc) is { } why)
+                    // a file of a kind that is no game file is one where the disc has it (the movies' subtitles: .txt)
+                    if (LeftOut(at.Disc) is { } why && !(why == "extra" && disc.ContainsKey(at.Disc)))
                     {
                         dropped[why] = dropped.GetValueOrDefault(why) + 1;
                         return;
@@ -257,9 +296,7 @@ public static class ModImport
             }
             var list = parts.OrderBy(p => p.Key, ExplorerOrder.Paths).Select(p => new ModPart(p.Key, on.Contains(p.Key),
                 [.. p.Value.Files.Values.OrderBy(f => f.Disc, StringComparer.Ordinal)], [.. p.Value.Same])).ToList();
-            var manifest = new ModManifest(id, survey.Name, Path.GetFileName(Path.TrimEndingDirectorySeparator(survey.Source)), SourceHash(survey.Source),
-                DateTimeOffset.UtcNow, list, dropped, picture);
-            ModLibrary.WriteManifest(part, manifest);
+            var manifest = Written(part, id, survey, list, dropped, picture, kept);
             var final = Path.Combine(modsFolder, id);
             if (Directory.Exists(final))
             {
@@ -279,6 +316,28 @@ public static class ModImport
             TryDelete(part);
             return (null, "Not imported: " + e.Message);
         }
+    }
+
+    /// <summary>The new mod's manifest, written into its folder.</summary>
+    private static ModManifest Written(string folder, string id, ModSurvey survey, List<ModPart> parts, SortedDictionary<string, int> dropped,
+        string? picture, List<ModText> texts)
+    {
+        var manifest = new ModManifest(id, survey.Name, Path.GetFileName(Path.TrimEndingDirectorySeparator(survey.Source)), SourceHash(survey.Source),
+            DateTimeOffset.UtcNow, parts, dropped, picture) { Texts = [.. texts.OrderBy(t => t.Path, ExplorerOrder.Paths)] };
+        ModLibrary.WriteManifest(folder, manifest);
+        return manifest;
+    }
+
+    /// <summary>One of the mod's text files kept in the store as it came.</summary>
+    private static ModText KeepText(string path, byte[] bytes, string store)
+    {
+        var sha = Convert.ToHexStringLower(SHA256.HashData(bytes));
+        var to = Path.Combine(store, sha);
+        if (!File.Exists(to))
+        {
+            File.WriteAllBytes(to, bytes);
+        }
+        return new ModText(path, bytes.LongLength, sha);
     }
 
     /// <summary>The part and disc path of each entry that is in a part.</summary>

@@ -9,6 +9,37 @@ namespace Launcher.Core;
 /// kept: it is never used.</summary>
 public sealed record ModFile(string Disc, ModFileClass Class, bool Online, string? Why, bool New, long Size, string Sha256);
 
+/// <summary>One of the mod's own text files (a readme, the author's notes), kept as it came in the store: its path in
+/// the mod, its size and SHA-256.</summary>
+public sealed record ModText(string Path, long Size, string Sha256)
+{
+    /// <summary>The most of a text shown.</summary>
+    public const int MostShown = 256 << 10;
+
+    /// <summary>A text file's words: UTF-8 (its mark dropped) where it is that, else Latin-1 (older Windows notes);
+    /// lines ended by '\n'; no control characters but tabs; at most <see cref="MostShown"/> bytes of it.</summary>
+    public static string Decode(byte[] bytes)
+    {
+        ArgumentNullException.ThrowIfNull(bytes);
+        var span = bytes.AsSpan(0, Math.Min(bytes.Length, MostShown));
+        if (span.StartsWith((ReadOnlySpan<byte>)[0xEF, 0xBB, 0xBF]))
+        {
+            span = span[3..];
+        }
+        string text;
+        try
+        {
+            text = new System.Text.UTF8Encoding(false, true).GetString(span);
+        }
+        catch (System.Text.DecoderFallbackException)
+        {
+            text = System.Text.Encoding.Latin1.GetString(span);
+        }
+        text = text.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
+        return new string([.. text.Where(c => c is '\n' or '\t' || !char.IsControl(c))]).TrimEnd();
+    }
+}
+
 /// <summary>One part of a mod: a folder of it laid out like the disc (<see cref="ModImport.Survey"/>'s roots), its
 /// path in the mod, whether it is ticked, its files kept (every file of it, ticked or not: the player may tick it
 /// later), and the paths of its files that are the disc's own (none kept: in a later part they put the disc's file
@@ -29,6 +60,9 @@ public sealed record ModManifest(string Id, string Name, string Source, string S
     public const int Format = 2;
 
     public const string FileName = "manifest.json", PictureFile = "picture.png", StoreFolder = "store";
+
+    /// <summary>The mod's own text files, in the store (none in a mod of the first form).</summary>
+    public IReadOnlyList<ModText> Texts { get; init; } = [];
 
     /// <summary>A mod of the first form: its parts are as they were chosen at its import.</summary>
     public bool Fixed => Form < 2;
@@ -90,6 +124,24 @@ public sealed record InstalledMod(ModManifest Manifest, string Folder, bool On)
 
     /// <summary>The mod's own picture's file, or null.</summary>
     public string? Picture => Manifest.Picture is { } p && File.Exists(Path.Combine(Folder, p)) ? Path.Combine(Folder, p) : null;
+
+    /// <summary>One of the mod's text files, read; null: it has no such file or it cannot be read.</summary>
+    public string? ReadText(string path)
+    {
+        if (Manifest.Texts.FirstOrDefault(t => t.Path == path) is not { } text)
+        {
+            return null;
+        }
+        try
+        {
+            var file = Path.Combine(Store, text.Sha256);
+            return new FileInfo(file).Length > ModImport.MostText ? null : ModText.Decode(File.ReadAllBytes(file));
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
 
     /// <summary>The kept car data file of the ticked parts, when there is one.</summary>
     public string? CarData => Manifest.Files.FirstOrDefault(f => f.Class == ModFileClass.CarData) is { } f ? PathOf(f) : null;
@@ -258,6 +310,7 @@ public sealed class ModLibrary(string dataFolder)
             ["imported"] = m.Imported.ToString("o", CultureInfo.InvariantCulture),
             ["dropped"] = dropped,
             ["parts"] = parts,
+            ["texts"] = new JsonArray([.. m.Texts.Select(t => (JsonNode)new JsonObject { ["path"] = t.Path, ["size"] = t.Size, ["sha256"] = t.Sha256 })]),
         };
         if (m.Picture is { } picture)
         {
@@ -316,16 +369,40 @@ public sealed class ModLibrary(string dataFolder)
                 dropped[d.Name] = d.Value.GetInt32();
             }
             var picture = r.TryGetProperty("picture", out var p) && p.GetString() == ModManifest.PictureFile ? ModManifest.PictureFile : null;
+            if (Texts(r, form) is not { } texts)
+            {
+                return null;
+            }
             return new ModManifest(r.GetProperty("id").GetString() ?? "", r.GetProperty("name").GetString() ?? "Mod",
                 r.GetProperty("source").GetString() ?? "", r.GetProperty("sourceSha256").GetString() ?? "",
                 DateTimeOffset.Parse(r.GetProperty("imported").GetString() ?? "", CultureInfo.InvariantCulture),
-                form == 1 ? parts : [.. parts.OrderBy(x => x.Path, ExplorerOrder.Paths)], dropped, picture, form);
+                form == 1 ? parts : [.. parts.OrderBy(x => x.Path, ExplorerOrder.Paths)], dropped, picture, form) { Texts = texts };
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or KeyNotFoundException
                                       or InvalidOperationException or FormatException)
         {
             return null;
         }
+    }
+
+    /// <summary>The mod's text files (none in the first form); null when one names a place outside the mod's folder.</summary>
+    private static List<ModText>? Texts(JsonElement root, int form)
+    {
+        var texts = new List<ModText>();
+        if (form < 2 || !root.TryGetProperty("texts", out var list))
+        {
+            return texts;
+        }
+        foreach (var text in list.EnumerateArray())
+        {
+            var sha = text.GetProperty("sha256").GetString() ?? "";
+            if (ModArchive.Safe(text.GetProperty("path").GetString()) is not { } at || !IsSha256(sha))
+            {
+                return null;
+            }
+            texts.Add(new ModText(at, text.GetProperty("size").GetInt64(), sha));
+        }
+        return texts;
     }
 
     /// <summary>A list of files; null when one names a place outside the mod's folder: a disc path that leaves it, or

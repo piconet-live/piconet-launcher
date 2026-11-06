@@ -1,5 +1,3 @@
-using System.Text.RegularExpressions;
-
 namespace Launcher.Core;
 
 /// <summary>
@@ -93,14 +91,13 @@ public enum ModTick
 }
 
 /// <summary>One row of a mod's tree: a folder as the mod ships it (the top row: the mod), the parts that are this
-/// folder itself (<see cref="Own"/>: a folder laid out like the disc), and the folders in it in Explorer's order.
-/// <see cref="Group"/>: the number of a lettered alternative ("2A", "Step 3B") that has siblings of the same number,
-/// of which one at most is ticked.</summary>
+/// folder itself (<see cref="Own"/>: a folder laid out like the disc), and what is in it in Explorer's order, folders
+/// first, then the mod's own text files (a row of <see cref="Text"/>: a readme, the author's notes) to read.</summary>
 public sealed class ModTreeNode
 {
-    internal ModTreeNode(string name, string key, ModTreeNode? parent)
+    internal ModTreeNode(string name, string key, ModTreeNode? parent, string? text = null)
     {
-        (Name, Key, Parent) = (name, key, parent);
+        (Name, Key, Parent, Text) = (name, key, parent, text);
         Depth = parent is null ? 0 : parent.Depth + 1;
     }
 
@@ -113,14 +110,18 @@ public sealed class ModTreeNode
 
     public int Depth { get; }
 
+    /// <summary>A text file's row: its path in the mod. Null: a folder's.</summary>
+    public string? Text { get; }
+
     public List<string> Own { get; } = [];
 
     public List<ModTreeNode> Children { get; } = [];
 
-    public string? Group { get; internal set; }
-
     /// <summary>Every part in this row and below it.</summary>
     public IEnumerable<string> Parts => Own.Concat(Children.SelectMany(c => c.Parts));
+
+    /// <summary>Something in this row or below it can be ticked.</summary>
+    public bool HasParts => Parts.Any();
 }
 
 /// <summary>
@@ -128,13 +129,12 @@ public sealed class ModTreeNode
 /// archive's top and its parts (<see cref="ModImport.Survey"/>'s roots: folders laid out like the disc), each part a
 /// row. The tree stops at the parts: the game's folders inside a part are not in it. A part's own last folder named
 /// "root" is not a row of its own (GXtreme's "_XTREMEv5/root" is the row "_XTREMEv5"), and the folders every part
-/// sits in are the top row. A folder's tick is all, some or none of what is in it; a lettered alternative is one of
-/// its siblings: ticking one unticks the others, and ticking the folder they are in ticks one of them.
+/// sits in are the top row. A folder's tick is all, some or none of what is in it; any mix may be ticked, and the
+/// ticked parts are laid in Explorer's order, a later over an earlier, as copying the folders by hand. The mod's own
+/// text files are rows where they sit, with the folders that hold only them (nothing to tick there).
 /// </summary>
 public sealed class ModTree
 {
-    private static readonly Regex Variant = new(@"^(?:step\s*)?(\d+)([a-z])\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
-
     private ModTree(ModTreeNode top, IReadOnlyList<string> parts) => (Top, Parts) = (top, parts);
 
     public ModTreeNode Top { get; }
@@ -147,8 +147,9 @@ public sealed class ModTree
 
     private static IEnumerable<ModTreeNode> Walk(ModTreeNode node) => new[] { node }.Concat(node.Children.SelectMany(Walk));
 
-    /// <summary>The tree of a mod named <paramref name="name"/> with these parts (paths in the mod, "" its top).</summary>
-    public static ModTree Of(string name, IEnumerable<string> parts)
+    /// <summary>The tree of a mod named <paramref name="name"/> with these parts (paths in the mod, "" its top) and
+    /// text files (paths in the mod).</summary>
+    public static ModTree Of(string name, IEnumerable<string> parts, IEnumerable<string>? texts = null)
     {
         ArgumentNullException.ThrowIfNull(parts);
         var list = parts.Distinct(StringComparer.Ordinal).Order(ExplorerOrder.Paths).ToList();
@@ -160,35 +161,62 @@ public sealed class ModTree
             common++;
         }
         var top = new ModTreeNode(name, "", null);
+        // each folder of the mod that is a row, by its path in the mod; and the parts' own folders
+        var rows = new Dictionary<string, ModTreeNode>(StringComparer.OrdinalIgnoreCase);
+        var inPart = new HashSet<ModTreeNode>();
+        if (shown.Count > 0)
+        {
+            for (var d = 0; d <= common; d++)
+            {
+                rows[string.Join('/', shown[0].Take(d))] = top;
+            }
+        }
         for (var p = 0; p < list.Count; p++)
         {
             var node = top;
-            foreach (var folder in shown[p].Skip(common))
+            var folders = shown[p];
+            for (var d = common; d < folders.Length; d++)
             {
-                var next = node.Children.Find(c => c.Name.Equals(folder, StringComparison.OrdinalIgnoreCase));
-                if (next is null)
-                {
-                    next = new ModTreeNode(folder, node.Key.Length == 0 ? folder : node.Key + "/" + folder, node);
-                    node.Children.Add(next);
-                }
-                node = next;
+                node = Child(node, folders[d]);
+                rows[string.Join('/', folders.Take(d + 1))] = node;
             }
             node.Own.Add(list[p]);
+            rows[list[p]] = node;
+            inPart.Add(node);
+        }
+        foreach (var text in (texts ?? []).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            var folders = text.Split('/');
+            // the deepest folder of the text that is a row, then its folders below that one (none inside a part)
+            var at = folders.Length - 1;
+            while (at > 0 && !rows.ContainsKey(string.Join('/', folders.Take(at))))
+            {
+                at--;
+            }
+            var node = rows.TryGetValue(string.Join('/', folders.Take(at)), out var known) ? known : top;
+            for (var d = at; d < folders.Length - 1 && !inPart.Contains(node); d++)
+            {
+                node = Child(node, folders[d]);
+                rows[string.Join('/', folders.Take(d + 1))] = node;
+            }
+            node.Children.Add(new ModTreeNode(folders[^1], node.Key.Length == 0 ? folders[^1] : node.Key + "/" + folders[^1], node, text));
         }
         foreach (var node in Walk(top))
         {
-            node.Children.Sort((a, b) => ExplorerOrder.Names.Compare(a.Name, b.Name));
-            var numbers = node.Children.Select(c => Variant.Match(c.Name)).Where(m => m.Success).GroupBy(m => int.Parse(m.Groups[1].Value,
-                System.Globalization.CultureInfo.InvariantCulture)).Where(g => g.Count() > 1).Select(g => g.Key).ToHashSet();
-            foreach (var child in node.Children)
-            {
-                if (Variant.Match(child.Name) is { Success: true } m && numbers.Contains(int.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture)))
-                {
-                    child.Group = int.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture).ToString(System.Globalization.CultureInfo.InvariantCulture);
-                }
-            }
+            node.Children.Sort((a, b) => a.Text is null != b.Text is null ? (a.Text is null ? -1 : 1) : ExplorerOrder.Names.Compare(a.Name, b.Name));
         }
         return new ModTree(top, list);
+    }
+
+    private static ModTreeNode Child(ModTreeNode node, string folder)
+    {
+        var next = node.Children.Find(c => c.Text is null && c.Name.Equals(folder, StringComparison.OrdinalIgnoreCase));
+        if (next is null)
+        {
+            next = new ModTreeNode(folder, node.Key.Length == 0 ? folder : node.Key + "/" + folder, node);
+            node.Children.Add(next);
+        }
+        return next;
     }
 
     /// <summary>A part's folders as rows: its last folder left out when it is named "root".</summary>
@@ -198,65 +226,30 @@ public sealed class ModTree
         return folders.Length > 0 && folders[^1].Equals("root", StringComparison.OrdinalIgnoreCase) ? folders[..^1] : folders;
     }
 
-    /// <summary>How much of a row is ticked: a group of alternatives counts as one, ticked when one of them is.</summary>
+    /// <summary>How much of a row is ticked (of its parts and the rows in it that have some).</summary>
     public static ModTick TickOf(ModTreeNode node, IReadOnlySet<string> on)
     {
         ArgumentNullException.ThrowIfNull(node);
         ArgumentNullException.ThrowIfNull(on);
-        var ticks = node.Own.Select(p => on.Contains(p) ? ModTick.On : ModTick.Off).ToList();
-        foreach (var slot in Slots(node))
-        {
-            if (slot.Count == 1)
-            {
-                ticks.Add(TickOf(slot[0], on));
-                continue;
-            }
-            var members = slot.Select(c => TickOf(c, on)).Where(t => t != ModTick.Off).ToList();
-            ticks.Add(members.Count == 0 ? ModTick.Off : members is [ModTick.On] ? ModTick.On : ModTick.Some);
-        }
-        return ticks.Count == 0 || ticks.All(t => t == ModTick.Off) ? ModTick.Off : ticks.All(t => t == ModTick.On) ? ModTick.On : ModTick.Some;
+        var parts = node.Parts.ToList();
+        var ticked = parts.Count(on.Contains);
+        return ticked == 0 ? ModTick.Off : ticked == parts.Count ? ModTick.On : ModTick.Some;
     }
 
-    /// <summary>A row's children as the tick counts them: one alone, or a group of alternatives.</summary>
-    private static IEnumerable<List<ModTreeNode>> Slots(ModTreeNode node) =>
-        node.Children.GroupBy(c => c.Group ?? "\0" + c.Key).Select(g => g.ToList());
-
-    /// <summary>A row pressed: all of it ticked, or, when it is all ticked already, none of it. Ticking an
-    /// alternative unticks its siblings.</summary>
+    /// <summary>A row pressed: all of it ticked, or, when it is all ticked already, none of it.</summary>
     public static HashSet<string> Press(ModTreeNode node, IReadOnlySet<string> on)
     {
         ArgumentNullException.ThrowIfNull(node);
         ArgumentNullException.ThrowIfNull(on);
         var now = new HashSet<string>(on, StringComparer.Ordinal);
-        var tick = TickOf(node, on) != ModTick.On;
-        if (tick && node.Group is { } group && node.Parent is { } parent)
+        if (TickOf(node, on) == ModTick.On)
         {
-            foreach (var sibling in parent.Children.Where(c => c != node && c.Group == group))
-            {
-                now.ExceptWith(sibling.Parts);
-            }
+            now.ExceptWith(node.Parts);
         }
-        Set(node, tick, now);
+        else
+        {
+            now.UnionWith(node.Parts);
+        }
         return now;
-    }
-
-    /// <summary>All of a row ticked (in each group of alternatives the one ticked already, else the first) or none.</summary>
-    private static void Set(ModTreeNode node, bool tick, HashSet<string> on)
-    {
-        if (!tick)
-        {
-            on.ExceptWith(node.Parts);
-            return;
-        }
-        on.UnionWith(node.Own);
-        foreach (var slot in Slots(node))
-        {
-            var pick = slot.Count == 1 ? slot[0] : slot.Find(c => TickOf(c, on) != ModTick.Off) ?? slot[0];
-            foreach (var other in slot.Where(c => c != pick))
-            {
-                on.ExceptWith(other.Parts);
-            }
-            Set(pick, true, on);
-        }
     }
 }
