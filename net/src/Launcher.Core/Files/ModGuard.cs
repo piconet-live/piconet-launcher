@@ -9,7 +9,9 @@ namespace Launcher.Core;
 /// <summary>What a mod's file is to the game, by its path on the disc (<see cref="ModGuard.Classify"/>).</summary>
 public enum ModFileClass
 {
-    /// <summary>Anything that is neither of the others: textures, models, backgrounds, music, menus, movies.</summary>
+    /// <summary>Anything that is neither of the others: textures, models, backgrounds, music, menus, movies. Used
+    /// everywhere, but for a course's own models (<c>stage/stNN.gma</c>), the track raced on: changed, they are single
+    /// player only (<see cref="ModGuard.Check(string, byte[], byte[])"/>).</summary>
     Look,
 
     /// <summary>The game's code (<c>sys/*</c>, <c>main.dol</c>, <c>*.rel</c>, <c>enemy_line/*</c>, the pinned files):
@@ -73,6 +75,34 @@ public static class ModGuard
         return lower.StartsWith("staff_ghost/", StringComparison.Ordinal) || lower.StartsWith("story_ghost/", StringComparison.Ordinal)
             ? ModFileClass.Ghost
             : ModFileClass.Look;
+    }
+
+    /// <summary>Why a course's own models that are not the disc's are single player only.</summary>
+    public const string TrackWhy = "Track changed: single player only";
+
+    /// <summary>A course's own models, the track raced on (<c>stage/stNN.gma</c>, packed or not).</summary>
+    public static bool IsTrackModel(string discPath)
+    {
+        ArgumentNullException.ThrowIfNull(discPath);
+        return TrackModel.IsMatch(discPath.Replace('\\', '/').TrimStart('/'));
+    }
+
+    private static readonly System.Text.RegularExpressions.Regex TrackModel = new(@"^stage/st\d+\.gma(\.lz)?$",
+        System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+
+    /// <summary>The guard's word on one file of a mod by its path on the disc: the mod's bytes against the disc's
+    /// (null: the disc has no such file). The owner, 2026-11-05: what differs is used everywhere but code (never),
+    /// the car data and a course file (their race fields: <see cref="Check(ModFileClass, byte[], byte[])"/>), and a
+    /// course's own models, which go to the race only as the disc's own bytes once unpacked.</summary>
+    public static ModVerdict Check(string discPath, byte[] mod, byte[]? disc)
+    {
+        ArgumentNullException.ThrowIfNull(mod);
+        var kind = Classify(discPath);
+        if (kind == ModFileClass.Look && IsTrackModel(discPath))
+        {
+            return disc is not null && Same(mod, disc) ? ModVerdict.Anywhere : new ModVerdict(false, TrackWhy);
+        }
+        return Check(kind, mod, disc);
     }
 
     /// <summary>The guard's word on one file: the mod's bytes against the disc's (null: the disc has no such file).</summary>

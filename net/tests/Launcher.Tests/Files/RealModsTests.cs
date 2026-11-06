@@ -6,7 +6,7 @@ namespace Launcher.Tests;
 /// The import of real community mods, where this computer has them (skipped where it does not): MODS_DOWNLOADS names
 /// the folder that holds the archives, MODS_DISC the disc's <c>files/</c> folder, MODS_OUT where the mods are
 /// imported (a data folder of its own, <c>MODS_OUT/data</c>) and what the guard said is written (<c>summary.txt</c>).
-/// Each mod is imported with the folders on by default. Nothing of a mod or the disc goes into the repository.
+/// Each mod is imported whole, the parts ticked by default on. Nothing of a mod or the disc goes into the repository.
 /// </summary>
 public sealed class RealModsTests
 {
@@ -26,12 +26,14 @@ public sealed class RealModsTests
         {
             var (survey, refusal) = ModImport.Survey(Path.Combine(downloads!, file), disc);
             Assert.True(survey is not null, file + ": " + refusal);
-            var chosen = survey!.Roots.Where(r => r.OnByDefault).Select(r => r.Path).ToList();
-            lines.Add($"== {file}: {survey.Roots.Count} folders, chosen: {string.Join(" | ", chosen.Select(c => c.Length == 0 ? "(top)" : c))}");
-            var (mod, why) = ModImport.Import(survey, chosen, gameFiles!, disc, library.Folder, cancel: TestContext.Current.CancellationToken);
+            var on = survey!.OnByDefault;
+            lines.Add($"== {file}: {survey.Roots.Count} parts, ticked: {string.Join(" | ", survey.Tree.Parts.Where(on.Contains).Select(c => c.Length == 0 ? "(top)" : c))}");
+            var (mod, why) = ModImport.Import(survey, on, gameFiles!, disc, library.Folder, cancel: TestContext.Current.CancellationToken);
             Assert.True(mod is not null, file + ": " + why);
             imported.Add(new InstalledMod(mod!, Path.Combine(library.Folder, mod!.Id), true));
-            lines.Add($"   kept {mod.Files.Count}, dropped {string.Join(", ", mod.Dropped.Select(d => $"{d.Key} {d.Value}"))}, picture {mod.Picture ?? "none"}");
+            var stored = Directory.GetFiles(Path.Combine(library.Folder, mod.Id, ModManifest.StoreFolder));
+            lines.Add($"   used {mod.Files.Count} of {mod.Parts.Sum(p => p.Files.Count)} in all parts, stored {stored.Length} ({stored.Sum(f => new FileInfo(f).Length) >> 20} MiB), " +
+                      $"dropped {string.Join(", ", mod.Dropped.Select(d => $"{d.Key} {d.Value}"))}, picture {mod.Picture ?? "none"}");
             foreach (var group in mod.Files.GroupBy(f => (f.Class, f.Online, f.Why)))
             {
                 lines.Add($"   {group.Key.Class} online={group.Key.Online} {group.Key.Why}: {group.Count()} ({string.Join(", ", group.Take(4).Select(f => f.Disc))})");
@@ -46,6 +48,13 @@ public sealed class RealModsTests
         Assert.All(byName["tron_aeropolis.7z"].Files, f => Assert.True(f.Online, f.Disc + ": " + f.Why));
         Assert.Contains(byName["tron_aeropolis.7z"].Files, f => f.Class == ModFileClass.Course);
         Assert.Contains(byName["gxtreme_v5.zip"].Files, f => f.Class == ModFileClass.CarData && !f.Online);
+        // GXtreme's story course on Trident's slot: its course file and its own models single player, its other looks everywhere
+        var gxtreme = byName["gxtreme_v5.zip"].Files.ToDictionary(f => f.Disc);
+        Assert.False(gxtreme["stage/COLI_COURSE24.lz"].Online);
+        Assert.Equal(ModGuard.TrackWhy, gxtreme["stage/st24.gma.lz"].Why);
+        Assert.True(gxtreme["stage/st24.tpl.lz"].Online);
+        Assert.True(gxtreme["stage/selst24.gma.lz"].Online);
+        Assert.True(gxtreme["bg/bg_ele.gma.lz"].Online);
         Assert.Contains(byName["f-zero_gx_unleashed_504_all_versions_.zip"].Files, f => f.Class == ModFileClass.Code);
     }
 }

@@ -6,7 +6,7 @@ namespace Launcher.Tests;
 /// <summary>
 /// The mod guard (<see cref="ModGuard"/>) on made-up files: car data passes for the race only when every field the
 /// race reads is the disc's, a course file only when nothing but its fog differs; and the overlays a start is given
-/// (<see cref="ModOverlay"/>): code never, single-player files offline only, a later mod's file over an earlier one's.
+/// (<see cref="ModOverlay"/>): code never, single-player files offline only, the file of a mod on top over a lower one's.
 /// </summary>
 public sealed class ModGuardTests
 {
@@ -114,8 +114,51 @@ public sealed class ModGuardTests
         Assert.False(ModGuard.Course([.. disc, 0, 0, 0, 0], disc).Online);
     }
 
+    [Fact]
+    public void ACoursesOwnModelsGoToTheRaceOnlyAsTheDiscsAndEverythingElseLooksGoesEverywhere()
+    {
+        byte[] disc = [1, 2, 3, 4], changed = [1, 2, 3, 5];
+        Assert.Equal(new ModVerdict(false, ModGuard.TrackWhy), ModGuard.Check("stage/st24.gma.lz", changed, disc));
+        Assert.Equal(new ModVerdict(false, ModGuard.TrackWhy), ModGuard.Check("stage/st60.gma.lz", changed, null));
+        Assert.True(ModGuard.Check("stage/st24.gma.lz", [.. disc], disc).Online);
+        // a re-skin (the course's textures), its preview, its background, a machine, music: everywhere
+        foreach (var look in new[] { "stage/st24.tpl.lz", "stage/selst24.gma.lz", "bg/bg_ele.gma.lz", "vehicle/bbull_p.arc.lz", "snd/adx_bgm/garage.adx" })
+        {
+            Assert.Equal(ModVerdict.Anywhere, ModGuard.Check(look, changed, disc));
+        }
+    }
+
+    [Fact]
+    public void GXtremesStoryPartHasItsCoursesAndTheirModelsSinglePlayerAndItsOtherLooksEverywhere()
+    {
+        // each file of the part as GXtreme's listing has it, changed from the disc's (a course file elsewhere than its fog)
+        Dictionary<string, ModVerdict> Verdicts(string root) => ModTreeTests.Listing("gxtreme_v5.tsv")
+            .Where(e => e.Path.StartsWith(root + "/root/", StringComparison.Ordinal)).Select(e => e.Path[(root.Length + 6)..])
+            .ToDictionary(d => d, d =>
+            {
+                if (ModGuard.Classify(d) == ModFileClass.Course)
+                {
+                    var course = Course();
+                    course[0x2F0] ^= 0x40;
+                    return ModGuard.Check(d, course, Course());
+                }
+                return ModGuard.Check(d, [1, 2, 3, 5], [1, 2, 3, 4]);
+            });
+        var story = Verdicts("Story Course Replacements");
+        Assert.False(story["stage/COLI_COURSE24.lz"].Online);
+        Assert.Equal(new ModVerdict(false, ModGuard.TrackWhy), story["stage/st24.gma.lz"]);
+        foreach (var look in new[] { "stage/st24.tpl.lz", "stage/selst24.gma.lz", "stage/selst24.tpl.lz", "bg/bg_ele.gma.lz", "bg/bg_ele.tpl.lz" })
+        {
+            Assert.True(story[look].Online, look);
+        }
+        // the core: its looks everywhere as before; its car data and ghosts single player
+        var core = Verdicts("_XTREMEv5");
+        Assert.All(core.Where(c => ModGuard.Classify(c.Key) == ModFileClass.Look), c => Assert.True(c.Value.Online, c.Key));
+        Assert.All(core.Where(c => ModGuard.Classify(c.Key) is ModFileClass.Ghost or ModFileClass.CarData), c => Assert.False(c.Value.Online, c.Key));
+    }
+
     private static InstalledMod Mod(string id, bool on, params ModFile[] files) =>
-        new(new ModManifest(id, id, id + ".zip", "", DateTimeOffset.UnixEpoch, [""], files, new Dictionary<string, int>(), null),
+        new(new ModManifest(id, id, id + ".zip", "", DateTimeOffset.UnixEpoch, [new ModPart("", true, files, [])], new Dictionary<string, int>(), null),
             Path.Combine(Path.GetTempPath(), "mods", id), on);
 
     private static ModFile File(string disc, ModFileClass kind, bool online) => new(disc, kind, online, online ? null : "why", false, 1, "");
@@ -133,10 +176,24 @@ public sealed class ModGuardTests
 
         var overlay = ModOverlay.Of([first, second, off]);
 
-        Assert.Equal(["staff_ghost/ghost1.dat", "game/cardata.lz", "stage/st05.tpl.lz", "bg/bg_tow.tpl.lz"], overlay.Offline.Select(f => f.Disc));
-        Assert.Equal(["stage/st05.tpl.lz", "bg/bg_tow.tpl.lz"], overlay.Guarded.Select(f => f.Disc));
-        // the later mod's file wins
-        Assert.Contains(Path.Combine("mods", "b", "files"), overlay.Guarded[0].From, StringComparison.Ordinal);
+        Assert.Equal(["bg/bg_tow.tpl.lz", "game/cardata.lz", "staff_ghost/ghost1.dat", "stage/st05.tpl.lz"], overlay.Offline.Select(f => f.Disc));
+        Assert.Equal(["bg/bg_tow.tpl.lz", "stage/st05.tpl.lz"], overlay.Guarded.Select(f => f.Disc));
+        // the mod on top's file wins
+        Assert.Contains(Path.Combine("mods", "a", ModManifest.StoreFolder), overlay.Guarded.Single(f => f.Disc == "stage/st05.tpl.lz").From, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void TheModOnTopTakesPriority()
+    {
+        var look = File("stage/st05.tpl.lz", ModFileClass.Look, true);
+        InstalledMod top = Mod("top", true, look), middle = Mod("middle", true, look, File("bg/bg_tow.tpl.lz", ModFileClass.Look, true)),
+            bottom = Mod("bottom", true, look);
+        string From(ModOverlay o, string disc) => Path.GetFileName(Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(o.Offline.Single(f => f.Disc == disc).From))!)!;
+        Assert.Equal("top", From(ModOverlay.Of([top, middle, bottom]), "stage/st05.tpl.lz"));
+        Assert.Equal("middle", From(ModOverlay.Of([top, middle, bottom]), "bg/bg_tow.tpl.lz"));
+        // moved down below the others: the one now on top wins; switched off: the next one down
+        Assert.Equal("middle", From(ModOverlay.Of([middle, bottom, top]), "stage/st05.tpl.lz"));
+        Assert.Equal("bottom", From(ModOverlay.Of([top with { On = false }, middle with { On = false }, bottom]), "stage/st05.tpl.lz"));
     }
 
     [Fact]

@@ -259,7 +259,8 @@
     <Setter Property="VerticalAlignment" Value="Center" />
   </Style>
 
-  <!-- Yes or no: a square, green with a tick when it is yes. -->
+  <!-- Yes or no: a square, green with a tick when it is yes; green with a dash when it is some (a tree's folder
+       with some of it ticked). -->
   <Style Selector="CheckBox.box">
     <Setter Property="MinHeight" Value="0" />
     <Setter Property="Height" Value="28" />
@@ -272,9 +273,14 @@
         <StackPanel Orientation="Horizontal" Background="Transparent">
           <Border Name="Box" Width="16" Height="16" BorderBrush="{StaticResource OutlineBrush}" BorderThickness="1"
                   VerticalAlignment="Center" CornerRadius="{DynamicResource StaticSmallCornerRadius}">
+            <Panel>
             <Border Name="Mark" Background="{StaticResource AccentBrush}" IsVisible="False" CornerRadius="{DynamicResource StaticSmallCornerRadius}">
               <Path Data="M3 7.2L5.8 10L11 4.2" Stroke="{StaticResource OnAccentBrush}" StrokeThickness="2" />
             </Border>
+            <Border Name="Some" Background="{StaticResource AccentBrush}" IsVisible="False" CornerRadius="{DynamicResource StaticSmallCornerRadius}">
+              <Path Data="M4 7L10 7" Stroke="{StaticResource OnAccentBrush}" StrokeThickness="2" StrokeLineCap="Round" />
+            </Border>
+            </Panel>
           </Border>
           <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" Margin="8,0,0,0"
                             Foreground="{TemplateBinding Foreground}" VerticalAlignment="Center" />
@@ -285,7 +291,10 @@
   <Style Selector="CheckBox.box:checked /template/ Border#Mark">
     <Setter Property="IsVisible" Value="True" />
   </Style>
-  <Style Selector="CheckBox.box:checked /template/ Border#Box">
+  <Style Selector="CheckBox.box:indeterminate /template/ Border#Some">
+    <Setter Property="IsVisible" Value="True" />
+  </Style>
+  <Style Selector="CheckBox.box:checked /template/ Border#Box, CheckBox.box:indeterminate /template/ Border#Box">
     <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}" />
   </Style>
   <Style Selector="CheckBox.box:pointerover /template/ Border#Box">
