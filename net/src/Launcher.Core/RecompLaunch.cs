@@ -106,8 +106,8 @@ public static partial class RecompLaunch
     /// behaviour. The fork's kind of bundle (Gecko codes) has no part in a plain start and is not named.</summary>
     /// <param name="controllerSetup">The start opens the game's own controller options and the game closes when
     /// the player leaves them (<see cref="GameLaunchFile.Offline"/>).</param>
-    /// <param name="widescreen">The picture, as a race has it (the Settings page's "Widescreen"); null: the player's
-    /// saved option.</param>
+    /// <param name="widescreen">The picture, as a race has it (the Settings page's "Widescreen"), on or off, whatever
+    /// the save says; null only for the game's own controller options, which keep the save's option.</param>
     public static string OfflineLaunch(RecompPaths paths, GameDebug? debug = null, GameWindow? window = null, bool controllerSetup = false,
         WidescreenMode? widescreen = null)
     {
@@ -177,7 +177,7 @@ public static partial class RecompLaunch
     /// <param name="controllerSetup">Straight to the game's own controller options, and closed when the player
     /// leaves them (<see cref="GameLaunchFile.Offline"/>).</param>
     /// <param name="volume">How loud the game is (<see cref="PrepareUserFolder"/>); null: as its settings say.</param>
-    /// <param name="widescreen">The picture, as in a race (<see cref="OfflineLaunch"/>); null: the player's saved option.</param>
+    /// <param name="widescreen">The picture, as in a race (<see cref="OfflineLaunch"/>); null only for the game's own controller options.</param>
     public static Process StartOffline(RecompPaths paths, GameWindow window, string? controllerFrom = null, IEnumerable<string>? extra = null,
         GameDebug? debug = null, bool controllerSetup = false, StartVolume? volume = null, WidescreenMode? widescreen = null) =>
         Start(paths, window, OfflineLaunch(paths, debug, window, controllerSetup, widescreen), extra, controllerFrom, volume);

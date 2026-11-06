@@ -166,8 +166,9 @@ public static class GameLaunchFile
     /// <param name="overlay">The mods' files the runner lays over the disc at boot (<see cref="ModOverlay"/>); none: the
     /// file has no <c>overlay</c>.</param>
     /// <param name="widescreen">The picture, as in a race: the game's screen option is set to it in memory every frame
-    /// (the game's Normal, or its own 16:9 mode), with true widescreen's race view; null: the file says nothing of
-    /// it, and the player's saved option stands.</param>
+    /// (the game's Normal, or its own 16:9 mode), on or off, whatever the save says, with true widescreen's race
+    /// view; null only for the start that opens the game's own controller options, where the runner keeps the save's
+    /// option.</param>
     public static string Offline(string? bundle, GameDebug? debug = null, GameWindow? window = null, bool controllerSetup = false,
         IReadOnlyList<OverlayFile>? overlay = null, WidescreenMode? widescreen = null)
     {
