@@ -295,7 +295,7 @@ public sealed record LauncherSettings
     }
 
     /// <summary>The practice last started (Play's Practice, START PRACTICE): its course and rules, which the page
-    /// opens on; null: the first course and Quick Play's rules (<see cref="PracticeSetup.Fresh"/>). Its machine
+    /// opens on; null: the first course, the mode's defaults and Quick Play's rules (<see cref="PracticeSetup.Default"/>). Its machine
     /// is not read back: the page's machine is the Garage's.</summary>
     [JsonConverter(typeof(SettingAsWritten.Whole<PracticeSetup>))]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

@@ -402,8 +402,8 @@ public sealed class PadNavigationTests : IDisposable
         var panel = window.GetVisualDescendants().OfType<RulesPanel>().Single();
         var targets = PadNavigator.TargetsIn(window).Where(panel.IsVisualAncestorOf).ToList();
         var rows = panel.GetVisualDescendants().OfType<Grid>().Where(g => g.Classes.Contains("rule")).ToList();
-        // every row with something to set has a control the pad stops on (Rewind and Save · Load are values)
-        foreach (var row in rows.Where(r => r.Children.OfType<TextBlock>().Single().Text is not ("Rewind" or "Save · Load")))
+        // every row with something to set has a control the pad stops on (Rewind is a value)
+        foreach (var row in rows.Where(r => r.Children.OfType<TextBlock>().Single().Text is not "Rewind"))
         {
             Assert.Contains(targets, row.IsVisualAncestorOf);
         }
@@ -416,20 +416,20 @@ public sealed class PadNavigationTests : IDisposable
             Do(pad, Press(PadMove.Down));
             visited.Add(pad.On!);
         }
-        foreach (var row in rows.Where(r => r.Children.OfType<TextBlock>().Single().Text is not ("Rewind" or "Save · Load")))
+        foreach (var row in rows.Where(r => r.Children.OfType<TextBlock>().Single().Text is not "Rewind"))
         {
             Assert.Contains(visited, row.IsVisualAncestorOf);
         }
 
         var mines = rows.Single(r => r.Children.OfType<TextBlock>().Single().Text == "Mines respawn");
-        var off = mines.GetVisualDescendants().OfType<ToggleSwitch>().Single();
+        var off = mines.GetVisualDescendants().OfType<ToggleSwitch>().Single(t => t.IsEffectivelyVisible);
         off.Focus();
         Do(pad, Press(PadButton.A));
         Assert.Equal(0, main.Practice.Setup.MineRegenMs);
         Do(pad, Press(PadButton.A));
         Assert.Equal(200, main.Practice.Setup.MineRegenMs);
         // right on the switch: on already, so the delay beside it; then a step of 50 ms
-        var delay = mines.GetVisualDescendants().OfType<Stepper>().Single();
+        var delay = mines.GetVisualDescendants().OfType<Stepper>().Single(s => s.IsEffectivelyVisible);
         Do(pad, Press(PadMove.Right));
         Assert.Same(delay, pad.On);
         Do(pad, Press(PadMove.Right));

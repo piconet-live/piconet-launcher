@@ -356,7 +356,7 @@ public sealed partial class NamedNumberRule(string label, string named, bool isN
     public partial int Value { get; set; } = Math.Clamp(value, minimum, maximum);
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Counted), nameof(State), nameof(UnitShown))]
+    [NotifyPropertyChangedFor(nameof(Counted), nameof(State), nameof(UnitShown), nameof(StateShown))]
     public partial bool IsNamed { get; set; } = isNamed;
 
     /// <summary>The stepper is in use: a number. A named value "Off" makes this the row's switch (On: the number).</summary>
@@ -371,6 +371,10 @@ public sealed partial class NamedNumberRule(string label, string named, bool isN
 
     /// <summary>The switch's state in words, when <see cref="IsOff"/>.</summary>
     public string State => Counted ? "On" : "Off";
+
+    /// <summary>The state's word shows: "Off" beside the switch; on, the number says it (and the row stays narrow
+    /// enough for its label on one line in Practice's panel).</summary>
+    public bool StateShown => IsOff && !Counted;
 
     partial void OnValueChanged(int value)
     {
@@ -418,42 +422,6 @@ public sealed partial class SwitchRule(string label, bool on) : RuleRow(label)
     public partial bool On { get; set; } = on;
 
     public string State => On ? "On" : "Off";
-}
-
-/// <summary>A time in milliseconds between - and +, on its steps, that can be typed too, with a switch that turns it
-/// off ("Mines respawn": 200 ms, or off).</summary>
-public sealed partial class DelayRule(string label, int ms, int minimum, int maximum, int step, int fallback) : RuleRow(label)
-{
-    public int Minimum { get; } = minimum;
-
-    public int Maximum { get; } = maximum;
-
-    public int Step { get; } = Math.Max(1, step);
-
-    /// <summary>The time when on (kept while off, for when it is on again).</summary>
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Ms))]
-    public partial int Value { get; set; } = OnSteps(ms > 0 ? ms : fallback, minimum, maximum, Math.Max(1, step));
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Ms))]
-    public partial bool On { get; set; } = ms > 0;
-
-    /// <summary>The time asked for: the value, or 0 when off.</summary>
-    public int Ms => On ? Value : 0;
-
-    partial void OnValueChanged(int value)
-    {
-        var kept = OnSteps(value, Minimum, Maximum, Step);
-        if (kept != value)
-        {
-            Value = kept;
-        }
-    }
-
-    // the nearest step inside the range
-    private static int OnSteps(int value, int minimum, int maximum, int step) =>
-        Math.Min(maximum, minimum + ((Math.Clamp(value, minimum, maximum) - minimum + (step / 2)) / step * step));
 }
 
 /// <summary>A line of text, with a hint while it is empty.</summary>

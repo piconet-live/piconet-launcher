@@ -16,11 +16,14 @@ public sealed class PracticeSettingsTests : IDisposable
     [Fact]
     public void ThePracticeIsSavedAndReadBack()
     {
-        var practice = new PracticeSetup(13, 7, "GX Unleashed", 60, 12, Restore: true, BoostFromStart: true, MineRegenMs: 1250);
+        var practice = new PracticeSetup(13, 7, "GX Unleashed", 60, BoostFromStart: true, MineRegenMs: 1250,
+            Params: new() { ["lap_count"] = 12, ["restore_on"] = 1 });
         var mine = new LauncherSettings { DiscPath = "C:/gx.iso", Practice = practice };
         new SettingsStore(SettingsFile).Save(mine);
         Assert.Contains("\"mineRegenMs\": 1250", File.ReadAllText(SettingsFile), StringComparison.Ordinal);
+        Assert.Contains("\"lap_count\": 12", File.ReadAllText(SettingsFile), StringComparison.Ordinal);
         Assert.DoesNotContain("\"rules\"", File.ReadAllText(SettingsFile), StringComparison.Ordinal);
+        Assert.DoesNotContain("\"laps\"", File.ReadAllText(SettingsFile), StringComparison.Ordinal);
 
         var store = new SettingsStore(SettingsFile);
         Assert.Equal(mine, store.Load());
@@ -60,10 +63,23 @@ public sealed class PracticeSettingsTests : IDisposable
 
         var read = store.Load().Practice;
 
-        Assert.Equal(new PracticeSetup(PracticeSetup.Default.Course, 40, null, 100, PracticeSetup.MostLaps, MineRegenMs: 250), read);
+        Assert.Equal(new PracticeSetup(PracticeSetup.Default.Course, 40, null, 100, MineRegenMs: 250) { OldLaps = 99 }, read);
         Assert.Equal(SettingsRead.Repaired, store.LastRead);
-        // a practice without the rules' keys (written by hand): no boost, no Restore, the mines stay gone
-        File.WriteAllText(SettingsFile, """{"practice": {"course": 8, "machine": 1, "machineSetting": 100, "laps": 3}}""");
-        Assert.Equal(new PracticeSetup(8, 1, null, 100, 3), new SettingsStore(SettingsFile).Load().Practice);
+        // a practice without the rules' keys (written by hand): no boost, the mines stay gone, the mode's defaults
+        File.WriteAllText(SettingsFile, """{"practice": {"course": 8, "machine": 1, "machineSetting": 100}}""");
+        Assert.Equal(new PracticeSetup(8, 1, null, 100), new SettingsStore(SettingsFile).Load().Practice);
+    }
+
+    /// <summary>A practice saved before its rows were the mode's parameters: its laps and Restore are read (the page
+    /// gives them to the parameters, PracticeModeTests), and parameters by names no mode file has are left out.</summary>
+    [Fact]
+    public void AnOlderPracticeKeepsItsLapsAndRestore()
+    {
+        File.WriteAllText(SettingsFile, """
+            {"practice": {"course": 8, "machine": 1, "machineSetting": 100, "laps": 3, "restore": true,
+                          "params": {"lap_count": 4, "no such name!": 1}}}
+            """);
+        var read = new SettingsStore(SettingsFile).Load().Practice;
+        Assert.Equal(new PracticeSetup(8, 1, null, 100, Params: new() { ["lap_count"] = 4 }) { OldLaps = 3, OldRestore = true }, read);
     }
 }
