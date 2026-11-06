@@ -122,7 +122,7 @@ public sealed class SettingsTabsTests : IDisposable
         // a first start: Game (Aurora's rows in every build: it draws every start; these tests are stamped public)
         Assert.Same(main.Settings, main.Current);
         Assert.Equal(["Widescreen", "Full screen mode", "Vertical sync", "Frame rate", "Volume", "Other racers' sounds", "Rumble", "Show inputs",
-            "Picture size", "Smooth edges", "Sharper textures", "Colourblind filter", "High refresh"], Rows(window));
+            "Resolution", "Anti-aliasing", "Anisotropic filtering", "Colourblind filter", "High refresh"], Rows(window));
         Assert.DoesNotContain(window.GetVisualDescendants().OfType<Control>(), c => Equals(AutomationProperties.GetName(c), "Picture engine"));
         Shot(window, "settings-game");
         Assert.Contains("on", Heading(window, "Game").Classes);

@@ -62,18 +62,18 @@
       <ToggleSwitch Grid.Row="7" Grid.Column="1" Name="ShowInputs" IsChecked="{Binding ShowInputs}" OnContent="" OffContent=""
                     HorizontalAlignment="Left" AutomationProperties.Name="Show inputs" />
       <!-- Aurora draws every start (the launch file's "renderer"); its own keys: "auroraSize", "auroraEdges", "auroraTextures", "auroraColourblind", "auroraHighRefresh", "auroraRayTracing" -->
-      <TextBlock Grid.Row="8" Classes="label" Text="Picture size" />
+      <TextBlock Grid.Row="8" Classes="label" Text="Resolution" />
       <ListBox Grid.Row="8" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.AuroraSizeChoices}"
                SelectedIndex="{Binding AuroraSizeIndex}"
-               AutomationProperties.Name="Picture size" />
-      <TextBlock Grid.Row="9" Classes="label" Text="Smooth edges" />
+               AutomationProperties.Name="Resolution" />
+      <TextBlock Grid.Row="9" Classes="label" Text="Anti-aliasing" />
       <ListBox Grid.Row="9" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.AuroraEdgesChoices}"
                SelectedIndex="{Binding AuroraEdgesIndex}"
-               AutomationProperties.Name="Smooth edges" />
-      <TextBlock Grid.Row="10" Classes="label" Text="Sharper textures" />
+               AutomationProperties.Name="Anti-aliasing" />
+      <TextBlock Grid.Row="10" Classes="label" Text="Anisotropic filtering" />
       <ListBox Grid.Row="10" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.AuroraTexturesChoices}"
                SelectedIndex="{Binding AuroraTexturesIndex}"
-               AutomationProperties.Name="Sharper textures" />
+               AutomationProperties.Name="Anisotropic filtering" />
       <TextBlock Grid.Row="11" Classes="label" Text="Colourblind filter" />
       <ListBox Grid.Row="11" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.AuroraColourblindChoices}"
                SelectedIndex="{Binding AuroraColourblindIndex}"

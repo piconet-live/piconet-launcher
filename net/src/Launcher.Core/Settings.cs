@@ -214,12 +214,12 @@ public sealed record LauncherSettings
     /// <summary>Aurora's samples for each pixel (<c>"auroraEdges"</c>): one of <see cref="AuroraEdgeCounts"/>.</summary>
     public int AuroraEdges { get; init; } = AuroraEdgeCounts[0].Count;
 
-    public static IReadOnlyList<(int Count, string Words)> AuroraEdgeCounts { get; } = [(1, "Off"), (4, "On")];
+    public static IReadOnlyList<(int Count, string Words)> AuroraEdgeCounts { get; } = [(1, "Off"), (4, "4x MSAA")];
 
     /// <summary>Aurora's anisotropic filtering (<c>"auroraTextures"</c>): one of <see cref="AuroraTextureLevels"/>.</summary>
     public int AuroraTextures { get; init; } = AuroraTextureLevels[0].Level;
 
-    public static IReadOnlyList<(int Level, string Words)> AuroraTextureLevels { get; } = [(1, "As the game"), (4, "4x"), (8, "8x"), (16, "16x")];
+    public static IReadOnlyList<(int Level, string Words)> AuroraTextureLevels { get; } = [(1, "Off"), (4, "4x"), (8, "8x"), (16, "16x")];
 
     /// <summary>Aurora's colour filter of the whole picture (<c>"auroraColourblind"</c>): one of <see cref="AuroraColourblindFilters"/>, off by default.</summary>
     public string AuroraColourblind { get; init; } = AuroraColourblindFilters[0].Name;
