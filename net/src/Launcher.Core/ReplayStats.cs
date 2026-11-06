@@ -45,9 +45,9 @@ public sealed record ReplayRow(DateTimeOffset Recorded, int Course, int Laps, bo
     public TimeSpan? Time => TimeMs is { } ms ? TimeSpan.FromMilliseconds(ms) : null;
 }
 
-/// <summary>Places over a set of races: how many, the wins (1st), the podiums (1st to 3rd), the average and best
-/// place over the races the player was not knocked out of, and the knock-outs.</summary>
-public sealed record PlaceStats(int Races, int Wins, int Podiums, double? AveragePlace, int? BestPlace, int KnockedOut);
+/// <summary>Places over a set of races: how many, the wins (1st), the podiums (1st to 3rd), the average place over
+/// the races the player was not knocked out of, and the knock-outs.</summary>
+public sealed record PlaceStats(int Races, int Wins, int Podiums, double? AveragePlace, int KnockedOut);
 
 /// <summary>The best finish time on a course at a number of laps (times of other lap counts are other records),
 /// with the machine it was set in and when; <paramref name="Raced"/>: how often that course and laps were raced (in
@@ -57,36 +57,34 @@ public sealed record BestTime(int Course, int Laps, StatsMachine Machine, TimeSp
 /// <summary>A course and how often it was raced.</summary>
 public sealed record CourseCount(int Course, int Count);
 
-/// <summary>The Stats page's figures for one kind of replay (online races, or practice runs).</summary>
-/// <param name="Count">The replays counted.</param>
-/// <param name="Places">Their places (practice runs have none to speak of: null for them).</param>
-/// <param name="Finished">The replays the player finished.</param>
-/// <param name="Recent">The latest replays with a place, newest first (at most <see cref="ReplayStats.RecentCount"/>).</param>
-public sealed record StatsPart(int Count, PlaceStats? Places, int Finished, IReadOnlyList<BestTime> BestByCourse,
+/// <summary>The Stats page's figures, of the online races (practice runs have no stats: owner 2026-11-06).</summary>
+/// <param name="Count">The races counted.</param>
+/// <param name="Places">Their places.</param>
+/// <param name="Recent">The latest races with a place, newest first (at most <see cref="ReplayStats.RecentCount"/>).</param>
+public sealed record StatsPart(int Count, PlaceStats Places, IReadOnlyList<BestTime> BestByCourse,
     IReadOnlyList<BestTime> BestByMachine, IReadOnlyList<CourseCount> MostRaced, IReadOnlyList<ReplayRow> Recent);
 
 /// <summary>
 /// The player's own figures, from their replays alone (a local Stats page, with no account):
-/// races, wins, podiums, average and best place, best times per course and per machine, the courses raced most and
-/// the recent form; online races and practice runs apart. Nothing is counted that a replay's header and results do
+/// races, wins, podiums, average place, best times per course and per machine, the courses raced most and the last
+/// races' places; online races only. Nothing is counted that a replay's header and results do
 /// not say (boosts, side attacks: they wait for accounts). Plain values, no UI.
 /// </summary>
 public static class ReplayStats
 {
-    /// <summary>How many races the recent form shows.</summary>
+    /// <summary>How many of the last races the page shows.</summary>
     public const int RecentCount = 10;
 
     /// <summary>How many courses "most raced" lists.</summary>
     public const int MostCount = 5;
 
-    /// <summary>The figures of the online races (<paramref name="practice"/> false) or the practice runs.</summary>
-    public static StatsPart Of(IEnumerable<ReplayRow> rows, bool practice)
+    /// <summary>The figures of the online races (practice runs are left out).</summary>
+    public static StatsPart Of(IEnumerable<ReplayRow> rows)
     {
         ArgumentNullException.ThrowIfNull(rows);
-        var part = rows.Where(r => r.Practice == practice).OrderByDescending(r => r.Recorded).ToList();
+        var part = rows.Where(r => !r.Practice).OrderByDescending(r => r.Recorded).ToList();
         var placed = part.Where(r => r.Place is not null).ToList();
-        PlaceStats? places = practice ? null : Places(placed);
-        return new StatsPart(part.Count, places, part.Count(r => r.TimeMs is not null),
+        return new StatsPart(part.Count, Places(placed),
             Best(part, byMachine: false), Best(part, byMachine: true),
             [.. part.GroupBy(r => r.Course).Select(g => new CourseCount(g.Key, g.Count()))
                 .OrderByDescending(c => c.Count).ThenBy(c => c.Course).Take(MostCount)],
@@ -97,8 +95,7 @@ public static class ReplayStats
     {
         var standing = placed.Where(r => r.Placed is not null).Select(r => r.Placed!.Value).ToList();
         return new PlaceStats(placed.Count, standing.Count(p => p == 1), standing.Count(p => p <= 3),
-            standing.Count > 0 ? standing.Average() : null, standing.Count > 0 ? standing.Min() : null,
-            placed.Count(r => r.Out));
+            standing.Count > 0 ? standing.Average() : null, placed.Count(r => r.Out));
     }
 
     /// <summary>The best time of each course and laps (and machine), the courses in their number's order.</summary>
