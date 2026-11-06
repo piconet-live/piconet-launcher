@@ -13,7 +13,10 @@ The few tests of what only `Launcher.App`'s own code does, run without a window 
   are ready, another online part's, damaged or missing. `.Buttons.cs`: RACE and "Play F-Zero GX" off with the
   reason while a start lacks the game's files or the game program. `.Stopped.cs`: Cancel and the window's close in
   the middle of a copy (held there through `AppState.PreparationWatch`), a preparation that cannot succeed, and a
-  game that becomes startable while the launcher is open. A player copy is made up with `Install.Of`.
+  game that becomes startable while the launcher is open. A player copy is made up with `Install.Of`. `.Graphics.cs`:
+  after CONTINUE, with Aurora, the plain look's graphics cache built at once with no question, the left column's
+  block and bar meanwhile, RACE, "Play F-Zero GX", START PRACTICE, the replays' Play and every start off with
+  "Preparing graphics", all back once it is done (PIPELINE_SHOTS keeps the pictures).
 - `CommandLineTests.cs`: the command line: the modes and their files, a launch file's test settings, and every
   option that is not listed refused.
 - `LanJoinTests.cs`: the Local network tab's Join needs the disc and the whole game, as RACE does; without them
@@ -96,3 +99,7 @@ The pages against a real server (`DebugRefusalTests`, `LobbyChoiceOrderTests`, `
   pages only with Settings' "Controller navigation" on (off by default).
 - `UpdateTimesTests.cs`: when the open launcher looks for an update again: two hours and up to five minutes after
   the last look, and at a game's end or leaving Quick Play only when the last look is over half an hour old.
+- `GraphicsCacheTests.cs`: the graphics cache with a script for the runner's `--build-pipelines`: Ray tracing ticked
+  in Settings asks first (Cancel leaves it off, nothing built; Build turns it on and builds its look, every start
+  waiting, the column saying why); once built it asks nothing; another Aurora clears Dawn's cache and builds again,
+  saying why. With `PIPELINE_SHOTS` set to a folder, the pages are kept there as PNGs.
