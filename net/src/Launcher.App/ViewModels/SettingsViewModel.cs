@@ -71,7 +71,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
             ShowServer();
             if (_state.Settings.RayTracing != RayTracing && !_askingRays)
             {
-                // turned on elsewhere (Build, the question's answer): the box follows, nothing saved again
+                // turned on elsewhere (Build, the question's answer): the switch follows, nothing saved again
                 _following = true;
                 RayTracing = _state.Settings.RayTracing;
                 _following = false;
@@ -168,7 +168,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     public partial bool RecordReplays { get; set; }
 
-    /// <summary>"Record practice", beside "Record my races" (<see cref="LauncherSettings.RecordPractice"/>).</summary>
+    /// <summary>"Record practice", under "Record races" (<see cref="LauncherSettings.RecordPractice"/>).</summary>
     [ObservableProperty]
     public partial bool RecordPractice { get; set; }
 
@@ -229,7 +229,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     public partial int AuroraHighRefreshIndex { get; set; }
 
-    /// <summary>Ray tracing (<c>"auroraRayTracing"</c>). Its box can be ticked once the check of the
+    /// <summary>Ray tracing (<c>"auroraRayTracing"</c>). Its switch can be turned on once the check of the
     /// graphics card has said it can (<see cref="RayTracingCard"/>); until then, and on a card that cannot, it cannot be
     /// changed, and <see cref="RayTracingReason"/> says why beside it.</summary>
     [ObservableProperty]
@@ -244,14 +244,14 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
     public bool RayTracingReasonShown => RayTracingReason.Length > 0;
 
-    /// <summary>The box follows the setting (<see cref="RayTracing"/>): nothing to save.</summary>
+    /// <summary>The switch follows the setting (<see cref="RayTracing"/>): nothing to save.</summary>
     private bool _following;
 
-    /// <summary>The box was ticked and whether ray tracing's graphics are ready is being looked at.</summary>
+    /// <summary>The switch was turned on and whether ray tracing's graphics are ready is being looked at.</summary>
     private bool _askingRays;
 
-    /// <summary>Ray tracing ticked: on at once when its graphics cache is ready (or none is built: Aurora does not draw);
-    /// otherwise the box goes back off and the question is asked (Build turns it on, <see cref="AppState.AnswerRays"/>).</summary>
+    /// <summary>Ray tracing turned on: on at once when its graphics cache is ready (or none is built: Aurora does not draw);
+    /// otherwise the switch goes back off and the question is asked (Build turns it on, <see cref="AppState.AnswerRays"/>).</summary>
     private async Task TurnOnRaysAsync()
     {
         _askingRays = true;
@@ -266,7 +266,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
         }
         if (!RayTracing || _state.Settings.RayTracing)
         {
-            return;   // unticked meanwhile, or on already
+            return;   // turned off meanwhile, or on already
         }
         if (ready)
         {
@@ -288,7 +288,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
     }
 
     /// <summary>A test build shows the frame rate whatever the setting says (<see cref="LauncherSettings.FrameRateShown"/>):
-    /// its box is ticked and cannot be changed, and the file keeps the player's own value.</summary>
+    /// its switch is on and cannot be changed, and the file keeps the player's own value.</summary>
     public bool FrameRateAlwaysShown { get; } = StackStamp.Current.Test;
 
     /// <summary>The launcher's animations are off (<see cref="LauncherSettings.ReducedMotion"/>).</summary>

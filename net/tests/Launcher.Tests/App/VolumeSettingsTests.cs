@@ -125,7 +125,7 @@ public sealed class VolumeSettingsTests : IDisposable
                 Pump(() => heard.Count == 1, "the launcher's volume was not heard when set");
                 Assert.Equal((LobbyMoment.CourseVote, 60), heard[0]);
                 // Mute: nothing sounds, the volume is kept, and the slider rests
-                Click(window, Named<CheckBox>(view, "SoundMuted"));
+                Click(window, Named<ToggleSwitch>(view, "SoundMuted"));
                 Assert.True(state.Settings.SoundMuted);
                 Assert.Equal(60, state.Settings.SoundVolume);
                 Assert.False(sounds.IsEnabled);

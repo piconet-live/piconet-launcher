@@ -134,21 +134,19 @@ public sealed class SettingsTabsTests : IDisposable
         // a first start: Game (Aurora's rows in every build: it draws every start; these tests are stamped public)
         Assert.Same(main.Settings, main.Current);
         // each page in groups under headings, as the Launcher page's Replays
-        Assert.Equal(["# Display", "Widescreen", "Full screen mode", "Vertical sync", "High refresh", "Frame rate",
-            "# Graphics", "Resolution", "Anti-aliasing", "Anisotropic filtering", "Colourblind filter",
+        Assert.Equal(["# Display", "Widescreen", "Full screen mode", "Vertical sync", "High refresh", "Show frame rate",
+            "# Graphics", "Resolution", "Anti-aliasing", "Anisotropic filtering", "Ray tracing", "Colourblind filter",
             "# Sound", "Volume", "Other racers' sounds",
             "# Controller", "Rumble", "Show inputs"], Form(window));
-        // Ray tracing's box names itself (no label): in Graphics, under Anisotropic filtering
-        var view = window.GetVisualDescendants().OfType<SettingsView>().Single();
-        double Y(Control c) => c.TranslatePoint(default, view)!.Value.Y;
-        TextBlock Label(string text) => view.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Classes.Contains("label") && t.Text == text);
-        Assert.InRange(Y(Named<CheckBox>(view, "RayTracing")), Y(Label("Anisotropic filtering")) + 1, Y(Label("Colourblind filter")) - 1);
+        // Show frame rate and Ray tracing: switches, as Rumble's
+        Assert.IsType<ToggleSwitch>(Named<Control>(window.GetVisualDescendants().OfType<SettingsView>().Single(), "ShowFrameRate"));
+        Assert.IsType<ToggleSwitch>(Named<Control>(window.GetVisualDescendants().OfType<SettingsView>().Single(), "RayTracing"));
         Assert.DoesNotContain(window.GetVisualDescendants().OfType<Control>(), c => Equals(AutomationProperties.GetName(c), "Picture engine"));
         Shot(window, "settings-game");
         Assert.Contains("on", Heading(window, "Game").Classes);
 
         Click(window, Heading(window, "Online"));
-        Assert.Equal(["# Connection", "Input delay", "Server", "Account", "# Social", "Notices", "Activity", "Chat"], Form(window));
+        Assert.Equal(["# Connection", "Input delay", "Server", "Account", "# Social", "Notices", "Show on Discord", "Hide swear words"], Form(window));
         Assert.Equal(["Online"], Headings(window).Where(b => b.Classes.Contains("on")).Select(b => ((SectionLink)b.DataContext!).Label));
 
         Click(window, Heading(window, "Controller"));
@@ -159,8 +157,12 @@ public sealed class SettingsTabsTests : IDisposable
         Click(window, Heading(window, "Launcher"));
         Assert.Same(main.Settings, main.Current);
         // (Updates shown since 0.5.0: NotYet; Older copy as this launcher is no portable copy: DataMoveViewModel.Offered)
-        Assert.Equal(["# General", "Disc image", "Updates", "Older copy", "# Interface", "Sounds", "Menus", "Interface scale",
-            "# Replays", "Recording", "Folder"], Form(window));
+        Assert.Equal(["# General", "Disc image", "Update automatically", "Older copy",
+            "# Interface", "Sounds", "Mute", "Controller navigation", "Reduced motion", "Interface scale",
+            "# Replays", "Record races", "Record practice", "Folder"], Form(window));
+        // one setting a row: every on/off one a switch, no box with its own words beside a label
+        Assert.DoesNotContain(window.GetVisualDescendants().OfType<SettingsView>().Single().GetVisualDescendants().OfType<CheckBox>(),
+            c => c.IsEffectivelyVisible);
         Assert.Equal(["Launcher"], Headings(window).Where(b => b.Classes.Contains("on")).Select(b => ((SectionLink)b.DataContext!).Label));
 
         Click(window, Heading(window, "Game"));
@@ -176,7 +178,7 @@ public sealed class SettingsTabsTests : IDisposable
         window.Height = 720;
         Click(window, TopTab(window, "Settings"));
         var scroll = Named<ScrollViewer>(window, "PageScroll");
-        foreach (var (page, first, last) in new[] { ("Game", "# Display", "Show inputs"), ("Online", "# Connection", "Chat"),
+        foreach (var (page, first, last) in new[] { ("Game", "# Display", "Show inputs"), ("Online", "# Connection", "Hide swear words"),
                      ("Launcher", "# General", "Folder") })
         {
             Click(window, Heading(window, page));
