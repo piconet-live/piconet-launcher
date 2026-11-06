@@ -103,16 +103,13 @@ internal static class GarageFiles
     /// <param name="kind1">The second material's first field (<see cref="MachineModel.CommonTexture"/>: its number
     /// is one of the shared list).</param>
     /// <param name="wrap1">How the second material's texture goes on (the byte at +3).</param>
-    /// <param name="place">Where each vertex is put (its number, 0 to 2, and where it would be): a model moved or
-    /// scaled.</param>
-    public static byte[] Gma(int texture0, int texture1, int kind1 = 0, byte wrap1 = 0, Func<int, Vector3, Vector3>? place = null)
+    public static byte[] Gma(int texture0, int texture1, int kind1 = 0, byte wrap1 = 0)
     {
         const int Flags = 0x200 | 0x400 | 0x2000;
         var strip = new List<byte> { 0, 0x98, 0, 3 };
-        foreach (var (v, (x, y)) in new[] { (0f, 0f), (1f, 0f), (0f, 1f) }.Index())
+        foreach (var (x, y) in new[] { (0f, 0f), (1f, 0f), (0f, 1f) })
         {
-            var at = place?.Invoke(v, new Vector3(x, y, 0)) ?? new Vector3(x, y, 0);
-            foreach (var f in new[] { at.X, at.Y, at.Z, 0f, 0f, 2f, x, y })
+            foreach (var f in new[] { x, y, 0f, 0f, 0f, 2f, x, y })
             {
                 var b = new byte[4];
                 BinaryPrimitives.WriteSingleBigEndian(b, f);

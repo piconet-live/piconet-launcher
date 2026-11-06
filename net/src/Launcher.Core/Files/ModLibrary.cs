@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Online.Protocol;
 
 namespace Launcher.Core;
 
@@ -65,11 +64,6 @@ public sealed record ModManifest(string Id, string Name, string Source, string S
     /// <summary>The mod's own text files, in the store (none in a mod of the first form).</summary>
     public IReadOnlyList<ModText> Texts { get; init; } = [];
 
-    /// <summary>The background each course of the mod's course files loads ("bg_ele"; <see cref="CourseBackgrounds"/>),
-    /// read from the disc at the import. Null: not known (a mod imported before, or a disc whose module is not the
-    /// pinned one): then every background file of the mod goes with a changed course.</summary>
-    public IReadOnlyDictionary<int, string>? Backgrounds { get; init; }
-
     /// <summary>A mod of the first form: its parts are as they were chosen at its import.</summary>
     public bool Fixed => Form < 2;
 
@@ -84,12 +78,8 @@ public sealed record ModManifest(string Id, string Name, string Source, string S
     }
 
     /// <summary>The files the mod lays over the disc: those of the ticked parts in Explorer's order, a later part's
-    /// over an earlier one's (and a later part's file that is the disc's own takes an earlier one's away), by disc path.
-    /// A course whose course file is single player only takes the mod's looks of it with it (<see cref="Tied"/>).</summary>
-    public IReadOnlyList<ModFile> Files => Tied(Laid);
-
-    /// <summary>The ticked parts' files laid, before <see cref="Tied"/>.</summary>
-    private IReadOnlyList<ModFile> Laid
+    /// over an earlier one's (and a later part's file that is the disc's own takes an earlier one's away), by disc path.</summary>
+    public IReadOnlyList<ModFile> Files
     {
         get
         {
@@ -108,54 +98,6 @@ public sealed record ModManifest(string Id, string Name, string Source, string S
             return [.. files.Values.OrderBy(f => f.Disc, StringComparer.Ordinal)];
         }
     }
-
-    /// <summary>
-    /// The owner, 2026-11-05: a course of the mod that is single player only (its course file's race fields differ
-    /// from the disc's) takes the mod's look files of that course with it, so no race shows one course over another's
-    /// collision: its models and textures (<c>stage/stNN.*</c>), its course-select preview (<c>stage/selstNN.*</c>) and
-    /// the background it loads (<see cref="Backgrounds"/>; every background where that is not known). A look of a
-    /// course whose course file is the disc's, or passed the guard, stays as it is.
-    /// </summary>
-    private IReadOnlyList<ModFile> Tied(IReadOnlyList<ModFile> files)
-    {
-        var changed = files.Where(f => f.Class == ModFileClass.Course && !f.Online).Select(f => CourseOfFile(f.Disc))
-            .OfType<int>().ToHashSet();
-        if (changed.Count == 0)
-        {
-            return files;
-        }
-        int? With(string disc)
-        {
-            if (CourseOf(disc, CourseLook) is { } course)
-            {
-                return changed.Contains(course) ? course : null;
-            }
-            var background = BackgroundOf(disc);
-            return background is null ? null
-                : changed.Cast<int?>().FirstOrDefault(c => Backgrounds is not { } known || !known.TryGetValue(c!.Value, out var name) ||
-                    string.Equals(name, background, StringComparison.OrdinalIgnoreCase));
-        }
-        return [.. files.Select(f => f.Class == ModFileClass.Look && f.Online && With(f.Disc) is { } course
-            ? f with { Online = false, Why = "Looks of a changed course (" + CourseNames.Name(course) + "): single player only" }
-            : f)];
-    }
-
-    private static readonly System.Text.RegularExpressions.Regex CourseFile = new(@"^stage/COLI_COURSE(\d+)\.",
-        System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
-
-    private static readonly System.Text.RegularExpressions.Regex CourseLook = new(@"^stage/(?:sel)?st(\d+)\.",
-        System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant);
-
-    /// <summary>The course a course file is of (24 of <c>stage/COLI_COURSE24.lz</c>); null for any other file.</summary>
-    public static int? CourseOfFile(string disc) => CourseOf(disc, CourseFile);
-
-    private static int? CourseOf(string disc, System.Text.RegularExpressions.Regex pattern) =>
-        pattern.Match(disc) is { Success: true } m && int.TryParse(m.Groups[1].ValueSpan, NumberStyles.None, CultureInfo.InvariantCulture, out var n)
-            ? n : null;
-
-    /// <summary>A background file's name ("bg_ele" of <c>bg/bg_ele.tpl.lz</c>); null for any other file.</summary>
-    private static string? BackgroundOf(string disc) =>
-        disc.StartsWith("bg/", StringComparison.OrdinalIgnoreCase) && disc.IndexOf('/', 3) < 0 ? disc[3..].Split('.')[0] : null;
 
     /// <summary>The courses the mod's files name (stage/stNN, selstNN, COLI_COURSENN), in order: for a picture
     /// where the mod has none of its own.</summary>
@@ -374,15 +316,6 @@ public sealed class ModLibrary(string dataFolder)
         {
             root["picture"] = picture;
         }
-        if (m.Backgrounds is { } backgrounds)
-        {
-            var known = new JsonObject();
-            foreach (var (course, name) in backgrounds.OrderBy(b => b.Key))
-            {
-                known[course.ToString(CultureInfo.InvariantCulture)] = name;
-            }
-            root["backgrounds"] = known;
-        }
         File.WriteAllText(Path.Combine(folder, ModManifest.FileName), root.ToJsonString());
     }
 
@@ -443,32 +376,13 @@ public sealed class ModLibrary(string dataFolder)
             return new ModManifest(r.GetProperty("id").GetString() ?? "", r.GetProperty("name").GetString() ?? "Mod",
                 r.GetProperty("source").GetString() ?? "", r.GetProperty("sourceSha256").GetString() ?? "",
                 DateTimeOffset.Parse(r.GetProperty("imported").GetString() ?? "", CultureInfo.InvariantCulture),
-                form == 1 ? parts : [.. parts.OrderBy(x => x.Path, ExplorerOrder.Paths)], dropped, picture, form)
-            { Texts = texts, Backgrounds = Backgrounds(r) };
+                form == 1 ? parts : [.. parts.OrderBy(x => x.Path, ExplorerOrder.Paths)], dropped, picture, form) { Texts = texts };
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException or KeyNotFoundException
                                       or InvalidOperationException or FormatException)
         {
             return null;
         }
-    }
-
-    /// <summary>The backgrounds of the mod's courses, where the import read them; null where it did not.</summary>
-    private static Dictionary<int, string>? Backgrounds(JsonElement root)
-    {
-        if (!root.TryGetProperty("backgrounds", out var list) || list.ValueKind != JsonValueKind.Object)
-        {
-            return null;
-        }
-        var known = new Dictionary<int, string>();
-        foreach (var b in list.EnumerateObject())
-        {
-            if (int.TryParse(b.Name, NumberStyles.None, CultureInfo.InvariantCulture, out var course) && b.Value.GetString() is { Length: > 0 } name)
-            {
-                known[course] = name;
-            }
-        }
-        return known;
     }
 
     /// <summary>The mod's text files (none in the first form); null when one names a place outside the mod's folder.</summary>

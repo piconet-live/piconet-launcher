@@ -114,6 +114,49 @@ public sealed class ModGuardTests
         Assert.False(ModGuard.Course([.. disc, 0, 0, 0, 0], disc).Online);
     }
 
+    [Fact]
+    public void ACoursesOwnModelsGoToTheRaceOnlyAsTheDiscsAndEverythingElseLooksGoesEverywhere()
+    {
+        byte[] disc = [1, 2, 3, 4], changed = [1, 2, 3, 5];
+        Assert.Equal(new ModVerdict(false, ModGuard.TrackWhy), ModGuard.Check("stage/st24.gma.lz", changed, disc));
+        Assert.Equal(new ModVerdict(false, ModGuard.TrackWhy), ModGuard.Check("stage/st60.gma.lz", changed, null));
+        Assert.True(ModGuard.Check("stage/st24.gma.lz", [.. disc], disc).Online);
+        // a re-skin (the course's textures), its preview, its background, a machine, music: everywhere
+        foreach (var look in new[] { "stage/st24.tpl.lz", "stage/selst24.gma.lz", "bg/bg_ele.gma.lz", "vehicle/bbull_p.arc.lz", "snd/adx_bgm/garage.adx" })
+        {
+            Assert.Equal(ModVerdict.Anywhere, ModGuard.Check(look, changed, disc));
+        }
+    }
+
+    [Fact]
+    public void GXtremesStoryPartHasItsCoursesAndTheirModelsSinglePlayerAndItsOtherLooksEverywhere()
+    {
+        // each file of the part as GXtreme's listing has it, changed from the disc's (a course file elsewhere than its fog)
+        Dictionary<string, ModVerdict> Verdicts(string root) => ModTreeTests.Listing("gxtreme_v5.tsv")
+            .Where(e => e.Path.StartsWith(root + "/root/", StringComparison.Ordinal)).Select(e => e.Path[(root.Length + 6)..])
+            .ToDictionary(d => d, d =>
+            {
+                if (ModGuard.Classify(d) == ModFileClass.Course)
+                {
+                    var course = Course();
+                    course[0x2F0] ^= 0x40;
+                    return ModGuard.Check(d, course, Course());
+                }
+                return ModGuard.Check(d, [1, 2, 3, 5], [1, 2, 3, 4]);
+            });
+        var story = Verdicts("Story Course Replacements");
+        Assert.False(story["stage/COLI_COURSE24.lz"].Online);
+        Assert.Equal(new ModVerdict(false, ModGuard.TrackWhy), story["stage/st24.gma.lz"]);
+        foreach (var look in new[] { "stage/st24.tpl.lz", "stage/selst24.gma.lz", "stage/selst24.tpl.lz", "bg/bg_ele.gma.lz", "bg/bg_ele.tpl.lz" })
+        {
+            Assert.True(story[look].Online, look);
+        }
+        // the core: its looks everywhere as before; its car data and ghosts single player
+        var core = Verdicts("_XTREMEv5");
+        Assert.All(core.Where(c => ModGuard.Classify(c.Key) == ModFileClass.Look), c => Assert.True(c.Value.Online, c.Key));
+        Assert.All(core.Where(c => ModGuard.Classify(c.Key) is ModFileClass.Ghost or ModFileClass.CarData), c => Assert.False(c.Value.Online, c.Key));
+    }
+
     private static InstalledMod Mod(string id, bool on, params ModFile[] files) =>
         new(new ModManifest(id, id, id + ".zip", "", DateTimeOffset.UnixEpoch, [new ModPart("", true, files, [])], new Dictionary<string, int>(), null),
             Path.Combine(Path.GetTempPath(), "mods", id), on);

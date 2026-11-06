@@ -296,7 +296,7 @@ public static class ModImport
             }
             var list = parts.OrderBy(p => p.Key, ExplorerOrder.Paths).Select(p => new ModPart(p.Key, on.Contains(p.Key),
                 [.. p.Value.Files.Values.OrderBy(f => f.Disc, StringComparer.Ordinal)], [.. p.Value.Same])).ToList();
-            var manifest = Written(part, id, survey, list, dropped, picture, kept, gameFiles);
+            var manifest = Written(part, id, survey, list, dropped, picture, kept);
             var final = Path.Combine(modsFolder, id);
             if (Directory.Exists(final))
             {
@@ -318,15 +318,12 @@ public static class ModImport
         }
     }
 
-    /// <summary>The new mod's manifest, written into its folder; with the backgrounds of its courses as the disc's game
-    /// picks them (<see cref="CourseBackgrounds"/>), for the looks a changed course takes with it.</summary>
+    /// <summary>The new mod's manifest, written into its folder.</summary>
     private static ModManifest Written(string folder, string id, ModSurvey survey, List<ModPart> parts, SortedDictionary<string, int> dropped,
-        string? picture, List<ModText> texts, string gameFiles)
+        string? picture, List<ModText> texts)
     {
-        var courses = parts.SelectMany(p => p.Files).Select(f => ModManifest.CourseOfFile(f.Disc)).OfType<int>().ToHashSet();
-        var backgrounds = CourseBackgrounds.OfDisc(gameFiles)?.Where(b => courses.Contains(b.Key)).ToDictionary(b => b.Key, b => b.Value);
         var manifest = new ModManifest(id, survey.Name, Path.GetFileName(Path.TrimEndingDirectorySeparator(survey.Source)), SourceHash(survey.Source),
-            DateTimeOffset.UtcNow, parts, dropped, picture) { Texts = [.. texts.OrderBy(t => t.Path, ExplorerOrder.Paths)], Backgrounds = backgrounds };
+            DateTimeOffset.UtcNow, parts, dropped, picture) { Texts = [.. texts.OrderBy(t => t.Path, ExplorerOrder.Paths)] };
         ModLibrary.WriteManifest(folder, manifest);
         return manifest;
     }
@@ -368,8 +365,7 @@ public static class ModImport
         {
             return null;
         }
-        // a look the race is driven on (a course's or a machine's models) has its own check
-        var verdict = (kind == ModFileClass.Look ? ModModels.Check(discPath, bytes, vanilla) : null) ?? ModGuard.Check(kind, bytes, vanilla);
+        var verdict = ModGuard.Check(discPath, bytes, vanilla);
         var to = Path.Combine(store, sha);
         if (kind != ModFileClass.Code && !File.Exists(to))
         {
