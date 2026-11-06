@@ -83,7 +83,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     /// <summary>Play's Practice page, on the Garage's machine.</summary>
     private PracticeViewModel PracticePage(AppState state) =>
         new(() => _state.Settings.Racer.Raced with { Machine = Garage.ChosenIndex }, () => Current = Garage,
-            [.. state.PracticePackList.Select(p => p.Name)], state.StartPractice, state.Settings.Practice);
+            [.. state.PracticePackList.Select(p => p.Name)], state.PracticeModeFile, state.StartPractice, state.Settings.Practice);
 
     /// <summary>The Custom lobbies page, and the lobby page's way to it (leaving a custom lobby).</summary>
     private CustomLobbiesViewModel CustomLobbies(AppState state)

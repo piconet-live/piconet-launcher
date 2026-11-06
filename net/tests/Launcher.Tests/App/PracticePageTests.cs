@@ -142,6 +142,37 @@ public sealed class PracticePageTests : IDisposable
         });
     }
 
+    /// <summary>At the launcher's least window, 1280 by 720, and at 1280 by 800, the whole rules panel shows with
+    /// START PRACTICE under it, the page's sections headed. With INPUTS_SHOTS naming a folder, the page there.</summary>
+    [Theory]
+    [InlineData(720)]
+    [InlineData(800)]
+    public Task TheRulesPanelShowsWholeInTheWindow(int height) => OnAWindow(State(), (window, main) =>
+    {
+        window.Width = 1280;
+        window.Height = height;
+        Dispatcher.UIThread.RunJobs();
+        Click(window, Heading(window, "Practice"));
+        Dispatcher.UIThread.RunJobs();
+        var start = Named<Button>(window, "START PRACTICE");
+        var bottom = start.TranslatePoint(new Point(0, start.Bounds.Height), window)!.Value.Y;
+        Shot(window, $"practice-1280x{height}");
+        Assert.True(bottom <= window.Bounds.Height, $"START PRACTICE ends at {bottom:F0} in a window {window.Bounds.Height:F0} high");
+    });
+
+    /// <summary>With INPUTS_SHOTS naming a folder, the window there as a PNG.</summary>
+    private static void Shot(Window window, string name)
+    {
+        if (Environment.GetEnvironmentVariable("INPUTS_SHOTS") is not { Length: > 0 } folder)
+        {
+            return;
+        }
+        PumpFor(300);
+        AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+        Directory.CreateDirectory(folder);
+        window.CaptureRenderedFrame()?.Save(Path.Combine(folder, name + ".png"), new Avalonia.Media.Imaging.PngBitmapEncoderOptions());
+    }
+
     [Fact]
     public Task ThePracticePageSetsUpARunAndWaitsForTheGame()
     {
@@ -155,14 +186,27 @@ public sealed class PracticePageTests : IDisposable
         Assert.Same(main.Practice, main.Current);
         Assert.Single(window.GetVisualDescendants().OfType<PracticeView>());
         Assert.Equal("play", main.Tab);
-        // the set-up as it opens: the first course, the Garage's machine, stock stats, 100, unlimited laps
-        Assert.Equal(PracticeSetup.Default with { Machine = main.Garage.MachineIndex }, main.Practice.Setup);
+        // the set-up as it opens: the first course, the Garage's machine, stock stats, 100, the mode's defaults (unlimited
+        // laps)
+        var mode = state.PracticeModeFile!;
+        Assert.Equal(PracticeSetup.Default with
+        {
+            Machine = main.Garage.MachineIndex,
+            Params = new(mode.Params.Select(p => KeyValuePair.Create(p.Name, p.Default))),
+        }, main.Practice.Setup);
         var labels = window.GetVisualDescendants().OfType<Grid>().Where(g => g.Classes.Contains("rule"))
-            .Select(g => g.Children.OfType<TextBlock>().Single().Text);
-        Assert.Equal(["Machine", "Stats", "Machine setting", "Laps", "Boost from the start", "Restore", "Mines respawn", "Rewind",
-                      "Save · Load"], labels);
-        // the host's rules that mean something alone, from the one list a custom lobby shows too; none of the others
-        Assert.Equal(HostRules.Alone.Select(r => r.Label).Order(), labels.Except(["Machine", "Rewind", "Save · Load"]).Order());
+            .Select(g => g.Children.OfType<TextBlock>().Single().Text).ToList();
+        // the machine; under Practice the mode's parameters in the file's order, then its rewind and save; under Race
+        // rules the host's other rules
+        string[] modeRows = [.. mode.Params.Select(p => p.Label)];
+        Assert.Equal(["Machine", "Stats", "Machine setting", .. modeRows, "Rewind", "Save · Load", "Boost from the start", "Mines respawn"], labels);
+        Assert.Equal(["Laps", "Restore"], modeRows.Order());
+        Assert.Equal(["PRACTICE", "RACE RULES"], window.GetVisualDescendants().OfType<TextBlock>()
+            .Where(t => t.Classes.Contains("grouphead") && t.IsEffectivelyVisible).Select(t => t.Text));
+        // the host's rules that mean something alone, from the one list a custom lobby shows too, but those the mode
+        // states (the laps) and its own Restore; none of the others
+        Assert.Equal(HostRules.Alone.Where(r => r.Reach == RuleReach.Alone && !PracticeMode.States(mode, r)).Select(r => r.Label).Order(),
+            labels.Except(["Machine", "Rewind", "Save · Load", .. modeRows]).Order());
         Assert.DoesNotContain(labels, l => HostRules.All.Any(r => r.Reach != RuleReach.Alone && r.Label == l));
         Assert.Contains(RowOf(window, "Rewind").GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "5'00\"");
         Assert.Contains(RowOf(window, "Save · Load").GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "D-pad right · left");
@@ -183,41 +227,45 @@ public sealed class PracticePageTests : IDisposable
         // counter's two figures
         var laps = RowOf(window, "Laps");
         var unlimited = laps.GetVisualDescendants().OfType<ToggleSwitch>().Single(t => t.IsEffectivelyVisible);
+        int Laps() => main.Practice.Setup.Params!["lap_count"];
         Assert.True(unlimited.IsChecked);
-        Assert.Equal(PracticeSetup.Unlimited, main.Practice.Setup.Laps);
+        Assert.Equal(0, Laps());
         unlimited.IsChecked = false;
         Dispatcher.UIThread.RunJobs();
-        Assert.Equal(1, main.Practice.Setup.Laps);
+        Assert.Equal(1, Laps());
         var more = Named<Button>(laps, "More");
         Click(window, more);
-        Assert.Equal(2, main.Practice.Setup.Laps);
+        Assert.Equal(2, Laps());
         var typed = Named<TextBox>(laps, "Typed");
         typed.Focus();
         typed.Text = "250";
         window.KeyPressQwerty(Avalonia.Input.PhysicalKey.Enter, Avalonia.Input.RawInputModifiers.None);
-        Assert.Equal(PracticeSetup.MostLaps, main.Practice.Setup.Laps);
+        Assert.Equal(99, Laps());
         Assert.Equal("99", typed.Text);
         typed.Text = "x";
         window.KeyPressQwerty(Avalonia.Input.PhysicalKey.Enter, Avalonia.Input.RawInputModifiers.None);
         Assert.Equal("99", typed.Text);
         typed.Text = "12";
         window.KeyPressQwerty(Avalonia.Input.PhysicalKey.Enter, Avalonia.Input.RawInputModifiers.None);
-        Assert.Equal(12, main.Practice.Setup.Laps);
+        Assert.Equal(12, Laps());
 
-        // Restore: off as it opens, the game's rule when on
-        Assert.False(main.Practice.Setup.Restore);
+        // Restore: off as it opens, the mode's rule when on
+        Assert.Equal(0, main.Practice.Setup.Params!["restore_on"]);
         Click(window, RowOf(window, "Restore").GetVisualDescendants().OfType<ToggleSwitch>().Single());
-        Assert.True(main.Practice.Setup.Restore);
+        Assert.Equal(1, main.Practice.Setup.Params!["restore_on"]);
         Assert.False(main.Practice.Setup.BoostFromStart);
         Click(window, RowOf(window, "Boost from the start").GetVisualDescendants().OfType<ToggleSwitch>().Single());
         Assert.True(main.Practice.Setup.BoostFromStart);
 
-        // the mines come back after Quick Play's 200 ms; Off: they stay gone, and the delay waits, kept
+        // the mines come back after Quick Play's 200 ms; Off: they stay gone, and the delay waits, kept (a lobby's row:
+        // its switch, then the delay)
         var mines = RowOf(window, "Mines respawn");
         Assert.Equal(200, main.Practice.Setup.MineRegenMs);
+        Assert.Contains(mines.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "ms" && t.IsEffectivelyVisible);
         Click(window, Named<ToggleSwitch>(mines, "Mines respawn"));
         Assert.Equal(0, main.Practice.Setup.MineRegenMs);
-        Assert.False(Named<Stepper>(mines, "Delay").IsEffectivelyEnabled);
+        Assert.DoesNotContain(mines.GetVisualDescendants().OfType<Stepper>(), t => t.IsEffectivelyVisible);
+        Assert.Contains(mines.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "Off" && t.IsEffectivelyVisible);
         Click(window, Named<ToggleSwitch>(mines, "Mines respawn"));
         Assert.Equal(200, main.Practice.Setup.MineRegenMs);
         Click(window, Named<Button>(mines, "More"));
@@ -326,9 +374,7 @@ public sealed class PracticePageTests : IDisposable
         Assert.Equal((60, 60), (range.Low, range.High));
         range.Low = 200;
         Assert.Equal((100, 100), (range.Low, range.High));
-        Assert.Equal(new PracticeSetup(1, 40, null, 0, 1), new PracticeSetup(999, 77, null, -5, -3).Kept());
-        Assert.Equal(PracticeSetup.Unlimited, new PracticeSetup(1, 0, null, 0, PracticeSetup.Unlimited).Kept().Laps);
-        Assert.Equal(PracticeSetup.MostLaps, new PracticeSetup(1, 0, null, 0, 1000).Kept().Laps);
+        Assert.Equal(new PracticeSetup(1, 40, null, 0), new PracticeSetup(999, 77, null, -5).Kept());
         var laps = new LapsRule("Laps", 0, 99);
         Assert.Equal(1, laps.Laps);
         laps.Value = 120;

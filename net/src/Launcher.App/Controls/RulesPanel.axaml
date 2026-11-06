@@ -107,10 +107,10 @@
         <ToggleSwitch IsChecked="{Binding IsNamed}" OnContent="" OffContent="" AutomationProperties.Name="{Binding Named}"
                       IsVisible="{Binding !IsOff}" />
         <TextBlock Classes="dim" Text="{Binding Named}" VerticalAlignment="Center" IsVisible="{Binding !IsOff}" />
-        <!-- a named value "Off": the row's switch, On the number -->
+        <!-- a named value "Off": the row's switch, On the number (no word beside the switch then: the number says it) -->
         <ToggleSwitch IsChecked="{Binding Counted}" OnContent="" OffContent="" AutomationProperties.Name="{Binding Label}"
                       IsVisible="{Binding IsOff}" />
-        <TextBlock Classes="dim" MinWidth="24" Text="{Binding State}" VerticalAlignment="Center" IsVisible="{Binding IsOff}" />
+        <TextBlock Classes="dim" MinWidth="24" Text="{Binding State}" VerticalAlignment="Center" IsVisible="{Binding StateShown}" />
         <c:Stepper Value="{Binding Value}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Step="{Binding Step}"
                    IsVisible="{Binding Counted}" AutomationProperties.Name="{Binding Label}" />
         <TextBlock Classes="dim" MinWidth="20" Text="{Binding Unit}" VerticalAlignment="Center" IsVisible="{Binding UnitShown}" />
@@ -122,17 +122,6 @@
         <TextBlock Classes="dim" Text="Unlimited" VerticalAlignment="Center" />
         <c:Stepper Value="{Binding Value}" Minimum="1" Maximum="{Binding Maximum}"
                    IsVisible="{Binding Counted}" AutomationProperties.Name="{Binding Label}" />
-      </StackPanel>
-    </DataTemplate>
-    <!-- the switch first: the pad's right turns it on, then moves on to the delay; no "On" beside it (the row is
-         narrow): the delay greyed is Off -->
-    <DataTemplate DataType="vm:DelayRule">
-      <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-        <ToggleSwitch IsChecked="{Binding On}" OnContent="" OffContent="" AutomationProperties.Name="{Binding Label}" />
-        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" IsEnabled="{Binding On}">
-          <c:Stepper Value="{Binding Value}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" Step="{Binding Step}" AutomationProperties.Name="Delay" />
-          <TextBlock Classes="dim" Text="ms" VerticalAlignment="Center" />
-        </StackPanel>
       </StackPanel>
     </DataTemplate>
     <DataTemplate DataType="vm:SliderRule">

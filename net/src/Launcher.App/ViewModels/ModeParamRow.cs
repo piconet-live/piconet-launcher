@@ -4,8 +4,9 @@ using Online.Protocol;
 namespace Launcher.App.ViewModels;
 
 /// <summary>
-/// A mode's <c>param</c> as a row of a lobby's rules panel, read from the compiled package's declaration: a switch its
-/// switch, a choice its choices, a whole number its stepper on its steps, and a time or a real number its values
+/// A mode's <c>param</c> as a row of a lobby's rules panel (and of Practice's), read from the compiled package's
+/// declaration: a switch its switch, a choice its choices, a whole number its stepper on its steps (the laps' 0 the
+/// Unlimited switch beside it), and a time or a real number its values
 /// dropped down, in words ("30 s"). An optional parameter (<see cref="ModeParam.Or"/>) offers its named value too: a whole
 /// number its switch beside the stepper ("By course"), a choice or a switch one choice more. The stats parameter
 /// (<see cref="ModeTerms.PackParam"/>) says its <c>stock</c> and <c>file</c> in words. <see cref="Value"/> is the cell a
@@ -36,6 +37,10 @@ public sealed class ModeParamRow
             { Kind: ModeParamKind.Choice } => (new ChoiceRule(param.Label, [.. Choices(param, stats)], value), null),
             { Or: { } or, Kind: ModeParamKind.Number } => (new NamedNumberRule(param.Label, or, param.StatesNothing(value),
                 param.StatesNothing(value) ? param.Default == param.Most ? param.Least : param.Default : value, param.Least, param.Top) { Step = Math.Max(1, param.Step), Unit = param.Unit }, null),
+            // a number that sets the laps and holds 0: the laps word's 0 is the game's free run, the Unlimited switch
+            // beside the number (as Practice's laps)
+            { Kind: ModeParamKind.Number, Type: ModeType.Int, Least: 0 } when UnlimitedLaps(param) =>
+                (new LapsRule(param.Label, value, param.Most) { Unlimited = value == 0 }, null),
             { Kind: ModeParamKind.Number, Type: ModeType.Int } =>
                 (new StepperRule(param.Label, value, param.Least, param.Most) { Step = Math.Max(1, param.Step), Unit = param.Unit }, null),
             _ => Offered(param, value),
@@ -44,6 +49,17 @@ public sealed class ModeParamRow
 
     /// <summary>The mode's stats parameter: its <c>stock</c> and <c>file</c> said in words.</summary>
     public bool Stats { get; }
+
+    /// <summary>A parameter that sets the laps (the <c>laps</c> word takes it) and may be 0, which is the game's free run:
+    /// no lap count.</summary>
+    public static bool UnlimitedLaps(ModeParam param)
+    {
+        ArgumentNullException.ThrowIfNull(param);
+        return param is { Kind: ModeParamKind.Number, Type: ModeType.Int, Least: 0, Or: null } && param.Rule == HostRules.Laps.Name;
+    }
+
+    /// <summary>The laps' 0 as the row and a summary say it.</summary>
+    public const string UnlimitedWords = "Unlimited";
 
     /// <summary>The stats choice is the host's own pack file now.</summary>
     public bool FileChosen => Stats && Row is ChoiceRule choice && choice.Selected < Param.Choices.Count && Param.Choices[choice.Selected] == ModeTerms.FileChoice;
@@ -69,6 +85,7 @@ public sealed class ModeParamRow
     public int Value => Row switch
     {
         SwitchRule on => on.On ? 1 : 0,
+        LapsRule laps => laps.Laps,
         StepperRule stepper => stepper.Value,
         NamedNumberRule named => named.IsNamed ? Param.Most : named.Value,
         ChoiceRule choice when _cells is { } cells => cells[choice.Selected],
@@ -113,6 +130,10 @@ public sealed class ModeParamRow
         if (param.StatesNothing(value))
         {
             return param.Or!;
+        }
+        if (value == 0 && UnlimitedLaps(param))
+        {
+            return UnlimitedWords;
         }
         return param.Kind switch
         {
