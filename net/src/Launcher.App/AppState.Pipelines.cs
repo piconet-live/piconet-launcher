@@ -36,6 +36,7 @@ public sealed partial class AppState
     private CancellationTokenSource? _building;
     private Task _lastBuild = Task.CompletedTask;   // the newest build's task: done once its runner has gone
     private bool _checkAfterGame;
+    private bool _checkAfterBuild;
     private int _checks;
     private long _lastShown;
 
@@ -136,7 +137,8 @@ public sealed partial class AppState
         }
         if (Pipelines is { Phase: PipelinePhase.Building } now && now.Look == look)
         {
-            return;   // (the same look is being built)
+            _checkAfterBuild = true;   // the same look is being built: what changed meanwhile (a mod) is looked at after it
+            return;
         }
         var paths = GamePaths;
         var drivers = PipelineDrivers;
@@ -247,6 +249,10 @@ public sealed partial class AppState
         Noted?.Invoke(end.Done ? $"the graphics cache of the {want.Look} look is built" : $"the graphics cache was not built: {end.Why}");
         Show(end.Done ? new PipelineStatus(PipelinePhase.Ready, want.Look)
             : new PipelineStatus(PipelinePhase.Failed, want.Look, 0, why, end.Why));
+        if (end.Done && Interlocked.Exchange(ref _checkAfterBuild, false))
+        {
+            _ = CheckPipelinesAsync();   // a mod switched on while it was built: its models, if any, are built now
+        }
     }
 
     private void StopBuild()

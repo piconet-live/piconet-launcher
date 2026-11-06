@@ -61,7 +61,7 @@ public sealed partial class FirstScreenTests
                 Assert.Equal(("Preparing graphics · 42%", (string?)null, 0.42), Column(screen.Window));
 
                 // nothing starts a game meanwhile, and each says why
-                Assert.Equal((false, AppState.PreparingText, false, null), Buttons(screen));   // (said once, under RACE)
+                Assert.Equal((false, AppState.PreparingText, false, AppState.PreparingText), Buttons(screen));   // (under each)
                 Assert.Equal(AppState.PreparingText, state.PlayOffline());
                 Assert.Equal(AppState.PreparingText, state.StartPractice(screen.Main.Practice.Setup));
                 Assert.Equal(AppState.PreparingText, state.WhyNotJoin);
