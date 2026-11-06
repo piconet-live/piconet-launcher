@@ -153,6 +153,7 @@ public sealed partial class SetUpInGameTests(OneHeadlessApplication application)
                 {
                     page.Hidden();
                     window.Close();
+                    state.ReleasePads();   // (the launcher's helper the page used: ended with its window, as MainViewModel does)
                 }
             }, TestContext.Current.CancellationToken);
 

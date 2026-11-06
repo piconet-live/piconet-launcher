@@ -9,8 +9,9 @@ namespace Launcher.App.ViewModels;
 /// The Controller page: the game's four controller ports, each off, a controller through a mapping, or the GameCube
 /// adapter; for a controller its device, its mapping ("press to set" for each control, the standard layout) and the
 /// sticks' dead zones; and the test, a picture of the GameCube controller that lights what the game sees. What is
-/// plugged in, what the player pressed and what the game would read all come from the game's own program started as
-/// a helper (<see cref="ControllerHelper"/>) while the page shows and no game runs; the settings are the game's own
+/// plugged in, what the player pressed and what the game would read all come from the game's own program, the
+/// launcher's controller helper (<see cref="ControllerHelper"/>, <see cref="AppState.Pads"/>), which runs while no game
+/// does; the settings are the game's own
 /// files (<see cref="ControllerFiles"/>), written at every change (the rest of the class: ControllerViewModel.Helper.cs).
 /// </summary>
 public sealed partial class ControllerViewModel : ViewModelBase

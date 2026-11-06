@@ -391,6 +391,7 @@ public sealed class RecompLaunchTests : IDisposable
         Assert.Equal("1.0", RecompLaunch.Setting(fresh, "Core", "EmulationSpeed"));
         Assert.Equal("False", RecompLaunch.Setting(fresh, "Core", "EnableCheats"));
         Assert.Equal("False", RecompLaunch.Setting(fresh, "Interface", "ConfirmStop"));
+        Assert.Equal("True", RecompLaunch.Setting(fresh, "Interface", "UsePanicHandlers"));   // the runner's handler: a line, no box
         Assert.Null(RecompLaunch.Setting(fresh, "DSP", "Volume"));                 // the emulator's own: full volume
         Assert.Null(RecompLaunch.Setting(fresh, "Core", "EnableCustomRTC"));       // offline play runs on the real clock
 
@@ -400,6 +401,7 @@ public sealed class RecompLaunchTests : IDisposable
             "[Core]", "Overclock = 1.0", "EmulationSpeed = 0.5", "EnableCheats = True", "CPUThread = True",
             "[DSP]", "Volume = 35", "Backend = OpenAL",
             "[Display]", "Fullscreen = True",
+            "[Interface]", "UsePanicHandlers = False",   // an older launcher's
         ];
         var kept = RecompLaunch.WithDefaults(used);
         Assert.Equal("6.0", RecompLaunch.Setting(kept, "Core", "Overclock"));
@@ -409,6 +411,7 @@ public sealed class RecompLaunchTests : IDisposable
         Assert.Equal("35", RecompLaunch.Setting(kept, "DSP", "Volume"));
         Assert.Equal("OpenAL", RecompLaunch.Setting(kept, "DSP", "Backend"));
         Assert.Equal("True", RecompLaunch.Setting(kept, "Display", "Fullscreen"));
+        Assert.Equal("True", RecompLaunch.Setting(kept, "Interface", "UsePanicHandlers"));
         Assert.Equal(kept, RecompLaunch.WithDefaults(kept));                       // and a second start changes nothing
     }
 

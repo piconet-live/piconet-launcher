@@ -34,9 +34,9 @@ public sealed partial class AppState
         {
             return Task.FromResult<string?>(null);
         }
-        // The Controller page's helper may hold the adapter: it goes first, and the page runs none while the check
-        // asks (CheckingController) nor while a game starts or runs; it hears when it may again (Changed).
-        ControllerHelper.StopAll();
+        // The launcher's helper holds the adapter: the check's start ends it first (ControllerHelper.StartAlone, off the
+        // window's thread), and it runs none while the check asks (CheckingController) nor while a game starts or runs;
+        // it hears when it may again (Changed).
         var check = _controllerCheck = CheckUntilClosedAsync(paths);
         Changed?.Invoke();
         _ = AfterCheckAsync(check);
@@ -68,7 +68,8 @@ public sealed partial class AppState
     private async Task<string?> CheckUntilClosedAsync(RecompPaths paths)
     {
         using var stop = new CancellationTokenSource();
-        var check = ControllerStart.PrepareAsync(paths, Settings.UserFolder, !Debug.LeaveAdapter, cancel: stop.Token);
+        var (from, adapter) = (Settings.UserFolder, !Debug.LeaveAdapter);
+        var check = Task.Run(() => ControllerStart.PrepareAsync(paths, from, adapter, cancel: stop.Token), CancellationToken.None);
         if (await Task.WhenAny(check, _closed.Task).ConfigureAwait(false) != check)
         {
             await stop.CancelAsync().ConfigureAwait(false);

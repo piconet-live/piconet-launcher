@@ -1,27 +1,27 @@
-using Avalonia.Threading;
 using Launcher.Core;
 
 namespace Launcher.App.ViewModels;
 
-// The Controller page's helper: started while the page shows and no game runs, ended when the page is left or a game
-// starts, and what it says taken onto the window's thread.
+// The Controller page's helper: the launcher's own (AppState.Pads, Launcher.Core/Pads/PadReader.cs), which runs for as
+// long as the launcher runs and no game does, its window in front or not. The page uses it while it shows: what it
+// says is taken onto the window's thread, and the port the page shows is the one it says as it moves. A page that
+// shows starts no program and takes no device from anybody; while a game runs there is none, and the adapter is the
+// game's ("In use by the game").
 public sealed partial class ControllerViewModel
 {
     /// <summary>How long "press to set" waits for the player.</summary>
     private const int CaptureMs = 6000;
 
-    private ControllerHelper? _helper;
+    private ControllerHelper? _helper;   // the launcher's, while the page shows; null: none runs (a game, no runner)
     private HelperAdapter? _adapter;
     private bool _shown;
-    private bool _helperAdapter;   // a port was the adapter's when the helper started (it sets up its devices by that)
-    private int _quickEnds;
-    private DateTimeOffset _started;
+    private Launcher.Core.Pads.PadReader? _pads;   // the launcher's helper the page is attached to
+    private int? _watched;
 
-    /// <summary>The page shows: the settings as they are on disk, and the helper started.</summary>
+    /// <summary>The page shows: the settings as they are on disk, and the launcher's helper taken.</summary>
     public void Shown()
     {
         _shown = true;
-        _quickEnds = 0;
         Enabled = !_state.Racing;
         try
         {
@@ -33,143 +33,132 @@ public sealed partial class ControllerViewModel
             Notice = $"Settings folder not made · {e.Message}";
         }
         Load();
-        StartHelper();
+        Attach();
         LookForTheGame();
     }
 
-    /// <summary>The page is left: the helper ends, and every device is free again.</summary>
+    /// <summary>The page is left: a listening ends, and the launcher's helper watches the pad's port again.</summary>
     public void Hidden()
     {
+        CancelCapture();
         _shown = false;
-        StopHelper();
+        Detach();
     }
 
-    /// <summary>The page may run its helper: it shows, the window is in front (no device is held for a program the
-    /// player went to; a page shown with no window that says so, as a test's, runs it), and no game of this
-    /// launcher runs or is starting (the check before a start asks a helper of its own, and a game must find every
-    /// device free: <see cref="ControllerHelper.Held"/>).</summary>
-    private bool MayRun => _shown && !_state.Racing && !_state.CheckingController && !ControllerHelper.Held
-        && (_state.WindowActive || !_state.FocusKnown);
+    private void Attach()
+    {
+        var pads = _state.Pads;   // (made and started at its first use: a page shown with no window, as a test's)
+        if (_pads != pads)
+        {
+            Detach();
+            _pads = pads;
+            pads.Said += OnSaid;
+            pads.HelperChanged += OnHelperChanged;
+            pads.FirstStartWritten += OnFirstStartWritten;
+        }
+        Take(pads.Helper);
+    }
+
+    private void Detach()
+    {
+        if (_pads is not { } pads)
+        {
+            return;
+        }
+        _pads = null;
+        pads.Said -= OnSaid;
+        pads.HelperChanged -= OnHelperChanged;
+        pads.FirstStartWritten -= OnFirstStartWritten;
+        pads.PageWatch(false);
+        _helper = null;
+        _adapter = null;
+        _watched = null;
+        Pad = null;
+    }
+
+    private void OnSaid(ControllerHelper helper, ControllerMessage message) => OnUi(() => Handle(helper, message));
+
+    private void OnHelperChanged(ControllerHelper? helper) => OnUi(() =>
+    {
+        if (_pads is not null)
+        {
+            Take(helper);
+        }
+    });
+
+    /// <summary>A game with no controller settings was given its first ones (the launcher's helper did it, as a start
+    /// would): the page shows them.</summary>
+    private void OnFirstStartWritten() => OnUi(() =>
+    {
+        if (_shown)
+        {
+            Load();
+        }
+    });
+
+    /// <summary>The launcher's helper as it is now: what it said so far (its devices, the adapter) shown, and the port
+    /// the page shows watched. None (a game started, the check before a start asks its own): the test is empty until
+    /// it is back.</summary>
+    private void Take(ControllerHelper? helper)
+    {
+        if (!_shown || _pads is not { } pads)
+        {
+            return;
+        }
+        if (helper != _helper)
+        {
+            EndCapture();   // (a listening was the helper's that went)
+        }
+        _helper = helper;
+        _adapter = helper is null ? null : pads.Adapter;
+        if (helper is not null && pads.Devices is { } devices)
+        {
+            _devices = devices.Devices;
+        }
+        Pad = null;
+        _watched = null;
+        if (helper is not null)
+        {
+            WatchPort();
+        }
+        else if (pads.GaveUp)
+        {
+            Notice = "Controller test stopped";
+        }
+        ShowPort();
+    }
 
     /// <summary>The launcher's state changed (a game started or ended, the check before a start began or is over):
-    /// the helper runs exactly while it may.</summary>
+    /// the page's buttons, and the adapter's words (the game's while it runs).</summary>
     private void GameChanged()
     {
         Enabled = !_state.Racing;
         ShowSetUpInGame();
-        if (MayRun && _helper is null)
-        {
-            Load();
-            StartHelper();
-        }
-        else if (!MayRun && _helper is not null)
-        {
-            StopHelper();
-            ShowPort();
-        }
+        ShowAdapter();
         ShowPadNote();
     }
-
-    private void StartHelper()
-    {
-        StopHelper();
-        if (!MayRun)
-        {
-            return;
-        }
-        // the pad reader's helper goes first (PageHelperRuns waits for it); null: the runner is not there, or did not
-        // start, and the reader may run its own again
-        _state.PageHelperRuns(true);
-        if (ControllerHelper.Start(_state.GamePaths) is not { } helper)
-        {
-            _state.PageHelperRuns(false);
-            ShowPort();
-            return;
-        }
-        _helper = helper;
-        _started = DateTimeOffset.UtcNow;
-        _helperAdapter = _ports.Any(p => p.Kind == PortKind.Adapter);
-        helper.Received += message => OnUi(() => Handle(helper, message));
-        helper.Ended += () => OnUi(() => HelperEnded(helper));
-        helper.Listen();
-        if (!_state.Debug.LeaveAdapter)
-        {
-            helper.AskAdapter();
-        }
-        _watched = null;
-        WatchPort();
-        ShowPort();
-    }
-
-    private int? _watched;
 
     /// <summary>The port the helper says as it moves: the one shown, unless it is no pad's (off, the keyboard) and a
     /// pad's port is set: that one then, so that the pad still works the window on this page.</summary>
     private void WatchPort()
     {
-        var port = _state.Pads.IsPadPort(PortIndex) ? PortIndex : _state.Pads.NavPort ?? PortIndex;
-        if (_helper is { } helper && port != _watched)
+        if (_helper is null || _pads is not { } pads)
+        {
+            return;
+        }
+        var port = pads.IsPadPort(PortIndex) ? PortIndex : pads.NavPort ?? PortIndex;
+        if (port != _watched)
         {
             _watched = port;
-            helper.Watch(port);
+            pads.PageWatch(true, port);
         }
-    }
-
-    private void StopHelper()
-    {
-        EndCapture();
-        var helper = _helper;
-        _helper = null;
-        _adapter = null;
-        Pad = null;
-        // ending it waits for the program to go: off the window's thread
-        if (helper is not null)
-        {
-            _ = Task.Run(helper.Dispose);
-            _state.PageHelperRuns(false);
-        }
-    }
-
-    /// <summary>The helper ended and the page did not end it. Ended for a game's start or for the check before
-    /// one, it stays away until the page hears that it may run again (<see cref="GameChanged"/>): never a helper
-    /// while a game is starting or running. Ended by a fault of its own, it is started again after a moment, and
-    /// not for ever when it ends at once each time.</summary>
-    private void HelperEnded(ControllerHelper helper)
-    {
-        if (helper != _helper)
-        {
-            return;
-        }
-        StopHelper();
-        ShowPort();
-        if (!MayRun)
-        {
-            return;
-        }
-        _quickEnds = DateTimeOffset.UtcNow - _started < TimeSpan.FromSeconds(5) ? _quickEnds + 1 : 0;
-        if (_quickEnds >= 3)
-        {
-            Notice = "Controller test stopped";
-            return;
-        }
-        DispatcherTimer.RunOnce(() =>
-        {
-            if (MayRun && _helper is null)
-            {
-                StartHelper();
-            }
-        }, TimeSpan.FromSeconds(1.5));
     }
 
     private void Handle(ControllerHelper helper, ControllerMessage message)
     {
-        if (helper != _helper)
+        if (!_shown || helper != _helper)
         {
-            return;   // one that was ended meanwhile
-        }
-        if (message is HelperPorts or HelperPad && !Capturing)
-        {
-            _state.Pads.Heard(message);   // the pad works the window while this page holds the devices
+            return;   // one that was ended meanwhile, or the page was left
         }
         switch (message)
         {
@@ -178,11 +167,10 @@ public sealed partial class ControllerViewModel
                 break;
             case HelperDevices devices:
                 _devices = devices.Devices;
-                FirstStart();
                 ShowPort();
                 break;
-            case HelperAdapter adapter:
-                _adapter = adapter;
+            case HelperAdapter:
+                _adapter = _pads?.Adapter;   // (the reader's: a "not asked" before the question is no state)
                 ShowAdapter();
                 ShowPadNote();
                 break;
@@ -198,40 +186,13 @@ public sealed partial class ControllerViewModel
         }
     }
 
-    /// <summary>A game with no controller settings at all gets its first ones here too, as before a start
-    /// (<see cref="ControllerStart"/>): the page then shows a port 1 that works.</summary>
-    private void FirstStart()
-    {
-        try
-        {
-            var first = StandardLayouts.FirstStart(_devices, GamepadProfile());
-            if (ControllerFiles.WriteFirstStart(UserFolder, first))
-            {
-                Load();
-                Reloaded();
-            }
-        }
-        catch (Exception e) when (ControllerFiles.Failed(e))
-        {
-            Notice = $"Controller settings not written · {e.Message}";
-        }
-    }
-
-    /// <summary>The files changed: the helper reads them again. It set its devices up by whether a port is the
-    /// adapter's, as the game does at its start, so when that changed it is started anew.</summary>
+    /// <summary>The files changed: the launcher's helper reads them again (it is started anew when whether a port is the
+    /// adapter's changed: the emulator sets its devices up by that at its start).</summary>
     private void Reloaded()
     {
-        if (_helper is null)
+        if (_helper is not null)
         {
-            return;
-        }
-        if (_ports.Any(p => p.Kind == PortKind.Adapter) != _helperAdapter)
-        {
-            StartHelper();
-        }
-        else
-        {
-            _helper.Reload();
+            _pads?.Reload();
         }
     }
 
@@ -240,6 +201,12 @@ public sealed partial class ControllerViewModel
         if (!IsAdapter)
         {
             (AdapterText, AdapterValue, AdapterProblem, AdapterReady) = ("", "", false, false);
+            return;
+        }
+        if (_state.Racing)
+        {
+            // the launcher's helper gave the adapter to the game at its start, and takes it back when the game has gone
+            (AdapterText, AdapterValue, AdapterProblem, AdapterReady) = (ControllerWords.InUseByTheGame, "", false, false);
             return;
         }
         var adapter = _helper is null ? null : _adapter;

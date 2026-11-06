@@ -469,6 +469,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         _feed.Dispose();
         Disc.Dispose();          // a preparation at work is stopped
         Controller.Hidden();
+        _state.ReleasePads();         // the launcher's helper lets the adapter go with its window
         ControllerHelper.StopAll();   // none outlives the launcher's window
         Account.Dispose();
         Lan.Dispose();

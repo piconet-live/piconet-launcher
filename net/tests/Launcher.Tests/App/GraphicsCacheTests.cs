@@ -39,7 +39,8 @@ public sealed class GraphicsCacheTests : IDisposable
     /// <summary>The launcher's state with a game that is "installed", Aurora chosen and offered (a card that can ray
     /// trace), the runner a script: the controller helper's start says nothing; a build writes down its last argument,
     /// says 42% built, holds while <see cref="Hold"/> is there, and says done.</summary>
-    private AppState State()
+    /// <param name="runner">A build of the test's own in place of the script's.</param>
+    private AppState State(Func<RecompPaths, string, IProgress<double>, CancellationToken, Task<PipelineBuildEnd>>? runner = null)
     {
         Directory.CreateDirectory(Data);
         File.WriteAllText(Path.Combine(Data, "settings.json"), """{"noServer": true}""");
@@ -63,6 +64,7 @@ public sealed class GraphicsCacheTests : IDisposable
         var state = AppState.Load(Data);
         state.CardRayTraces = () => true;
         state.PipelineDrivers = () => "Made-up Graphics 1.0";
+        state.PipelineRunner = runner ?? state.PipelineRunner;
         state.Update(s => s with
         {
             Recomp = new RecompSettings(Runner: Runner, Module: Path.Combine(_dir, "m.dll"), GameFolder: Path.Combine(_dir, "game")),
@@ -150,6 +152,68 @@ public sealed class GraphicsCacheTests : IDisposable
         }
         finally
         {
+            state.Shutdown();
+        }
+    }
+
+    /// <summary>Two builds never run at once: another look's build starts once the build before it has gone. Its runner is
+    /// ended when it is cancelled, and goes a moment later (here 300 ms); two runners at once wrote one Dawn cache and one
+    /// launch file (build k: the plain and the rays' look, 01:16).</summary>
+    [Fact]
+    public async Task ANewLooksBuildStartsOnlyOnceTheBuildBeforeHasGone()
+    {
+        var gate = new Lock();
+        var (running, most) = (0, 0);
+        var looks = new List<string>();
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var state = State(async (_, launch, _, cancel) =>
+        {
+            lock (gate)
+            {
+                running++;
+                most = Math.Max(most, running);
+                // the look the build's launch file asks for (written compact or indented)
+                var rays = launch.Contains("\"auroraRayTracing\":true", StringComparison.Ordinal)
+                    || launch.Contains("\"auroraRayTracing\": true", StringComparison.Ordinal);
+                looks.Add(rays ? PipelineCache.Rays : PipelineCache.Plain);
+            }
+            try
+            {
+                await Task.WhenAny(release.Task, Task.Delay(Timeout.Infinite, cancel)).ConfigureAwait(false);
+                if (cancel.IsCancellationRequested)
+                {
+                    await Task.Delay(300, CancellationToken.None).ConfigureAwait(false);   // (the killed runner going)
+                    throw new OperationCanceledException(cancel);
+                }
+                return new PipelineBuildEnd(true, null);
+            }
+            finally
+            {
+                lock (gate)
+                {
+                    running--;
+                }
+            }
+        });
+        var token = TestContext.Current.CancellationToken;
+        try
+        {
+            await state.CheckPipelinesAsync();
+            await Until(() => { lock (gate) { return looks.Count == 1; } }, token, "the plain look's build did not start");
+            state.Update(s => s with { RayTracing = true });   // another look: the plain one's build is cancelled
+            await Until(() => state.Pipelines is { Phase: PipelinePhase.Building, Look: PipelineCache.Rays }, token, "the rays' build was not asked for");
+            await Until(() => { lock (gate) { return looks.Count == 2; } }, token, "the rays' build did not start");
+            release.TrySetResult();
+            await Until(() => state.Pipelines is { Phase: PipelinePhase.Ready, Look: PipelineCache.Rays }, token, "the rays' build did not end");
+            lock (gate)
+            {
+                Assert.Equal(1, most);
+                Assert.Equal([PipelineCache.Plain, PipelineCache.Rays], looks);
+            }
+        }
+        finally
+        {
+            release.TrySetResult();
             state.Shutdown();
         }
     }

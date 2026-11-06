@@ -34,6 +34,7 @@ public sealed partial class AppState
 
     private readonly Lock _pipelinesGate = new();
     private CancellationTokenSource? _building;
+    private Task _lastBuild = Task.CompletedTask;   // the newest build's task: done once its runner has gone
     private bool _checkAfterGame;
     private int _checks;
     private long _lastShown;
@@ -166,13 +167,21 @@ public sealed partial class AppState
         }
     }
 
+    /// <summary>A build of the look, once the build before it has gone: two builds never run at once (each writes Dawn's
+    /// cache and the build's launch file in the one user folder, and a stale cache is cleared first). The build before is
+    /// cancelled here, and its runner ended; this one starts when that runner has gone (<see cref="PipelineCache.RunAsync"/>
+    /// comes back only then), unless it was itself cancelled meanwhile.</summary>
     private void Build(RecompPaths paths, PipelineStamp want, PipelineWhy why, bool stale)
     {
         CancellationTokenSource cancel;
+        Task before;
+        var gone = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);   // this build's end
         lock (_pipelinesGate)
         {
             _building?.Cancel();
             _building = cancel = new CancellationTokenSource();
+            before = _lastBuild;
+            _lastBuild = gone.Task;
         }
         Noted?.Invoke($"the graphics cache of the {want.Look} look is built ({why})");
         Show(new PipelineStatus(PipelinePhase.Building, want.Look, 0, why));
@@ -181,46 +190,63 @@ public sealed partial class AppState
         var progress = new Progress(this, want.Look, why);
         _ = Task.Run(async () =>
         {
-            PipelineBuildEnd end;
             try
             {
-                if (stale)
+                await before.ConfigureAwait(false);
+                if (!cancel.IsCancellationRequested)   // (else a newer build took its place while it waited)
                 {
-                    PipelineCache.Clear(paths);   // Aurora or the drivers changed: nothing of Dawn's cache is of use
+                    await BuildAsync(paths, want, why, stale, launch, progress, cancel).ConfigureAwait(false);
                 }
-                end = await PipelineRunner(paths, launch, progress, cancel.Token).ConfigureAwait(false);
             }
-            catch (OperationCanceledException)
+            finally
             {
-                return;   // another look's build, or none, took its place
+                gone.TrySetResult();
             }
-            catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidOperationException)
+        }, CancellationToken.None);
+    }
+
+    private async Task BuildAsync(RecompPaths paths, PipelineStamp want, PipelineWhy why, bool stale, string launch, Progress progress,
+        CancellationTokenSource cancel)
+    {
+        PipelineBuildEnd end;
+        try
+        {
+            if (stale)
+            {
+                PipelineCache.Clear(paths);   // Aurora or the drivers changed: nothing of Dawn's cache is of use
+            }
+            end = await PipelineRunner(paths, launch, progress, cancel.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            return;   // another look's build, or none, took its place
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException or InvalidOperationException)
+        {
+            end = new PipelineBuildEnd(false, e.Message);
+        }
+        lock (_pipelinesGate)
+        {
+            if (_building != cancel)
+            {
+                return;
+            }
+            _building = null;
+        }
+        if (end.Done)
+        {
+            try
+            {
+                PipelineCache.Mark(paths, want);
+            }
+            catch (Exception e) when (e is IOException or UnauthorizedAccessException)
             {
                 end = new PipelineBuildEnd(false, e.Message);
             }
-            lock (_pipelinesGate)
-            {
-                if (_building != cancel)
-                {
-                    return;
-                }
-                _building = null;
-            }
-            if (end.Done)
-            {
-                try
-                {
-                    PipelineCache.Mark(paths, want);
-                }
-                catch (Exception e) when (e is IOException or UnauthorizedAccessException)
-                {
-                    end = new PipelineBuildEnd(false, e.Message);
-                }
-            }
-            Noted?.Invoke(end.Done ? $"the graphics cache of the {want.Look} look is built" : $"the graphics cache was not built: {end.Why}");
-            Show(end.Done ? new PipelineStatus(PipelinePhase.Ready, want.Look)
-                : new PipelineStatus(PipelinePhase.Failed, want.Look, 0, why, end.Why));
-        }, CancellationToken.None);
+        }
+        Noted?.Invoke(end.Done ? $"the graphics cache of the {want.Look} look is built" : $"the graphics cache was not built: {end.Why}");
+        Show(end.Done ? new PipelineStatus(PipelinePhase.Ready, want.Look)
+            : new PipelineStatus(PipelinePhase.Failed, want.Look, 0, why, end.Why));
     }
 
     private void StopBuild()

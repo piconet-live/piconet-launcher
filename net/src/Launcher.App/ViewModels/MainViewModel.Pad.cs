@@ -4,7 +4,7 @@ namespace Launcher.App.ViewModels;
 // in order, and the way back.
 public sealed partial class MainViewModel
 {
-    /// <summary>The pad that works the window (read while the window is in front and no game runs).</summary>
+    /// <summary>The launcher's controller helper, whose pad works the window while it is in front.</summary>
     public Launcher.Core.Pads.PadReader PadReader => _state.Pads;
 
     /// <summary>The pad works the pages (Settings, Launcher: "Controller navigation"; off by default).</summary>
