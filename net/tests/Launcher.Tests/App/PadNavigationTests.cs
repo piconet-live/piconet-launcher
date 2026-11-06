@@ -21,7 +21,7 @@ namespace Launcher.Tests;
 /// focus by position; L and R go through the tabs and stop at their ends; Z through a tab's pages; B goes one step
 /// up and closes the question over the page; Start presses the page's main action; left and right change a value
 /// and a held direction never leaves it; a text box and the name (it needs the keyboard) are never stopped on; the
-/// mouse hides the pad's mark. With "Navigation sounds" on, a move sounds the game's cursor and B's step up its
+/// mouse hides the pad's mark. With "Controller navigation" on, a move sounds the game's cursor and B's step up its
 /// cancel; with them off (the default), and for the mouse always, nothing sounds.
 /// </summary>
 [Collection(ControllerPageTests.Name)]
@@ -152,17 +152,17 @@ public sealed class PadNavigationTests : IDisposable
         Assert.Same(main.Home, main.Current);                       // and no further
     });
 
-    /// <summary>The navigation's sounds (the game's cursor and cancel), as Settings' "Navigation sounds" has them: a
-    /// move of the pad between controls and the keyboard's Tab sound the cursor, the pad's B that goes a step up the
-    /// cancel; the pad's first press, a page it lands on, a B that goes nowhere and a click sound nothing. Off: none
-    /// of them sounds.</summary>
+    /// <summary>The navigation's sounds (the game's cursor and cancel), with Settings' "Controller navigation": a
+    /// move of the pad between controls sounds the cursor, the pad's B that goes a step up the cancel; the pad's first
+    /// press, a page it lands on, a B that goes nowhere, the keyboard's Tab and a click sound nothing. Off: none of
+    /// them sounds, whatever an older settings file's "navigationSounds" says (it is not read).</summary>
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public Task TheNavigationSoundsAreTheCursorAndTheCancelWhenSwitchedOn(bool on) =>
-        OnAWindow($$"""{"noServer": true, "navigationSounds": {{(on ? "true" : "false")}}}""", (window, main, pad) =>
+    public Task TheNavigationSoundsAreTheCursorAndTheCancelWithControllerNavigation(bool on) =>
+        OnAWindow($$"""{"noServer": true, "padNavigation": {{(on ? "true" : "false")}}, "navigationSounds": true}""", (window, main, pad) =>
     {
-        Assert.Equal(on, main.SoundSettings.NavigationSounds);
+        Assert.Equal(on, main.SoundSettings.PadNavigation);
         var heard = new List<LauncherSound>();
         // (the navigation's two only: a test of another collection may sound its lobby meanwhile)
         void Hear(LauncherSound sound, int volume)
@@ -196,8 +196,8 @@ public sealed class PadNavigationTests : IDisposable
             Assert.Equal(on ? [LauncherSound.Back] : [], heard);
 
             heard.Clear();
-            Headless.Press(window, Key.Tab, PhysicalKey.Tab);           // the keyboard's Tab
-            Assert.Equal(on ? [LauncherSound.Cursor] : [], heard);
+            Headless.Press(window, Key.Tab, PhysicalKey.Tab);           // the keyboard's Tab: never
+            Assert.Empty(heard);
 
             heard.Clear();
             Click(window, window.FindControl<Button>("SettingsButton")!);  // the mouse: never

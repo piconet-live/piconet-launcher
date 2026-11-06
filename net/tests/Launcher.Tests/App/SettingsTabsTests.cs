@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Headless;
@@ -114,6 +115,17 @@ public sealed class SettingsTabsTests : IDisposable
         [.. window.GetVisualDescendants().OfType<SettingsView>().Single().GetVisualDescendants().OfType<TextBlock>()
             .Where(t => t.Classes.Contains("label") && t.IsEffectivelyVisible).Select(t => t.Text ?? "")];
 
+    /// <summary>The Settings page as it reads down the screen: each group's heading ("# Display") and the labels of its
+    /// rows, in the order they are drawn, not the order they are written.</summary>
+    private static string[] Form(MainWindow window)
+    {
+        var view = window.GetVisualDescendants().OfType<SettingsView>().Single();
+        return [.. view.GetVisualDescendants().OfType<TextBlock>()
+            .Where(t => t.IsEffectivelyVisible && (t.Classes.Contains("label") || t.Classes.Contains("section")))
+            .OrderBy(t => t.TranslatePoint(default, view)!.Value.Y)
+            .Select(t => t.Classes.Contains("section") ? "# " + t.Text : t.Text ?? "")];
+    }
+
     [Fact]
     public Task TheSettingsTabHasFourPagesEachWithItsOwnRows() => OnAWindow(State("""{"noServer": true}"""), (window, main) =>
     {
@@ -121,14 +133,20 @@ public sealed class SettingsTabsTests : IDisposable
         Assert.Equal(["Game", "Online", "Controller", "Launcher"], Headings(window).Select(b => ((SectionLink)b.DataContext!).Label));
         // a first start: Game (Aurora's rows in every build: it draws every start; these tests are stamped public)
         Assert.Same(main.Settings, main.Current);
-        Assert.Equal(["Widescreen", "Full screen mode", "Vertical sync", "Frame rate", "Volume", "Other racers' sounds", "Rumble", "Show inputs",
-            "Picture size", "Smooth edges", "Sharper textures", "Colourblind filter", "High refresh"], Rows(window));
+        // each page in groups under headings, as the Launcher page's Replays
+        Assert.Equal(["# Display", "Widescreen", "Full screen mode", "Vertical sync", "High refresh", "Show frame rate",
+            "# Graphics", "Resolution", "Anti-aliasing", "Anisotropic filtering", "Ray tracing", "Colourblind filter",
+            "# Sound", "Volume", "Other racers' sounds",
+            "# Controller", "Rumble", "Show inputs"], Form(window));
+        // Show frame rate and Ray tracing: switches, as Rumble's
+        Assert.IsType<ToggleSwitch>(Named<Control>(window.GetVisualDescendants().OfType<SettingsView>().Single(), "ShowFrameRate"));
+        Assert.IsType<ToggleSwitch>(Named<Control>(window.GetVisualDescendants().OfType<SettingsView>().Single(), "RayTracing"));
         Assert.DoesNotContain(window.GetVisualDescendants().OfType<Control>(), c => Equals(AutomationProperties.GetName(c), "Picture engine"));
         Shot(window, "settings-game");
         Assert.Contains("on", Heading(window, "Game").Classes);
 
         Click(window, Heading(window, "Online"));
-        Assert.Equal(["Input delay", "Server", "Account", "Notices", "Activity", "Chat"], Rows(window));
+        Assert.Equal(["# Connection", "Input delay", "Server", "Account", "# Social", "Notices", "Show on Discord", "Hide swear words"], Form(window));
         Assert.Equal(["Online"], Headings(window).Where(b => b.Classes.Contains("on")).Select(b => ((SectionLink)b.DataContext!).Label));
 
         Click(window, Heading(window, "Controller"));
@@ -139,11 +157,44 @@ public sealed class SettingsTabsTests : IDisposable
         Click(window, Heading(window, "Launcher"));
         Assert.Same(main.Settings, main.Current);
         // (Updates shown since 0.5.0: NotYet; Older copy as this launcher is no portable copy: DataMoveViewModel.Offered)
-        Assert.Equal(["Disc image", "Sounds", "Menus", "Interface scale", "Updates", "Recording", "Folder", "Older copy"], Rows(window));
+        Assert.Equal(["# General", "Disc image", "Update automatically", "Older copy",
+            "# Interface", "Sounds", "Mute", "Controller navigation", "Reduced motion", "Interface scale",
+            "# Replays", "Record races", "Record practice", "Folder"], Form(window));
+        // one setting a row: every on/off one a switch, no box with its own words beside a label
+        Assert.DoesNotContain(window.GetVisualDescendants().OfType<SettingsView>().Single().GetVisualDescendants().OfType<CheckBox>(),
+            c => c.IsEffectivelyVisible);
         Assert.Equal(["Launcher"], Headings(window).Where(b => b.Classes.Contains("on")).Select(b => ((SectionLink)b.DataContext!).Label));
 
         Click(window, Heading(window, "Game"));
         Assert.Equal("Widescreen", Rows(window)[0]);
+    });
+
+    /// <summary>At the launcher's least window, 1280 by 720, each page scrolls down to its last group, and its last
+    /// row comes into the window. With INPUTS_SHOTS naming a folder, each page there at its top and at its foot.</summary>
+    [Fact]
+    public Task AtTheLeastWindowEachPageScrollsToItsLastGroup() => OnAWindow(State("""{"noServer": true}"""), (window, main) =>
+    {
+        window.Width = 1280;
+        window.Height = 720;
+        Click(window, TopTab(window, "Settings"));
+        var scroll = Named<ScrollViewer>(window, "PageScroll");
+        foreach (var (page, first, last) in new[] { ("Game", "# Display", "Show inputs"), ("Online", "# Connection", "Hide swear words"),
+                     ("Launcher", "# General", "Folder") })
+        {
+            Click(window, Heading(window, page));
+            scroll.Offset = default;
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(first, Form(window)[0]);
+            Shot(window, $"settings-{page.ToLowerInvariant()}-top");
+
+            scroll.Offset = new Vector(0, scroll.Extent.Height);
+            Dispatcher.UIThread.RunJobs();
+            var label = window.GetVisualDescendants().OfType<SettingsView>().Single().GetVisualDescendants().OfType<TextBlock>()
+                .Single(t => t.Classes.Contains("label") && t.Text == last && t.IsEffectivelyVisible);
+            Assert.Equal(last, Form(window)[^1]);
+            Assert.InRange(label.TranslatePoint(default, scroll)!.Value.Y, 0, scroll.Viewport.Height - label.Bounds.Height);
+            Shot(window, $"settings-{page.ToLowerInvariant()}-foot");
+        }
     });
 
     [Fact]

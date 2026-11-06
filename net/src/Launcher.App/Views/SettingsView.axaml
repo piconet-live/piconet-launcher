@@ -10,7 +10,7 @@
     <Style Selector="Grid.form > :is(Control)">
       <Setter Property="Margin" Value="0,5" />
     </Style>
-    <!-- a group's heading across the form (Replays): a heading over a hairline -->
+    <!-- a group's heading across the form (Display, Replays): a heading over a hairline -->
     <Style Selector="Grid.form > Border.group">
       <Setter Property="Margin" Value="0,14,0,4" />
       <Setter Property="Padding" Value="0,0,0,6" />
@@ -19,94 +19,116 @@
     </Style>
   </UserControl.Styles>
   <!-- Settings in direction C (Theme.axaml): three of the Settings tab's pages (Game, Online, Launcher; Controller is
-       its own view), each one form of labelled rows, the one showing by the headings above (Tab). Every change is
-       kept as it is made: there is no Save. -->
+       its own view), each one form of labelled rows in groups under headings, the one showing by the headings above
+       (Tab). The rows are written in the order they show, so the keyboard's Tab goes down the page group by group.
+       Every change is kept as it is made: there is no Save. -->
   <Panel>
-    <!-- Game: the game's picture, sound and rumble -->
+    <!-- Game: Display, Graphics, Sound, Controller -->
     <Grid Name="GamePage" Classes="form" ColumnDefinitions="196,*" MaxWidth="900" HorizontalAlignment="Left"
-          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" IsVisible="{Binding OnGame}">
+          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" IsVisible="{Binding OnGame}">
+      <Border Grid.ColumnSpan="2" Classes="group">
+        <TextBlock Classes="section" FontSize="18" Text="Display" />
+      </Border>
       <!-- the game's picture: Normal, the game's own 16:9, or true widescreen (16:9 with Normal's whole height) -->
-      <TextBlock Classes="label" Text="Widescreen" />
-      <ListBox Grid.Column="1" Classes="seg tall" Name="Widescreen"
+      <TextBlock Grid.Row="1" Classes="label" Text="Widescreen" />
+      <ListBox Grid.Row="1" Grid.Column="1" Classes="seg tall" Name="Widescreen"
                ItemsSource="{x:Static vm:SettingsViewModel.WidescreenChoices}" SelectedIndex="{Binding WidescreenIndex}"
                AutomationProperties.Name="Widescreen" />
-      <TextBlock Grid.Row="1" Classes="label" Text="Full screen mode" />
-      <ListBox Grid.Row="1" Grid.Column="1" Classes="seg tall" Name="FullScreen"
+      <TextBlock Grid.Row="2" Classes="label" Text="Full screen mode" />
+      <ListBox Grid.Row="2" Grid.Column="1" Classes="seg tall" Name="FullScreen"
                ItemsSource="{x:Static vm:SettingsViewModel.FullScreenChoices}" SelectedIndex="{Binding FullScreenIndex}"
                AutomationProperties.Name="Full screen mode" />
-      <TextBlock Grid.Row="2" Classes="label" Text="Vertical sync" />
-      <ListBox Grid.Row="2" Grid.Column="1" Classes="seg tall" Name="VerticalSync"
+      <TextBlock Grid.Row="3" Classes="label" Text="Vertical sync" />
+      <ListBox Grid.Row="3" Grid.Column="1" Classes="seg tall" Name="VerticalSync"
                ItemsSource="{x:Static vm:SettingsViewModel.VerticalSyncChoices}" SelectedIndex="{Binding VerticalSyncIndex}"
                AutomationProperties.Name="Vertical sync" />
+      <!-- pictures between the game's 60 steps a second, the one setting of them: the launch file's "auroraHighRefresh"
+           (Off: left out). The launcher writes no "refreshRate" since 0.6.0 -->
+      <TextBlock Grid.Row="4" Classes="label" Text="High refresh"
+                 ToolTip.Tip="Pictures between the game's own steps, for a screen above 60 Hz. No added input delay. The race stays at 60 steps a second; when there is no time for one, it is left out." />
+      <ListBox Grid.Row="4" Grid.Column="1" Classes="seg tall" Name="HighRefresh" ItemsSource="{x:Static vm:SettingsViewModel.AuroraHighRefreshChoices}"
+               SelectedIndex="{Binding AuroraHighRefreshIndex}"
+               AutomationProperties.Name="High refresh" />
       <!-- the game window's strip, which the game draws in this launcher's look -->
-      <TextBlock Grid.Row="3" Classes="label" Text="Frame rate" />
-      <CheckBox Grid.Row="3" Grid.Column="1" Classes="box" Content="Show in the game window" IsChecked="{Binding ShowFrameRate}"
-                IsEnabled="{Binding !FrameRateAlwaysShown}" AutomationProperties.Name="Show frame rate in the game window" />
-      <!-- how loud the game is, as a number: the game starts at it (a game that is open keeps the one it started at) -->
-      <TextBlock Grid.Row="4" Classes="label" Text="Volume" />
-      <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Spacing="12">
-        <Slider Name="GameVolume" Classes="bar" Width="220" Minimum="0" Maximum="100" Value="{Binding GameVolume}" TickFrequency="5"
-                IsSnapToTickEnabled="True" VerticalAlignment="Center" AutomationProperties.Name="Game volume" />
-        <c:NumberBox Name="GameVolumeNumber" Value="{Binding GameVolume}" AutomationProperties.Name="Game volume number" />
-      </StackPanel>
-      <TextBlock Grid.Row="5" Classes="label" Text="Other racers' sounds" />
-      <ListBox Grid.Row="5" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.OtherSoundsChoices}"
-               SelectedIndex="{Binding OtherSoundsIndex}"
-               AutomationProperties.Name="Other racers' sounds" />
-      <!-- the launch file's "rumble": off, no controller rumbles; on, only while the player drives (never spectating) -->
-      <TextBlock Grid.Row="6" Classes="label" Text="Rumble" />
-      <ToggleSwitch Grid.Row="6" Grid.Column="1" Name="Rumble" IsChecked="{Binding Rumble}" OnContent="" OffContent=""
-                    HorizontalAlignment="Left" AutomationProperties.Name="Rumble" />
-      <!-- "Show inputs": the Inputs window, the player's controller as the game reads it, opens with each game start (InputsKeeper) -->
-      <TextBlock Grid.Row="7" Classes="label" Text="Show inputs" />
-      <ToggleSwitch Grid.Row="7" Grid.Column="1" Name="ShowInputs" IsChecked="{Binding ShowInputs}" OnContent="" OffContent=""
-                    HorizontalAlignment="Left" AutomationProperties.Name="Show inputs" />
-      <!-- Aurora draws every start (the launch file's "renderer"); its own keys: "auroraSize", "auroraEdges", "auroraTextures", "auroraColourblind", "auroraHighRefresh", "auroraRayTracing" -->
-      <TextBlock Grid.Row="8" Classes="label" Text="Picture size" />
-      <ListBox Grid.Row="8" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.AuroraSizeChoices}"
+      <TextBlock Grid.Row="5" Classes="label" Text="Show frame rate" />
+      <ToggleSwitch Grid.Row="5" Grid.Column="1" Name="ShowFrameRate" IsChecked="{Binding ShowFrameRate}" OnContent="" OffContent=""
+                    IsEnabled="{Binding !FrameRateAlwaysShown}" HorizontalAlignment="Left" AutomationProperties.Name="Show frame rate" />
+
+      <!-- Aurora draws every start (the launch file's "renderer"); its own keys: "auroraSize", "auroraEdges", "auroraTextures",
+           "auroraRayTracing", "auroraColourblind" (the colourblind filter is Aurora's too: a group of one row would stand
+           alone, so it ends this one) -->
+      <Border Grid.Row="6" Grid.ColumnSpan="2" Classes="group">
+        <TextBlock Classes="section" FontSize="18" Text="Graphics" />
+      </Border>
+      <TextBlock Grid.Row="7" Classes="label" Text="Resolution" />
+      <ListBox Grid.Row="7" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.AuroraSizeChoices}"
                SelectedIndex="{Binding AuroraSizeIndex}"
-               AutomationProperties.Name="Picture size" />
-      <TextBlock Grid.Row="9" Classes="label" Text="Smooth edges" />
-      <ListBox Grid.Row="9" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.AuroraEdgesChoices}"
+               AutomationProperties.Name="Resolution" />
+      <TextBlock Grid.Row="8" Classes="label" Text="Anti-aliasing" />
+      <ListBox Grid.Row="8" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.AuroraEdgesChoices}"
                SelectedIndex="{Binding AuroraEdgesIndex}"
-               AutomationProperties.Name="Smooth edges" />
-      <TextBlock Grid.Row="10" Classes="label" Text="Sharper textures" />
-      <ListBox Grid.Row="10" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.AuroraTexturesChoices}"
+               AutomationProperties.Name="Anti-aliasing" />
+      <TextBlock Grid.Row="9" Classes="label" Text="Anisotropic filtering" />
+      <ListBox Grid.Row="9" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.AuroraTexturesChoices}"
                SelectedIndex="{Binding AuroraTexturesIndex}"
-               AutomationProperties.Name="Sharper textures" />
+               AutomationProperties.Name="Anisotropic filtering" />
+      <!-- the launch file's "auroraRayTracing": the runner's tested set of ray switches. The switch can be turned on on a
+           graphics card the launcher's check found can ray trace (Launcher.Core/RayTracingCard.cs); beside it, why it
+           cannot -->
+      <TextBlock Grid.Row="10" Classes="label" Text="Ray tracing" />
+      <StackPanel Grid.Row="10" Grid.Column="1" Orientation="Horizontal" Spacing="12">
+        <ToggleSwitch Name="RayTracing" IsChecked="{Binding RayTracing}" OnContent="" OffContent=""
+                      IsEnabled="{Binding RayTracingPossible}" AutomationProperties.Name="Ray tracing" />
+        <TextBlock Classes="faint" VerticalAlignment="Center" Text="{Binding RayTracingReason}" IsVisible="{Binding RayTracingReasonShown}" />
+      </StackPanel>
       <TextBlock Grid.Row="11" Classes="label" Text="Colourblind filter" />
       <ListBox Grid.Row="11" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.AuroraColourblindChoices}"
                SelectedIndex="{Binding AuroraColourblindIndex}"
                AutomationProperties.Name="Colourblind filter" />
-      <!-- pictures between the game's 60 steps a second, the one setting of them: the launch file's "auroraHighRefresh"
-           (Off: left out). The launcher writes no "refreshRate" since 0.6.0 -->
-      <TextBlock Grid.Row="12" Classes="label" Text="High refresh"
-                 ToolTip.Tip="Pictures between the game's own steps, for a screen above 60 Hz. No added input delay. The race stays at 60 steps a second; when there is no time for one, it is left out." />
-      <ListBox Grid.Row="12" Grid.Column="1" Classes="seg tall" Name="HighRefresh" ItemsSource="{x:Static vm:SettingsViewModel.AuroraHighRefreshChoices}"
-               SelectedIndex="{Binding AuroraHighRefreshIndex}"
-               AutomationProperties.Name="High refresh" />
-      <!-- the launch file's "auroraRayTracing": the runner's tested set of ray switches. The box can be ticked on a graphics
-           card the launcher's check found can ray trace (Launcher.Core/RayTracingCard.cs); beside it, why it cannot. The box
-           names itself, as Navigation sounds does on the Launcher page -->
+
+      <Border Grid.Row="12" Grid.ColumnSpan="2" Classes="group">
+        <TextBlock Classes="section" FontSize="18" Text="Sound" />
+      </Border>
+      <!-- how loud the game is, as a number: the game starts at it (a game that is open keeps the one it started at) -->
+      <TextBlock Grid.Row="13" Classes="label" Text="Volume" />
       <StackPanel Grid.Row="13" Grid.Column="1" Orientation="Horizontal" Spacing="12">
-        <CheckBox Classes="box" Name="RayTracing" Content="Ray tracing" IsChecked="{Binding RayTracing}"
-                  IsEnabled="{Binding RayTracingPossible}" AutomationProperties.Name="Ray tracing" />
-        <TextBlock Classes="faint" VerticalAlignment="Center" Text="{Binding RayTracingReason}" IsVisible="{Binding RayTracingReasonShown}" />
+        <Slider Name="GameVolume" Classes="bar" Width="220" Minimum="0" Maximum="100" Value="{Binding GameVolume}" TickFrequency="5"
+                IsSnapToTickEnabled="True" VerticalAlignment="Center" AutomationProperties.Name="Game volume" />
+        <c:NumberBox Name="GameVolumeNumber" Value="{Binding GameVolume}" AutomationProperties.Name="Game volume number" />
       </StackPanel>
+      <TextBlock Grid.Row="14" Classes="label" Text="Other racers' sounds" />
+      <ListBox Grid.Row="14" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.OtherSoundsChoices}"
+               SelectedIndex="{Binding OtherSoundsIndex}"
+               AutomationProperties.Name="Other racers' sounds" />
+
+      <Border Grid.Row="15" Grid.ColumnSpan="2" Classes="group">
+        <TextBlock Classes="section" FontSize="18" Text="Controller" />
+      </Border>
+      <!-- the launch file's "rumble": off, no controller rumbles; on, only while the player drives (never spectating) -->
+      <TextBlock Grid.Row="16" Classes="label" Text="Rumble" />
+      <ToggleSwitch Grid.Row="16" Grid.Column="1" Name="Rumble" IsChecked="{Binding Rumble}" OnContent="" OffContent=""
+                    HorizontalAlignment="Left" AutomationProperties.Name="Rumble" />
+      <!-- "Show inputs": the Inputs window, the player's controller as the game reads it, opens with each game start (InputsKeeper) -->
+      <TextBlock Grid.Row="17" Classes="label" Text="Show inputs" />
+      <ToggleSwitch Grid.Row="17" Grid.Column="1" Name="ShowInputs" IsChecked="{Binding ShowInputs}" OnContent="" OffContent=""
+                    HorizontalAlignment="Left" AutomationProperties.Name="Show inputs" />
     </Grid>
 
-    <!-- Online: the input delay first (what players change most), the server, the account -->
-    <Grid Name="OnlinePage" Classes="form" ColumnDefinitions="148,*" MaxWidth="620" HorizontalAlignment="Left"
-          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" IsVisible="{Binding OnOnline}">
+    <!-- Online: Connection (the input delay first: what players change most; the server; the account), Social -->
+    <Grid Name="OnlinePage" Classes="form" ColumnDefinitions="196,*" MaxWidth="668" HorizontalAlignment="Left"
+          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" IsVisible="{Binding OnOnline}">
+      <Border Grid.ColumnSpan="2" Classes="group">
+        <TextBlock Classes="section" FontSize="18" Text="Connection" />
+      </Border>
       <!-- this game's own input delay in a race, in frames: the player's choice -->
-      <TextBlock Classes="label" Text="Input delay" />
-      <ListBox Grid.Column="1" Classes="seg tall figures" Name="InputDelay"
+      <TextBlock Grid.Row="1" Classes="label" Text="Input delay" />
+      <ListBox Grid.Row="1" Grid.Column="1" Classes="seg tall figures" Name="InputDelay"
                ItemsSource="{x:Static vm:SettingsViewModel.InputDelayChoices}" SelectedIndex="{Binding InputDelayIndex}"
                AutomationProperties.Name="Input delay" />
-      <TextBlock Grid.Row="1" Classes="label" Text="Server" />
-      <TextBox Name="ServerBox" Grid.Row="1" Grid.Column="1" Classes="field" Classes.bad="{Binding ServerProblem}" Text="{Binding Server}" PlaceholderText="{Binding ServerPlaceholder}"
+      <TextBlock Grid.Row="2" Classes="label" Text="Server" />
+      <TextBox Name="ServerBox" Grid.Row="2" Grid.Column="1" Classes="field" Classes.bad="{Binding ServerProblem}" Text="{Binding Server}" PlaceholderText="{Binding ServerPlaceholder}"
                KeyDown="OnServerKey" LostFocus="OnServerLeft" AutomationProperties.Name="Server" />
-      <StackPanel Grid.Row="2" Grid.Column="1">
+      <StackPanel Grid.Row="3" Grid.Column="1">
         <!-- an address that is none: the form one has, as a value -->
         <Grid Classes="warnline" ColumnDefinitions="Auto,*" Margin="0,4,0,0" IsVisible="{Binding ServerProblem}">
           <Path Classes="warnmark" />
@@ -126,36 +148,44 @@
                 IsVisible="{Binding NoServer}" HorizontalAlignment="Left" Margin="0,6,0,0"
                 AutomationProperties.Name="Use the official server" />
       </StackPanel>
-      <TextBlock Grid.Row="3" Classes="label" Text="Account" />
-      <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal" Spacing="10">
+      <TextBlock Grid.Row="4" Classes="label" Text="Account" />
+      <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Spacing="10">
         <Button Classes="secondary" Content="Sign in with Discord" IsEnabled="False" />
         <TextBlock Classes="dim" Text="Later" VerticalAlignment="Center" />
       </StackPanel>
+
+      <Border Grid.Row="5" Grid.ColumnSpan="2" Classes="group">
+        <TextBlock Classes="section" FontSize="18" Text="Social" />
+      </Border>
       <!-- the server's notices: Silent takes their tone and taskbar flash away; they still show -->
-      <TextBlock Grid.Row="4" Classes="label" Text="Notices" />
-      <ListBox Grid.Row="4" Grid.Column="1" Classes="seg tall" Name="Notices" ItemsSource="{x:Static vm:SettingsViewModel.NoticesChoices}"
+      <TextBlock Grid.Row="6" Classes="label" Text="Notices" />
+      <ListBox Grid.Row="6" Grid.Column="1" Classes="seg tall" Name="Notices" ItemsSource="{x:Static vm:SettingsViewModel.NoticesChoices}"
                SelectedIndex="{Binding NoticesIndex}" AutomationProperties.Name="Notices" />
       <!-- Discord's status (Launcher.Core DiscordPresence): off clears it at once -->
-      <TextBlock Grid.Row="5" Classes="label" Text="Activity" />
-      <CheckBox Grid.Row="5" Grid.Column="1" Classes="box" Name="ShowOnDiscord" Content="Show on Discord"
-                IsChecked="{Binding ShowOnDiscord}" AutomationProperties.Name="Show on Discord" />
+      <TextBlock Grid.Row="7" Classes="label" Text="Show on Discord" />
+      <ToggleSwitch Grid.Row="7" Grid.Column="1" Name="ShowOnDiscord" IsChecked="{Binding ShowOnDiscord}" OnContent="" OffContent=""
+                    HorizontalAlignment="Left" AutomationProperties.Name="Show on Discord" />
       <!-- the chat's swear words masked (****) in the lines received: on unless the player switches it off -->
-      <TextBlock Grid.Row="6" Classes="label" Text="Chat" />
-      <CheckBox Grid.Row="6" Grid.Column="1" Classes="box" Name="HideSwearWords" Content="Hide swear words"
-                IsChecked="{Binding HideSwearWords}" AutomationProperties.Name="Hide swear words" />
+      <TextBlock Grid.Row="8" Classes="label" Text="Hide swear words" />
+      <ToggleSwitch Grid.Row="8" Grid.Column="1" Name="HideSwearWords" IsChecked="{Binding HideSwearWords}" OnContent="" OffContent=""
+                    HorizontalAlignment="Left" AutomationProperties.Name="Hide swear words" />
     </Grid>
 
-    <!-- Launcher: the disc, the launcher's own sounds (the lobby's moments), updates, replays -->
-    <Grid Name="LauncherPage" Classes="form" ColumnDefinitions="148,*" MaxWidth="620" HorizontalAlignment="Left"
-          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" IsVisible="{Binding OnLauncher}">
-      <TextBlock Classes="label" Text="Disc image" />
-      <Grid Grid.Column="1" ColumnDefinitions="*,8,Auto">
+    <!-- Launcher: General (the disc, updates, an older copy), Interface (the launcher's own sounds: the lobby's moments;
+         the pad on the pages; the animations; its size), Replays. One setting a row, an on/off one a switch (as Rumble) -->
+    <Grid Name="LauncherPage" Classes="form" ColumnDefinitions="196,*" MaxWidth="668" HorizontalAlignment="Left"
+          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" IsVisible="{Binding OnLauncher}">
+      <Border Grid.ColumnSpan="2" Classes="group">
+        <TextBlock Classes="section" FontSize="18" Text="General" />
+      </Border>
+      <TextBlock Grid.Row="1" Classes="label" Text="Disc image" />
+      <Grid Grid.Row="1" Grid.Column="1" ColumnDefinitions="*,8,Auto">
         <TextBox Name="DiscImage" Classes="field" Text="{Binding DiscPath}" PlaceholderText="F-Zero GX (USA), .iso or .gcm"
                  AutomationProperties.Name="Disc image" />
         <Button Grid.Column="2" Classes="secondary" Content="Choose…" Click="OnChooseDisc"
                 AutomationProperties.Name="Choose the disc image" />
       </Grid>
-      <Panel Grid.Row="1" Grid.Column="1" Margin="0,-4,0,2">
+      <Panel Grid.Row="2" Grid.Column="1" Margin="0,-4,0,2">
         <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding !DiscProblem}">
           <Path Classes="tick" />
           <TextBlock Classes="faint" Text="{Binding DiscStatusText}" VerticalAlignment="Center" />
@@ -165,31 +195,62 @@
           <TextBlock Grid.Column="1" FontSize="{StaticResource Size13}" Text="{Binding DiscStatusText}" />
         </Grid>
       </Panel>
-      <TextBlock Grid.Row="2" Classes="label" Text="Sounds" />
-      <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Spacing="12">
+      <!-- the launcher's own updates (UpdateViewModel): the setting, and under it where the update stands and the one
+           action that fits; an older copy's data brought over (DataMoveViewModel). Either can be hidden; the disc's row
+           keeps the group from standing empty -->
+      <TextBlock Grid.Row="3" Classes="label" Text="Update automatically" IsVisible="{x:Static app:NotYet.Updates}" />
+      <ToggleSwitch Grid.Row="3" Grid.Column="1" Name="AutoUpdate" IsChecked="{Binding AutoUpdate}" OnContent="" OffContent=""
+                    IsEnabled="{Binding Update.Installed, FallbackValue=False}" HorizontalAlignment="Left"
+                    IsVisible="{x:Static app:NotYet.Updates}" AutomationProperties.Name="Update automatically" />
+      <StackPanel Grid.Row="4" Grid.Column="1" Spacing="6" Margin="0,-4,0,2" IsVisible="{x:Static app:NotYet.Updates}">
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <TextBlock Classes="faint" Text="{Binding Update.SettingsLine, FallbackValue=''}" VerticalAlignment="Center" TextWrapping="Wrap"
+                     MaxWidth="340" />
+          <Button Name="UpdateAct" Classes="secondary" Content="{Binding Update.ActionText, FallbackValue=''}"
+                  Command="{Binding Update.ActCommand}"
+                  IsVisible="{Binding Update.ActionText, Converter={x:Static StringConverters.IsNotNullOrEmpty}, FallbackValue=False}"
+                  AutomationProperties.Name="{Binding Update.ActionText, FallbackValue=''}" />
+        </StackPanel>
+        <TextBlock Classes="faint" Text="{Binding Update.Reason, FallbackValue=''}"
+                   IsVisible="{Binding Update.Reason, Converter={x:Static StringConverters.IsNotNullOrEmpty}, FallbackValue=False}" />
+      </StackPanel>
+      <TextBlock Grid.Row="5" Classes="label top" Text="Older copy" IsVisible="{Binding Move.Offered}" />
+      <StackPanel Grid.Row="5" Grid.Column="1" Spacing="6" IsVisible="{Binding Move.Offered}">
+        <Button Name="BringOver" Classes="secondary" Content="Bring over an older copy…" Click="OnBringOver"
+                IsEnabled="{Binding Move.Idle}" HorizontalAlignment="Left" AutomationProperties.Name="Bring over an older copy" />
+        <TextBlock Classes="faint" Text="Settings, replays and game files of a copy you unzipped before" TextWrapping="Wrap"
+                   IsVisible="{Binding Move.Text, Converter={x:Static StringConverters.IsNullOrEmpty}}" />
+        <TextBlock Text="{Binding Move.Text}" TextWrapping="Wrap"
+                   IsVisible="{Binding Move.Text, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+      </StackPanel>
+
+      <Border Grid.Row="6" Grid.ColumnSpan="2" Classes="group">
+        <TextBlock Classes="section" FontSize="18" Text="Interface" />
+      </Border>
+      <TextBlock Grid.Row="7" Classes="label" Text="Sounds" />
+      <StackPanel Grid.Row="7" Grid.Column="1" Orientation="Horizontal" Spacing="12">
         <Slider Name="SoundVolume" Classes="bar" Width="220" Minimum="0" Maximum="100" Value="{Binding SoundVolume}" TickFrequency="5"
                 IsSnapToTickEnabled="True" IsEnabled="{Binding !SoundMuted}" VerticalAlignment="Center"
                 AutomationProperties.Name="Launcher sounds volume" />
         <c:NumberBox Name="SoundVolumeNumber" Value="{Binding SoundVolume}" IsEnabled="{Binding !SoundMuted}"
                      AutomationProperties.Name="Launcher sounds volume number" />
-        <CheckBox Name="SoundMuted" Classes="box" Content="Mute" IsChecked="{Binding SoundMuted}" />
       </StackPanel>
-      <!-- the game's cursor and cancel for the pad's and the keyboard's moves; never the mouse's (off by default) -->
-      <CheckBox Grid.Row="3" Grid.Column="1" Name="NavigationSounds" Classes="box" Content="Navigation sounds"
-                IsChecked="{Binding NavigationSounds}" IsEnabled="{Binding !SoundMuted}"
-                AutomationProperties.Name="Navigation sounds" />
-      <!-- the pad works the launcher's pages (D-pad, A, B, L and R); off by default: the controller is the game's -->
-      <TextBlock Grid.Row="4" Classes="label" Text="Menus" />
-      <StackPanel Grid.Row="4" Grid.Column="1" Spacing="8">
-        <CheckBox Name="PadNavigation" Classes="box" Content="Controller navigation"
-                  IsChecked="{Binding PadNavigation}" AutomationProperties.Name="Controller menu navigation" />
-        <!-- the launcher's animations (Controls/Motion.cs) -->
-        <CheckBox Name="ReducedMotion" Classes="box" Content="Reduced motion"
-                  IsChecked="{Binding ReducedMotion}" AutomationProperties.Name="Reduced motion" />
-      </StackPanel>
+      <!-- the launcher's own sounds off, the volume kept for when they are on again -->
+      <TextBlock Grid.Row="8" Classes="label" Text="Mute" />
+      <ToggleSwitch Grid.Row="8" Grid.Column="1" Name="SoundMuted" IsChecked="{Binding SoundMuted}" OnContent="" OffContent=""
+                    HorizontalAlignment="Left" AutomationProperties.Name="Mute" />
+      <!-- the pad works the launcher's pages (D-pad, A, B, L and R), its moves with the game's cursor and cancel; off by
+           default: the controller is the game's. The keyboard and the mouse never sound -->
+      <TextBlock Grid.Row="9" Classes="label" Text="Controller navigation" />
+      <ToggleSwitch Grid.Row="9" Grid.Column="1" Name="PadNavigation" IsChecked="{Binding PadNavigation}" OnContent="" OffContent=""
+                    HorizontalAlignment="Left" AutomationProperties.Name="Controller navigation" />
+      <!-- the launcher's animations (Controls/Motion.cs) -->
+      <TextBlock Grid.Row="10" Classes="label" Text="Reduced motion" />
+      <ToggleSwitch Grid.Row="10" Grid.Column="1" Name="ReducedMotion" IsChecked="{Binding ReducedMotion}" OnContent="" OffContent=""
+                    HorizontalAlignment="Left" AutomationProperties.Name="Reduced motion" />
       <!-- the launcher's size on top of the system's scaling: set by Apply; Ctrl+0, Ctrl+plus, Ctrl+minus at once -->
-      <TextBlock Grid.Row="5" Classes="label" Text="Interface scale" />
-      <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal" Spacing="12">
+      <TextBlock Grid.Row="11" Classes="label" Text="Interface scale" />
+      <StackPanel Grid.Row="11" Grid.Column="1" Orientation="Horizontal" Spacing="12">
         <Slider Name="InterfaceScale" Classes="bar" Width="220" Minimum="{x:Static vm:SettingsViewModel.LeastScale}"
                 Maximum="{x:Static vm:SettingsViewModel.MostScale}" Value="{Binding PendingScale}"
                 TickFrequency="{x:Static vm:SettingsViewModel.ScaleStep}" IsSnapToTickEnabled="True"
@@ -202,52 +263,27 @@
         <Button Name="ApplyScale" Classes="secondary" Content="Apply" Command="{Binding ApplyScaleCommand}"
                 IsEnabled="{Binding CanApplyScale}" AutomationProperties.Name="Apply the interface scale" />
       </StackPanel>
-      <!-- the launcher's own updates (UpdateViewModel): the setting, where the update stands, and the one action
-           that fits; an older copy's data brought over (DataMoveViewModel) -->
-      <TextBlock Grid.Row="6" Classes="label top check" Text="Updates" IsVisible="{x:Static app:NotYet.Updates}" />
-      <StackPanel Grid.Row="6" Grid.Column="1" Spacing="6" IsVisible="{x:Static app:NotYet.Updates}">
-        <CheckBox Name="AutoUpdate" Classes="box" Content="Update automatically" IsChecked="{Binding AutoUpdate}"
-                  IsEnabled="{Binding Update.Installed, FallbackValue=False}" />
-        <StackPanel Orientation="Horizontal" Spacing="10">
-          <TextBlock Classes="faint" Text="{Binding Update.SettingsLine, FallbackValue=''}" VerticalAlignment="Center" TextWrapping="Wrap"
-                     MaxWidth="340" />
-          <Button Name="UpdateAct" Classes="secondary" Content="{Binding Update.ActionText, FallbackValue=''}"
-                  Command="{Binding Update.ActCommand}"
-                  IsVisible="{Binding Update.ActionText, Converter={x:Static StringConverters.IsNotNullOrEmpty}, FallbackValue=False}"
-                  AutomationProperties.Name="{Binding Update.ActionText, FallbackValue=''}" />
-        </StackPanel>
-        <TextBlock Classes="faint" Text="{Binding Update.Reason, FallbackValue=''}"
-                   IsVisible="{Binding Update.Reason, Converter={x:Static StringConverters.IsNotNullOrEmpty}, FallbackValue=False}" />
-      </StackPanel>
 
-      <Border Grid.Row="7" Grid.ColumnSpan="2" Classes="group">
+      <Border Grid.Row="12" Grid.ColumnSpan="2" Classes="group">
         <TextBlock Classes="section" FontSize="18" Text="Replays" />
       </Border>
-      <TextBlock Grid.Row="8" Classes="label" Text="Recording" />
-      <StackPanel Grid.Row="8" Grid.Column="1" Orientation="Horizontal" Spacing="24">
-        <CheckBox Classes="box" Content="Record my races" IsChecked="{Binding RecordReplays}" />
-        <CheckBox Classes="box" Content="Record practice" IsChecked="{Binding RecordPractice}" />
-      </StackPanel>
-      <TextBlock Grid.Row="9" Classes="label" Text="Folder" />
-      <Grid Grid.Row="9" Grid.Column="1" ColumnDefinitions="*,8,Auto">
+      <TextBlock Grid.Row="13" Classes="label" Text="Record races" />
+      <ToggleSwitch Grid.Row="13" Grid.Column="1" Name="RecordReplays" IsChecked="{Binding RecordReplays}" OnContent="" OffContent=""
+                    HorizontalAlignment="Left" AutomationProperties.Name="Record races" />
+      <TextBlock Grid.Row="14" Classes="label" Text="Record practice" />
+      <ToggleSwitch Grid.Row="14" Grid.Column="1" Name="RecordPractice" IsChecked="{Binding RecordPractice}" OnContent="" OffContent=""
+                    HorizontalAlignment="Left" AutomationProperties.Name="Record practice" />
+      <TextBlock Grid.Row="15" Classes="label" Text="Folder" />
+      <Grid Grid.Row="15" Grid.Column="1" ColumnDefinitions="*,8,Auto">
         <TextBox Classes="field" Text="{Binding ReplayFolder}" AutomationProperties.Name="Replay folder" />
         <Button Grid.Column="2" Classes="secondary" Content="Open" Command="{Binding OpenReplayFolderCommand}"
                 AutomationProperties.Name="Open the replay folder" />
       </Grid>
-      <Grid Grid.Row="10" Grid.Column="1" Classes="warnline" ColumnDefinitions="Auto,*"
+      <Grid Grid.Row="16" Grid.Column="1" Classes="warnline" ColumnDefinitions="Auto,*"
             IsVisible="{Binding FolderNotice, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
         <Path Classes="warnmark" />
         <TextBlock Grid.Column="1" Text="{Binding FolderNotice}" />
       </Grid>
-      <TextBlock Grid.Row="11" Classes="label top" Text="Older copy" IsVisible="{Binding Move.Offered}" />
-      <StackPanel Grid.Row="11" Grid.Column="1" Spacing="6" IsVisible="{Binding Move.Offered}">
-        <Button Name="BringOver" Classes="secondary" Content="Bring over an older copy…" Click="OnBringOver"
-                IsEnabled="{Binding Move.Idle}" HorizontalAlignment="Left" AutomationProperties.Name="Bring over an older copy" />
-        <TextBlock Classes="faint" Text="Settings, replays and game files of a copy you unzipped before" TextWrapping="Wrap"
-                   IsVisible="{Binding Move.Text, Converter={x:Static StringConverters.IsNullOrEmpty}}" />
-        <TextBlock Text="{Binding Move.Text}" TextWrapping="Wrap"
-                   IsVisible="{Binding Move.Text, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-      </StackPanel>
     </Grid>
   </Panel>
 </UserControl>

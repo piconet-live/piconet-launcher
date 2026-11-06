@@ -19,6 +19,19 @@ public sealed class CommandLineTests : IDisposable
         return file;
     }
 
+    /// <summary>The windows are drawn onto their own surface, which a window capture's Automatic way (BitBlt) reads;
+    /// a launch file's <c>"windowComposition"</c> gives back Avalonia's default, Windows' composition first
+    /// (<see cref="WindowsDrawing"/>).</summary>
+    [Fact]
+    public void TheWindowsAreDrawnOnTheirOwnSurfaceUnlessALaunchFileAsksForComposition()
+    {
+        Assert.Equal([Avalonia.Win32CompositionMode.RedirectionSurface], WindowsDrawing.Options(DebugSettings.Off).CompositionMode);
+        var (line, refusal) = CommandLine.Parse(["--config", LaunchFile("""{"windowComposition": true}""")]);
+        Assert.Null(refusal);
+        Assert.Equal(new Avalonia.Win32PlatformOptions().CompositionMode, WindowsDrawing.Options(line!.Debug).CompositionMode);
+        Assert.Equal(Avalonia.Win32CompositionMode.WinUIComposition, WindowsDrawing.Options(line.Debug).CompositionMode![0]);
+    }
+
     [Fact]
     public void WithoutAnOptionItIsTheWindowWithEveryTestSettingOff()
     {

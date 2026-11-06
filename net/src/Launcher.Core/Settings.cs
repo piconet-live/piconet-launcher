@@ -214,12 +214,12 @@ public sealed record LauncherSettings
     /// <summary>Aurora's samples for each pixel (<c>"auroraEdges"</c>): one of <see cref="AuroraEdgeCounts"/>.</summary>
     public int AuroraEdges { get; init; } = AuroraEdgeCounts[0].Count;
 
-    public static IReadOnlyList<(int Count, string Words)> AuroraEdgeCounts { get; } = [(1, "Off"), (4, "On")];
+    public static IReadOnlyList<(int Count, string Words)> AuroraEdgeCounts { get; } = [(1, "Off"), (4, "4x MSAA")];
 
     /// <summary>Aurora's anisotropic filtering (<c>"auroraTextures"</c>): one of <see cref="AuroraTextureLevels"/>.</summary>
     public int AuroraTextures { get; init; } = AuroraTextureLevels[0].Level;
 
-    public static IReadOnlyList<(int Level, string Words)> AuroraTextureLevels { get; } = [(1, "As the game"), (4, "4x"), (8, "8x"), (16, "16x")];
+    public static IReadOnlyList<(int Level, string Words)> AuroraTextureLevels { get; } = [(1, "Off"), (4, "4x"), (8, "8x"), (16, "16x")];
 
     /// <summary>Aurora's colour filter of the whole picture (<c>"auroraColourblind"</c>): one of <see cref="AuroraColourblindFilters"/>, off by default.</summary>
     public string AuroraColourblind { get; init; } = AuroraColourblindFilters[0].Name;
@@ -350,13 +350,10 @@ public sealed record LauncherSettings
     /// <summary>The launcher's own sounds are off; the volume is kept for when they are on again.</summary>
     public bool SoundMuted { get; init; }
 
-    /// <summary>The game's menu sounds as the pad or the keyboard moves between controls (the cursor) and on the
-    /// pad's B (back); never for the mouse (the Settings page's "Navigation sounds", Launcher; off by default:
-    /// minimal sounds). Muted and at the volume as the launcher's other sounds.</summary>
-    public bool NavigationSounds { get; init; }
-
     /// <summary>The pad works the launcher's pages (the Settings page's "Controller navigation", Launcher; off by default: a
-    /// controller left in the window does nothing to it). Setting a control on the Controller page reads the pad either way.</summary>
+    /// controller left in the window does nothing to it). Setting a control on the Controller page reads the pad either way.
+    /// On, the pad's moves between controls sound the game's cursor and its B the game's cancel (muted and at the volume
+    /// as the launcher's other sounds); the keyboard and the mouse never sound.</summary>
     public bool PadNavigation { get; init; }
 
     /// <summary>The server's notices come without their tone and the taskbar's flash (the Settings page's "Notices":

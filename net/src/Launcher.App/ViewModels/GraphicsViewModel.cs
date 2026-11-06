@@ -6,7 +6,7 @@ using Launcher.Core;
 namespace Launcher.App.ViewModels;
 
 /// <summary>The graphics cache as the window shows it (<see cref="AppState.Pipelines"/>): while it is built, a block in
-/// the left column on every page (the words, the share built, a bar, and why it is built), and the question before
+/// the left column on every page (the words, the share built and a bar), and the question before
 /// ray tracing is turned on with its cache not built yet (over the page: Build or Cancel). Labels and values only.</summary>
 public sealed partial class GraphicsViewModel : ViewModelBase
 {
@@ -32,10 +32,6 @@ public sealed partial class GraphicsViewModel : ViewModelBase
     [ObservableProperty]
     public partial string Line { get; set; } = "";
 
-    /// <summary>Why it is built, in a few words (the first start, a driver, an update, the mods).</summary>
-    [ObservableProperty]
-    public partial string Why { get; set; } = "";
-
     /// <summary>The question before ray tracing is turned on.</summary>
     [ObservableProperty]
     public partial bool Asking { get; set; }
@@ -52,20 +48,8 @@ public sealed partial class GraphicsViewModel : ViewModelBase
         Building = status.Phase == PipelinePhase.Building;
         Fraction = Math.Clamp(status.Fraction, 0, 1);
         Line = string.Create(CultureInfo.InvariantCulture, $"{AppState.PreparingText} · {(int)Math.Floor(Fraction * 100)}%");
-        Why = Building ? WhyText(status.Why, status.Look) : "";
         Asking = _state.RaysQuestion;
     }
-
-    /// <summary>Why the cache is built, as the column says it.</summary>
-    public static string WhyText(PipelineWhy? why, string? look) => why switch
-    {
-        PipelineWhy.First when look == PipelineCache.Rays => "For ray tracing, once",
-        PipelineWhy.First => "First start, once",
-        PipelineWhy.Drivers => "Your graphics driver changed",
-        PipelineWhy.Aurora => "The game was updated",
-        PipelineWhy.Mods => "Your mods changed",
-        _ => "",
-    };
 
     /// <summary>Build: ray tracing turned on, and its cache built.</summary>
     [RelayCommand]

@@ -15,8 +15,8 @@ namespace Launcher.Tests;
 /// The graphics cache (<see cref="PipelineCache"/>, <see cref="AppState.Pipelines"/>) in the launcher's own window, with
 /// a script that stands for the runner's <c>--build-pipelines</c>: it says a share built, then holds while the test's
 /// hold file is there, then says done. The window is on Quick Play's page, as after the first screen (the first start's
-/// own build: FirstScreenTests.Graphics.cs). Ray tracing ticked in Settings asks first (Cancel: off, nothing built;
-/// Build: on, and its look built while every start waits, the column saying so); once built, ticking it asks nothing.
+/// own build: FirstScreenTests.Graphics.cs). Ray tracing turned on in Settings asks first (Cancel: off, nothing built;
+/// Build: on, and its look built while every start waits, the column saying so); once built, turning it on asks nothing.
 /// Another Aurora (its library changed) clears Dawn's cache and builds again, saying why; no Aurora beside the runner builds
 /// nothing. With <c>PIPELINE_SHOTS</c> set
 /// to a folder, the window is kept there as PNGs at each of those moments.
@@ -89,7 +89,7 @@ public sealed class GraphicsCacheTests : IDisposable
     private int BuildsRun => File.Exists(Builds) ? File.ReadAllLines(Builds).Length : 0;
 
     /// <summary>The left column's block while the cache is built: its words and why; null: it does not show.</summary>
-    private static (string? Line, string? Why, double Bar)? Column(Window window)
+    private static (string? Line, string? Below, double Bar)? Column(Window window)
     {
         var block = Named<Border>(window, "Graphics");
         if (!block.IsEffectivelyVisible)
@@ -166,9 +166,9 @@ public sealed class GraphicsCacheTests : IDisposable
             Pump(() => main.Settings.RayTracingReason.Length > 0 || main.Settings.RayTracingPossible);
             main.Settings.RayTracingPossible = true;                             // (the made-up card can)
             Dispatcher.UIThread.RunJobs();
-            var box = Named<CheckBox>(window, "RayTracing");
+            var box = Named<ToggleSwitch>(window, "RayTracing");
 
-            // ticked: the question, the box back off, nothing built
+            // turned on: the question, the switch back off, nothing built
             box.BringIntoView();
             Click(window, box);
             Pump(() => main.Graphics.Asking, $"the question was not asked (box {box.IsChecked}, shown {box.IsEffectivelyVisible}, on {box.IsEffectivelyEnabled}, setting {state.Settings.RayTracing}, first {state.RaysBuildFirst})");
@@ -182,7 +182,7 @@ public sealed class GraphicsCacheTests : IDisposable
             Assert.Equal(PipelinePhase.Ready, state.Pipelines.Phase);
             Assert.Equal(1, BuildsRun);
 
-            // ticked again and Build: on, and its look built while every start waits
+            // turned on again and Build: on, and its look built while every start waits
             File.WriteAllText(Hold, "");
             Click(window, box);
             Pump(() => main.Graphics.Asking, "the question was not asked again");
@@ -190,7 +190,7 @@ public sealed class GraphicsCacheTests : IDisposable
             PumpTelling(state, () => state.Pipelines is { Phase: PipelinePhase.Building, Look: PipelineCache.Rays, Fraction: > 0.4 }, "the rays' build did not start");
             Assert.True(state.Settings.RayTracing);
             Pump(() => box.IsChecked == true && Column(window)?.Bar > 0.4);
-            Assert.Equal(("Preparing graphics · 42%", "For ray tracing, once", 0.42), Column(window));
+            Assert.Equal(("Preparing graphics · 42%", (string?)null, 0.42), Column(window));
             Assert.Equal(AppState.PreparingText, state.PlayOffline());
             Shot(window, "5-rays-progress");
             main.Current = main.Home;
@@ -202,8 +202,8 @@ public sealed class GraphicsCacheTests : IDisposable
 
             // built: off and on again asks nothing and builds nothing
             main.ShowSettings(SettingsTab.Game);
-            Pump(() => Named<CheckBox>(window, "RayTracing").IsEffectivelyVisible);
-            box = Named<CheckBox>(window, "RayTracing");
+            Pump(() => Named<ToggleSwitch>(window, "RayTracing").IsEffectivelyVisible);
+            box = Named<ToggleSwitch>(window, "RayTracing");
             box.BringIntoView();
             Click(window, box);
             PumpTelling(state, () => !state.Settings.RayTracing && state.Pipelines is { Phase: PipelinePhase.Ready, Look: PipelineCache.Plain },
@@ -235,7 +235,7 @@ public sealed class GraphicsCacheTests : IDisposable
             PumpTelling(again, () => again.Pipelines is { Phase: PipelinePhase.Building, Fraction: > 0.4 }, "the build did not start again");
             Assert.Equal(PipelineWhy.Aurora, again.Pipelines.Why);
             Assert.False(File.Exists(dawn));                                      // nothing of the old Aurora's is of use
-            Pump(() => Column(window)?.Why == "The game was updated");
+            Pump(() => Column(window) is { Line: not null, Below: null });
             Shot(window, "7-stamp-change-build");
             File.Delete(Hold);
             PumpTelling(again, () => again.Pipelines.Phase == PipelinePhase.Ready, "the build did not end");

@@ -66,8 +66,10 @@ The few tests of what only `Launcher.App`'s own code does, run without a window 
 - `VolumeSettingsTests.cs`: the Settings page's game volume moved with the mouse and the keys, then in the game's own
   settings at a start of the game (a script); the launcher's volume heard when set, and Mute. In the Controller
   page's collection: a start of the game ends every controller helper of the process.
-- `SettingsTabsTests.cs`: the Settings tab's four pages pressed by their headings, each with its own rows; the page
-  last chosen kept for this run and the next, a page the file names that is none of them read as Game; RACE
+- `SettingsTabsTests.cs`: the Settings tab's four pages pressed by their headings, each with its own rows in groups
+  under headings (Display, Graphics, Sound, Controller; Connection, Social; General, Interface, Replays), each
+  scrolled to its last group in the least window (1280 by 720; with `INPUTS_SHOTS` the pages as PNGs, top and foot); the
+  page last chosen kept for this run and the next, a page the file names that is none of them read as Game; RACE
   without a disc and Home's "Choose your disc" open Launcher, RACE without a server Online.
 - `InterfaceScaleTests.cs`: the interface scale: the file's value read defensively, the keys' steps and ends, the
   slider dragged changing nothing until Apply, the keys acting at once from a text box, the window's least size
