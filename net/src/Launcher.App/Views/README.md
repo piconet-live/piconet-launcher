@@ -7,6 +7,7 @@ view's own: sizes that answer the window, a key, a file picker.
 | File | What it is |
 |---|---|
 | `MainWindow.axaml` | The window: its title bar, the left column, the tabs and the page showing |
+| `InputsWindow` | "Show inputs": a window of its own, the player's controller live from the game's status board (`InputsKeeper` opens and closes it) |
 | `RacerView`, `PlayControlView`, `ConnectionView` | The left column's parts: the player, the play control, the connection dot |
 | `NameMenu` | The menu that changes the player's name; whoever shows it calls `Begin` when it opens and closes it at `Done`. It saves, then closes (closed first, its Save would do nothing) |
 | `DiscView` | The first screen |

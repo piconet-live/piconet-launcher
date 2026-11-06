@@ -57,7 +57,7 @@
       <TextBlock Grid.Row="6" Classes="label" Text="Rumble" />
       <ToggleSwitch Grid.Row="6" Grid.Column="1" Name="Rumble" IsChecked="{Binding Rumble}" OnContent="" OffContent=""
                     HorizontalAlignment="Left" AutomationProperties.Name="Rumble" />
-      <!-- the launch file's "showInputs": a controller over the picture, the inputs of the racer in view -->
+      <!-- "Show inputs": the Inputs window, the player's controller as the game reads it, opens with each game start (InputsKeeper) -->
       <TextBlock Grid.Row="7" Classes="label" Text="Show inputs" />
       <ToggleSwitch Grid.Row="7" Grid.Column="1" Name="ShowInputs" IsChecked="{Binding ShowInputs}" OnContent="" OffContent=""
                     HorizontalAlignment="Left" AutomationProperties.Name="Show inputs" />

@@ -10,17 +10,17 @@ using SkiaSharp;
 namespace Launcher.App.Controls;
 
 /// <summary>
-/// The Controller page's test: m-overlay's default skin (bkacjios/m-overlay, MIT: Assets/PadOverlay/LICENSE.txt) drawn
-/// live, layer for layer and in its order, from what it is given (<see cref="Pad"/>: the game's own reading of the
-/// port). It keeps the skin's shape, 2 to 1, and takes the width it is given.
+/// m-overlay's default skin (bkacjios/m-overlay, MIT: Assets/PadOverlay/LICENSE.txt) drawn live, layer for layer and in
+/// its order, from what it is given (<see cref="Pad"/>: a pad as the game reads it, clamped; null: at rest): the
+/// Controller page's test and the Inputs window. It keeps the skin's shape, 2 to 1, and takes the width it is given.
 /// </summary>
 public sealed class PadOverlay : Control
 {
-    public static readonly StyledProperty<HelperPad?> PadProperty = AvaloniaProperty.Register<PadOverlay, HelperPad?>(nameof(Pad));
+    public static readonly StyledProperty<PadPicture?> PadProperty = AvaloniaProperty.Register<PadOverlay, PadPicture?>(nameof(Pad));
 
     static PadOverlay() => AffectsRender<PadOverlay>(PadProperty);
 
-    public HelperPad? Pad
+    public PadPicture? Pad
     {
         get => GetValue(PadProperty);
         set => SetValue(PadProperty, value);
@@ -35,7 +35,7 @@ public sealed class PadOverlay : Control
     public override void Render(DrawingContext context)
     {
         base.Render(context);
-        context.Custom(new Drawing(new Rect(Bounds.Size), Pad is { Connected: true } pad ? pad : null));
+        context.Custom(new Drawing(new Rect(Bounds.Size), Pad));
     }
 
     /// <summary>The pictures, read once: Skia's images belong to no thread, and the drawing runs on the renderer's.</summary>
@@ -62,7 +62,7 @@ public sealed class PadOverlay : Control
 
     private static readonly byte[] SameColour = [.. Enumerable.Range(0, 256).Select(i => (byte)i)];
 
-    private sealed class Drawing(Rect bounds, HelperPad? pad) : ICustomDrawOperation
+    private sealed class Drawing(Rect bounds, PadPicture? pad) : ICustomDrawOperation
     {
         public Rect Bounds => bounds;
 
@@ -93,11 +93,9 @@ public sealed class PadOverlay : Control
 
         private void Skin(SKCanvas canvas)
         {
-            var (stickX, stickY) = PadSkin.ClampedStick(pad?.StickX ?? 128, pad?.StickY ?? 128);
-            var (x, y) = PadSkin.Translate(stickX, stickY, 72);
+            var (x, y) = PadSkin.Translate(pad?.StickX ?? 0, pad?.StickY ?? 0, 72);
             Stick(canvas, PadSkin.Stick, x, y, "joystick", SKColors.White);
-            var (cStickX, cStickY) = PadSkin.ClampedCStick(pad?.CStickX ?? 128, pad?.CStickY ?? 128);
-            (x, y) = PadSkin.Translate(cStickX, cStickY, 59);
+            (x, y) = PadSkin.Translate(pad?.CStickX ?? 0, pad?.CStickY ?? 0, 59);
             Stick(canvas, PadSkin.CStick, x, y, "c-stick", PadSkin.CStickColour);
 
             Triggers(canvas);
@@ -143,8 +141,8 @@ public sealed class PadOverlay : Control
         {
             using var white = new SKPaint { Color = SKColors.White, IsAntialias = true };
             using var line = new SKPaint { Color = SKColors.White, IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 4 };
-            var l = On("L") ? 1 : PadSkin.Trigger(PadSkin.ClampedTrigger(pad?.L ?? 0));
-            var r = On("R") ? 1 : PadSkin.Trigger(PadSkin.ClampedTrigger(pad?.R ?? 0));
+            var l = On("L") ? 1 : PadSkin.Trigger(pad?.L ?? 0);
+            var r = On("R") ? 1 : PadSkin.Trigger(pad?.R ?? 0);
 
             // L: the outline, the mark of the press, the bar filling from the left, the press's end at the right
             Picture(canvas, "analog-outline", 24 + 6, 14, SKColors.White, 116, 24);

@@ -152,7 +152,7 @@
     <!-- the test: what the game reads from this port now -->
     <StackPanel Grid.Row="1" Grid.Column="2">
       <Border Classes="well pad" Classes.dim="{Binding PadDim}" Padding="0,10,0,8">
-        <c:PadOverlay Pad="{Binding Pad}" />
+        <c:PadOverlay Pad="{Binding PadShown}" />
       </Border>
       <Grid Classes="warnline" ColumnDefinitions="Auto,*" Margin="0,8,0,0"
             IsVisible="{Binding PadNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">

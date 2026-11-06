@@ -241,6 +241,34 @@ public sealed unsafe class BoardTests : IDisposable
         Assert.Same(s, board.Latest);
     }
 
+    /// <summary>The local player's pad for the Inputs window: none before the game writes one, the game's numbers as it
+    /// read them, none again when it says it holds none (a replay, a watched race), a number out of its reach kept within
+    /// it, and none once the board goes with its game.</summary>
+    [Fact]
+    public void TheLocalPadIsReadForTheInputsWindow()
+    {
+        var board = GameBoard.Create(_folder);
+        using var game = new FakeGame(board.Path);
+        board.Look(S(0));
+        Assert.Null(board.Pad);
+        game.View.WriteLocalPad(new BoardLocalPad { Serial = 1, Held = 1, Buttons = 0x1110, StickX = -72, StickY = 40, CStickX = 59, CStickY = -3, L = 150, R = 12 });
+        board.Look(S(0.016));
+        Assert.Equal(new PadReading(0x1110, -72, 40, 59, -3, 150, 12), board.Pad);
+        Assert.Equal(["Z", "A", "Start"], board.Pad!.Held);
+        var same = board.Pad;
+        board.Look(S(0.032));   // (the same serial: the same reading)
+        Assert.Same(same, board.Pad);
+        game.View.WriteLocalPad(new BoardLocalPad { Serial = 2, Held = 0 });
+        board.Look(S(0.048));
+        Assert.Null(board.Pad);
+        game.View.WriteLocalPad(new BoardLocalPad { Serial = 3, Held = 1, Buttons = 0xFFFF_FFFF, StickX = 900, StickY = -900, CStickX = int.MinValue, CStickY = 60, L = 4000, R = uint.MaxValue });
+        board.Look(S(0.064));
+        Assert.Equal(new PadReading(0x1F7F, 72, -72, -59, 59, 150, 150), board.Pad);
+        Assert.Equal(12, board.Pad!.Held.Count);
+        board.Dispose();
+        Assert.Null(board.Pad);
+    }
+
     /// <summary>The board is a file in the launcher's own folder that only this PC's programs can open; still, what
     /// cannot be shown is not passed on (the check the coordinator's reports pass).</summary>
     [Fact]

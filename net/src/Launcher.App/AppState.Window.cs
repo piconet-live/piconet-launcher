@@ -20,7 +20,7 @@ public sealed partial class AppState
             Settings.FrameRateShown(StackStamp.Current, testGame: !ReferenceEquals(Debug, DebugSettings.Off)),
             NamePicture: null, TaskbarGroup,
             Settings.GamePresent, Settings.VerticalSync, Settings.GameFullScreen,
-            Rumble: Settings.Rumble, Camera: Settings.StartCamera, ShowInputs: Settings.ShowInputs));
+            Rumble: Settings.Rumble, Camera: Settings.StartCamera));
 
     /// <summary>Aurora's keys (Aurora draws every start: <see cref="GameWindow.Renderer"/>), left out at their defaults.
     /// Ray tracing is left out on a graphics card the check found cannot (<see cref="RayTracingCard"/>).</summary>
