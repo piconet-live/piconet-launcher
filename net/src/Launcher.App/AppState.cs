@@ -288,7 +288,9 @@ public sealed partial class AppState(SettingsStore store, string dataFolder)
             return problem;
         }
         var debug = GameDebug.From(Debug);
-        Fork = RecompLaunch.StartOffline(paths, WindowWithBoard(), Settings.UserFolder, Debug.RunnerArguments, debug, controllerSetup, Volume);
+        // the picture as in a race (Settings, Game, "Widescreen"); the game's own controller options keep the player's saved one
+        Fork = RecompLaunch.StartOffline(paths, WindowWithBoard(), Settings.UserFolder, Debug.RunnerArguments, debug, controllerSetup, Volume,
+            controllerSetup ? null : Settings.Widescreen);
         Running(GameRun.Offline);
         Watch(Fork);
         Changed?.Invoke();

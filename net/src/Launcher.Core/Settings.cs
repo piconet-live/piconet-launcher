@@ -12,7 +12,7 @@ public enum OtherSounds
     Off,
 }
 
-/// <summary>The game's picture in a race and a replay (the Settings page's "Widescreen"). <see cref="Off"/>: the
+/// <summary>The game's picture in a race, a replay and offline play (the Settings page's "Widescreen"). <see cref="Off"/>: the
 /// game's Normal, 4:3. <see cref="Game"/>: the game's own Wide Screen, 16:9, which shows a little more at the sides
 /// than Normal and cuts the top and bottom. <see cref="TrueWide"/>: true widescreen, 16:9 with Normal's whole height
 /// and the sides widened (the launch file's <c>"trueWidescreen"</c>; port/image/sites_view.py). For the picture

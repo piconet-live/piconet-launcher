@@ -165,11 +165,15 @@ public static class GameLaunchFile
     /// setting).</param>
     /// <param name="overlay">The mods' files the runner lays over the disc at boot (<see cref="ModOverlay"/>); none: the
     /// file has no <c>overlay</c>.</param>
+    /// <param name="widescreen">The picture, as in a race: the game's screen option is set to it in memory every frame
+    /// (the game's Normal, or its own 16:9 mode), with true widescreen's race view; null: the file says nothing of
+    /// it, and the player's saved option stands.</param>
     public static string Offline(string? bundle, GameDebug? debug = null, GameWindow? window = null, bool controllerSetup = false,
-        IReadOnlyList<OverlayFile>? overlay = null)
+        IReadOnlyList<OverlayFile>? overlay = null, WidescreenMode? widescreen = null)
     {
         var about = controllerSetup ? "Piconet Launcher: the game's controller options" : "Piconet Launcher: offline play";
-        return Text(new LaunchFile(about, bundle, ControllerSetup: controllerSetup), debug, window, overlay);
+        var file = new LaunchFile(about, bundle, ControllerSetup: controllerSetup);
+        return Text(widescreen is { } mode ? Screen(file, mode) : file, debug, window, overlay);
     }
 
     /// <summary>A race from a match file's text (<see cref="MatchFile.Build"/>, or a file somebody wrote).</summary>
