@@ -200,7 +200,7 @@ public sealed class PracticePageTests : IDisposable
         // rules the host's other rules
         string[] modeRows = [.. mode.Params.Select(p => p.Label)];
         Assert.Equal(["Machine", "Stats", "Machine setting", .. modeRows, "Rewind", "Save · Load", "Boost from the start", "Mines respawn"], labels);
-        Assert.Equal(["Laps", "Restore"], modeRows.Order());
+        Assert.Equal(["Laps", "Restore", "Resume countdown"], modeRows);
         Assert.Equal(["PRACTICE", "RACE RULES"], window.GetVisualDescendants().OfType<TextBlock>()
             .Where(t => t.Classes.Contains("grouphead") && t.IsEffectivelyVisible).Select(t => t.Text));
         // the host's rules that mean something alone, from the one list a custom lobby shows too, but those the mode
@@ -256,6 +256,14 @@ public sealed class PracticePageTests : IDisposable
         Assert.False(main.Practice.Setup.BoostFromStart);
         Click(window, RowOf(window, "Boost from the start").GetVisualDescendants().OfType<ToggleSwitch>().Single());
         Assert.True(main.Practice.Setup.BoostFromStart);
+
+        // the countdown after a resume or a load: 1 s as it opens, the times dropped down (a lobby's row for a delay)
+        var resume = Assert.IsType<ChoiceRule>(main.Practice.Param("resume"));
+        Assert.Equal(["0 s", "1 s", "2 s", "3 s", "4 s", "5 s"], resume.Options);
+        Assert.Equal("1 s", resume.Chosen);
+        Assert.Single(RowOf(window, "Resume countdown").GetVisualDescendants().OfType<ComboBox>());
+        resume.Selected = 3;
+        Assert.Equal(180, main.Practice.Setup.Params!["resume"]);
 
         // the mines come back after Quick Play's 200 ms; Off: they stay gone, and the delay waits, kept (a lobby's row:
         // its switch, then the delay)
