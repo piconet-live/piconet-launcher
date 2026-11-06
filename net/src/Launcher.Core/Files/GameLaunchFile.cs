@@ -74,7 +74,6 @@ public sealed record TaskbarGroup(string Id, string Program, string Name)
 /// <param name="Name">The name in the strip (the launch file's <c>"windowName"</c>); null: none.</param>
 /// <param name="ShowFrameRate">The strip shows the frame rate (<c>"showFrameRate"</c>).</param>
 /// <param name="ShowInputs">A controller over the picture shows the inputs (<c>"showInputs"</c>).</param>
-/// <param name="Renderer">Who draws the picture (<c>"renderer"</c>); null: the emulator, as ever.</param>
 /// <param name="AuroraSize">Aurora's picture size (<c>"auroraSize"</c>); null: Auto.</param>
 /// <param name="AuroraEdges">Aurora's samples for each pixel (<c>"auroraEdges"</c>); 0: left out.</param>
 /// <param name="AuroraTextures">Aurora's anisotropic filtering (<c>"auroraTextures"</c>); 0: left out.</param>
@@ -95,9 +94,6 @@ public sealed record TaskbarGroup(string Id, string Program, string Name)
 /// neither: not written, and the game's full screen is the borderless window.</param>
 /// <param name="Board">The launcher's status board for this game (<see cref="GameBoard.Path"/>; <c>"board"</c>): the
 /// channel by which the launcher sees the game run and stand still, gets the race, and asks it to stop. Null: none.</param>
-/// <param name="RefreshRate">Pictures a second where frames are drawn between two steps (the player's setting,
-/// <see cref="LauncherSettings.GameRefreshRate"/>; <c>"refreshRate"</c>: "120", "240" or "display"). Null, or none
-/// of them: not written, and the game draws its own picture a step.</param>
 /// <param name="Rumble">The controllers may rumble (the player's setting, <see cref="LauncherSettings.Rumble"/>;
 /// <c>"rumble": false</c>, written only when off: a runner from before the key refuses it).</param>
 /// <param name="Camera">The chase camera view a race starts in, 1 to 3 or 4 first person (the player's last,
@@ -105,11 +101,15 @@ public sealed record TaskbarGroup(string Id, string Program, string Name)
 /// view: a runner from before the key refuses it). 0: the game's own.</param>
 public sealed record GameWindow(string Title, string? Name = null, bool ShowFrameRate = false, Picture? NamePicture = null,
     TaskbarGroup? Taskbar = null, string? Present = null, bool VerticalSync = false, string? FullScreen = null,
-    string? Board = null, string? RefreshRate = null, bool Rumble = true, int Camera = 0, bool ShowInputs = false,
-    string? Renderer = null, string? AuroraSize = null, int AuroraEdges = 0, int AuroraTextures = 0, string? AuroraColourblind = null, int AuroraHighRefresh = 0, bool AuroraRayTracing = false)
+    string? Board = null, bool Rumble = true, int Camera = 0, bool ShowInputs = false,
+    string? AuroraSize = null, int AuroraEdges = 0, int AuroraTextures = 0, string? AuroraColourblind = null, int AuroraHighRefresh = 0, bool AuroraRayTracing = false)
 {
     /// <summary>The largest name picture the game's reader takes.</summary>
     public const int MostPictureWidth = LaunchFormat.WindowNamePictureWidthHigh, MostPictureHeight = LaunchFormat.WindowNamePictureHeightHigh;
+
+    /// <summary>Who draws the picture (<c>"renderer"</c>): Aurora, in every start since 0.6.0 (the emulator's own
+    /// pictures are no choice any more; a runner given no key draws them, which only tests do).</summary>
+    public const string Renderer = "aurora";
 
     /// <summary>The launch file with the window's members.</summary>
     internal LaunchFile Into(LaunchFile file) => file with
@@ -135,9 +135,6 @@ public sealed record GameWindow(string Title, string? Name = null, bool ShowFram
         Present = Present is LauncherSettings.PresentAsBefore or LauncherSettings.PresentAtTheCopy ? Present : null,
         VerticalSync = VerticalSync,
         FullScreen = FullScreen is LauncherSettings.FullScreenBorderless or LauncherSettings.FullScreenExclusive ? FullScreen : null,
-        RefreshRate = RefreshRate is LauncherSettings.Refresh120 or LauncherSettings.Refresh240 or LauncherSettings.RefreshAsTheDisplay
-            ? RefreshRate
-            : null,
         // a group the game would refuse is left out, as the picture is: the game's window then has its own button
         Taskbar = Taskbar is { Taken: true } group ? new LaunchTaskbar(group.Id, group.Program, group.Name) : null,
         Board = Board,

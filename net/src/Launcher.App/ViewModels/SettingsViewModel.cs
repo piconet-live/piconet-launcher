@@ -42,7 +42,6 @@ public sealed partial class SettingsViewModel : ViewModelBase
         WidescreenIndex = Enum.IsDefined(s.Widescreen) ? (int)s.Widescreen : (int)WidescreenMode.Game;
         ShowFrameRate = s.ShowFrameRate || FrameRateAlwaysShown;
         ShowInputs = s.ShowInputs;
-        PictureEngineIndex = Math.Max(0, LauncherSettings.PictureEngines.ToList().FindIndex(e => e.Name == s.PictureEngine));
         AuroraSizeIndex = Math.Max(0, LauncherSettings.AuroraSizes.ToList().FindIndex(a => a.Name == s.AuroraSize));
         AuroraEdgesIndex = Math.Max(0, LauncherSettings.AuroraEdgeCounts.ToList().FindIndex(a => a.Count == s.AuroraEdges));
         AuroraTexturesIndex = Math.Max(0, LauncherSettings.AuroraTextureLevels.ToList().FindIndex(a => a.Level == s.AuroraTextures));
@@ -54,7 +53,6 @@ public sealed partial class SettingsViewModel : ViewModelBase
         InputDelayIndex = s.RaceInputDelay;
         VerticalSyncIndex = s.VerticalSync ? 1 : 0;
         FullScreenIndex = s.GameFullScreen == LauncherSettings.FullScreenExclusive ? 1 : 0;
-        RefreshRateIndex = Math.Max(0, RefreshRates.IndexOf(s.RefreshRate));
         AutoUpdate = s.AutoUpdate;
         GameVolume = s.GameVolume;
         SoundVolume = s.SoundVolume;
@@ -145,15 +143,6 @@ public sealed partial class SettingsViewModel : ViewModelBase
     /// <summary>The two kinds of full screen, in the order of <see cref="FullScreenIndex"/>.</summary>
     public static IReadOnlyList<string> FullScreenChoices { get; } = ["Borderless", "Exclusive"];
 
-    /// <summary>The refresh rates, in the order of <see cref="RefreshRateIndex"/>, as the settings file names them
-    /// (<see cref="RefreshRates"/>) and as the page shows them. No choice adds input delay: the game's
-    /// own picture comes at its 60 Hz moment and the pictures after it are guessed forward (stage 5).</summary>
-    public static IReadOnlyList<string> RefreshRateChoices { get; } =
-        ["60 Hz", "120 Hz", "240 Hz", "Display"];
-
-    private static readonly List<string> RefreshRates =
-        [LauncherSettings.RefreshAsTheGame, LauncherSettings.Refresh120, LauncherSettings.Refresh240, LauncherSettings.RefreshAsTheDisplay];
-
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(DiscStatusText), nameof(DiscProblem))]
     public partial string DiscPath { get; set; }
@@ -207,24 +196,11 @@ public sealed partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     public partial bool ShowInputs { get; set; }
 
-    /// <summary>The picture engine rows show only in a test build until Aurora ships; the launch keys go with them
-    /// (AppState's game window).</summary>
-    public bool PictureEngineOffered { get; } = StackStamp.Current.Test;
-
-    public static IReadOnlyList<string> PictureEngineChoices { get; } = LauncherSettings.PictureEngines.Select(e => e.Words).ToList();
-
     public static IReadOnlyList<string> AuroraSizeChoices { get; } = LauncherSettings.AuroraSizes.Select(a => a.Words).ToList();
 
     public static IReadOnlyList<string> AuroraEdgesChoices { get; } = LauncherSettings.AuroraEdgeCounts.Select(a => a.Words).ToList();
 
     public static IReadOnlyList<string> AuroraTexturesChoices { get; } = LauncherSettings.AuroraTextureLevels.Select(a => a.Words).ToList();
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(AuroraRowsShown))]
-    public partial int PictureEngineIndex { get; set; }
-
-    /// <summary>Aurora's own rows show when it is the engine chosen.</summary>
-    public bool AuroraRowsShown => PictureEngineOffered && PictureEngineIndex == 1;
 
     [ObservableProperty]
     public partial int AuroraSizeIndex { get; set; }
@@ -242,10 +218,12 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
     public static IReadOnlyList<string> AuroraHighRefreshChoices { get; } = LauncherSettings.AuroraHighRefreshes.Select(a => a.Words).ToList();
 
+    /// <summary>High refresh (<see cref="LauncherSettings.AuroraHighRefresh"/>): 0 off, 1 up to 120, 2 up to 240; the one
+    /// setting of pictures between the game's steps.</summary>
     [ObservableProperty]
     public partial int AuroraHighRefreshIndex { get; set; }
 
-    /// <summary>Ray tracing (<c>"auroraRayTracing"</c>), with Aurora's rows. Its box can be ticked once the check of the
+    /// <summary>Ray tracing (<c>"auroraRayTracing"</c>). Its box can be ticked once the check of the
     /// graphics card has said it can (<see cref="RayTracingCard"/>); until then, and on a card that cannot, it cannot be
     /// changed, and <see cref="RayTracingReason"/> says why beside it.</summary>
     [ObservableProperty]
@@ -292,11 +270,6 @@ public sealed partial class SettingsViewModel : ViewModelBase
     /// <summary>Full screen (<see cref="LauncherSettings.FullScreen"/>): 0 borderless, 1 exclusive.</summary>
     [ObservableProperty]
     public partial int FullScreenIndex { get; set; }
-
-    /// <summary>Refresh rate (<see cref="LauncherSettings.RefreshRate"/>): 0 the game's 60, 1 120, 2 240, 3 the
-    /// display's own.</summary>
-    [ObservableProperty]
-    public partial int RefreshRateIndex { get; set; }
 
     /// <summary>How loud the game is, 0 to 100: it starts at this volume in every start the launcher makes.</summary>
     [ObservableProperty]
@@ -405,8 +378,6 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
     partial void OnShowInputsChanged(bool value) => Save();
 
-    partial void OnPictureEngineIndexChanged(int value) => Save();
-
     partial void OnAuroraSizeIndexChanged(int value) => Save();
 
     partial void OnAuroraEdgesIndexChanged(int value) => Save();
@@ -432,8 +403,6 @@ public sealed partial class SettingsViewModel : ViewModelBase
     partial void OnVerticalSyncIndexChanged(int value) => Save();
 
     partial void OnFullScreenIndexChanged(int value) => Save();
-
-    partial void OnRefreshRateIndexChanged(int value) => Save();
 
     partial void OnGameVolumeChanged(int value) => Save();
 
@@ -503,12 +472,11 @@ public sealed partial class SettingsViewModel : ViewModelBase
             ShowFrameRate = FrameRateAlwaysShown ? s.ShowFrameRate : ShowFrameRate,
             ShowInputs = ShowInputs,
             // (a list with nothing selected says -1: the setting stays what it is)
-            PictureEngine = PictureEngineIndex >= 0 && PictureEngineIndex < LauncherSettings.PictureEngines.Count ? LauncherSettings.PictureEngines[PictureEngineIndex].Name : s.PictureEngine,
             AuroraSize = AuroraSizeIndex >= 0 && AuroraSizeIndex < LauncherSettings.AuroraSizes.Count ? LauncherSettings.AuroraSizes[AuroraSizeIndex].Name : s.AuroraSize,
             AuroraEdges = AuroraEdgesIndex >= 0 && AuroraEdgesIndex < LauncherSettings.AuroraEdgeCounts.Count ? LauncherSettings.AuroraEdgeCounts[AuroraEdgesIndex].Count : s.AuroraEdges,
             AuroraTextures = AuroraTexturesIndex >= 0 && AuroraTexturesIndex < LauncherSettings.AuroraTextureLevels.Count ? LauncherSettings.AuroraTextureLevels[AuroraTexturesIndex].Level : s.AuroraTextures,
             AuroraColourblind = AuroraColourblindIndex >= 0 && AuroraColourblindIndex < LauncherSettings.AuroraColourblindFilters.Count ? LauncherSettings.AuroraColourblindFilters[AuroraColourblindIndex].Name : s.AuroraColourblind,
-            AuroraHighRefresh = AuroraHighRefreshIndex >= 0 && AuroraHighRefreshIndex < LauncherSettings.AuroraHighRefreshes.Count ? LauncherSettings.AuroraHighRefreshes[AuroraHighRefreshIndex].Rate : 0,
+            AuroraHighRefresh = AuroraHighRefreshIndex >= 0 && AuroraHighRefreshIndex < LauncherSettings.AuroraHighRefreshes.Count ? LauncherSettings.AuroraHighRefreshes[AuroraHighRefreshIndex].Rate : s.AuroraHighRefresh,
             RayTracing = RayTracing,
             Rumble = Rumble,
             ReducedMotion = ReducedMotion,
@@ -521,7 +489,6 @@ public sealed partial class SettingsViewModel : ViewModelBase
                 1 => LauncherSettings.FullScreenExclusive,
                 _ => s.GameFullScreen,
             },
-            RefreshRate = RefreshRateIndex >= 0 && RefreshRateIndex < RefreshRates.Count ? RefreshRates[RefreshRateIndex] : s.RefreshRate,
             GameVolume = Math.Clamp(GameVolume, 0, 100),
             SoundVolume = Math.Clamp(SoundVolume, 0, 100),
             SoundMuted = SoundMuted,

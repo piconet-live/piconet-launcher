@@ -24,7 +24,7 @@
   <Panel>
     <!-- Game: the game's picture, sound and rumble -->
     <Grid Name="GamePage" Classes="form" ColumnDefinitions="196,*" MaxWidth="900" HorizontalAlignment="Left"
-          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" IsVisible="{Binding OnGame}">
+          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" IsVisible="{Binding OnGame}">
       <!-- the game's picture: Normal, the game's own 16:9, or true widescreen (16:9 with Normal's whole height) -->
       <TextBlock Classes="label" Text="Widescreen" />
       <ListBox Grid.Column="1" Classes="seg tall" Name="Widescreen"
@@ -38,65 +38,57 @@
       <ListBox Grid.Row="2" Grid.Column="1" Classes="seg tall" Name="VerticalSync"
                ItemsSource="{x:Static vm:SettingsViewModel.VerticalSyncChoices}" SelectedIndex="{Binding VerticalSyncIndex}"
                AutomationProperties.Name="Vertical sync" />
-      <!-- pictures between the game's 60 steps a second (the launch file's "refreshRate"): the race is the same.
-           No choice adds input delay (stage 5: the game's picture at its own moment) -->
-      <TextBlock Grid.Row="3" Classes="label" Text="Refresh rate (experimental)" />
-      <ListBox Grid.Row="3" Grid.Column="1" Classes="seg tall" Name="RefreshRate"
-               ItemsSource="{x:Static vm:SettingsViewModel.RefreshRateChoices}" SelectedIndex="{Binding RefreshRateIndex}"
-               AutomationProperties.Name="Refresh rate (experimental)" />
       <!-- the game window's strip, which the game draws in this launcher's look -->
-      <TextBlock Grid.Row="4" Classes="label" Text="Frame rate" />
-      <CheckBox Grid.Row="4" Grid.Column="1" Classes="box" Content="Show in the game window" IsChecked="{Binding ShowFrameRate}"
+      <TextBlock Grid.Row="3" Classes="label" Text="Frame rate" />
+      <CheckBox Grid.Row="3" Grid.Column="1" Classes="box" Content="Show in the game window" IsChecked="{Binding ShowFrameRate}"
                 IsEnabled="{Binding !FrameRateAlwaysShown}" AutomationProperties.Name="Show frame rate in the game window" />
       <!-- how loud the game is, as a number: the game starts at it (a game that is open keeps the one it started at) -->
-      <TextBlock Grid.Row="5" Classes="label" Text="Volume" />
-      <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal" Spacing="12">
+      <TextBlock Grid.Row="4" Classes="label" Text="Volume" />
+      <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Spacing="12">
         <Slider Name="GameVolume" Classes="bar" Width="220" Minimum="0" Maximum="100" Value="{Binding GameVolume}" TickFrequency="5"
                 IsSnapToTickEnabled="True" VerticalAlignment="Center" AutomationProperties.Name="Game volume" />
         <c:NumberBox Name="GameVolumeNumber" Value="{Binding GameVolume}" AutomationProperties.Name="Game volume number" />
       </StackPanel>
-      <TextBlock Grid.Row="6" Classes="label" Text="Other racers' sounds" />
-      <ListBox Grid.Row="6" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.OtherSoundsChoices}"
+      <TextBlock Grid.Row="5" Classes="label" Text="Other racers' sounds" />
+      <ListBox Grid.Row="5" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.OtherSoundsChoices}"
                SelectedIndex="{Binding OtherSoundsIndex}"
                AutomationProperties.Name="Other racers' sounds" />
       <!-- the launch file's "rumble": off, no controller rumbles; on, only while the player drives (never spectating) -->
-      <TextBlock Grid.Row="7" Classes="label" Text="Rumble" />
-      <ToggleSwitch Grid.Row="7" Grid.Column="1" Name="Rumble" IsChecked="{Binding Rumble}" OnContent="" OffContent=""
+      <TextBlock Grid.Row="6" Classes="label" Text="Rumble" />
+      <ToggleSwitch Grid.Row="6" Grid.Column="1" Name="Rumble" IsChecked="{Binding Rumble}" OnContent="" OffContent=""
                     HorizontalAlignment="Left" AutomationProperties.Name="Rumble" />
       <!-- the launch file's "showInputs": a controller over the picture, the inputs of the racer in view -->
-      <TextBlock Grid.Row="8" Classes="label" Text="Show inputs" />
-      <ToggleSwitch Grid.Row="8" Grid.Column="1" Name="ShowInputs" IsChecked="{Binding ShowInputs}" OnContent="" OffContent=""
+      <TextBlock Grid.Row="7" Classes="label" Text="Show inputs" />
+      <ToggleSwitch Grid.Row="7" Grid.Column="1" Name="ShowInputs" IsChecked="{Binding ShowInputs}" OnContent="" OffContent=""
                     HorizontalAlignment="Left" AutomationProperties.Name="Show inputs" />
-      <!-- the launch file's "renderer", "auroraSize", "auroraEdges", "auroraTextures", "auroraColourblind", "auroraHighRefresh": test builds only, until Aurora ships -->
-      <TextBlock Grid.Row="9" Classes="label" Text="Picture engine" IsVisible="{Binding PictureEngineOffered}" />
-      <ListBox Grid.Row="9" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.PictureEngineChoices}"
-               SelectedIndex="{Binding PictureEngineIndex}" IsVisible="{Binding PictureEngineOffered}"
-               AutomationProperties.Name="Picture engine" />
-      <TextBlock Grid.Row="10" Classes="label" Text="Picture size" IsVisible="{Binding AuroraRowsShown}" />
-      <ListBox Grid.Row="10" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.AuroraSizeChoices}"
-               SelectedIndex="{Binding AuroraSizeIndex}" IsVisible="{Binding AuroraRowsShown}"
+      <!-- Aurora draws every start (the launch file's "renderer"); its own keys: "auroraSize", "auroraEdges", "auroraTextures", "auroraColourblind", "auroraHighRefresh", "auroraRayTracing" -->
+      <TextBlock Grid.Row="8" Classes="label" Text="Picture size" />
+      <ListBox Grid.Row="8" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.AuroraSizeChoices}"
+               SelectedIndex="{Binding AuroraSizeIndex}"
                AutomationProperties.Name="Picture size" />
-      <TextBlock Grid.Row="11" Classes="label" Text="Smooth edges" IsVisible="{Binding AuroraRowsShown}" />
-      <ListBox Grid.Row="11" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.AuroraEdgesChoices}"
-               SelectedIndex="{Binding AuroraEdgesIndex}" IsVisible="{Binding AuroraRowsShown}"
+      <TextBlock Grid.Row="9" Classes="label" Text="Smooth edges" />
+      <ListBox Grid.Row="9" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.AuroraEdgesChoices}"
+               SelectedIndex="{Binding AuroraEdgesIndex}"
                AutomationProperties.Name="Smooth edges" />
-      <TextBlock Grid.Row="12" Classes="label" Text="Sharper textures" IsVisible="{Binding AuroraRowsShown}" />
-      <ListBox Grid.Row="12" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.AuroraTexturesChoices}"
-               SelectedIndex="{Binding AuroraTexturesIndex}" IsVisible="{Binding AuroraRowsShown}"
+      <TextBlock Grid.Row="10" Classes="label" Text="Sharper textures" />
+      <ListBox Grid.Row="10" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.AuroraTexturesChoices}"
+               SelectedIndex="{Binding AuroraTexturesIndex}"
                AutomationProperties.Name="Sharper textures" />
-      <TextBlock Grid.Row="13" Classes="label" Text="Colourblind filter" IsVisible="{Binding AuroraRowsShown}" />
-      <ListBox Grid.Row="13" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.AuroraColourblindChoices}"
-               SelectedIndex="{Binding AuroraColourblindIndex}" IsVisible="{Binding AuroraRowsShown}"
+      <TextBlock Grid.Row="11" Classes="label" Text="Colourblind filter" />
+      <ListBox Grid.Row="11" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.AuroraColourblindChoices}"
+               SelectedIndex="{Binding AuroraColourblindIndex}"
                AutomationProperties.Name="Colourblind filter" />
-      <TextBlock Grid.Row="14" Classes="label" Text="High refresh" IsVisible="{Binding AuroraRowsShown}"
+      <!-- pictures between the game's 60 steps a second, the one setting of them: the launch file's "auroraHighRefresh"
+           (Off: left out). The launcher writes no "refreshRate" since 0.6.0 -->
+      <TextBlock Grid.Row="12" Classes="label" Text="High refresh"
                  ToolTip.Tip="Pictures between the game's own steps, for a screen above 60 Hz. No added input delay. The race stays at 60 steps a second; when there is no time for one, it is left out." />
-      <ListBox Grid.Row="14" Grid.Column="1" Classes="seg tall" ItemsSource="{x:Static vm:SettingsViewModel.AuroraHighRefreshChoices}"
-               SelectedIndex="{Binding AuroraHighRefreshIndex}" IsVisible="{Binding AuroraRowsShown}"
+      <ListBox Grid.Row="12" Grid.Column="1" Classes="seg tall" Name="HighRefresh" ItemsSource="{x:Static vm:SettingsViewModel.AuroraHighRefreshChoices}"
+               SelectedIndex="{Binding AuroraHighRefreshIndex}"
                AutomationProperties.Name="High refresh" />
       <!-- the launch file's "auroraRayTracing": the runner's tested set of ray switches. The box can be ticked on a graphics
            card the launcher's check found can ray trace (Launcher.Core/RayTracingCard.cs); beside it, why it cannot. The box
            names itself, as Navigation sounds does on the Launcher page -->
-      <StackPanel Grid.Row="15" Grid.Column="1" Orientation="Horizontal" Spacing="12" IsVisible="{Binding AuroraRowsShown}">
+      <StackPanel Grid.Row="13" Grid.Column="1" Orientation="Horizontal" Spacing="12">
         <CheckBox Classes="box" Name="RayTracing" Content="Ray tracing" IsChecked="{Binding RayTracing}"
                   IsEnabled="{Binding RayTracingPossible}" AutomationProperties.Name="Ray tracing" />
         <TextBlock Classes="faint" VerticalAlignment="Center" Text="{Binding RayTracingReason}" IsVisible="{Binding RayTracingReasonShown}" />
