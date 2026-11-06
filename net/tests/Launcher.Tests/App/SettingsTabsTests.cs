@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Headless;
@@ -114,6 +115,17 @@ public sealed class SettingsTabsTests : IDisposable
         [.. window.GetVisualDescendants().OfType<SettingsView>().Single().GetVisualDescendants().OfType<TextBlock>()
             .Where(t => t.Classes.Contains("label") && t.IsEffectivelyVisible).Select(t => t.Text ?? "")];
 
+    /// <summary>The Settings page as it reads down the screen: each group's heading ("# Display") and the labels of its
+    /// rows, in the order they are drawn, not the order they are written.</summary>
+    private static string[] Form(MainWindow window)
+    {
+        var view = window.GetVisualDescendants().OfType<SettingsView>().Single();
+        return [.. view.GetVisualDescendants().OfType<TextBlock>()
+            .Where(t => t.IsEffectivelyVisible && (t.Classes.Contains("label") || t.Classes.Contains("section")))
+            .OrderBy(t => t.TranslatePoint(default, view)!.Value.Y)
+            .Select(t => t.Classes.Contains("section") ? "# " + t.Text : t.Text ?? "")];
+    }
+
     [Fact]
     public Task TheSettingsTabHasFourPagesEachWithItsOwnRows() => OnAWindow(State("""{"noServer": true}"""), (window, main) =>
     {
@@ -121,14 +133,22 @@ public sealed class SettingsTabsTests : IDisposable
         Assert.Equal(["Game", "Online", "Controller", "Launcher"], Headings(window).Select(b => ((SectionLink)b.DataContext!).Label));
         // a first start: Game (Aurora's rows in every build: it draws every start; these tests are stamped public)
         Assert.Same(main.Settings, main.Current);
-        Assert.Equal(["Widescreen", "Full screen mode", "Vertical sync", "Frame rate", "Volume", "Other racers' sounds", "Rumble", "Show inputs",
-            "Resolution", "Anti-aliasing", "Anisotropic filtering", "Colourblind filter", "High refresh"], Rows(window));
+        // each page in groups under headings, as the Launcher page's Replays
+        Assert.Equal(["# Display", "Widescreen", "Full screen mode", "Vertical sync", "High refresh", "Frame rate",
+            "# Graphics", "Resolution", "Anti-aliasing", "Anisotropic filtering", "Colourblind filter",
+            "# Sound", "Volume", "Other racers' sounds",
+            "# Controller", "Rumble", "Show inputs"], Form(window));
+        // Ray tracing's box names itself (no label): in Graphics, under Anisotropic filtering
+        var view = window.GetVisualDescendants().OfType<SettingsView>().Single();
+        double Y(Control c) => c.TranslatePoint(default, view)!.Value.Y;
+        TextBlock Label(string text) => view.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Classes.Contains("label") && t.Text == text);
+        Assert.InRange(Y(Named<CheckBox>(view, "RayTracing")), Y(Label("Anisotropic filtering")) + 1, Y(Label("Colourblind filter")) - 1);
         Assert.DoesNotContain(window.GetVisualDescendants().OfType<Control>(), c => Equals(AutomationProperties.GetName(c), "Picture engine"));
         Shot(window, "settings-game");
         Assert.Contains("on", Heading(window, "Game").Classes);
 
         Click(window, Heading(window, "Online"));
-        Assert.Equal(["Input delay", "Server", "Account", "Notices", "Activity", "Chat"], Rows(window));
+        Assert.Equal(["# Connection", "Input delay", "Server", "# Account", "Account", "# Social", "Notices", "Activity", "Chat"], Form(window));
         Assert.Equal(["Online"], Headings(window).Where(b => b.Classes.Contains("on")).Select(b => ((SectionLink)b.DataContext!).Label));
 
         Click(window, Heading(window, "Controller"));
@@ -139,11 +159,40 @@ public sealed class SettingsTabsTests : IDisposable
         Click(window, Heading(window, "Launcher"));
         Assert.Same(main.Settings, main.Current);
         // (Updates shown since 0.5.0: NotYet; Older copy as this launcher is no portable copy: DataMoveViewModel.Offered)
-        Assert.Equal(["Disc image", "Sounds", "Menus", "Interface scale", "Updates", "Recording", "Folder", "Older copy"], Rows(window));
+        Assert.Equal(["# General", "Disc image", "Updates", "Older copy", "# Interface", "Sounds", "Menus", "Interface scale",
+            "# Replays", "Recording", "Folder"], Form(window));
         Assert.Equal(["Launcher"], Headings(window).Where(b => b.Classes.Contains("on")).Select(b => ((SectionLink)b.DataContext!).Label));
 
         Click(window, Heading(window, "Game"));
         Assert.Equal("Widescreen", Rows(window)[0]);
+    });
+
+    /// <summary>At the launcher's least window, 1280 by 720, each page scrolls down to its last group, and its last
+    /// row comes into the window. With INPUTS_SHOTS naming a folder, each page there at its top and at its foot.</summary>
+    [Fact]
+    public Task AtTheLeastWindowEachPageScrollsToItsLastGroup() => OnAWindow(State("""{"noServer": true}"""), (window, main) =>
+    {
+        window.Width = 1280;
+        window.Height = 720;
+        Click(window, TopTab(window, "Settings"));
+        var scroll = Named<ScrollViewer>(window, "PageScroll");
+        foreach (var (page, first, last) in new[] { ("Game", "# Display", "Show inputs"), ("Online", "# Connection", "Chat"),
+                     ("Launcher", "# General", "Folder") })
+        {
+            Click(window, Heading(window, page));
+            scroll.Offset = default;
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(first, Form(window)[0]);
+            Shot(window, $"settings-{page.ToLowerInvariant()}-top");
+
+            scroll.Offset = new Vector(0, scroll.Extent.Height);
+            Dispatcher.UIThread.RunJobs();
+            var label = window.GetVisualDescendants().OfType<SettingsView>().Single().GetVisualDescendants().OfType<TextBlock>()
+                .Single(t => t.Classes.Contains("label") && t.Text == last && t.IsEffectivelyVisible);
+            Assert.Equal(last, Form(window)[^1]);
+            Assert.InRange(label.TranslatePoint(default, scroll)!.Value.Y, 0, scroll.Viewport.Height - label.Bounds.Height);
+            Shot(window, $"settings-{page.ToLowerInvariant()}-foot");
+        }
     });
 
     [Fact]

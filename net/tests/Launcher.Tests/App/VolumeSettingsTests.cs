@@ -77,7 +77,10 @@ public sealed class VolumeSettingsTests : IDisposable
                 var volume = Named<Slider>(view, "GameVolume");
                 var number = Named<Launcher.App.Controls.NumberBox>(view, "GameVolumeNumber");
                 Assert.Equal((100, 100, 100), (volume.Value, number.Value, state.Settings.GameVolume));
-                // pressed in its left half with the mouse, then finer with the arrow keys
+                // pressed in its left half with the mouse (scrolled to: Sound is the page's third group), then finer
+                // with the arrow keys
+                volume.BringIntoView();
+                Aim();
                 var at = volume.TranslatePoint(new Point(volume.Bounds.Width * 0.25, volume.Bounds.Height / 2), window)!.Value;
                 window.MouseDown(at, MouseButton.Left);
                 window.MouseUp(at, MouseButton.Left);
