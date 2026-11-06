@@ -12,7 +12,7 @@ namespace Launcher.App.Views;
 public sealed partial class MainWindow : AppWindow
 {
     /// <summary>The machine's height in the left column: the window's least height (720) has room for it beside
-    /// the column's other parts (the name, the play control with its lines, "Play F-Zero GX", Settings, the
+    /// the column's other parts (the name, the places, "Start F-Zero GX" with its line, Settings, the
     /// connection).</summary>
     private const double MachineHeight = 176;
 

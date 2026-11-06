@@ -135,7 +135,8 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     /// <summary>The left column's name, machine and connection.</summary>
     public AccountViewModel Account { get; }
 
-    /// <summary>The left column's play control: RACE or what the lobby is doing, and "Play F-Zero GX".</summary>
+    /// <summary>The play control: RACE or what the lobby is doing (Quick Play's page), and "Start F-Zero GX" (the left
+    /// column's foot).</summary>
     public PlayControlViewModel Control { get; }
 
     /// <summary>The server's notices: the banner, the bell and its list.</summary>

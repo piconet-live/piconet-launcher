@@ -7,7 +7,8 @@ view's own: sizes that answer the window, a key, a file picker.
 | File | What it is |
 |---|---|
 | `MainWindow.axaml` | The window: its title bar, the left column, the tabs and the page showing |
-| `RacerView`, `PlayControlView`, `ConnectionView` | The left column's parts: the player, the play control, the connection dot |
+| `RacerView`, `StartGameView`, `ConnectionView` | The left column's parts: the player, "Start F-Zero GX" with the line saying why it is off, the connection dot |
+| `PlayControlView` | Quick Play's action row: RACE, or the lobby's box and Leave Lobby |
 | `NameMenu` | The menu that changes the player's name; whoever shows it calls `Begin` when it opens and closes it at `Done`. It saves, then closes (closed first, its Save would do nothing) |
 | `DiscView` | The first screen |
 | `HomeView`, `LobbyView`, `LobbyChat`, `LanView` | The Play tab's pages (the lobby's shows the Garage's view under its line in the machine stage); the lobby's chat, whose lines can be selected and copied |

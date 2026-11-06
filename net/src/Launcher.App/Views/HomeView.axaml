@@ -75,8 +75,8 @@
   </UserControl.Styles>
 
   <StackPanel Spacing="24">
-    <!-- Quick Play's action: RACE, or the lobby's box and the way out; "Play F-Zero GX" (PlayControlView, on the
-         window's PlayControlViewModel) -->
+    <!-- Quick Play's action: RACE, or the lobby's box and the way out (PlayControlView, on the window's
+         PlayControlViewModel; "Start F-Zero GX" is the left column's, StartGameView) -->
     <v:PlayControlView DataContext="{Binding $parent[Window].((vm:MainViewModel)DataContext).Control}" />
     <!-- The race, and what stands in its place: the same block at the same size in every state. -->
     <Grid Name="Top" ColumnDefinitions="520,16,*" RowDefinitions="Auto,Auto">

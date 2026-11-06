@@ -50,7 +50,7 @@ public sealed class FocusMapTests
     [Fact]
     public void TheLeftColumnAndThePageMeetSideBySide()
     {
-        // the column: RACE, Play F-Zero GX, Settings; the page: a table's rows with Play at their end
+        // the column: three buttons one under the other (a place, Start F-Zero GX, Settings); the page: a table's rows with Play at their end
         Box race = new(20, 300, 240, 56), play = new(20, 370, 240, 34), settings = new(20, 660, 120, 30);
         Box tab = new(330, 40, 40, 30), row1 = new(1100, 200, 60, 30), row2 = new(1100, 240, 60, 30), first = new(330, 200, 80, 28);
         List<Box> all = [race, play, settings, tab, row1, row2, first];

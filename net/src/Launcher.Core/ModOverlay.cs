@@ -6,7 +6,7 @@ namespace Launcher.Core;
 /// such a file in every start, online included, and no other car data or course file outside offline play.</summary>
 public sealed record OverlayFile(string Disc, string From, bool RaceSame = false);
 
-/// <summary>Which game start an overlay is for: offline play ("Play F-Zero GX"), where the whole mod is used, or any
+/// <summary>Which game start an overlay is for: offline play ("Start F-Zero GX"), where the whole mod is used, or any
 /// other (a race, Practice, a replay, watching, the game's controller options), where only what passed the guard is.</summary>
 public enum OverlayUse
 {

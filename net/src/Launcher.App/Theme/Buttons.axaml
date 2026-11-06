@@ -4,7 +4,7 @@
         xmlns:c="using:Launcher.App.Controls"
         xmlns:v="using:Launcher.App.Views">
   <!-- Buttons: one flat template for all of them. Every change of colour eases (Quick); a press settles. -->
-  <Style Selector="Button.go, Button.primary, Button.secondary, Button.quiet, Button.link, Button.tab, Button.section, Button.chrome, Button.icon, Button.plain, Button.stat, Button.heart, Button.chip, Button.shelf">
+  <Style Selector="Button.go, Button.startgame, Button.primary, Button.secondary, Button.quiet, Button.link, Button.tab, Button.section, Button.chrome, Button.icon, Button.plain, Button.stat, Button.heart, Button.chip, Button.shelf">
     <Setter Property="Cursor" Value="Hand" />
     <Setter Property="MinHeight" Value="0" />
     <Setter Property="MinWidth" Value="0" />
@@ -78,6 +78,53 @@
   <Style Selector="Button.go TextBlock, Button.go /template/ ContentPresenter > TextBlock">
     <Setter Property="LetterSpacing" Value="{StaticResource GoSpacing}" />
   </Style>
+  <!-- "Start F-Zero GX" at the left column's foot (StartGameView): RACE's leaning plate across the column, in the places'
+       lettering, filled with a green far quieter than RACE's own, the play mark green; brighter under the pointer; off,
+       the surface tone with the word and mark dark. -->
+  <Style Selector="Button.startgame">
+    <Setter Property="Height" Value="{StaticResource ButtonHeight}" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="Padding" Value="16,0" />
+    <Setter Property="Background">
+      <SolidColorBrush Color="{StaticResource AccentColor}" Opacity="0.16" />
+    </Setter>
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Panel Name="Root" Background="Transparent">
+        <c:Plate Name="Face" Shape="Lean" Background="{TemplateBinding Background}">
+          <StackPanel Orientation="Horizontal" Spacing="12" Margin="{TemplateBinding Padding}" HorizontalAlignment="Center"
+                      VerticalAlignment="Center">
+            <Viewbox Width="14" Height="14" VerticalAlignment="Center">
+              <Canvas Width="24" Height="24">
+                <Path Name="Glyph" Data="{TemplateBinding Tag}" Fill="{StaticResource AccentBrush}" />
+              </Canvas>
+            </Viewbox>
+            <TextBlock Classes="display d20" Text="{TemplateBinding Content, Converter={x:Static v:UpperText.Instance}}"
+                       Foreground="{TemplateBinding Foreground}" VerticalAlignment="Center" />
+          </StackPanel>
+        </c:Plate>
+        </Panel>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="Button.startgame:pointerover">
+    <Setter Property="Background">
+      <SolidColorBrush Color="{StaticResource AccentColor}" Opacity="0.26" />
+    </Setter>
+  </Style>
+  <Style Selector="Button.startgame:pressed">
+    <Setter Property="Background">
+      <SolidColorBrush Color="{StaticResource AccentColor}" Opacity="0.12" />
+    </Setter>
+  </Style>
+  <Style Selector="Button.startgame:disabled">
+    <Setter Property="Background" Value="{StaticResource WellBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource OffTextBrush}" />
+  </Style>
+  <Style Selector="Button.startgame:disabled /template/ Path#Glyph">
+    <Setter Property="Fill" Value="{StaticResource OffTextBrush}" />
+  </Style>
+
   <!-- soft corners (Theme.axaml, CORNERS): the surface buttons, chips, rows and icons 6; the left column's places, the
        title bar's buttons, the plates and a plain button (its content is its look) square -->
   <Style Selector="Button.primary, Button.secondary, Button.quiet, Button.chip, Button.shelf, Button.stat, Button.icon">
@@ -107,7 +154,7 @@
     <Setter Property="Padding" Value="16,0" />
     <Setter Property="Background" Value="{StaticResource RaisedBrush}" />
   </Style>
-  <!-- A secondary button of the left column's width: "Play F-Zero GX", "Leave Lobby". -->
+  <!-- A secondary button of a column's width: "Leave Lobby". -->
   <Style Selector="Button.secondary.wide">
     <Setter Property="CornerRadius" Value="{StaticResource SquareCorner}" />
     <Setter Property="Height" Value="{StaticResource ButtonHeight}" />

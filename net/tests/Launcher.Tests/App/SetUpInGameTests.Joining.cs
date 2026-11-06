@@ -269,7 +269,7 @@ public sealed partial class SetUpInGameTests
                 Dispatcher.UIThread.RunJobs();
                 return (open, local, closed, main.Control.Notice);
             });
-            Assert.Equal(("", "Game running", true, false), open);   // said once, under Play F-Zero GX
+            Assert.Equal(("", "Game running", true, false), open);   // said once, under Start F-Zero GX
             Assert.Equal(("Game running", true), local);
             Assert.Equal("An older notice.", closed);              // the reason went with the game
             Assert.Equal("Could not reach the server · refused", tried);   // it tried, now that it may

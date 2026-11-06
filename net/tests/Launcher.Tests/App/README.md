@@ -10,10 +10,11 @@ The few tests of what only `Launcher.App`'s own code does, run without a window 
   files from a made-up image and the launcher opens; a refused image, Cancel, too little space and another
   preparation at work, each said in the preparation's sentence with the screen still usable. A preparation is held
   where it asks for the free space, so what shows meanwhile is looked at. `.Start.cs`: the start with files that
-  are ready, another online part's, damaged or missing. `.Buttons.cs`: RACE and "Play F-Zero GX" off with the
+  are ready, another online part's, damaged or missing. `.Buttons.cs`: RACE and "Start F-Zero GX" off with the
   reason while a start lacks the game's files or the game program. `.Stopped.cs`: Cancel and the window's close in
   the middle of a copy (held there through `AppState.PreparationWatch`), a preparation that cannot succeed, and a
   game that becomes startable while the launcher is open. A player copy is made up with `Install.Of`.
+- `StartGameButtonTests.cs`: "Start F-Zero GX" at the left column's foot on Play and on the Garage: the column's width, just above Settings, off with the reason without the game, on with it; none on Quick Play's page. With `INPUTS_SHOTS` the window as PNGs.
 - `CommandLineTests.cs`: the command line: the modes and their files, a launch file's test settings, and every
   option that is not listed refused.
 - `LanJoinTests.cs`: the Local network tab's Join needs the disc and the whole game, as RACE does; without them

@@ -7,7 +7,7 @@ namespace Launcher.App.ViewModels;
 // The Controller page's "Set up in the game": F-Zero GX started straight on its own controller options (calibration,
 // button settings, rumble), where a player sets what this page cannot; the game closes when the player leaves them.
 // The start is offline play's (AppState.PlayOffline), with the game's "controllerSetup" in its launch file. It can be
-// pressed whenever "Play F-Zero GX" could start the game at once: not while a game runs, not in Quick Play (the left
+// pressed whenever "Start F-Zero GX" could start the game at once: not while a game runs, not in Quick Play (the left
 // column's button asks there; a race could start meanwhile), and not without a disc image or the game's files.
 // The button shows the launcher's state as it changes, the Quick Play session's own changes included (a connection
 // made or lost is said by the session alone); and a press never trusts what the button shows: it reads the state
