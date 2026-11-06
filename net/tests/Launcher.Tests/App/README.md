@@ -67,7 +67,7 @@ The few tests of what only `Launcher.App`'s own code does, run without a window 
   settings at a start of the game (a script); the launcher's volume heard when set, and Mute. In the Controller
   page's collection: a start of the game ends every controller helper of the process.
 - `SettingsTabsTests.cs`: the Settings tab's four pages pressed by their headings, each with its own rows in groups
-  under headings (Display, Graphics, Sound, Controller; Connection, Account, Social; General, Interface, Replays), each
+  under headings (Display, Graphics, Sound, Controller; Connection, Social; General, Interface, Replays), each
   scrolled to its last group in the least window (1280 by 720; with `INPUTS_SHOTS` the pages as PNGs, top and foot); the
   page last chosen kept for this run and the next, a page the file names that is none of them read as Game; RACE
   without a disc and Home's "Choose your disc" open Launcher, RACE without a server Online.

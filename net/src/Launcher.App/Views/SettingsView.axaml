@@ -113,9 +113,9 @@
                     HorizontalAlignment="Left" AutomationProperties.Name="Show inputs" />
     </Grid>
 
-    <!-- Online: Connection (the input delay first: what players change most; the server), Account, Social -->
+    <!-- Online: Connection (the input delay first: what players change most; the server; the account), Social -->
     <Grid Name="OnlinePage" Classes="form" ColumnDefinitions="148,*" MaxWidth="620" HorizontalAlignment="Left"
-          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" IsVisible="{Binding OnOnline}">
+          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" IsVisible="{Binding OnOnline}">
       <Border Grid.ColumnSpan="2" Classes="group">
         <TextBlock Classes="section" FontSize="18" Text="Connection" />
       </Border>
@@ -147,30 +147,26 @@
                 IsVisible="{Binding NoServer}" HorizontalAlignment="Left" Margin="0,6,0,0"
                 AutomationProperties.Name="Use the official server" />
       </StackPanel>
-
-      <Border Grid.Row="4" Grid.ColumnSpan="2" Classes="group">
-        <TextBlock Classes="section" FontSize="18" Text="Account" />
-      </Border>
-      <TextBlock Grid.Row="5" Classes="label" Text="Account" />
-      <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal" Spacing="10">
+      <TextBlock Grid.Row="4" Classes="label" Text="Account" />
+      <StackPanel Grid.Row="4" Grid.Column="1" Orientation="Horizontal" Spacing="10">
         <Button Classes="secondary" Content="Sign in with Discord" IsEnabled="False" />
         <TextBlock Classes="dim" Text="Later" VerticalAlignment="Center" />
       </StackPanel>
 
-      <Border Grid.Row="6" Grid.ColumnSpan="2" Classes="group">
+      <Border Grid.Row="5" Grid.ColumnSpan="2" Classes="group">
         <TextBlock Classes="section" FontSize="18" Text="Social" />
       </Border>
       <!-- the server's notices: Silent takes their tone and taskbar flash away; they still show -->
-      <TextBlock Grid.Row="7" Classes="label" Text="Notices" />
-      <ListBox Grid.Row="7" Grid.Column="1" Classes="seg tall" Name="Notices" ItemsSource="{x:Static vm:SettingsViewModel.NoticesChoices}"
+      <TextBlock Grid.Row="6" Classes="label" Text="Notices" />
+      <ListBox Grid.Row="6" Grid.Column="1" Classes="seg tall" Name="Notices" ItemsSource="{x:Static vm:SettingsViewModel.NoticesChoices}"
                SelectedIndex="{Binding NoticesIndex}" AutomationProperties.Name="Notices" />
       <!-- Discord's status (Launcher.Core DiscordPresence): off clears it at once -->
-      <TextBlock Grid.Row="8" Classes="label" Text="Activity" />
-      <CheckBox Grid.Row="8" Grid.Column="1" Classes="box" Name="ShowOnDiscord" Content="Show on Discord"
+      <TextBlock Grid.Row="7" Classes="label" Text="Activity" />
+      <CheckBox Grid.Row="7" Grid.Column="1" Classes="box" Name="ShowOnDiscord" Content="Show on Discord"
                 IsChecked="{Binding ShowOnDiscord}" AutomationProperties.Name="Show on Discord" />
       <!-- the chat's swear words masked (****) in the lines received: on unless the player switches it off -->
-      <TextBlock Grid.Row="9" Classes="label" Text="Chat" />
-      <CheckBox Grid.Row="9" Grid.Column="1" Classes="box" Name="HideSwearWords" Content="Hide swear words"
+      <TextBlock Grid.Row="8" Classes="label" Text="Chat" />
+      <CheckBox Grid.Row="8" Grid.Column="1" Classes="box" Name="HideSwearWords" Content="Hide swear words"
                 IsChecked="{Binding HideSwearWords}" AutomationProperties.Name="Hide swear words" />
     </Grid>
 

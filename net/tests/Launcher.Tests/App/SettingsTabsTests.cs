@@ -148,7 +148,7 @@ public sealed class SettingsTabsTests : IDisposable
         Assert.Contains("on", Heading(window, "Game").Classes);
 
         Click(window, Heading(window, "Online"));
-        Assert.Equal(["# Connection", "Input delay", "Server", "# Account", "Account", "# Social", "Notices", "Activity", "Chat"], Form(window));
+        Assert.Equal(["# Connection", "Input delay", "Server", "Account", "# Social", "Notices", "Activity", "Chat"], Form(window));
         Assert.Equal(["Online"], Headings(window).Where(b => b.Classes.Contains("on")).Select(b => ((SectionLink)b.DataContext!).Label));
 
         Click(window, Heading(window, "Controller"));
