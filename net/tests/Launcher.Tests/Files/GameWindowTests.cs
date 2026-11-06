@@ -50,14 +50,14 @@ public sealed class GameWindowTests : IDisposable
         File.WriteAllText(file, """{"widescreen": false}""");
         Assert.True(new SettingsStore(file).Load().Rumble);
         var off = new GameWindow("F-Zero GX", Rumble: false);
-        Assert.Equal("""{"about":"Piconet Launcher: offline play","bundle":"b","lanes":0,"showFrameRate":false,"rumble":false}""",
+        Assert.Equal("""{"about":"Piconet Launcher: offline play","bundle":"b","lanes":0,"showFrameRate":false,"renderer":"aurora","rumble":false}""",
             Flat(GameLaunchFile.Offline("b", window: off)));
         Assert.False((bool)JsonNode.Parse(GameLaunchFile.Race("b", Match, window: off))!["rumble"]!);
         Assert.False((bool)JsonNode.Parse(GameLaunchFile.Playback("b", "r.fzrp", window: off))!["rumble"]!);
         var on = new GameWindow("F-Zero GX");
         Assert.Null(JsonNode.Parse(GameLaunchFile.Race("b", Match, window: on))!["rumble"]);
         Assert.Null(JsonNode.Parse(GameLaunchFile.Playback("b", "r.fzrp", window: on))!["rumble"]);
-        Assert.Equal("""{"about":"Piconet Launcher: offline play","bundle":"b","lanes":0,"showFrameRate":false}""",
+        Assert.Equal("""{"about":"Piconet Launcher: offline play","bundle":"b","lanes":0,"showFrameRate":false,"renderer":"aurora"}""",
             Flat(GameLaunchFile.Offline("b", window: on)));
     }
 
@@ -127,7 +127,7 @@ public sealed class GameWindowTests : IDisposable
         Assert.True(on.FrameRateShown(players, testGame: false));
         // what the launcher writes for a test build's game, with the player's setting off
         var window = new GameWindow("F-Zero GX", "Piconet", off.FrameRateShown(test, testGame: false));
-        Assert.Equal("""{"about":"Piconet Launcher: offline play","bundle":"b","lanes":0,"windowName":"Piconet","showFrameRate":true}""",
+        Assert.Equal("""{"about":"Piconet Launcher: offline play","bundle":"b","lanes":0,"windowName":"Piconet","showFrameRate":true,"renderer":"aurora"}""",
             Flat(GameLaunchFile.Offline("b", window: window)));
     }
 
@@ -135,18 +135,18 @@ public sealed class GameWindowTests : IDisposable
     public void TheLaunchFileNamesTheStripsNameAndTheFrameRate()
     {
         var window = new GameWindow("F-Zero GX", "Piconet", ShowFrameRate: true);
-        Assert.Equal("""{"about":"Piconet Launcher: offline play","bundle":"b","lanes":0,"windowName":"Piconet","showFrameRate":true}""",
+        Assert.Equal("""{"about":"Piconet Launcher: offline play","bundle":"b","lanes":0,"windowName":"Piconet","showFrameRate":true,"renderer":"aurora"}""",
             Flat(GameLaunchFile.Offline("b", window: window)));
         Assert.Equal(
-            """{"about":"Piconet Launcher: a replay\u0027s playback","bundle":"b","widescreen":true,"lanes":0,"replay":{"file":"r.fzrp","otherSounds":"quieter"},"windowName":"Piconet","showFrameRate":false}""",
+            """{"about":"Piconet Launcher: a replay\u0027s playback","bundle":"b","widescreen":true,"lanes":0,"replay":{"file":"r.fzrp","otherSounds":"quieter"},"windowName":"Piconet","showFrameRate":false,"renderer":"aurora"}""",
             Flat(GameLaunchFile.Playback("b", "r.fzrp", window: window with { ShowFrameRate = false })));
         var race = JsonNode.Parse(GameLaunchFile.Race("b", Match, window: window, debug: new GameDebug(Autopilot: true)))!.AsObject();
-        Assert.Equal(["about", "bundle", "widescreen", "lanes", "match", "windowName", "showFrameRate", "debug"], race.Select(m => m.Key));
+        Assert.Equal(["about", "bundle", "widescreen", "lanes", "match", "windowName", "showFrameRate", "renderer", "debug"], race.Select(m => m.Key));
         // the title is the runner's argument, never a member of the file; a window without a name names none
         Assert.DoesNotContain("F-Zero GX", GameLaunchFile.Offline("b", window: window), StringComparison.Ordinal);
-        Assert.Equal("""{"about":"Piconet Launcher: offline play","lanes":0,"showFrameRate":false}""",
+        Assert.Equal("""{"about":"Piconet Launcher: offline play","lanes":0,"showFrameRate":false,"renderer":"aurora"}""",
             Flat(GameLaunchFile.Offline(null, window: new GameWindow("Port test"))));
-        Assert.Equal("""{"about":"Piconet Launcher: offline play","lanes":0,"showFrameRate":true}""",
+        Assert.Equal("""{"about":"Piconet Launcher: offline play","lanes":0,"showFrameRate":true,"renderer":"aurora"}""",
             Flat(GameLaunchFile.Offline(null, window: new GameWindow("t", "  ", true))));
     }
 
@@ -186,9 +186,9 @@ public sealed class GameWindowTests : IDisposable
 
         // the launch file: nothing of either for a player's game; the two other ways by name; vertical sync when on
         var window = new GameWindow("F-Zero GX", "Piconet");
-        Assert.Equal("""{"about":"Piconet Launcher: offline play","bundle":"b","lanes":0,"windowName":"Piconet","showFrameRate":false}""",
+        Assert.Equal("""{"about":"Piconet Launcher: offline play","bundle":"b","lanes":0,"windowName":"Piconet","showFrameRate":false,"renderer":"aurora"}""",
             Flat(GameLaunchFile.Offline("b", window: window)));
-        Assert.Equal("""{"about":"Piconet Launcher: offline play","bundle":"b","lanes":0,"windowName":"Piconet","showFrameRate":false,"present":"field"}""",
+        Assert.Equal("""{"about":"Piconet Launcher: offline play","bundle":"b","lanes":0,"windowName":"Piconet","showFrameRate":false,"renderer":"aurora","present":"field"}""",
             Flat(GameLaunchFile.Offline("b", window: window with { Present = "field" })));
         Assert.Equal("copy", (string)JsonNode.Parse(GameLaunchFile.Race("b", Match, window: window with { Present = "copy" }))!["present"]!);
         Assert.Equal("field", (string)JsonNode.Parse(GameLaunchFile.Playback("b", "r.fzrp", window: window with { Present = "field" }))!["present"]!);
@@ -196,35 +196,45 @@ public sealed class GameWindowTests : IDisposable
         {
             Assert.Null(JsonNode.Parse(GameLaunchFile.Race("b", Match, window: window with { Present = none }))!["present"]);
         }
-        Assert.Equal("""{"about":"Piconet Launcher: offline play","bundle":"b","lanes":0,"windowName":"Piconet","showFrameRate":false,"verticalSync":true}""",
+        Assert.Equal("""{"about":"Piconet Launcher: offline play","bundle":"b","lanes":0,"windowName":"Piconet","showFrameRate":false,"renderer":"aurora","verticalSync":true}""",
             Flat(GameLaunchFile.Offline("b", window: window with { VerticalSync = true })));
         Assert.True((bool)JsonNode.Parse(GameLaunchFile.Race("b", Match, window: window with { VerticalSync = true }))!["verticalSync"]!);
         Assert.Null(JsonNode.Parse(GameLaunchFile.Playback("b", "r.fzrp", window: window))!["verticalSync"]);
     }
 
-    /// <summary>The refresh rate (frames drawn between two steps): "60" for every player, the three others kept by
-    /// name, anything else read as "60", and written into the launch file only when frames are drawn.</summary>
+    /// <summary>High refresh is the one setting of pictures between steps: it gives the launch file's
+    /// <c>"refreshRate"</c> beside its <c>"auroraHighRefresh"</c> (120 with "120", 240 with "240", off neither). A settings
+    /// file of before 0.6.0 with a <c>"refreshRate"</c> of its own keeps the higher of the two ("display" is 240), and
+    /// the next save no longer writes it. The launch file still takes any of its refresh rates from a window.</summary>
     [Fact]
-    public void TheRefreshRateIsKeptByNameAndGoesIntoTheLaunchFileWhenFramesAreDrawn()
+    public void HighRefreshGivesTheRefreshRateAndAnOldRefreshRateIsTakenIntoIt()
     {
-        Assert.Equal(("60", null), (new LauncherSettings().RefreshRate, new LauncherSettings().GameRefreshRate));
+        Assert.Equal((0, null), (new LauncherSettings().AuroraHighRefresh, new LauncherSettings().GameRefreshRate));
+        foreach (var (rate, redraw) in new (int, string?)[] { (0, null), (120, "120"), (240, "240"), (77, null) })
+        {
+            Assert.Equal(redraw, new LauncherSettings { AuroraHighRefresh = rate }.GameRefreshRate);
+        }
         var file = Path.Combine(_dir, "settings.json");
         var store = new SettingsStore(file);
-        foreach (var (written, read, game) in new[]
+        foreach (var (written, high, read) in new[]
                  {
-                     ("\"120\"", "120", "120"), ("\"240\"", "240", "240"), ("\"display\"", "display", "display"),
-                     ("\"60\"", "60", null), ("\"144\"", "60", null), ("120", "60", null), ("\"Display\"", "60", null),
+                     ("\"120\"", 0, 120), ("\"240\"", 0, 240), ("\"display\"", 0, 240), ("\"60\"", 0, 0), ("\"144\"", 0, 0),
+                     ("120", 0, 0), ("\"Display\"", 0, 0), ("\"120\"", 240, 240), ("\"240\"", 120, 240), ("\"60\"", 120, 120),
                  })
         {
-            File.WriteAllText(file, $$"""{"refreshRate": {{written}}, "gameVolume": 35}""");
+            File.WriteAllText(file, $$"""{"refreshRate": {{written}}, "auroraHighRefresh": {{high}}, "gameVolume": 35}""");
             var settings = store.Load();
-            Assert.Equal((read, game, 35), (settings.RefreshRate, settings.GameRefreshRate, settings.GameVolume));
+            Assert.Equal((read, 35), (settings.AuroraHighRefresh, settings.GameVolume));
+            Assert.Equal(SettingsRead.Fine, store.LastRead);
+            store.Save(settings);
+            Assert.Null(JsonNode.Parse(File.ReadAllText(file))!["refreshRate"]);
+            Assert.Equal(read, store.Load().AuroraHighRefresh);
         }
         var window = new GameWindow("F-Zero GX", "Piconet");
         Assert.Null(JsonNode.Parse(GameLaunchFile.Race("b", Match, window: window))!["refreshRate"]);
         Assert.Null(JsonNode.Parse(GameLaunchFile.Race("b", Match, window: window with { RefreshRate = "60" }))!["refreshRate"]);
-        Assert.Equal("240", (string)JsonNode.Parse(GameLaunchFile.Race("b", Match, window: window with { RefreshRate = "240" }))!["refreshRate"]!);
-        Assert.Equal("display", (string)JsonNode.Parse(GameLaunchFile.Playback("b", "r.fzrp", window: window with { RefreshRate = "display" }))!["refreshRate"]!);
+        Assert.Equal("240", (string)JsonNode.Parse(GameLaunchFile.Race("b", Match, window: window with { RefreshRate = GameWindow.Redraw240 }))!["refreshRate"]!);
+        Assert.Equal("display", (string)JsonNode.Parse(GameLaunchFile.Playback("b", "r.fzrp", window: window with { RefreshRate = GameWindow.RedrawAsTheDisplay }))!["refreshRate"]!);
     }
 
     /// <summary>The kind of full screen: one default in one place (<see cref="LauncherSettings.FullScreenDefault"/>,
@@ -260,7 +270,7 @@ public sealed class GameWindowTests : IDisposable
         var window = new GameWindow("F-Zero GX", "Piconet");
         Assert.Null(JsonNode.Parse(GameLaunchFile.Offline("b", window: window))!["fullScreen"]);
         Assert.Null(JsonNode.Parse(GameLaunchFile.Offline("b", window: window with { FullScreen = "windowed" }))!["fullScreen"]);
-        Assert.Equal("""{"about":"Piconet Launcher: offline play","bundle":"b","lanes":0,"windowName":"Piconet","showFrameRate":false,"fullScreen":"exclusive"}""",
+        Assert.Equal("""{"about":"Piconet Launcher: offline play","bundle":"b","lanes":0,"windowName":"Piconet","showFrameRate":false,"renderer":"aurora","fullScreen":"exclusive"}""",
             Flat(GameLaunchFile.Offline("b", window: window with { FullScreen = "exclusive" })));
         Assert.Equal("borderless", (string)JsonNode.Parse(GameLaunchFile.Race("b", Match, window: window with { FullScreen = "borderless" }))!["fullScreen"]!);
         Assert.Equal("exclusive", (string)JsonNode.Parse(GameLaunchFile.Playback("b", "r.fzrp", window: window with { FullScreen = "exclusive" }))!["fullScreen"]!);

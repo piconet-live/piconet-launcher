@@ -53,7 +53,6 @@ public sealed partial class SettingsViewModel : ViewModelBase
         InputDelayIndex = s.RaceInputDelay;
         VerticalSyncIndex = s.VerticalSync ? 1 : 0;
         FullScreenIndex = s.GameFullScreen == LauncherSettings.FullScreenExclusive ? 1 : 0;
-        RefreshRateIndex = Math.Max(0, RefreshRates.IndexOf(s.RefreshRate));
         AutoUpdate = s.AutoUpdate;
         GameVolume = s.GameVolume;
         SoundVolume = s.SoundVolume;
@@ -144,15 +143,6 @@ public sealed partial class SettingsViewModel : ViewModelBase
     /// <summary>The two kinds of full screen, in the order of <see cref="FullScreenIndex"/>.</summary>
     public static IReadOnlyList<string> FullScreenChoices { get; } = ["Borderless", "Exclusive"];
 
-    /// <summary>The refresh rates, in the order of <see cref="RefreshRateIndex"/>, as the settings file names them
-    /// (<see cref="RefreshRates"/>) and as the page shows them. No choice adds input delay: the game's
-    /// own picture comes at its 60 Hz moment and the pictures after it are guessed forward (stage 5).</summary>
-    public static IReadOnlyList<string> RefreshRateChoices { get; } =
-        ["60 Hz", "120 Hz", "240 Hz", "Display"];
-
-    private static readonly List<string> RefreshRates =
-        [LauncherSettings.RefreshAsTheGame, LauncherSettings.Refresh120, LauncherSettings.Refresh240, LauncherSettings.RefreshAsTheDisplay];
-
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(DiscStatusText), nameof(DiscProblem))]
     public partial string DiscPath { get; set; }
@@ -228,6 +218,8 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
     public static IReadOnlyList<string> AuroraHighRefreshChoices { get; } = LauncherSettings.AuroraHighRefreshes.Select(a => a.Words).ToList();
 
+    /// <summary>High refresh (<see cref="LauncherSettings.AuroraHighRefresh"/>): 0 off, 1 up to 120, 2 up to 240; the one
+    /// setting of pictures between the game's steps (the launch file's two keys of them: <see cref="LauncherSettings.GameRefreshRate"/>).</summary>
     [ObservableProperty]
     public partial int AuroraHighRefreshIndex { get; set; }
 
@@ -278,11 +270,6 @@ public sealed partial class SettingsViewModel : ViewModelBase
     /// <summary>Full screen (<see cref="LauncherSettings.FullScreen"/>): 0 borderless, 1 exclusive.</summary>
     [ObservableProperty]
     public partial int FullScreenIndex { get; set; }
-
-    /// <summary>Refresh rate (<see cref="LauncherSettings.RefreshRate"/>): 0 the game's 60, 1 120, 2 240, 3 the
-    /// display's own.</summary>
-    [ObservableProperty]
-    public partial int RefreshRateIndex { get; set; }
 
     /// <summary>How loud the game is, 0 to 100: it starts at this volume in every start the launcher makes.</summary>
     [ObservableProperty]
@@ -417,8 +404,6 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
     partial void OnFullScreenIndexChanged(int value) => Save();
 
-    partial void OnRefreshRateIndexChanged(int value) => Save();
-
     partial void OnGameVolumeChanged(int value) => Save();
 
     partial void OnSoundVolumeChanged(int value)
@@ -491,7 +476,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
             AuroraEdges = AuroraEdgesIndex >= 0 && AuroraEdgesIndex < LauncherSettings.AuroraEdgeCounts.Count ? LauncherSettings.AuroraEdgeCounts[AuroraEdgesIndex].Count : s.AuroraEdges,
             AuroraTextures = AuroraTexturesIndex >= 0 && AuroraTexturesIndex < LauncherSettings.AuroraTextureLevels.Count ? LauncherSettings.AuroraTextureLevels[AuroraTexturesIndex].Level : s.AuroraTextures,
             AuroraColourblind = AuroraColourblindIndex >= 0 && AuroraColourblindIndex < LauncherSettings.AuroraColourblindFilters.Count ? LauncherSettings.AuroraColourblindFilters[AuroraColourblindIndex].Name : s.AuroraColourblind,
-            AuroraHighRefresh = AuroraHighRefreshIndex >= 0 && AuroraHighRefreshIndex < LauncherSettings.AuroraHighRefreshes.Count ? LauncherSettings.AuroraHighRefreshes[AuroraHighRefreshIndex].Rate : 0,
+            AuroraHighRefresh = AuroraHighRefreshIndex >= 0 && AuroraHighRefreshIndex < LauncherSettings.AuroraHighRefreshes.Count ? LauncherSettings.AuroraHighRefreshes[AuroraHighRefreshIndex].Rate : s.AuroraHighRefresh,
             RayTracing = RayTracing,
             Rumble = Rumble,
             ReducedMotion = ReducedMotion,
@@ -504,7 +489,6 @@ public sealed partial class SettingsViewModel : ViewModelBase
                 1 => LauncherSettings.FullScreenExclusive,
                 _ => s.GameFullScreen,
             },
-            RefreshRate = RefreshRateIndex >= 0 && RefreshRateIndex < RefreshRates.Count ? RefreshRates[RefreshRateIndex] : s.RefreshRate,
             GameVolume = Math.Clamp(GameVolume, 0, 100),
             SoundVolume = Math.Clamp(SoundVolume, 0, 100),
             SoundMuted = SoundMuted,

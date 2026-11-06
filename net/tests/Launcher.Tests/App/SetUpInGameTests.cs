@@ -198,7 +198,7 @@ public sealed partial class SetUpInGameTests(OneHeadlessApplication application)
         var file = JsonNode.Parse(File.ReadAllText(launch))!.AsObject();
         // every member: the start asks for the controller options, the game window's strip has the launcher's name,
         // the launcher's status board for this game is named, and nothing of a test is on
-        Assert.Equal(["about", "lanes", "controllerSetup", "windowName", "showFrameRate", "fullScreen", "board"], file.Select(m => m.Key));
+        Assert.Equal(["about", "lanes", "controllerSetup", "windowName", "showFrameRate", "renderer", "fullScreen", "board"], file.Select(m => m.Key));
         Assert.EndsWith(".board", (string?)file["board"], StringComparison.Ordinal);
         Assert.True((bool)file["controllerSetup"]!);
         Assert.Equal("Piconet Launcher: the game's controller options", (string?)file["about"]);

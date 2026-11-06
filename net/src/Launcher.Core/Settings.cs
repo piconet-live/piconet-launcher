@@ -217,7 +217,10 @@ public sealed record LauncherSettings
     public static IReadOnlyList<(string Name, string Words)> AuroraColourblindFilters { get; } =
         [("off", "Off"), ("deuteranopia", "Deuteranopia"), ("protanopia", "Protanopia"), ("tritanopia", "Tritanopia")];
 
-    /// <summary>Pictures between the game's own steps, each step run ahead (<c>"auroraHighRefresh"</c>): one of <see cref="AuroraHighRefreshes"/>, off by default.</summary>
+    /// <summary>Pictures between the game's own steps (the Settings page's "High refresh", Game): one of
+    /// <see cref="AuroraHighRefreshes"/>, off by default. It is the launch file's <c>"auroraHighRefresh"</c> and its
+    /// <c>"refreshRate"</c> both (<see cref="GameRefreshRate"/>). A settings file of before 0.6.0 may hold
+    /// <c>"refreshRate"</c>, the setting of its own that this one took over: the higher of the two is kept (<see cref="SettingsStore.Load"/>).</summary>
     public int AuroraHighRefresh { get; init; } = AuroraHighRefreshes[0].Rate;
 
     public static IReadOnlyList<(int Rate, string Words)> AuroraHighRefreshes { get; } = [(0, "Off"), (120, "Up to 120"), (240, "Up to 240")];
@@ -238,6 +241,26 @@ public sealed record LauncherSettings
             AuroraColourblind != AuroraColourblindFilters[0].Name && AuroraColourblindFilters.Any(a => a.Name == AuroraColourblind) ? AuroraColourblind : null,
             AuroraHighRefreshes.Any(a => a.Rate == AuroraHighRefresh) ? AuroraHighRefresh : 0,
             RayTracing && cardRayTraces);
+
+    /// <summary>The launch file's <c>"refreshRate"</c> beside its <c>"auroraHighRefresh"</c>, from the one setting
+    /// (<see cref="AuroraHighRefresh"/>): "120" with 120, "240" with 240; off (and anything not on the list): null, and
+    /// neither is written.</summary>
+    [JsonIgnore]
+    public string? GameRefreshRate => AuroraLaunchKeys().HighRefresh switch
+    {
+        120 => GameWindow.Redraw120,
+        240 => GameWindow.Redraw240,
+        _ => null,
+    };
+
+    /// <summary>What a settings file of before 0.6.0 said in its <c>"refreshRate"</c>, as <see cref="AuroraHighRefresh"/>:
+    /// "120" is 120, "240" and "display" (the display's own rate) are 240, anything else 0.</summary>
+    public static int HighRefreshOfFormerRefreshRate(string? refreshRate) => refreshRate switch
+    {
+        "120" => 120,
+        "240" or "display" => 240,
+        _ => 0,
+    };
 
     /// <summary>The controllers rumble in the game (the Settings page's "Rumble", Game; on by default).
     /// Off reaches the game's launch file as <c>"rumble": false</c> (on is the game's default, and a runner
@@ -394,22 +417,6 @@ public sealed record LauncherSettings
     /// comparison, else null (the launch file then says nothing of it: the game's own way is a console's).</summary>
     [JsonIgnore]
     public string? GamePresent => Present is PresentAsBefore or PresentAtTheCopy ? Present : null;
-
-    /// <summary>Pictures a second in a race or a replay (the launch file's <c>"refreshRate"</c>; the Settings page's "Refresh rate").
-    /// <c>"60"</c>: the game's own picture a step, every player's. <c>"120"</c>, <c>"240"</c>, <c>"display"</c> (the
-    /// display's own rate): frames drawn between two steps, machines and cameras between where they were and where
-    /// they are, each shown at its time; the simulation keeps the console's clock. Anything else reads as
-    /// <c>"60"</c> (<see cref="SettingsCheck"/>).</summary>
-    [JsonConverter(typeof(SettingAsWritten.Words))]
-    public string RefreshRate { get; init; } = RefreshAsTheGame;
-
-    /// <summary>The refresh rates a settings file can name; the first is every player's.</summary>
-    public const string RefreshAsTheGame = "60", Refresh120 = "120", Refresh240 = "240", RefreshAsTheDisplay = "display";
-
-    /// <summary>What a game is started with: <see cref="RefreshRate"/> when it draws frames between steps, else null
-    /// (the launch file then says nothing of it).</summary>
-    [JsonIgnore]
-    public string? GameRefreshRate => RefreshRate is Refresh120 or Refresh240 or RefreshAsTheDisplay ? RefreshRate : null;
 
     /// <summary>The game's pictures wait for the display's refresh (off by default; the Settings page's "Vertical
     /// sync"). Off suits a display with variable refresh and a window the system composes; on is for a display of

@@ -33,7 +33,7 @@ public sealed class GameLaunchFileTests
             """{"about":"Piconet Launcher: a replay\u0027s playback","bundle":"b","widescreen":true,"lanes":0,"replay":{"file":"r.fzrp","otherSounds":"full"}}""",
             Flat(GameLaunchFile.Playback("b", "r.fzrp", OtherSounds.Full)));
         var race = JsonNode.Parse(GameLaunchFile.Race("b", Match, record: "race.fzrp", window: new GameWindow("t", Board: "g.board")))!.AsObject();
-        Assert.Equal(["about", "bundle", "widescreen", "lanes", "match", "showFrameRate", "board"], race.Select(m => m.Key));
+        Assert.Equal(["about", "bundle", "widescreen", "lanes", "match", "showFrameRate", "renderer", "board"], race.Select(m => m.Key));
         Assert.Equal(0, (int)race["lanes"]!);
         Assert.Equal("Piconet Launcher: a race (match m7)", (string?)race["about"]);
         Assert.Equal(["match", "relayHost", "delay", "overclock", "otherSounds", "record"], race["match"]!.AsObject().Select(m => m.Key));
