@@ -103,13 +103,19 @@ public sealed record DebugSettings
     /// launcher takes it from nobody (<c>"leaveAdapter"</c>).</summary>
     public bool LeaveAdapter { get; init; }
 
+    /// <summary>The launcher's windows drawn the way Avalonia draws them by default, through Windows' composition
+    /// (WinUI, else DirectComposition), instead of onto the window's own surface (<c>"windowComposition"</c>): to
+    /// compare the two for smoothness. A capture that reads the window's surface (OBS's Window Capture on its
+    /// Automatic way, BitBlt) gets nothing of a composed window. Read once, as the window starts (Program.cs).</summary>
+    public bool WindowComposition { get; init; }
+
     /// <summary>A setting here reaches a race: one handed on to the game (<see cref="Title"/>,
     /// <see cref="RunnerArguments"/>, and <see cref="Autopilot"/>, <see cref="TestLagMs"/>, <see cref="Game"/>: the
     /// game's own "debug" part, <see cref="GameDebug"/>), or one of the launcher's that acts in a race
     /// (<see cref="QuickPlay"/>: nobody is at the controls; <see cref="StartLimitSeconds"/>). The launcher says so in
     /// its hello (<see cref="Online.Protocol.Hello.Debug"/>), and a server that takes no test settings refuses it.
     /// The settings of the launcher's own window and checks (<see cref="WindowAt"/>, <see cref="WindowPage"/>,
-    /// <see cref="Fault"/>, <see cref="GpuLog"/>, <see cref="GpuTurn"/>, <see cref="LoadTrace"/>, <see cref="LeaveAdapter"/>) reach no race. A setting named with the
+    /// <see cref="Fault"/>, <see cref="GpuLog"/>, <see cref="GpuTurn"/>, <see cref="LoadTrace"/>, <see cref="LeaveAdapter"/>, <see cref="WindowComposition"/>) reach no race. A setting named with the
     /// value it has anyway (<c>"autopilot": false</c>, an empty <c>"game"</c>) is not on.</summary>
     public bool ReachesARace => Title is not null || RunnerArguments.Count > 0 || QuickPlay is not null
         || StartLimitSeconds > 0 || GameDebug.From(this).Part() is not null;
@@ -223,6 +229,7 @@ public sealed record LaunchConfig(string About, DebugSettings Debug)
                 "gpuTurn" => d with { GpuTurn = YesNo(member) },
                 "loadTrace" => d with { LoadTrace = YesNo(member) },
                 "leaveAdapter" => d with { LeaveAdapter = YesNo(member) },
+                "windowComposition" => d with { WindowComposition = YesNo(member) },
                 _ => throw Unknown(member, "debug."),
             };
         }

@@ -433,5 +433,5 @@ internal static class Program
         return 0;
     }
     public static AppBuilder BuildAvaloniaApp() =>
-        AppBuilder.Configure<App>().UsePlatformDetect().LogToTrace();
+        AppBuilder.Configure<App>().UsePlatformDetect().With(WindowsDrawing.Options(Line.Debug)).LogToTrace();
 }
