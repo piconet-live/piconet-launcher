@@ -48,6 +48,11 @@ public sealed class RealModsTests
         Assert.All(byName["tron_aeropolis.7z"].Files, f => Assert.True(f.Online, f.Disc + ": " + f.Why));
         Assert.Contains(byName["tron_aeropolis.7z"].Files, f => f.Class == ModFileClass.Course);
         Assert.Contains(byName["gxtreme_v5.zip"].Files, f => f.Class == ModFileClass.CarData && !f.Online);
+        // GXtreme's story course on Trident's slot: its looks and its background go with its course file, offline
+        var gxtreme = byName["gxtreme_v5.zip"];
+        Assert.Equal("bg_ele", gxtreme.Backgrounds![24]);
+        Assert.All(gxtreme.Files.Where(f => f.Disc is "stage/COLI_COURSE24.lz" or "stage/st24.gma.lz" or "stage/selst24.tpl.lz" or "bg/bg_ele.tpl.lz"),
+            f => Assert.False(f.Online, f.Disc));
         Assert.Contains(byName["f-zero_gx_unleashed_504_all_versions_.zip"].Files, f => f.Class == ModFileClass.Code);
     }
 }
