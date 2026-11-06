@@ -6,7 +6,7 @@
              x:DataType="vm:StatsViewModel"
              x:Name="Root">
   <!-- Stats, the Replays tab's second page (direction D: dark, green for what is won): the tabs as the
-       Replays page has them, the figures as tiles, the recent form, the best times and the courses raced most. -->
+       Replays page has them, the figures as tiles, the last races, the best times and the courses raced most. -->
   <UserControl.Styles>
     <Style Selector="Grid.cells > :is(Control)">
       <Setter Property="Margin" Value="12,0,0,0" />
@@ -33,24 +33,12 @@
   </UserControl.Styles>
 
   <StackPanel>
-    <!-- the tabs: the online races and the practice runs, each with its count -->
-    <Border BorderBrush="{StaticResource EdgeBrush}" BorderThickness="0,0,0,1" Margin="0,40,0,8">
-      <c:TravelHost Fill="{StaticResource AccentBrush}" Shape="Lean"><ItemsControl ItemsSource="{Binding Tabs}">
-        <ItemsControl.ItemsPanel>
-          <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="20" /></ItemsPanelTemplate>
-        </ItemsControl.ItemsPanel>
-        <ItemsControl.ItemTemplate>
-          <DataTemplate x:DataType="vm:ReplayTab">
-            <Button Classes="section" Classes.on="{Binding On}" AutomationProperties.Name="{Binding Label}"
-                    Command="{Binding #Root.((vm:StatsViewModel)DataContext).ShowTabCommand}" CommandParameter="{Binding}">
-              <StackPanel Orientation="Horizontal" Spacing="6">
-                <TextBlock Text="{Binding Label}" />
-                <TextBlock Classes="dim" Text="{Binding Count}" FontFeatures="tnum" />
-              </StackPanel>
-            </Button>
-          </DataTemplate>
-        </ItemsControl.ItemTemplate>
-      </ItemsControl></c:TravelHost>
+    <!-- the heading: online races only, with their count (practice has no stats: owner 2026-11-06) -->
+    <Border BorderBrush="{StaticResource EdgeBrush}" BorderThickness="0,0,0,1" Margin="0,40,0,8" Padding="0,0,0,8">
+      <StackPanel Orientation="Horizontal" Spacing="6">
+        <TextBlock Classes="section" Text="Online races" />
+        <TextBlock Classes="dim" Text="{Binding RaceCount}" FontFeatures="tnum" VerticalAlignment="Center" />
+      </StackPanel>
     </Border>
 
     <Border Classes="row last" IsVisible="{Binding Reading}">
@@ -78,9 +66,9 @@
         </ItemsControl.ItemTemplate>
       </ItemsControl>
 
-      <!-- the recent form, newest first -->
+      <!-- the last races' places, newest first (ReplayStats.RecentCount) -->
       <StackPanel IsVisible="{Binding HasForm}" Spacing="8">
-        <TextBlock Classes="head" Text="Recent form" />
+        <TextBlock Classes="head" Text="Last 10 races" />
         <ItemsControl ItemsSource="{Binding Form}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
