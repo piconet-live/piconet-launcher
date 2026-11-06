@@ -12,7 +12,7 @@ internal static class Program
     /// <summary>
     /// The launcher's window; or one of the modes without it, as the command line says (<see cref="CommandLine"/>
     /// describes every option): <c>--play-offline</c>, the recompiled game started for offline play (the same start
-    /// as the left column's Play F-Zero GX), waiting until the game is closed; <c>--play-match FILE</c>, the game
+    /// as the left column's Start F-Zero GX), waiting until the game is closed; <c>--play-match FILE</c>, the game
     /// started on the race of that match file (tests and development), recorded into the replay folder or where
     /// <c>--replay FILE</c> says; <c>--play-replay FILE</c>, the game playing that replay file back, which stays paused
     /// on the race's last picture until the game is closed (the replay scrubber); <c>--list-replays</c>, the replay folder's replays as the Replays page lists them, one line

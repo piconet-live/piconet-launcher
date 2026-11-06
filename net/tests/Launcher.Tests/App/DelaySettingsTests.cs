@@ -56,7 +56,7 @@ public sealed class DelaySettingsTests : IDisposable
         return state;
     }
 
-    /// <summary>The launch file of the game a press of "Play F-Zero GX" starts, read once the game was started.</summary>
+    /// <summary>The launch file of the game a press of "Start F-Zero GX" starts, read once the game was started.</summary>
     private JsonObject LaunchFileOfAStart(AppState state)
     {
         File.Delete(Started);

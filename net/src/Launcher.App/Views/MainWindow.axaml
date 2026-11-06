@@ -94,8 +94,9 @@
     <Grid Grid.Row="2" ColumnDefinitions="Auto,*">
       <!-- The left column, on every page (direction D: "who you are, where you can go, whether you are online"): your
            machine in 3D, the gold bar, your name and machine; the places (Play, Garage, Replays, Mods); the one notice;
-           at its foot Settings, lit while a Settings page shows, above the connection and the build. RACE, the lobby's
-           box and "Play F-Zero GX" are on Quick Play's page (PlayControlView); the lobby's state is the Lobby's. -->
+           at its foot "Start F-Zero GX" (StartGameView), then Settings, lit while a Settings page shows, above the
+           connection and the build. RACE and the lobby's box are on Quick Play's page (PlayControlView); the lobby's
+           state is the Lobby's. -->
       <Border Width="{StaticResource ColumnWidth}" Background="{StaticResource ColumnBrush}" IsVisible="{Binding Navigation}">
         <!-- Declared top to bottom, so Tab goes as the eye does (a dock declared first comes first). -->
         <c:TravelHost Fill="{StaticResource RaisedBrush}">
@@ -145,6 +146,7 @@
           <StackPanel Grid.Row="2" Margin="16" Spacing="8">
             <!-- the launcher's update, while there is something to do: "Restart to update" (UpdateViewModel) -->
             <v:UpdateNoticeView DataContext="{Binding Update}" />
+            <v:StartGameView DataContext="{Binding Control}" Margin="0,0,0,8" />
             <Button Name="SettingsButton" Classes="quiet" Command="{Binding ShowTabCommand}" CommandParameter="settings"
                     Classes.on="{Binding Tab, Converter={x:Static v:Equal.Instance}, ConverterParameter=settings}"
                     AutomationProperties.Name="Settings">
