@@ -14,8 +14,11 @@ namespace Launcher.Core;
 /// the game's user folder (<c>Aurora/dawn_cache.db</c>), which every later game reads instead of compiling.
 /// <para>A look's cache is ready when its stamp file holds the stamp the launcher works out now (<see cref="Want"/>):
 /// the look (plain, or ray traced: their shaders differ), Aurora itself (its library and the pipeline seed beside the
-/// runner: a new build compiles other shaders), the graphics drivers (a driver's compiled code is its own), and the mods
-/// that are on (their models are planned too). The launcher writes the stamp when a build has said it is done.</para>
+/// runner: a new build compiles other shaders), the graphics drivers (a driver's compiled code is its own), and the mods'
+/// files that can add pipelines (<see cref="AddsPipelines"/>: their models and course files; a texture, a sound or a
+/// table cannot). The launcher writes the stamp when a build has said it is done. The cache only adds, so a set of such
+/// files that the built ones hold is ready too (a mod switched off, a part unticked: <see cref="Why"/>), and the stamp
+/// a build leaves holds what was built before it as well (<see cref="Mark"/>).</para>
 /// <para>When Aurora or the drivers changed, what Dawn's cache holds is of no use any more: it is emptied first
 /// (<see cref="Clear"/>), with every look's stamp. A change of the look or of the mods only adds to it.</para>
 /// </summary>
@@ -86,17 +89,66 @@ public static class PipelineCache
                 }
             }
         });
-        var mods = Hash(w =>
+        var files = string.Join(',', (paths.Mods?.Offline ?? []).Where(AddsPipelines).Select(f => Hash(w =>
         {
-            foreach (var f in paths.Mods?.Offline ?? [])
+            var info = new FileInfo(f.From);
+            w.Write(f.Disc);
+            w.Write(f.From);
+            w.Write(info.Length.ToString(CultureInfo.InvariantCulture) + "/" + info.LastWriteTimeUtc.Ticks.ToString(CultureInfo.InvariantCulture));
+        })).Distinct().Order(StringComparer.Ordinal));
+        return new PipelineStamp(look, aurora, Hash(w => w.Write(drivers)), Hash(w => w.Write(files)), files);
+    }
+
+    /// <summary>Whether a mod's file can need pipelines a build makes: what the build's planner reads (recompcore
+    /// model_pipelines.cpp read_file): a course file, by its name (its fog type is in the forms' key), or a file that might
+    /// hold models by its first bytes (an LZ file, a U8 archive, a model file's table), the runner's own test of the files
+    /// it hands to the planner (piconet-runner pipelines_build.cpp MightHoldModels and Files). Nothing else enters
+    /// Aurora's pipeline key (gx/pipeline.hpp PipelineConfig: the GX state a model's materials set; no texture's format
+    /// or palette): a texture, a sound, a table or a text adds none. A file that cannot be read adds none (the build
+    /// leaves it out too).</summary>
+    public static bool AddsPipelines(OverlayFile file)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+        try
+        {
+            var info = new FileInfo(file.From);
+            if (!info.Exists || info.Length < 16)
             {
-                var info = new FileInfo(f.From);
-                w.Write(f.Disc);
-                w.Write(f.From);
-                w.Write(info.Exists ? info.Length.ToString(CultureInfo.InvariantCulture) + "/" + info.LastWriteTimeUtc.Ticks.ToString(CultureInfo.InvariantCulture) : "-");
+                return false;
             }
-        });
-        return new PipelineStamp(look, aurora, Hash(w => w.Write(drivers)), mods);
+            if (file.Disc.Contains("COLI_COURSE", StringComparison.Ordinal))
+            {
+                return true;
+            }
+            Span<byte> head = stackalloc byte[8];
+            using (var s = info.OpenRead())
+            {
+                s.ReadExactly(head);
+            }
+            return MightHoldModels(head, (ulong)info.Length);
+        }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>The runner's test (pipelines_build.cpp MightHoldModels, after the emulator's disc monitor): LZ (its packed
+    /// size says the file's size), a U8 archive, or a model file's table.</summary>
+    public static bool MightHoldModels(ReadOnlySpan<byte> head, ulong size)
+    {
+        if (head.Length < 8)
+        {
+            return false;
+        }
+        var le = System.Buffers.Binary.BinaryPrimitives.ReadUInt32LittleEndian(head);
+        var be0 = System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(head);
+        var be1 = System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(head[4..]);
+        if ((ulong)le + 8 == size || be0 == 0x55AA382D)
+        {
+            return true;
+        }
+        return be0 != 0 && be0 < 0x10000 && be1 >= 8 + (ulong)be0 * 8 && be1 < size && be1 % 0x20 == 0;
     }
 
     /// <summary>The stamp of a look's last finished build; null: none.</summary>
@@ -121,11 +173,20 @@ public static class PipelineCache
             // another look built with this Aurora and these drivers: the same words as a first build
             return PipelineWhy.First;
         }
-        return built == want ? null
-            : built.Aurora != want.Aurora ? PipelineWhy.Aurora
+        return built.Aurora != want.Aurora ? PipelineWhy.Aurora
             : built.Drivers != want.Drivers ? PipelineWhy.Drivers
+            : built.Mods == want.Mods || Holds(built, want) ? null
             : PipelineWhy.Mods;
     }
+
+    /// <summary>The built stamp's mods' files hold every one <paramref name="want"/> has (the cache only adds: fewer files
+    /// need nothing). A stamp from before the list was kept holds none.</summary>
+    private static bool Holds(PipelineStamp built, PipelineStamp want) =>
+        built.ModFiles is { } have && want.ModFiles is { } wanted &&
+        Files(wanted).All(Files(have).Contains);
+
+    private static HashSet<string> Files(string list) =>
+        list.Split(',', StringSplitOptions.RemoveEmptyEntries).ToHashSet(StringComparer.Ordinal);
 
     /// <summary>Some look was built with another Aurora or other drivers than <paramref name="want"/>'s: Dawn's cache holds
     /// nothing a game can use, and is emptied before the build (<see cref="Clear"/>).</summary>
@@ -147,10 +208,17 @@ public static class PipelineCache
         }
     }
 
-    /// <summary>A look's build is done: its stamp kept.</summary>
+    /// <summary>A look's build is done: its stamp kept, with the mods' files the look's last stamp had built when Aurora and
+    /// the drivers are the same (Dawn's cache still holds those: switched on again, they need no build).</summary>
     public static void Mark(RecompPaths paths, PipelineStamp stamp)
     {
         ArgumentNullException.ThrowIfNull(stamp);
+        if (Built(paths, stamp.Look) is { ModFiles: { } before } built && built.Aurora == stamp.Aurora && built.Drivers == stamp.Drivers &&
+            stamp.ModFiles is { } now)
+        {
+            var files = string.Join(',', Files(before).Union(Files(now)).Order(StringComparer.Ordinal));
+            stamp = stamp with { Mods = Hash(w => w.Write(files)), ModFiles = files };
+        }
         Directory.CreateDirectory(Folder(paths));
         File.WriteAllText(StampFile(paths, stamp.Look), stamp.Text);
     }
@@ -298,11 +366,12 @@ public static class PipelineCache
     }
 }
 
-/// <summary>What a look's cache was built for (<see cref="PipelineCache.Want"/>): each part a short hash.</summary>
-public sealed record PipelineStamp(string Look, string Aurora, string Drivers, string Mods)
+/// <summary>What a look's cache was built for (<see cref="PipelineCache.Want"/>): each part a short hash; ModFiles each mod
+/// file that adds pipelines as one, joined by commas (null: a stamp from before they were kept).</summary>
+public sealed record PipelineStamp(string Look, string Aurora, string Drivers, string Mods, string? ModFiles = null)
 {
     /// <summary>The stamp file's text: a part a line.</summary>
-    public string Text => $"look={Look}\naurora={Aurora}\ndrivers={Drivers}\nmods={Mods}\n";
+    public string Text => $"look={Look}\naurora={Aurora}\ndrivers={Drivers}\nmods={Mods}\n" + (ModFiles is null ? "" : $"modfiles={ModFiles}\n");
 
     /// <summary>A stamp file's text; null: none (a part missing).</summary>
     public static PipelineStamp? Parse(string text)
@@ -312,7 +381,7 @@ public sealed record PipelineStamp(string Look, string Aurora, string Drivers, s
             .Select(l => l.Split('=', 2)).Where(p => p.Length == 2).ToDictionary(p => p[0], p => p[1], StringComparer.Ordinal);
         return parts.TryGetValue("look", out var look) && parts.TryGetValue("aurora", out var aurora) &&
                parts.TryGetValue("drivers", out var drivers) && parts.TryGetValue("mods", out var mods)
-            ? new PipelineStamp(look, aurora, drivers, mods)
+            ? new PipelineStamp(look, aurora, drivers, mods, parts.GetValueOrDefault("modfiles"))
             : null;
     }
 }
