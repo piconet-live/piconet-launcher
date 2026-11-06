@@ -161,7 +161,7 @@ public sealed class CustomLobbiesTests : IDisposable
             PumpTelling(state, () => main.Current is CustomLobbiesViewModel && lobbies.Rows.Count == 3, "leaving did not go back to the browser");
             Assert.True(state.Session is { Custom: true, ConnectedTo: not null, Lobby: null });
 
-            // Create: pick a mode, then its settings. The server's official modes (Quick Play, Knockout, Ghost race),
+            // Create: pick a mode, then its settings. The server's official modes (Quick Play, Knockout, Ghost race, Death Race),
             // Quick Play's first and chosen; the lobby's own settings beside
             view = Page<CustomLobbiesView>(window);
             Click(window, Named<Button>(view, "CreateButton"));
@@ -171,7 +171,7 @@ public sealed class CustomLobbiesTests : IDisposable
             Assert.True(Named<Button>(view, "Back").IsEffectivelyVisible);
             var list = Named<ListBox>(view, "ModeList");
             Assert.True(list.IsEffectivelyVisible);
-            Assert.Equal(["Quick Play", "Knockout", "Ghost race"], editor.ModeRow.Choices.Select(c => c.Name));
+            Assert.Equal(["Quick Play", "Knockout", "Ghost race", "Death Race"], editor.ModeRow.Choices.Select(c => c.Name));
             Assert.Equal(0, list.SelectedIndex);
             Assert.Equal("Quick Play's rules: laps by course, GX Unleashed stats.", editor.ModeRow.Chosen!.About);
             Assert.True(Named<Button>(view, "ModeFromFile").IsEffectivelyVisible);
@@ -453,7 +453,7 @@ public sealed class CustomLobbiesTests : IDisposable
             var view = Page<CustomLobbiesView>(window);
             Click(window, Named<Button>(view, "CreateButton"));
             var editor = main.Lobbies.Editor!;
-            Assert.Equal(["Quick Play", "Knockout", "Ghost race"], editor.ModeRow.Choices.Select(c => c.Name));
+            Assert.Equal(["Quick Play", "Knockout", "Ghost race", "Death Race"], editor.ModeRow.Choices.Select(c => c.Name));
             // Quick Play's settings are its mode's: the stats among them, no stats row of the lobby's
             Assert.Equal(QuickPlaysSettings, editor.ParamRows.Select(p => p.Row.Label));
             Assert.DoesNotContain(editor.LobbyGroups.SelectMany(g => g.Rows), r => r.Label == HostRules.StatPack.Label && r is PackRule);
