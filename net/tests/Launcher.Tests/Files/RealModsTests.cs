@@ -53,6 +53,8 @@ public sealed class RealModsTests
         Assert.Equal("bg_ele", gxtreme.Backgrounds![24]);
         Assert.All(gxtreme.Files.Where(f => f.Disc is "stage/COLI_COURSE24.lz" or "stage/st24.gma.lz" or "stage/selst24.tpl.lz" or "bg/bg_ele.tpl.lz"),
             f => Assert.False(f.Online, f.Disc));
+        // its story courses' own models are re-modelled: single player by their shape; Luminous City's re-skin passes
+        Assert.Contains(gxtreme.Files, f => f is { Disc: "stage/st24.gma.lz", Why: ModModels.TrackWhy });
         Assert.Contains(byName["f-zero_gx_unleashed_504_all_versions_.zip"].Files, f => f.Class == ModFileClass.Code);
     }
 }

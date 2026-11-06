@@ -368,7 +368,8 @@ public static class ModImport
         {
             return null;
         }
-        var verdict = ModGuard.Check(kind, bytes, vanilla);
+        // a look the race is driven on (a course's or a machine's models) has its own check
+        var verdict = (kind == ModFileClass.Look ? ModModels.Check(discPath, bytes, vanilla) : null) ?? ModGuard.Check(kind, bytes, vanilla);
         var to = Path.Combine(store, sha);
         if (kind != ModFileClass.Code && !File.Exists(to))
         {

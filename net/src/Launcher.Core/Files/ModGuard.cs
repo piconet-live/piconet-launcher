@@ -9,7 +9,9 @@ namespace Launcher.Core;
 /// <summary>What a mod's file is to the game, by its path on the disc (<see cref="ModGuard.Classify"/>).</summary>
 public enum ModFileClass
 {
-    /// <summary>Anything that is neither of the others: textures, models, backgrounds, music, menus, movies.</summary>
+    /// <summary>Anything that is neither of the others: textures, models, backgrounds, music, menus, movies. Free,
+    /// but for a course's own models, which keep the disc's shape for the race (<see cref="ModModels"/>), and the
+    /// looks of a course that is single player only (<see cref="ModManifest.Files"/>).</summary>
     Look,
 
     /// <summary>The game's code (<c>sys/*</c>, <c>main.dol</c>, <c>*.rel</c>, <c>enemy_line/*</c>, the pinned files):
