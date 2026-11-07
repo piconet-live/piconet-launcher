@@ -8,7 +8,7 @@ namespace Launcher.Tests;
 /// <summary>The stand-in service races Quick Play's rotation as the service does (<see cref="QuickPlayRotation"/>):
 /// on the protocol's rotation of today's words, its vote has five cards, one spicy with its badge, and Random; the
 /// draw's card names what the course drawn races. The official rotation loads, with no notice, and its vote has two
-/// spicy cards, Knockout and Ghost race, each on its own course. A rotation that does not
+/// spicy cards, two different ones of Knockout, Ghost race and Overdrive, each on its own course. A rotation that does not
 /// load: the stand-in votes on courses alone and says why. A custom lobby's host mode file is compiled as the service compiles it: a file that
 /// does not compile is refused with its line (bad_mode), one that does names the lobby's mode.</summary>
 [Collection(HeadlessApp.Name)]   // the stand-in's rotation is the process's: these take turns with the app's tests
@@ -82,12 +82,19 @@ public sealed class StandInModesTests : IDisposable
                 await link.VoteStartAsync(true, TestContext.Current.CancellationToken);
                 var vote = await Next<CourseVote>(got);
                 var cards = vote.Cards!;
-                var spicy = Assert.Single(cards, c => c.Badge == "KNOCKOUT");
-                Assert.Equal(0, spicy.Laps);
-                Assert.Contains(vote.Options[cards.ToList().IndexOf(spicy)], CoursePool.Default);   // any course (protocol 9710f66)
                 var normal = StandInService.Rotation!.Normal;
-                var ghost = Assert.Single(cards, c => c.Badge == "GHOST RACE");   // any course, Quick Play's laps on it
-                Assert.Equal(normal.Laps(vote.Options[cards.ToList().IndexOf(ghost)]), ghost.Laps);
+                Assert.Equal(["GHOST RACE", "KNOCKOUT", "OVERDRIVE"],
+                    StandInService.Rotation.Spicy.Select(s => s.Mode.Package.Badge).Order(StringComparer.Ordinal));
+                // two spicy cards, two different ones of the three, each on any course (protocol 9710f66) with its laps:
+                // Knockout and Overdrive unlimited (0), Ghost race Quick Play's laps on its course
+                var spicy = Enumerable.Range(0, 5).Where(i => cards[i].Badge is not null).ToList();
+                Assert.Equal(2, spicy.Count);
+                Assert.Equal(2, spicy.Select(i => cards[i].Badge).Distinct().Count());
+                foreach (var i in spicy)
+                {
+                    Assert.Contains(vote.Options[i], CoursePool.Default);
+                    Assert.Equal(cards[i].Badge == "GHOST RACE" ? normal.Laps(vote.Options[i]) : 0, cards[i].Laps);
+                }
                 Assert.Equal(2, cards.Count(c => c.Badge is not null));
                 Assert.Equal(5, vote.Options.Take(5).Distinct().Count());
                 for (var i = 0; i < 5; i++)
