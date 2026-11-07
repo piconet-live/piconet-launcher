@@ -126,8 +126,9 @@ public sealed partial class LobbyStageRulesTests
         });
     }
 
-    /// <summary>Quick Play's own rotation (protocol/quickplay: the competitive lap table, Knockout the spicy card on Loop
-    /// Cross): each normal card says its course's laps, Knockout its badge and no laps (it races unlimited). LOBBY_SHOTS
+    /// <summary>Quick Play's own rotation (protocol/quickplay: the competitive lap table, Knockout and Ghost race the
+    /// spicy cards): each normal card says its course's laps, Knockout its badge and no laps (it races unlimited), Ghost
+    /// race its badge and its course's laps. LOBBY_SHOTS
     /// keeps it, to set beside the vote's mockup (design 6).</summary>
     [Fact]
     public async Task QuickPlaysOwnRotationShowsEachCoursesLaps()
@@ -142,8 +143,11 @@ public sealed partial class LobbyStageRulesTests
             Send(server, LedServer.Lobby(LobbyState.Starting), new CourseVote("m1", options, 60_000, [.. vote.Select(o => o.Card)]));
             PumpTelling(state, () => lobby.VoteShown && lobby.CourseOptions.Count == 6);
             var cards = lobby.CourseOptions;
-            var spicy = Assert.Single(cards, c => c.HasBadge);
-            Assert.Equal(("KNOCKOUT", spicy.Place), (spicy.Badge, spicy.PlaceLine));
+            var spicy = Assert.Single(cards, c => c.Badge == "KNOCKOUT");
+            Assert.Equal(spicy.Place, spicy.PlaceLine);   // laps unlimited: none said
+            var ghost = Assert.Single(cards, c => c.Badge == "GHOST RACE");   // the second spicy card, Quick Play's laps
+            Assert.Matches(@" · \d+ laps?$", ghost.PlaceLine);
+            Assert.Equal(2, cards.Count(c => c.HasBadge));
             Assert.All(cards.Where(c => !c.HasBadge && c.Course != CourseVote.RandomCourse), c =>
                 Assert.Matches(@" · \d+ laps?$", c.PlaceLine));
             // the cards say the laps: the lobby's line says none of its own

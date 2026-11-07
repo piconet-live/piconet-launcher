@@ -336,7 +336,7 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
     private IReadOnlyList<int> CoursePool => room?.Terms?.Courses is { Count: > 0 } listed ? listed : Courses.Pool;
 
     /// <summary>(Under the lock.) The match forms: the course vote, five courses of the pool and Random course; with
-    /// Quick Play's rotation, five cards of it (one spicy) and Random, as the service's vote.</summary>
+    /// Quick Play's rotation, five cards of it (its spicy ones among them) and Random, as the service's vote.</summary>
     private void StartMatch()
     {
         _match++;

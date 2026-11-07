@@ -192,7 +192,7 @@ public sealed class ReplayTabsTests : IDisposable
                     Assert.Equal("Laps 1 · Ghosts on the map Show · Gap Live", mode.ModeSettings);
                     var source = window.GetVisualDescendants().OfType<SelectableTextBlock>().Single(t => t.Name == "ModeSource" && t.IsEffectivelyVisible);
                     Assert.Equal(text.Replace("\r\n", "\n", StringComparison.Ordinal).TrimEnd(), source.Text);
-                    Assert.Contains("param lap_count \"Laps\" number 1..9 default 3;", source.Text, StringComparison.Ordinal);
+                    Assert.Contains("param lap_count \"Laps\" number 1..99 or \"By course\" default \"By course\";", source.Text, StringComparison.Ordinal);
                     Shot(window, "replay-mode-file");
 
                     // the results open in its place, and Close puts the file away
