@@ -166,12 +166,29 @@ public sealed partial class QuickPlaySession(LauncherSettings settings, string w
     /// <summary>The server's rules (from its welcome; null from a server that sends none).</summary>
     public ServerRules? Rules { get; private set; }
 
-    /// <summary>The machine-setting range this lobby races under: a custom lobby's own (its state names both ends),
-    /// else the server's (null from a server that sends none).</summary>
+    /// <summary>The machine-setting range this lobby races under: a custom lobby's (<see cref="RacedSetting"/>), else
+    /// the server's (null from a server that sends none).</summary>
     public SettingRange? MachineSetting =>
-        Lobby is { Custom: true, Rules: { } r } && r.Value(HostRules.MachineSetting) is { } low
-            && r.Value(LobbyRules.SettingHighKey) is { } high && new SettingRange(low, high) is { IsSound: true } range
-            ? range : Rules?.MachineSetting;
+        Lobby is { Custom: true, Rules: { } r } && RacedSetting(r) is { } range ? range : Rules?.MachineSetting;
+
+    /// <summary>The machine-setting range a custom lobby's rules race, the one the server brings each racer's setting
+    /// into: its mode's (<see cref="ModeSetting"/>), else the rules' own values (a server from before modes); null when
+    /// neither names a sound range. (A mode's lobby's values are the host's own, without the mode: not what it races.)</summary>
+    public static SettingRange? RacedSetting(LobbyRules rules)
+    {
+        ArgumentNullException.ThrowIfNull(rules);
+        return ModeSetting(rules) ?? Sound(rules.Value(HostRules.MachineSetting), rules.Value(LobbyRules.SettingHighKey));
+    }
+
+    /// <summary>The machine-setting range the lobby's mode races (<see cref="LobbyMode.Terms"/>, on the host's values:
+    /// Quick Play's 100 alone, or the range the host opened); null: no mode, or no sound range in its terms.</summary>
+    public static SettingRange? ModeSetting(LobbyRules? rules) => rules?.Mode?.Terms is { } terms
+        ? Sound(terms.TryGetValue(HostRules.MachineSetting.Name, out var low) ? low : null,
+            terms.TryGetValue(LobbyRules.SettingHighKey, out var high) ? high : null)
+        : null;
+
+    private static SettingRange? Sound(int? low, int? high) =>
+        low is { } l && high is { } h && new SettingRange(l, h) is { IsSound: true } range ? range : null;
 
     /// <summary>The machine this session races: the one it queued with (the player's, or the server's first allowed one),
     /// then the one last chosen.</summary>

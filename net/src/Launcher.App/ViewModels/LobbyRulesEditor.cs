@@ -219,7 +219,8 @@ public sealed partial class LobbyRulesEditor : ObservableObject
     /// lobby settings that differ from Quick Play's.</summary>
     public string Summary => Rules is var rules && ModeRow.FileChosen && ModeRow.File is { } file
         ? string.Join(" · ", new[] { file.Name, CustomRules.ParamsLine(file.Params, ModeValues, file.Terms.PackParam), CustomRules.CoursesLine(file.Terms.Courses), CustomRules.MachinesLine(file.Terms.Machines), CustomRules.CustomsLine(file.Terms.CustomsOff), CustomRules.Summary(rules with { Mode = null, ModeValues = null, StatPack = null }, _quickPlay) }.Where(s => s.Length > 0))
-        : CustomRules.Summary(rules, _quickPlay);
+        // (the named mode's terms are on the values it came with, not the host's moved ones: its settings by their labels)
+        : CustomRules.Summary(rules with { Mode = rules.Mode is { } named ? named with { Terms = null } : null }, _quickPlay);
 
     /// <summary>The name as a request sends it: trimmed.</summary>
     public string Name => NameRow.Text.Trim();
