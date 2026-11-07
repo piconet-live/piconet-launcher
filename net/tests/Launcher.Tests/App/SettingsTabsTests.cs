@@ -169,6 +169,33 @@ public sealed class SettingsTabsTests : IDisposable
         Assert.Equal("Widescreen", Rows(window)[0]);
     });
 
+    /// <summary>Ray tracing is experimental in 0.6.0 (it smears at High refresh 240): on a card that can ray trace, a faint
+    /// "Experimental" beside its switch, the row's label still "Ray tracing"; on one that cannot, only the card's reason.</summary>
+    [Fact]
+    public Task RayTracingSaysExperimentalBesideItsSwitch() => OnAWindow(State("""{"noServer": true}"""), (window, main) =>
+    {
+        Click(window, TopTab(window, "Settings"));
+        Pump(() => main.Settings.RayTracingReason.Length > 0 || main.Settings.RayTracingPossible);   // the card's answer first
+        var view = window.GetVisualDescendants().OfType<SettingsView>().Single();
+        var word = Named<TextBlock>(view, "RayTracingExperimental");
+        Assert.Equal("Experimental", word.Text);
+        Assert.Contains("faint", word.Classes);
+        Assert.Equal("Ray tracing, experimental", AutomationProperties.GetName(Named<ToggleSwitch>(view, "RayTracing")));
+        Assert.Contains("Ray tracing", Rows(window));
+        Assert.DoesNotContain(Rows(window), r => r.Contains("xperimental"));
+        bool Shows(string text) => view.GetVisualDescendants().OfType<TextBlock>().Any(t => t.IsEffectivelyVisible && t.Text == text);
+
+        main.Settings.RayTracingPossible = true;                                  // a card that can: the word, no reason
+        main.Settings.RayTracingReason = "";
+        Pump(() => word.IsEffectivelyVisible, "no Experimental beside the switch on a card that can ray trace");
+        Assert.False(Shows("No card"));
+
+        main.Settings.RayTracingPossible = false;                                 // one that cannot: its reason, no word
+        main.Settings.RayTracingReason = "No card";
+        Pump(() => Shows("No card"), "the card's reason did not show");
+        Assert.False(word.IsEffectivelyVisible);
+    });
+
     /// <summary>At the launcher's least window, 1280 by 720, each page scrolls down to its last group, and its last
     /// row comes into the window. With INPUTS_SHOTS naming a folder, each page there at its top and at its foot.</summary>
     [Fact]
