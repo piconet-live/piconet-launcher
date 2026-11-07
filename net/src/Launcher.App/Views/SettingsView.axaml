@@ -74,11 +74,13 @@
                AutomationProperties.Name="Anisotropic filtering" />
       <!-- the launch file's "auroraRayTracing": the runner's tested set of ray switches. The switch can be turned on on a
            graphics card the launcher's check found can ray trace (Launcher.Core/RayTracingCard.cs); beside it, why it
-           cannot -->
+           cannot; on a card that can, "Experimental" (0.6.0: it smears at High refresh 240) -->
       <TextBlock Grid.Row="10" Classes="label" Text="Ray tracing" />
       <StackPanel Grid.Row="10" Grid.Column="1" Orientation="Horizontal" Spacing="12">
         <ToggleSwitch Name="RayTracing" IsChecked="{Binding RayTracing}" OnContent="" OffContent=""
-                      IsEnabled="{Binding RayTracingPossible}" AutomationProperties.Name="Ray tracing" />
+                      IsEnabled="{Binding RayTracingPossible}" AutomationProperties.Name="Ray tracing, experimental" />
+        <TextBlock Name="RayTracingExperimental" Classes="faint" VerticalAlignment="Center" Text="Experimental"
+                   IsVisible="{Binding !RayTracingReasonShown}" />
         <TextBlock Classes="faint" VerticalAlignment="Center" Text="{Binding RayTracingReason}" IsVisible="{Binding RayTracingReasonShown}" />
       </StackPanel>
       <TextBlock Grid.Row="11" Classes="label" Text="Colourblind filter" />
