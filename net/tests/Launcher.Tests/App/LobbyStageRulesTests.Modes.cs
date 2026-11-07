@@ -126,14 +126,15 @@ public sealed partial class LobbyStageRulesTests
         });
     }
 
-    /// <summary>Quick Play's own rotation (protocol/quickplay: the competitive lap table, Knockout and Ghost race the
-    /// spicy cards): each normal card says its course's laps, Knockout its badge and no laps (it races unlimited), Ghost
-    /// race its badge and its course's laps. LOBBY_SHOTS
-    /// keeps it, to set beside the vote's mockup (design 6).</summary>
+    /// <summary>Quick Play's own rotation (protocol/quickplay: the competitive lap table; Knockout, Ghost race and
+    /// Overdrive the spicy options, two of them a vote): each normal card says its course's laps; a spicy card its badge,
+    /// Ghost race its course's laps and Knockout and Overdrive none (they race unlimited), whichever two are drawn.
+    /// LOBBY_SHOTS keeps it, to set beside the vote's mockup (design 6).</summary>
     [Fact]
     public async Task QuickPlaysOwnRotationShowsEachCoursesLaps()
     {
         var rotation = QuickPlayRotation.Read(RepositoryFolder.Protocol("protocol", "quickplay"));
+        Assert.Equal(["GHOST RACE", "KNOCKOUT", "OVERDRIVE"], rotation.Spicy.Select(s => s.Mode.Package.Badge).Order(StringComparer.Ordinal));
         var vote = rotation.Vote(CoursePool.Default, new Random(4).Next);
         int[] options = [.. vote.Select(o => o.Course)];
         await using var server = new LedServer();
@@ -143,20 +144,30 @@ public sealed partial class LobbyStageRulesTests
             Send(server, LedServer.Lobby(LobbyState.Starting), new CourseVote("m1", options, 60_000, [.. vote.Select(o => o.Card)]));
             PumpTelling(state, () => lobby.VoteShown && lobby.CourseOptions.Count == 6);
             var cards = lobby.CourseOptions;
-            var spicy = Assert.Single(cards, c => c.Badge == "KNOCKOUT");
-            Assert.Equal(spicy.Place, spicy.PlaceLine);   // laps unlimited: none said
-            var ghost = Assert.Single(cards, c => c.Badge == "GHOST RACE");   // the second spicy card, Quick Play's laps
-            Assert.Matches(@" · \d+ laps?$", ghost.PlaceLine);
-            Assert.Equal(2, cards.Count(c => c.HasBadge));
+            var spicy = cards.Where(c => c.HasBadge).ToList();
+            Assert.Equal(2, spicy.Count);
+            Assert.Equal(2, spicy.Select(c => c.Badge).Distinct().Count());   // two different spicy options
+            foreach (var card in spicy)
+            {
+                var mode = Assert.Single(rotation.Spicy, s => s.Mode.Package.Badge == card.Badge).Mode;
+                if (card.Badge == "GHOST RACE")
+                {
+                    Assert.Matches(@" · \d+ laps?$", card.PlaceLine);   // Quick Play's laps on its course
+                }
+                else
+                {
+                    Assert.Equal(card.Place, card.PlaceLine);   // laps unlimited: none said
+                }
+                Assert.StartsWith(mode.Package.About, card.About, StringComparison.Ordinal);
+                Assert.DoesNotContain("normally", card.About, StringComparison.OrdinalIgnoreCase);
+            }
             Assert.All(cards.Where(c => !c.HasBadge && c.Course != CourseVote.RandomCourse), c =>
                 Assert.Matches(@" · \d+ laps?$", c.PlaceLine));
             // the cards say the laps: the lobby's line says none of its own
             Assert.DoesNotContain("lap", lobby.RulesText, StringComparison.Ordinal);
             Shot(window, state, "mode-vote-quickplay");
             var view = window.GetVisualDescendants().OfType<LobbyView>().Single();
-            Assert.StartsWith("The racer in last place is out at every cut.", spicy.About, StringComparison.Ordinal);
-            Assert.DoesNotContain("normally", spicy.About, StringComparison.OrdinalIgnoreCase);
-            TipShot(window, view, state, spicy.Index, spicy.About, "mode-vote-quickplay-tip");
+            TipShot(window, view, state, spicy[0].Index, spicy[0].About, "mode-vote-quickplay-tip");
         });
     }
 

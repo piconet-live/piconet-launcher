@@ -171,7 +171,7 @@ public sealed class CustomLobbiesTests : IDisposable
             Assert.True(Named<Button>(view, "Back").IsEffectivelyVisible);
             var list = Named<ListBox>(view, "ModeList");
             Assert.True(list.IsEffectivelyVisible);
-            Assert.Equal(["Quick Play", "Knockout", "Ghost race", "Death Race"], editor.ModeRow.Choices.Select(c => c.Name));
+            Assert.Equal(["Quick Play", "Knockout", "Ghost race", "Overdrive", "Death Race"], editor.ModeRow.Choices.Select(c => c.Name));
             Assert.Equal(0, list.SelectedIndex);
             Assert.Equal("Quick Play's rules: laps by course, GX Unleashed stats, three lives.", editor.ModeRow.Chosen!.About);
             Assert.True(Named<Button>(view, "ModeFromFile").IsEffectivelyVisible);
@@ -453,7 +453,7 @@ public sealed class CustomLobbiesTests : IDisposable
             var view = Page<CustomLobbiesView>(window);
             Click(window, Named<Button>(view, "CreateButton"));
             var editor = main.Lobbies.Editor!;
-            Assert.Equal(["Quick Play", "Knockout", "Ghost race", "Death Race"], editor.ModeRow.Choices.Select(c => c.Name));
+            Assert.Equal(["Quick Play", "Knockout", "Ghost race", "Overdrive", "Death Race"], editor.ModeRow.Choices.Select(c => c.Name));
             // Quick Play's settings are its mode's: the stats among them, no stats row of the lobby's
             Assert.Equal(QuickPlaysSettings, editor.ParamRows.Select(p => p.Row.Label));
             Assert.DoesNotContain(editor.LobbyGroups.SelectMany(g => g.Rows), r => r.Label == HostRules.StatPack.Label && r is PackRule);
