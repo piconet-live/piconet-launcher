@@ -22,7 +22,7 @@ public sealed class RulesTests
     [Fact]
     public void TheMinesRuleIsSaidOnlyWhenItIsNotQuickPlays()
     {
-        Assert.Equal([null, "mines back after 0.05 s", "mines back after 0.5 s", "mines back after 2.25 s", "mines stay gone", "mines stay gone"],
+        Assert.Equal([null, "Mines respawn 50 ms", "Mines respawn 500 ms", "Mines respawn 2250 ms", "Mines respawn Off", "Mines respawn Off"],
             new[] { 200, 50, 500, 2250, 0, -50 }.Select(Launcher.App.ViewModels.LobbyViewModel.MinesRule));
         Assert.Equal(0, System.Text.Json.JsonSerializer.Deserialize<RaceRules>("{\"cpuLevel\":3}", ControlProtocol.Json)!.MineRegenMs);
     }
@@ -33,7 +33,7 @@ public sealed class RulesTests
     [Fact]
     public void ThePingLimitIsSaidOnlyWhenItIsNotQuickPlays()
     {
-        Assert.Equal([null, "ping limit 150 ms", "ping limit 300 ms", "ping limit 30 ms"],
+        Assert.Equal([null, "Latency limit 150 ms", "Latency limit 300 ms", "Latency limit 30 ms"],
             PingLimits.Select(Launcher.App.ViewModels.LobbyViewModel.PingRule));
     }
 
@@ -42,7 +42,7 @@ public sealed class RulesTests
     [Fact]
     public void TheSettingRuleIsSaidAsARangeWhenItIsNotQuickPlays()
     {
-        Assert.Equal([null, "setting 80-100", "setting 50", "your own setting"],
+        Assert.Equal([null, "Machine setting 80-100", "Machine setting 50", "Machine setting 0-100"],
             new[] { SettingRange.Only(100), new SettingRange(80, 100), SettingRange.Only(50), SettingRange.Free }
                 .Select(Launcher.App.ViewModels.LobbyViewModel.SettingRule));
     }

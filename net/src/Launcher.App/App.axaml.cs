@@ -42,11 +42,15 @@ public sealed partial class App : Application
             var window = new MainWindow { DataContext = main };
             ForTests(window, main, state.Debug);
             desktop.MainWindow = window;
+            // "Show inputs": the Inputs window opens with each game start, and closes with the launcher's window
+            var inputs = new InputsKeeper(state);
+            window.Closed += (_, _) => inputs.Dispose();
             // a restart (to put an update in, after an older copy's data came over) closes as the player's close does
             Relaunch.Close = window.Close;
             desktop.ShutdownRequested += (_, _) =>
             {
                 updates?.Dispose();
+                inputs.Dispose();
                 main.Dispose();
                 state.Shutdown();
             };

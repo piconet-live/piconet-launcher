@@ -146,7 +146,7 @@ public sealed partial class StatRow(MachineStatInfo info) : ObservableObject
     public string Label { get; } = info.Label;
 
     /// <summary>What the row says to a screen reader, and when it is pointed at.</summary>
-    public string Hint { get; } = $"Sort the machines by {info.Label.ToLowerInvariant()}";
+    public string Hint { get; } = $"Sort the machines by {info.Label.ToLowerInvariant()}{(info.Note is null ? "" : ". " + info.Note)}";
 
     [ObservableProperty]
     public partial string Value { get; set; } = "";

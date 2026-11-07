@@ -35,6 +35,11 @@ public sealed partial class GarageViewModel
     [ObservableProperty]
     public partial bool OfferLimited { get; set; }
 
+    /// <summary>The lobby's mode races no custom machines (<c>customs off</c>): the Custom shelf is greyed, the custom
+    /// tiles are off the Favourites shelf, and the stock machine is the one raced. What is saved stays saved.</summary>
+    [ObservableProperty]
+    public partial bool CustomsOff { get; set; }
+
     /// <summary>The "All 41" switch: the machines the lobby does not offer shown too, greyed, never picked.</summary>
     [ObservableProperty]
     public partial bool ShowAll { get; set; }
@@ -73,10 +78,11 @@ public sealed partial class GarageViewModel
     }
 
     /// <summary>The lobby's part: the machines on offer, the range its server keeps the setting in, and the stat pack
-    /// its races run on, whose values stand over the disc's in the stats and the order; all null out of a lobby.</summary>
+    /// its races run on, whose values stand over the disc's in the stats and the order; all null out of a lobby. And
+    /// whether its mode holds custom machines back (<see cref="CustomsOff"/>).</summary>
     /// <param name="packLabel">The pack as the lobby's line names it (its name and author); shown as the stats'
     /// fixed choice while the pack's values are.</param>
-    public void InLobby(IReadOnlyList<int>? offer, Online.Protocol.SettingRange? setting, Online.Protocol.StatPack? pack = null, string packLabel = "")
+    public void InLobby(IReadOnlyList<int>? offer, Online.Protocol.SettingRange? setting, Online.Protocol.StatPack? pack = null, string packLabel = "", bool customsOff = false)
     {
         SettingRange = setting ?? Online.Protocol.SettingRange.Free;
         var inLobby = offer is not null || setting is not null || pack is not null
@@ -89,6 +95,20 @@ public sealed partial class GarageViewModel
             Offer = next;
             OfferLimited = next is not null;
             ShowAll = ShowAll && OfferLimited;
+            ShowChoices();
+        }
+        if (customsOff != CustomsOff)
+        {
+            CustomsOff = customsOff;
+            if (customsOff)
+            {
+                LeavePreview();
+                if (Shelf == CustomShelf)
+                {
+                    Shelf = StockShelf;
+                }
+            }
+            ShowSelected();
             ShowChoices();
         }
     }

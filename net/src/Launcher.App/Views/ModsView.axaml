@@ -1,0 +1,285 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:c="using:Launcher.App.Controls"
+             x:Class="Launcher.App.Views.ModsView"
+             x:DataType="vm:ModsViewModel"
+             x:Name="Root">
+  <!-- The Mods page (direction D): Import and Folder over the list; the player's mods as cards in their order, under
+       a quiet line that says the top one's files win: the mod's picture, its name, small tags for what it cannot do online (the reasons when
+       pointed at), and at its end Stat pack where its car data changes the race, the switch, up and down, and remove.
+       Pressed, a card with several parts opens its tree. While a mod is looked at or unpacked: its name, the bar and
+       Cancel; where it has several parts, its tree to tick and IMPORT. A tree: the mod's row (all of it), its folders
+       as the mod ships them, each with a tick of all, some or none and an arrow that opens it, and the mod's own text
+       files where they sit, which open to their words. -->
+  <UserControl.DataTemplates>
+    <DataTemplate DataType="vm:ModTreeChoice">
+      <ItemsControl Classes="modtree" ItemsSource="{Binding Rows}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:ModTreeRow">
+            <StackPanel Margin="{Binding Indent}">
+            <Grid ColumnDefinitions="24,*" Height="30" Classes.top="{Binding IsTop}">
+              <Button Classes="plain arrow" Width="24" Height="24" Command="{Binding ExpandCommand}" IsVisible="{Binding HasArrow}"
+                      VerticalAlignment="Center" AutomationProperties.Name="{Binding Name}">
+                <Path Classes="arrow" Classes.open="{Binding Expanded}" Data="M1,1 L6,6 L11,1" />
+              </Button>
+              <CheckBox Grid.Column="1" Classes="box" IsChecked="{Binding Checked}" IsEnabled="{Binding CanChange}" VerticalAlignment="Center"
+                        AutomationProperties.Name="{Binding Name}" IsVisible="{Binding HasBox}">
+                <TextBlock Classes="treename" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+              </CheckBox>
+              <!-- a text file of the mod, or a folder of only those: its glyph where a box would be; pressed, it opens -->
+              <Button Grid.Column="1" Classes="plain treefile" Command="{Binding ExpandCommand}" IsVisible="{Binding !HasBox}"
+                      HorizontalAlignment="Left" VerticalAlignment="Center" AutomationProperties.Name="{Binding Name}">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <Panel Width="16" Height="16">
+                    <Path Classes="glyph" IsVisible="{Binding IsText}" Data="M4,1.5 L9.5,1.5 L12.5,4.5 L12.5,14.5 L4,14.5 Z M9.5,1.5 L9.5,4.5 L12.5,4.5" />
+                    <Path Classes="glyph" IsVisible="{Binding IsPlainFolder}" Data="M1.5,3.5 L6,3.5 L7.5,5 L14.5,5 L14.5,13 L1.5,13 Z" />
+                  </Panel>
+                  <TextBlock Classes="treename" Text="{Binding Name}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
+            </Grid>
+            <Border Classes="words" IsVisible="{Binding ShowsText}">
+              <ScrollViewer MaxHeight="320" HorizontalScrollBarVisibility="Disabled">
+                <SelectableTextBlock Text="{Binding Words}" TextWrapping="Wrap" />
+              </ScrollViewer>
+            </Border>
+            </StackPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </DataTemplate>
+  </UserControl.DataTemplates>
+
+  <UserControl.Styles>
+    <Style Selector="Border.modcard">
+      <Setter Property="Background" Value="{StaticResource WellBrush}" />
+      <Setter Property="CornerRadius" Value="{DynamicResource StaticLargeCornerRadius}" />
+      <Setter Property="Padding" Value="8" />
+    </Style>
+    <!-- a tree's row: the arrow turns open; the mod's own row a little heavier -->
+    <Style Selector="Path.arrow">
+      <Setter Property="Stroke" Value="{StaticResource DimBrush}" />
+      <Setter Property="StrokeThickness" Value="1.6" />
+      <Setter Property="Width" Value="10" />
+      <Setter Property="Height" Value="6" />
+      <Setter Property="Stretch" Value="Uniform" />
+      <Setter Property="StrokeLineCap" Value="Round" />
+      <Setter Property="StrokeJoin" Value="Round" />
+      <Setter Property="RenderTransform" Value="rotate(-90deg)" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <TransformOperationsTransition Property="RenderTransform" Duration="{StaticResource Standard}" Easing="{StaticResource EaseOut}" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Path.arrow.open">
+      <Setter Property="RenderTransform" Value="rotate(0deg)" />
+    </Style>
+    <Style Selector="Button.arrow:pointerover Path.arrow">
+      <Setter Property="Stroke" Value="{StaticResource TextBrush}" />
+    </Style>
+    <Style Selector=".still Path.arrow">
+      <Setter Property="Transitions" Value="{x:Null}" />
+    </Style>
+    <!-- a card opens its tree where it has one; one without has nothing to press -->
+    <Style Selector="Button.cardface">
+      <Setter Property="Cursor" Value="Arrow" />
+    </Style>
+    <Style Selector="Button.cardface.tree">
+      <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <Style Selector="Button.cardface:not(.tree):pressed /template/ :is(Control)#Face">
+      <Setter Property="RenderTransform" Value="none" />
+    </Style>
+    <Style Selector="TextBlock.treename">
+      <Setter Property="FontSize" Value="{StaticResource Size14}" />
+    </Style>
+    <Style Selector="Grid.top TextBlock.treename">
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <!-- a text file's or a plain folder's glyph, and a text file's words as the author wrote them -->
+    <Style Selector="Path.glyph">
+      <Setter Property="Stroke" Value="{StaticResource DimBrush}" />
+      <Setter Property="StrokeThickness" Value="1.3" />
+      <Setter Property="StrokeLineCap" Value="Round" />
+      <Setter Property="StrokeJoin" Value="Round" />
+    </Style>
+    <Style Selector="Button.treefile:pointerover Path.glyph">
+      <Setter Property="Stroke" Value="{StaticResource TextBrush}" />
+    </Style>
+    <Style Selector="Border.words">
+      <Setter Property="Background" Value="{StaticResource RaisedBrush}" />
+      <Setter Property="CornerRadius" Value="{DynamicResource StaticMediumCornerRadius}" />
+      <Setter Property="Padding" Value="14,10" />
+      <Setter Property="Margin" Value="48,2,8,8" />
+    </Style>
+    <Style Selector="Border.words SelectableTextBlock">
+      <Setter Property="FontSize" Value="{StaticResource Size13}" />
+      <Setter Property="LineHeight" Value="19" />
+      <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+    </Style>
+    <Style Selector="CheckBox.box:disabled">
+      <Setter Property="Opacity" Value="0.55" />
+      <Setter Property="Cursor" Value="Arrow" />
+    </Style>
+    <Style Selector="Border.modcard.off TextBlock.name">
+      <Setter Property="Foreground" Value="{StaticResource DimBrush}" />
+    </Style>
+    <Style Selector="Border.modcard.off Panel.picture">
+      <Setter Property="Opacity" Value="0.45" />
+    </Style>
+    <Style Selector="Border.picture">
+      <Setter Property="Width" Value="156" />
+      <Setter Property="Height" Value="88" />
+      <Setter Property="CornerRadius" Value="{DynamicResource StaticMediumCornerRadius}" />
+      <Setter Property="ClipToBounds" Value="True" />
+      <Setter Property="Background" Value="{StaticResource RaisedBrush}" />
+    </Style>
+    <Style Selector="TextBlock.name">
+      <Setter Property="FontSize" Value="{StaticResource Size20}" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+    </Style>
+    <!-- a tag: a small chip of state, its reasons in the tooltip -->
+    <Style Selector="Border.tag">
+      <Setter Property="CornerRadius" Value="{DynamicResource StaticMediumCornerRadius}" />
+      <Setter Property="Padding" Value="8,3" />
+      <Setter Property="Background" Value="{StaticResource RaisedBrush}" />
+    </Style>
+    <Style Selector="Border.tag TextBlock">
+      <Setter Property="FontSize" Value="{StaticResource Size13}" />
+      <Setter Property="Foreground" Value="{StaticResource DimBrush}" />
+    </Style>
+    <Style Selector="Border.tag.single">
+      <Setter Property="Background" Value="{StaticResource TierWarningTintBrush}" />
+    </Style>
+    <Style Selector="Border.tag.single TextBlock">
+      <Setter Property="Foreground" Value="{StaticResource NoticeBrush}" />
+    </Style>
+    <Style Selector="Path.chevron">
+      <Setter Property="Stroke" Value="{StaticResource TextBrush}" />
+      <Setter Property="StrokeThickness" Value="1.8" />
+      <Setter Property="Width" Value="12" />
+      <Setter Property="Height" Value="8" />
+      <Setter Property="Stretch" Value="Uniform" />
+      <Setter Property="StrokeLineCap" Value="Round" />
+      <Setter Property="StrokeJoin" Value="Round" />
+    </Style>
+    <Style Selector="Button:disabled Path.chevron">
+      <Setter Property="Stroke" Value="{StaticResource OffBrush}" />
+    </Style>
+    <Style Selector="Button.secondary.danger, Button.secondary.danger:pointerover">
+      <Setter Property="BorderBrush" Value="{StaticResource OfflineBrush}" />
+      <Setter Property="Background" Value="#1FFF4D4D" />
+    </Style>
+    <Style Selector="ProgressBar.import">
+      <Setter Property="Height" Value="4" />
+      <Setter Property="MinHeight" Value="4" />
+      <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+      <Setter Property="Background" Value="{StaticResource RaisedBrush}" />
+    </Style>
+  </UserControl.Styles>
+
+  <StackPanel Spacing="12">
+    <Grid ColumnDefinitions="*,Auto" Height="40">
+      <Grid Classes="warnline" ColumnDefinitions="Auto,*" Name="Notice" VerticalAlignment="Center"
+            IsVisible="{Binding Notice, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+        <Path Classes="warnmark" />
+        <TextBlock Grid.Column="1" Text="{Binding Notice}" />
+      </Grid>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" IsEnabled="{Binding Idle}">
+        <Button Name="ImportFolder" Classes="secondary" Content="Folder…" Click="OnImportFolder" AutomationProperties.Name="Import a mod's folder" />
+        <Button Name="ImportFile" Classes="primary" c:PadNav.Main="True" Content="Import…" Click="OnImportFile" AutomationProperties.Name="Import a mod" />
+      </StackPanel>
+    </Grid>
+
+    <!-- Looking at a mod or unpacking it -->
+    <Border Classes="modcard" Padding="16" IsVisible="{Binding Importing}">
+      <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+        <TextBlock Classes="name" Text="{Binding ImportName}" VerticalAlignment="Center" />
+        <Button Grid.Column="1" Classes="secondary" Content="Cancel" Command="{Binding CancelImportCommand}" />
+        <ProgressBar Grid.Row="1" Grid.ColumnSpan="2" Classes="import" Minimum="0" Maximum="1" Value="{Binding Fraction}" Margin="0,12,0,0" />
+      </Grid>
+    </Border>
+
+    <!-- The mod's parts, to tick -->
+    <Border Classes="modcard" Padding="16,12" IsVisible="{Binding Choosing}">
+      <StackPanel Spacing="8">
+        <ContentControl Name="ChoiceTree" Content="{Binding Choice}" />
+        <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,4,0,0">
+          <Button Classes="secondary" Content="Cancel" Command="{Binding CancelImportCommand}" />
+          <Button Name="ImportChosen" Classes="primary" Content="IMPORT" Command="{Binding ImportChosenCommand}" IsEnabled="{Binding Choice.AnyOn, FallbackValue=False}" />
+        </StackPanel>
+      </StackPanel>
+    </Border>
+
+    <TextBlock Classes="faint" Text="No mods" IsVisible="{Binding NoCards}" Margin="0,8,0,0" />
+
+    <TextBlock Name="Priority" Classes="faint" FontSize="{StaticResource Size13}" Text="Mods on top take priority" IsVisible="{Binding HasCards}" Margin="2,0,0,-4" />
+
+    <ItemsControl Name="ModList" ItemsSource="{Binding Cards}">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate><StackPanel Spacing="8" /></ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:ModCard">
+          <Border Classes="modcard" Classes.off="{Binding !On}">
+            <StackPanel>
+            <Grid ColumnDefinitions="*,Auto" Height="88">
+              <Button Classes="plain cardface" Classes.tree="{Binding HasTree}" Command="{Binding ToggleTreeCommand}" AutomationProperties.Name="{Binding Name}">
+              <Grid ColumnDefinitions="Auto,*">
+              <Panel Classes="picture">
+                <Border Classes="picture">
+                  <Panel>
+                    <TextBlock Text="{Binding Initial}" FontSize="32" FontWeight="Bold" Foreground="{StaticResource OffBrush}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="{Binding !HasPicture}" />
+                    <Image Source="{Binding Picture}" Stretch="UniformToFill" IsVisible="{Binding HasPicture}" />
+                  </Panel>
+                </Border>
+              </Panel>
+              <StackPanel Grid.Column="1" Margin="16,4,12,0" Spacing="10" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                  <TextBlock Classes="name" Text="{Binding Name}" />
+                  <Path Classes="arrow" Classes.open="{Binding TreeOpen}" Data="M1,1 L6,6 L11,1" VerticalAlignment="Center" IsVisible="{Binding HasTree}" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasTags}">
+                  <Border Classes="tag single" IsVisible="{Binding SinglePlayer}" ToolTip.Tip="{Binding SinglePlayerWhy}" ToolTip.ShowDelay="200">
+                    <TextBlock Text="Single player" />
+                  </Border>
+                  <Border Classes="tag" IsVisible="{Binding CodeNotUsed}" ToolTip.Tip="{Binding CodeWhy}" ToolTip.ShowDelay="200">
+                    <TextBlock Text="Code not used" />
+                  </Border>
+                </StackPanel>
+              </StackPanel>
+              </Grid>
+              </Button>
+              <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Button Classes="secondary" Content="Stat pack" Command="{Binding MakePackCommand}" ToolTip.Tip="{Binding PackWhy}"
+                        IsVisible="{Binding CanMakePack}" AutomationProperties.Name="Make a stat pack of its machine stats" />
+                <Button Classes="secondary" Content="Show pack" Command="{Binding ShowPackCommand}"
+                        IsVisible="{Binding PackFile, Converter={x:Static ObjectConverters.IsNotNull}}" />
+                <ToggleSwitch IsChecked="{Binding On}" OnContent="" OffContent="" VerticalAlignment="Center"
+                              AutomationProperties.Name="{Binding Name}" Margin="4,0" />
+                <Button Classes="secondary" Width="32" Padding="0" Command="{Binding MoveUpCommand}" IsEnabled="{Binding CanMoveUp}"
+                        AutomationProperties.Name="Up">
+                  <Path Classes="chevron" Data="M1,7 L6,2 L11,7" />
+                </Button>
+                <Button Classes="secondary" Width="32" Padding="0" Command="{Binding MoveDownCommand}" IsEnabled="{Binding CanMoveDown}"
+                        AutomationProperties.Name="Down">
+                  <Path Classes="chevron" Data="M1,1 L6,6 L11,1" />
+                </Button>
+                <Button Classes="secondary" Content="Remove" Command="{Binding AskRemoveCommand}" IsVisible="{Binding !Removing}" />
+                <Button Classes="secondary danger" Content="Remove" Command="{Binding RemoveCommand}" IsVisible="{Binding Removing}"
+                        AutomationProperties.Name="Remove for good" />
+                <Button Classes="secondary" Content="Keep" Command="{Binding AskRemoveCommand}" IsVisible="{Binding Removing}" />
+              </StackPanel>
+            </Grid>
+            <ContentControl Classes="cardtree" Content="{Binding Tree}" IsVisible="{Binding TreeOpen}" Margin="8,10,8,6" />
+            </StackPanel>
+          </Border>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+  </StackPanel>
+</UserControl>

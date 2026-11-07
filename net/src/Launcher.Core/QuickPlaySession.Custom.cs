@@ -13,7 +13,7 @@ public sealed partial class QuickPlaySession
     public static IReadOnlySet<string> CustomLobbyRefusals { get; } = new HashSet<string>(StringComparer.Ordinal)
     {
         CustomLobby.BadPassword, CustomLobby.NotHost, CustomLobby.NoSuchLobby, CustomLobby.LobbyFull, CustomLobby.LobbyClosed,
-        CustomLobby.BadRules, CustomLobby.RulesLocked, CustomLobby.BadName,
+        CustomLobby.BadRules, CustomLobby.RulesLocked, CustomLobby.BadName, CustomLobby.BadMode, CustomLobby.ModeRefuses,
     };
 
     /// <summary>A visit to the custom lobbies: after the welcome the player is in no lobby and not queued, and sees
@@ -26,6 +26,10 @@ public sealed partial class QuickPlaySession
     /// <summary>The server's Quick Play rules, whole, as the list carries them: what a lobby's rules are compared
     /// with. Null until a list names them (the rules' own defaults stand in: <see cref="HostRules"/>).</summary>
     public LobbyRules? QuickPlayRules { get; private set; }
+
+    /// <summary>The server's official modes a host may give a lobby, in its order, as the list carries them (by name and
+    /// hash, never a list of the launcher's own): the create face's list. Empty until a list names them.</summary>
+    public IReadOnlyList<LobbyMode> OfficialModes { get; private set; } = [];
 
     /// <summary>The browser shows: the server sends the list and its changes.</summary>
     public bool Browsing { get; private set; }
@@ -68,6 +72,7 @@ public sealed partial class QuickPlaySession
     {
         Lobbies = list.Lobbies;
         QuickPlayRules = list.QuickPlay ?? QuickPlayRules;
+        OfficialModes = list.Modes ?? OfficialModes;
         Changed?.Invoke();
     }
 
@@ -96,19 +101,19 @@ public sealed partial class QuickPlaySession
     {
         ArgumentNullException.ThrowIfNull(rules);
         RulesSent(rules);
-        var (machine, color, setting, stock, custom) = RacerToSend();
+        var (machine, color, setting, stock, custom, trail) = RacerToSend();
         Requested();
         return Client.CreateLobbyAsync(new CreateLobby(name, rules, string.IsNullOrEmpty(password) ? null : password,
-            machine, color, setting, stock, custom));
+            machine, color, setting, stock, custom, trail));
     }
 
     /// <summary>Joins a lobby of the list (its password for a locked one).</summary>
     public Task JoinLobbyAsync(string lobbyId, string? password = null)
     {
-        var (machine, color, setting, stock, custom) = RacerToSend();
+        var (machine, color, setting, stock, custom, trail) = RacerToSend();
         Requested();
         return Client.JoinLobbyAsync(new JoinLobby(lobbyId, string.IsNullOrEmpty(password) ? null : password,
-            machine, color, setting, stock, custom));
+            machine, color, setting, stock, custom, trail));
     }
 
     /// <summary>The host's change: the name (null: the same), the rules whole, a new password (null: the same) or
@@ -122,6 +127,9 @@ public sealed partial class QuickPlaySession
     }
 
     public Task KickAsync(string playerId) => Client.KickPlayerAsync(playerId);
+
+    /// <summary>The team of the player, or of another member (the host's); null: none.</summary>
+    public Task ChooseTeamAsync(int? team, string? playerId = null) => Client.ChooseTeamAsync(team, playerId);
 
     public Task StartLobbyRaceAsync() => Client.StartLobbyRaceAsync();
 
@@ -141,13 +149,13 @@ public sealed partial class QuickPlaySession
     /// <summary>The racer as a create or a join carries it, as the queue's would: the machine the server allows, its
     /// look, the player's own setting (the server brings it into the lobby's range, which a create or a join from the
     /// browser does not know yet); and kept as what the server was told.</summary>
-    private (int Machine, Rgb Color, int? Setting, int? StockColor, CustomMachine? Custom) RacerToSend()
+    private (int Machine, Rgb Color, int? Setting, int? StockColor, CustomMachine? Custom, BoostTrail? Trail) RacerToSend()
     {
         var profile = Racer;
         Machine = QueueMachine(profile.Machine, Rules);
         var look = profile.LookOf(Machine.Value);
         Sent = new RacedMachine(Machine.Value, CustomMachine.Checked(profile.Custom));
         return (Machine.Value, look.Color ?? profile.Color, Math.Clamp(look.Setting, 0, 100),
-            look.StockColor, profile.Custom);
+            look.StockColor, profile.Custom, profile.Trail);
     }
 }

@@ -4,7 +4,7 @@
   with the two it takes in at its end: Buttons.axaml
   (everything that is pressed) and Forms.axaml (tables, inputs, forms). A page uses these resources and classes; it
   sets no colour, size or duration of its own. Every colour is here, the accent once (AccentColor): the controls drawn
-  in code (PadMark, PadPicture) read theirs from this dictionary.
+  in code (PadMark) read theirs from this dictionary.
 
   GRID      8 px: gaps 8 · 16 · 24, padding 16 or 24, nothing else. Window: a 32 px title bar; under it a 240 px
             left column (who you are, where you go, whether you are online) and the content. Table rows 32 px.
@@ -31,9 +31,11 @@
             tracks round (StaticFullCornerRadius). Square (SquareCorner): the left column and its places, the title bar. Leaning
             (Controls/Plate, about 15 degrees): the active tab, the primary button and the hero's title plate only; the
             rules panel has one chamfered corner. A ring (the selection's 2 px, the pad's mark) follows the shape.
-  MOTION    Quick 120 ms (hover tone, press, tooltip), Standard 200 ms (a control changing size or state), Emphasis
-            320 ms (a card lifting, bars growing). Easing: EaseOut, cubic-bezier(.2, .8, .2, 1): fast start, soft
-            landing; nothing snaps, nothing bounces. Flat fills: no glow; a shadow only for what floats (FloatShadow).
+  MOTION    Quick 120 ms (hover tone, press, tooltip), Standard 200 ms (a page, a selector, a panel: the longest
+            anything a player waits on takes), Emphasis 320 ms (a big moment nobody waits on), StaggerStep 20 ms between
+            a list's rows. Easing: EaseOut, cubic-bezier(.2, .8, .2, 1): fast start, soft landing; Spring for a press
+            and its release, a little past the end and back. These four are the one place to tune motion (Motion.cs
+            reads them). Only transforms and opacity move. Flat fills: no glow; a shadow only for what floats (FloatShadow).
   CONTROLS  Button.go (the one primary) · Button.primary · Button.secondary (a surface button) · Button.quiet ·
             Button.nav (the column's places) · Button.link · Button.tab · Button.section (a mode tab) ·
             Button.chrome (the window's own buttons) · Button.icon (the bell) · Border.row and Border.rowhead
@@ -100,6 +102,8 @@
     <SolidColorBrush x:Key="OnGoldBrush" Color="#000000" />
     <SolidColorBrush x:Key="OnlineBrush" Color="{StaticResource AccentColor}" />
     <SolidColorBrush x:Key="NoticeBrush" Color="{StaticResource WarnColor}" />
+    <!-- a spicy vote card's badge (a game mode that changes the race), black text on it -->
+    <SolidColorBrush x:Key="SpicyBrush" Color="{StaticResource WarnColor}" />
     <SolidColorBrush x:Key="OfflineBrush" Color="{StaticResource DangerColor}" />
     <!-- A server notice's tier (NoticeCard): its bar, label and icon, and a light tint of it behind the card. Info is
          the accent, notice a lighter green, warning amber, urgent red. -->
@@ -181,6 +185,7 @@
     <StreamGeometry x:Key="GlyphPlay">M6 4L20 12L6 20Z</StreamGeometry>
     <StreamGeometry x:Key="GlyphGarage">M3 11L12 4L21 11V20H3Z M8 20V14H16V20</StreamGeometry>
     <StreamGeometry x:Key="GlyphReplays">M21 12A9 9 0 1 1 3 12A9 9 0 1 1 21 12Z M12 7V12L15 14</StreamGeometry>
+    <StreamGeometry x:Key="GlyphMods">M12 3L21 8L12 13L3 8Z M3 12L12 17L21 12 M3 16L12 21L21 16</StreamGeometry>
 
     <!-- The display role's lean reaches past a line's box on the right (Type, below): each size's box holds it -->
     <Thickness x:Key="DisplayReach64">0,0,18,0</Thickness>
@@ -196,7 +201,9 @@
     <x:TimeSpan x:Key="Quick">0:0:0.12</x:TimeSpan>
     <x:TimeSpan x:Key="Standard">0:0:0.2</x:TimeSpan>
     <x:TimeSpan x:Key="Emphasis">0:0:0.32</x:TimeSpan>
+    <x:TimeSpan x:Key="StaggerStep">0:0:0.02</x:TimeSpan>
     <SplineEasing x:Key="EaseOut" X1="0.2" Y1="0.8" X2="0.2" Y2="1" />
+    <SplineEasing x:Key="Spring" X1="0.3" Y1="1.7" X2="0.5" Y2="1" />
 
     <!-- Whether the player's disc gives its pictures (GameSkin.Load sets them). -->
     <x:Boolean x:Key="HasDiscArt">False</x:Boolean>
@@ -367,6 +374,31 @@
     <Setter Property="StrokeJoin" Value="Round" />
   </Style>
   <!-- The one notice of the left column: its mark, its words in amber, a link to its folder. -->
+  <!-- A preparation's bar, a mark of the design language (the game's files on the first screen, the graphics cache in
+       the left column): a 4 px track, fully rounded, green up to the share done, growing to each new value with the
+       emphasis' easing. -->
+  <Style Selector="ProgressBar.prepare">
+    <Setter Property="Height" Value="4" />
+    <Setter Property="MinHeight" Value="4" />
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="#1FFFFFFF" CornerRadius="{DynamicResource StaticFullCornerRadius}" ClipToBounds="True">
+          <Panel>
+            <Border Name="PART_Indicator" Width="0" Background="{StaticResource AccentBrush}" CornerRadius="{DynamicResource StaticFullCornerRadius}"
+                    HorizontalAlignment="Left">
+              <Border.Transitions>
+                <Transitions>
+                  <DoubleTransition Property="Width" Duration="0:0:0.42" Easing="{StaticResource EaseOut}" />
+                </Transitions>
+              </Border.Transitions>
+            </Border>
+          </Panel>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+
   <Style Selector="Border.columnnotice">
     <Setter Property="Padding" Value="16,8" />
     <Setter Property="Background" Value="{StaticResource WellBrush}" />
@@ -438,4 +470,5 @@
   <!-- The rest of the look, in this order (a later style wins over an earlier one). -->
   <StyleInclude Source="avares://Launcher.App/Theme/Buttons.axaml" />
   <StyleInclude Source="avares://Launcher.App/Theme/Forms.axaml" />
+  <StyleInclude Source="avares://Launcher.App/Theme/Motion.axaml" />
 </Styles>

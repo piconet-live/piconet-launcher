@@ -1,0 +1,94 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:v="using:Launcher.App.Views"
+             x:Class="Launcher.App.Views.StandingsTable"
+             x:DataType="vm:RaceViewModel"
+             Width="{Binding StandingsWidth}">
+  <!-- The race's standings: every racer, press one to follow them on the map; after the time, a column for each of the
+       mode's lines for a racer. The race page's, and the page of a replay the game plays. -->
+  <UserControl.Styles>
+    <!-- a racer's paint: a round dot -->
+    <Style Selector="Border.chip">
+      <Setter Property="Width" Value="8" />
+      <Setter Property="Height" Value="8" />
+      <Setter Property="CornerRadius" Value="{DynamicResource StaticFullCornerRadius}" />
+    </Style>
+    <!-- a row follows its racer on the map when pressed; text on the ground, so no light under the pointer, only the
+         followed racer's -->
+    <Style Selector="Border.standing">
+      <Setter Property="Height" Value="19" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Border.standing.followed">
+      <Setter Property="Background" Value="{StaticResource RowOnBrush}" />
+    </Style>
+    <Style Selector="Border.standing.out">
+      <Setter Property="Opacity" Value="0.5" />
+    </Style>
+    <Style Selector="Border.standing TextBlock.detail">
+      <Setter Property="Foreground" Value="{StaticResource DimBrush}" />
+    </Style>
+    <Style Selector="Border.standing.out TextBlock.detail">
+      <Setter Property="Foreground" Value="{StaticResource OfflineBrush}" />
+    </Style>
+    <!-- "Game open": the lobby waits for this player's game to close -->
+    <Style Selector="Border.standing TextBlock.open">
+      <Setter Property="Foreground" Value="{StaticResource NoticeBrush}" />
+    </Style>
+  </UserControl.Styles>
+  <StackPanel>
+    <Grid ColumnDefinitions="*,Auto" Height="22">
+      <TextBlock Classes="strong" Text="{Binding LapText}" />
+      <TextBlock Grid.Column="1" Classes="figure" Text="{Binding TimeText}" />
+    </Grid>
+    <ItemsControl Name="SeatHeads" ItemsSource="{Binding ModeSeatHeads}" HorizontalAlignment="Right">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="x:String">
+          <TextBlock Classes="colhead" Width="56" TextAlignment="Right" TextTrimming="CharacterEllipsis"
+                     Text="{Binding Converter={x:Static v:UpperText.Instance}}" ToolTip.Tip="{Binding}" />
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+    <ItemsControl Name="StandingList" ItemsSource="{Binding Standings}">
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:StandingRow">
+          <Border Classes="standing" Classes.out="{Binding Out}" Classes.followed="{Binding Followed}">
+            <Grid ColumnDefinitions="24,16,*,Auto,Auto">
+              <TextBlock Classes="figure" FontSize="{StaticResource Size14}" Text="{Binding Rank}" VerticalAlignment="Center" />
+              <Border Grid.Column="1" Classes="chip" HorizontalAlignment="Left"
+                      Background="{Binding ColorHex, Converter={x:Static v:HexToBrush.Instance}}" />
+              <TextBlock Grid.Column="2" Text="{Binding Name}" Classes.strong="{Binding You}" VerticalAlignment="Center"
+                         TextTrimming="CharacterEllipsis" />
+              <!-- a player whose race is run: their game still open, or back in the lobby -->
+              <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="8" Margin="8,0,0,0">
+                <TextBlock Name="Phase" Classes="dim" Classes.open="{Binding GameOpen}"
+                           FontSize="{StaticResource Size12}" Text="{Binding Phase}" VerticalAlignment="Center"
+                           IsVisible="{Binding Phase, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                <TextBlock Name="StandingTeam" Classes="dim" FontSize="{StaticResource Size12}" Text="{Binding Team}"
+                           VerticalAlignment="Center" IsVisible="{Binding HasTeam}" />
+                <TextBlock Classes="figure detail" FontSize="{StaticResource Size14}" Text="{Binding Detail}"
+                           VerticalAlignment="Center" />
+              </StackPanel>
+              <ItemsControl Grid.Column="4" ItemsSource="{Binding Cells}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="x:String">
+                    <TextBlock Name="ModeCell" Classes="figure" FontSize="{StaticResource Size14}" Width="56" TextAlignment="Right"
+                               TextTrimming="CharacterEllipsis" Text="{Binding}" VerticalAlignment="Center" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </Grid>
+          </Border>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+  </StackPanel>
+</UserControl>

@@ -182,6 +182,16 @@ public sealed class SettingsStore(string path)
         {
             read = read with { Server = null };
         }
+        // the refresh rate of a launcher before 0.6.0, a setting of its own: High refresh now drives it, the higher of the two kept
+        if (LauncherSettings.HighRefreshOfFormerRefreshRate(FormerRefreshRate(bytes!)) is var former and > 0 && former > read.AuroraHighRefresh)
+        {
+            read = read with { AuroraHighRefresh = former };
+        }
+        // the three trail colours of an earlier launcher: one now (TrailColour), as the garage shows and races send it
+        if (read.Racer is { Trail: not null } racer)
+        {
+            read = read with { Racer = racer with { Trail = TrailColour.Migrated(racer.Trail) } };
+        }
         var (sound, repaired) = SettingsCheck.Sound(read);
         if (repaired)
         {
@@ -190,6 +200,24 @@ public sealed class SettingsStore(string path)
             LeftAlone = !KeepDamaged();
         }
         return sound;
+    }
+
+    /// <summary>The <c>"refreshRate"</c> of a settings file of before 0.6.0 (text), or null: the settings no longer
+    /// hold it, so it is not written back.</summary>
+    private static string? FormerRefreshRate(byte[] bytes)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(bytes);
+            return document.RootElement.ValueKind == JsonValueKind.Object &&
+                   document.RootElement.TryGetProperty("refreshRate", out var rate) && rate.ValueKind == JsonValueKind.String
+                ? rate.GetString()
+                : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
     }
 
     /// <summary>The file's bytes, if it is no longer than <see cref="MostBytes"/>.</summary>

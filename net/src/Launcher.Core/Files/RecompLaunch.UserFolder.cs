@@ -17,15 +17,17 @@ public static partial class RecompLaunch
         ("Core", "EnableCheats", "False"),
         ("Core", "GFXBackend", "Vulkan"),
         ("Interface", "ConfirmStop", "False"),
-        ("Interface", "UsePanicHandlers", "False"),
+        ("Interface", "UsePanicHandlers", "True"),
         ("Interface", "OnScreenDisplayMessages", "False"),
         ("DSP", "Backend", "Cubeb"),
         ("Analytics", "Enabled", "False"),
         ("Analytics", "PermissionAsked", "True"),
     ];
 
-    /// <summary>The settings whose value the module fixes: written whatever the file says.</summary>
-    private static readonly HashSet<string> Fixed = ["OverclockEnable", "Overclock", "StaticRecompIdlePC", "EnableCheats"];
+    /// <summary>The settings whose value the module fixes: written whatever the file says. The panic handlers are the
+    /// runner's (every alert of the emulator's a line of runner.log, never a box): on, so that the runner hears every
+    /// alert (an older launcher wrote them off, and the game then said in its log that the file's value was not used).</summary>
+    private static readonly HashSet<string> Fixed = ["OverclockEnable", "Overclock", "StaticRecompIdlePC", "EnableCheats", "UsePanicHandlers"];
 
     /// <summary>Makes the game's user folder ready: its emulator settings (see <see cref="Defaults"/>), the folder
     /// the emulator keeps its shader cache in, and the player's controller profile copied from

@@ -9,6 +9,7 @@ and does is here; the logic with no UI type is in `../Launcher.Core`. The names 
 | `CommandLine.cs` | Every option of the launcher, read here and nowhere else; an option not listed is refused. Test settings come from a launch file (`--config`) |
 | `App.axaml`, `App.axaml.cs` | The application: the theme, the window made on the shared state, an error on the window's thread |
 | `AppState.cs` | The state every page shares: the settings, the Quick Play session, every start of the game; `AppState.Controllers.cs`: the controllers before a start; `AppState.GameFiles.cs`: whether a start has the game's files, and their preparation from the disc |
+| `InputsKeeper.cs` | "Show inputs": the Inputs window opened with each game start while the setting is on, kept open between races, closed when switched off or with the launcher's window; its place kept |
 | `AppState.Dropped.cs` | A Quick Play connection that ended without the player's doing, said in the left column |
 | `AppState.Joining.cs` | A Quick Play join on its way: it counts as being in Quick Play for a game start, and a game that is open rules a join out |
 | `AppState.Renamed.cs` | The player's name changed: saved, and told to the server the launcher is connected to |

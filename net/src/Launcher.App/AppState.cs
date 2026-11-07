@@ -99,6 +99,8 @@ public sealed partial class AppState(SettingsStore store, string dataFolder)
             // the stand-in's address in place of the player's server while the launcher runs
             state.Update(s => s with { Server = StandInService.Address, NoServer = false });
         }
+        // the player's mods, read off the window's thread: every game start lays the ones that are on over the disc
+        state.ModsRead = state.LoadModsAsync();
         return state;
     }
 
@@ -156,10 +158,13 @@ public sealed partial class AppState(SettingsStore store, string dataFolder)
     public void Update(Func<LauncherSettings, LauncherSettings> change)
     {
         ArgumentNullException.ThrowIfNull(change);
+        bool lookChanged;
         lock (_settingsGate)
         {
             var noServer = Settings.NoServer;
+            var before = Settings;
             Settings = change(Settings);
+            lookChanged = PipelineLookOf(before) != PipelineLookOf(Settings) || before.Recomp != Settings.Recomp;
             if (noServer && !Settings.NoServer && Problem == store.Notice && !store.LeftAlone)
             {
                 // the notice of settings that could not be read asked for a server, and the player has chosen one
@@ -173,6 +178,10 @@ public sealed partial class AppState(SettingsStore store, string dataFolder)
             }
         }
         Changed?.Invoke();
+        if (lookChanged)
+        {
+            _ = CheckPipelinesAsync();   // another look (ray tracing, the picture engine) or another game: its cache
+        }
     }
 
     /// <summary>The settings written to the file (under <see cref="_settingsGate"/>).</summary>
@@ -251,6 +260,7 @@ public sealed partial class AppState(SettingsStore store, string dataFolder)
         Session = null;
         Problem = problem;
         Changed?.Invoke();
+        PipelinesAfterLobby();
         try
         {
             await session.LeaveAsync().ConfigureAwait(false);
@@ -273,12 +283,14 @@ public sealed partial class AppState(SettingsStore store, string dataFolder)
             return Racing ? GameOpenText : InQuickPlayText;
         }
         var paths = GamePaths;
-        if (RecompLaunch.Problem(paths) is { } problem)
+        if ((PipelinesBlock ?? RecompLaunch.Problem(paths)) is { } problem)
         {
             return problem;
         }
         var debug = GameDebug.From(Debug);
-        Fork = RecompLaunch.StartOffline(paths, WindowWithBoard(), Settings.UserFolder, Debug.RunnerArguments, debug, controllerSetup, Volume);
+        // the picture as in a race (Settings, Game, "Widescreen"); the game's own controller options keep the player's saved one
+        Fork = RecompLaunch.StartOffline(paths, WindowWithBoard(), Settings.UserFolder, Debug.RunnerArguments, debug, controllerSetup, Volume,
+            controllerSetup ? null : Settings.Widescreen);
         Running(GameRun.Offline);
         Watch(Fork);
         Changed?.Invoke();
@@ -300,7 +312,7 @@ public sealed partial class AppState(SettingsStore store, string dataFolder)
             return GameOpenText;
         }
         var paths = GamePaths;
-        if (RecompLaunch.RaceProblem(paths) is { } problem)
+        if ((PipelinesBlock ?? RecompLaunch.RaceProblem(paths)) is { } problem)
         {
             return problem;
         }
@@ -348,16 +360,45 @@ public sealed partial class AppState(SettingsStore store, string dataFolder)
             return Racing ? "In a race" : InQuickPlayText;   // (a replay is a game start like any other)
         }
         var paths = PathsOf(s.Recomp);
-        if (RecompLaunch.PlaybackProblem(paths, replayFile) is { } problem)
+        if ((PipelinesBlock ?? RecompLaunch.PlaybackProblem(paths, replayFile)) is { } problem)
         {
             return problem;
         }
-        Fork = RecompLaunch.StartPlayback(paths, WindowWithBoard(), Path.GetFullPath(replayFile), s.OtherSounds, s.Widescreen,
+        var window = WindowWithBoard();
+        Fork = RecompLaunch.StartPlayback(paths, window, Path.GetFullPath(replayFile), s.OtherSounds, s.Widescreen,
             s.UserFolder, Debug.RunnerArguments, GameDebug.From(Debug), Volume);
         Running(GameRun.Replay);
+        if (Board is { } board && ReplayFile.Read(replayFile) is { } info)
+        {
+            WatchPlayback(board, info);
+        }
+        Fork.EnableRaisingEvents = true;
+        Fork.Exited += (_, _) => PlaybackOver();
         Watch(Fork, sayError: true);
         Changed?.Invoke();
         return null;
+    }
+
+    /// <summary>The replay a game plays now (null: none): the race page's seats, course and laps for it.</summary>
+    public ReplayInfo? Playback { get; private set; }
+
+    /// <summary>A new moment of the replay the game plays, from its status board, with the mode's values (on the
+    /// board's thread).</summary>
+    public event Action<Online.Protocol.RaceSnapshot, ModeBoardNow?>? PlaybackLive;
+
+    /// <summary>The replay's race, from the board of the game that plays it.</summary>
+    public void WatchPlayback(GameBoard board, ReplayInfo info)
+    {
+        ArgumentNullException.ThrowIfNull(board);
+        Playback = info;
+        board.Received += snapshot => PlaybackLive?.Invoke(snapshot, board.Mode);
+    }
+
+    /// <summary>The replay's game ended: the page's race goes with it.</summary>
+    public void PlaybackOver()
+    {
+        Playback = null;
+        Changed?.Invoke();
     }
 
     /// <summary>The last removal of an empty replay (<see cref="RemoveEmptyReplay"/>), which a launcher that closes
@@ -368,6 +409,7 @@ public sealed partial class AppState(SettingsStore store, string dataFolder)
     {
         PadsMade?.Dispose();
         EndControllerCheck();
+        StopBuild();   // a graphics cache build ends with the launcher (what it compiled stays)
         _cleanup.Wait(TimeSpan.FromSeconds(3));
         Session?.DisposeAsync().AsTask().Wait(TimeSpan.FromSeconds(2));
         Presence?.Dispose();
@@ -426,7 +468,7 @@ public sealed partial class AppState(SettingsStore store, string dataFolder)
             Noted?.Invoke($"the race of match {race.Start.MatchId} was not started: a game of this launcher was already running");
             _ = session?.RaceOverAsync();
         }
-        else if (RecompLaunch.RaceProblem(paths) is { } problem)
+        else if ((PipelinesBlock ?? RecompLaunch.RaceProblem(paths)) is { } problem)
         {
             Problem = problem;
             // no game will run this race: the player is back in the lobby (the relay's AI takes the seat)

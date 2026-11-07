@@ -16,7 +16,9 @@ public sealed partial class AppState
 
     /// <summary>Where the game is for these settings, as the launcher's places have it: in this launcher's folder
     /// (<see cref="Install"/>: a player copy's is the one above its libraries).</summary>
-    private RecompPaths PathsOf(RecompSettings? recomp) => RecompLaunch.Resolve(recomp, Where, dataFolder, Preparation.Pins);
+    /// <para>With mods on, the paths carry their overlay (<see cref="Overlay"/>); without, none.</para>
+    private RecompPaths PathsOf(RecompSettings? recomp) =>
+        RecompLaunch.Resolve(recomp, Where, dataFolder, Preparation.Pins) with { Mods = Overlay.Offline.Count > 0 ? Overlay : null };
 
     /// <summary>Where this launcher is (a test's: a made-up player copy).</summary>
     public Install Where { get; private init; } = Install.This;
@@ -63,11 +65,12 @@ public sealed partial class AppState
     }
 
     /// <summary>What is missing to start the game, in the player's words; null: nothing. The newest look's answer:
-    /// the buttons that start a game show it, and a start itself looks again.</summary>
-    public string? GameProblem => Game.Problem;
+    /// the buttons that start a game show it, and a start itself looks again. While the graphics cache is built, that
+    /// first (<see cref="PipelinesBlock"/>).</summary>
+    public string? GameProblem => PipelinesBlock ?? Game.Problem;
 
     /// <summary>The same for a race, which needs the game's online part too.</summary>
-    public string? RaceProblem => Game.RaceProblem;
+    public string? RaceProblem => PipelinesBlock ?? Game.RaceProblem;
 
     /// <summary>Looks again, on another thread, at what a game start has: at the launcher's start, at CONTINUE on
     /// the first screen, after a preparation, after a start that found something missing. When the answer is in
@@ -102,7 +105,7 @@ public sealed partial class AppState
         return _looking = Task.Run(() =>
         {
             var look = RecompLaunch.Look(recomp, Where.Folder, dataFolder, pins, Where.PlayerCopy, Where.Installed);
-            bool changed;
+            bool changed, setUp;
             lock (_lookGate)
             {
                 if (number != _lookNumber)
@@ -110,11 +113,16 @@ public sealed partial class AppState
                     return look;   // a newer look is at work: its answer is the one the pages get
                 }
                 changed = _look is { } before && (before.Problem != look.Problem || before.RaceProblem != look.RaceProblem);
+                setUp = look.Problem is null && (_look is null || _look.Problem is not null);
                 _look = look;
             }
             if (changed)
             {
                 Changed?.Invoke();
+            }
+            if (setUp)
+            {
+                _ = CheckPipelinesAsync();   // the game is set up (the launcher's start, a preparation): its graphics cache
             }
             return look;
         });

@@ -13,7 +13,7 @@ public sealed partial class GarageViewModel
     /// 0 to 100.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(SettingFixed), nameof(SettingFree), nameof(SettingLimited), nameof(SettingLimit),
-        nameof(SettingLeast), nameof(SettingMost), nameof(ShownSetting), nameof(SettingText))]
+        nameof(SettingLeast), nameof(SettingMost), nameof(ShownSetting))]
     public partial SettingRange SettingRange { get; set; } = SettingRange.Free;
 
     /// <summary>One value: the slider shows it and cannot be moved.</summary>

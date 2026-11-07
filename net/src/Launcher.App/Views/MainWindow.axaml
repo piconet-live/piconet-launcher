@@ -93,11 +93,13 @@
 
     <Grid Grid.Row="2" ColumnDefinitions="Auto,*">
       <!-- The left column, on every page (direction D: "who you are, where you can go, whether you are online"): your
-           machine in 3D, the gold bar, your name and machine; the places (Play, Garage, Replays); the one notice;
-           at its foot Settings, lit while a Settings page shows, above the connection and the build. RACE, the lobby's
-           box and "Play F-Zero GX" are on Quick Play's page (PlayControlView); the lobby's state is the Lobby's. -->
+           machine in 3D, the gold bar, your name and machine; the places (Play, Garage, Replays, Mods); the one notice;
+           at its foot "Start F-Zero GX" (StartGameView), then Settings, lit while a Settings page shows, above the
+           connection and the build. RACE and the lobby's box are on Quick Play's page (PlayControlView); the lobby's
+           state is the Lobby's. -->
       <Border Width="{StaticResource ColumnWidth}" Background="{StaticResource ColumnBrush}" IsVisible="{Binding Navigation}">
         <!-- Declared top to bottom, so Tab goes as the eye does (a dock declared first comes first). -->
+        <c:TravelHost Fill="{StaticResource RaisedBrush}">
         <Grid RowDefinitions="Auto,*,Auto">
           <!-- The machine in 3D, in its paint, on the game's turntable (nothing without the disc). It takes the height
                the window can spare (MainWindow.axaml.cs). -->
@@ -126,8 +128,18 @@
                         Classes.on="{Binding Tab, Converter={x:Static v:Equal.Instance}, ConverterParameter=garage}" />
                 <Button Classes="tab" Content="Replays" Tag="{StaticResource GlyphReplays}" Command="{Binding ShowTabCommand}" CommandParameter="replays"
                         Classes.on="{Binding Tab, Converter={x:Static v:Equal.Instance}, ConverterParameter=replays}" />
+                <Button Classes="tab" Content="Mods" Tag="{StaticResource GlyphMods}" Command="{Binding ShowTabCommand}" CommandParameter="mods"
+                        Classes.on="{Binding Tab, Converter={x:Static v:Equal.Instance}, ConverterParameter=mods}" />
               </StackPanel>
               <v:ColumnNoticeView DataContext="{Binding Control}" />
+              <!-- the graphics cache while it is built: the words and the share, the bar (GraphicsViewModel); no line of why:
+                   the greyed starts say it already (owner 2026-11-06) -->
+              <Border Name="Graphics" Classes="columnnotice" IsVisible="{Binding Graphics.Building}">
+                <StackPanel Spacing="6">
+                  <TextBlock Text="{Binding Graphics.Line}" FontFeatures="tnum" />
+                  <ProgressBar Classes="prepare" Minimum="0" Maximum="1" Value="{Binding Graphics.Fraction}" />
+                </StackPanel>
+              </Border>
               <!-- a lobby's stage with a decision the player was not brought to (a change not saved in the builder):
                    its name, a link there (MainViewModel.Decision.cs) -->
               <Button Name="Decision" Classes="secondary wide" IsVisible="{Binding DecisionShown}"
@@ -142,6 +154,7 @@
           <StackPanel Grid.Row="2" Margin="16" Spacing="8">
             <!-- the launcher's update, while there is something to do: "Restart to update" (UpdateViewModel) -->
             <v:UpdateNoticeView DataContext="{Binding Update}" />
+            <v:StartGameView DataContext="{Binding Control}" Margin="0,0,0,8" />
             <Button Name="SettingsButton" Classes="quiet" Command="{Binding ShowTabCommand}" CommandParameter="settings"
                     Classes.on="{Binding Tab, Converter={x:Static v:Equal.Instance}, ConverterParameter=settings}"
                     AutomationProperties.Name="Settings">
@@ -157,6 +170,7 @@
             <v:ConnectionView DataContext="{Binding Account}" />
           </StackPanel>
         </Grid>
+        </c:TravelHost>
       </Border>
 
       <Grid Grid.Column="1" RowDefinitions="Auto,*">
@@ -167,6 +181,7 @@
           <TextBlock Classes="display d40" Text="{Binding TabTitle}" VerticalAlignment="Center" Margin="0,0,24,0" />
           <!-- the mode bar: the pages on the surface tone, the one showing a green plate that leans -->
           <Border Grid.Column="1" Background="{StaticResource WellBrush}" Padding="4" VerticalAlignment="Center" CornerRadius="{DynamicResource StaticMediumCornerRadius}" IsVisible="{Binding HasSections}">
+            <c:TravelHost Fill="{StaticResource AccentBrush}" Shape="Lean">
             <ItemsControl ItemsSource="{Binding Sections}">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="4" /></ItemsPanelTemplate>
@@ -181,6 +196,7 @@
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>
+            </c:TravelHost>
           </Border>
           <TextBlock Grid.Column="2" Classes="dim" Text="{Binding Home.RulesLine}" IsVisible="{Binding OnQuickPlay}"
                      HorizontalAlignment="Right" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="16,0" />
@@ -205,14 +221,31 @@
         </ScrollViewer>
 
         <!-- The bell's list, over the page under the bell. -->
-        <Panel Grid.Row="1" IsVisible="{Binding Notices.ListOpen}" HorizontalAlignment="Right" c:PadNav.Scope="True"
+        <Panel Grid.Row="1" c:Motion.Reveal="True" IsVisible="{Binding Notices.ListOpen}" HorizontalAlignment="Right" c:PadNav.Scope="True"
                VerticalAlignment="Top" Width="380" MaxHeight="440" Margin="0,4,16,0">
           <v:NoticesList Name="Notices" DataContext="{Binding Notices}" />
         </Panel>
       </Grid>
 
+      <!-- The question before ray tracing is turned on with its graphics not prepared yet (GraphicsViewModel), over the
+           page: Build prepares them (no game starts meanwhile), Cancel leaves ray tracing off. -->
+      <Panel Name="RaysQuestion" Grid.ColumnSpan="2" c:Motion.Reveal="True" IsVisible="{Binding Graphics.Asking}" c:PadNav.Scope="True">
+        <Border Background="{StaticResource GroundBrush}" Opacity="0.86" />
+        <Border Width="440" Background="{StaticResource RaisedBrush}" Padding="24" CornerRadius="{DynamicResource StaticExtraLargeCornerRadius}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                BoxShadow="0 8 24 0 #80000000">
+          <StackPanel>
+            <TextBlock Classes="head" FontWeight="SemiBold" Text="{x:Static vm:GraphicsViewModel.AskTitle}" TextWrapping="Wrap" />
+            <TextBlock Classes="dim" Text="{x:Static vm:GraphicsViewModel.AskLine}" TextWrapping="Wrap" Margin="0,8,0,0" />
+            <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,18,0,0">
+              <Button Classes="primary" Height="32" Content="Build" Command="{Binding Graphics.BuildCommand}" AutomationProperties.Name="Build" />
+              <Button Classes="secondary" Height="32" Content="Cancel" Command="{Binding Graphics.CancelCommand}" AutomationProperties.Name="Cancel" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+      </Panel>
+
       <!-- The question before leaving a lobby for the game, over the page. -->
-      <Panel Grid.ColumnSpan="2" IsVisible="{Binding Control.Asking}" c:PadNav.Scope="True">
+      <Panel Grid.ColumnSpan="2" c:Motion.Reveal="True" IsVisible="{Binding Control.Asking}" c:PadNav.Scope="True">
         <Panel.Styles>
           <Style Selector="Button.leave">
             <Setter Property="Background" Value="{StaticResource HoverBrush}" />

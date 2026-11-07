@@ -3,14 +3,16 @@ using Launcher.Core.Pads;
 
 namespace Launcher.App;
 
-// The pad that works the window (Launcher.Core/Pads/PadReader.cs): read while the window is in front and no game runs.
+// The launcher's controller helper (Launcher.Core/Pads/PadReader.cs): it holds the devices, the GameCube adapter among
+// them, for as long as the launcher runs and no game does; the pad works the window only while it is in front.
 public sealed partial class AppState
 {
     /// <summary>(A property, not a field: the reader is ended by <see cref="Shutdown"/>, as the session is.)</summary>
     private PadReader? PadsMade { get; set; }
     private bool _padsHeard;
 
-    /// <summary>The pad reader, made at its first use (the window's; a mode without a window never reads a pad).</summary>
+    /// <summary>The launcher's helper, made at its first use (the window's, or the Controller page's; a mode without a
+    /// window never starts one) and started at once.</summary>
     public PadReader Pads
     {
         get
@@ -23,22 +25,19 @@ public sealed partial class AppState
                     _padsHeard = true;
                     Changed += PadsChanged;
                 }
+                PadsChanged();
             }
             return PadsMade;
         }
     }
 
-    /// <summary>The launcher's window is in front (the pads are read only then).</summary>
+    /// <summary>The launcher's window is in front (the pad works the window only then).</summary>
     public bool WindowActive { get; private set; }
-
-    /// <summary>The Controller page runs a helper of its own: the reader runs none, and hears the page's.</summary>
-    public bool PageHelper { get; private set; }
 
     /// <summary>The window came to the front or was left.</summary>
     public event Action? FocusChanged;
 
-    /// <summary>A window has said whether it is in front (<see cref="WindowFocus"/>); until then (a test's page with
-    /// no main window) the Controller page does not wait for it.</summary>
+    /// <summary>A window has said whether it is in front (<see cref="WindowFocus"/>).</summary>
     public bool FocusKnown { get; private set; }
 
     public void WindowFocus(bool active)
@@ -53,21 +52,18 @@ public sealed partial class AppState
         FocusChanged?.Invoke();
     }
 
-    /// <summary>The Controller page starts its helper (true) or has ended it (false). Before the page's starts, the
-    /// reader's has gone: the two never hold the GameCube adapter at once.</summary>
-    public void PageHelperRuns(bool runs)
+    /// <summary>The window the helper was made for has gone (or a test's page that made it): the helper is ended, and
+    /// the adapter is free. A later use makes a new one.</summary>
+    public void ReleasePads()
     {
-        PageHelper = runs;
-        PadsChanged();
-        if (runs && PadsMade is { } pads)
-        {
-            pads.Ending.Wait(TimeSpan.FromSeconds(3));
-        }
+        var pads = PadsMade;
+        PadsMade = null;
+        pads?.Dispose();
     }
 
-    /// <summary>The conditions for reading the pads, as they stand now, given to the reader.</summary>
+    /// <summary>The conditions for the launcher's helper, as they stand now, given to it.</summary>
     public void PadsChanged() =>
-        PadsMade?.Update(new PadConditions(WindowActive, Racing, CheckingController, PageHelper));
+        PadsMade?.Update(new PadConditions(WindowActive, Racing, CheckingController));
 
     private ControllerHelper? StartPadHelper()
     {

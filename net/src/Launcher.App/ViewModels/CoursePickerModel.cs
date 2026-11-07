@@ -58,12 +58,17 @@ public sealed partial class CoursePickerModel : ObservableObject
 {
     public const string AllCups = "All";
 
-    public CoursePickerModel(PickMode mode, IEnumerable<int> picked)
+    /// <param name="mode">One course, or a pool.</param>
+    /// <param name="picked">The course or courses picked to begin with.</param>
+    /// <param name="only">The courses it offers (a game mode's list); null, or none the game knows: every course.</param>
+    public CoursePickerModel(PickMode mode, IEnumerable<int> picked, IReadOnlyCollection<int>? only = null)
     {
         ArgumentNullException.ThrowIfNull(picked);
         Mode = mode;
         var set = picked.ToHashSet();
-        Cards = [.. CourseCups.All.Select(c => new CourseCard(c.Course, c.Cup) { InPool = mode == PickMode.Pool })];
+        var offered = CourseCups.All.Where(c => only?.Contains(c.Course) != false).ToList();
+        offered = offered.Count > 0 ? offered : [.. CourseCups.All];
+        Cards = [.. offered.Select(c => new CourseCard(c.Course, c.Cup) { InPool = mode == PickMode.Pool })];
         var first = true;
         foreach (var card in Cards)
         {
@@ -74,7 +79,7 @@ public sealed partial class CoursePickerModel : ObservableObject
         {
             Cards[0].Picked = true;
         }
-        Chips = [.. new[] { AllCups }.Concat(CourseCups.Cups).Select(label => new CupChip(label) { On = label == AllCups })];
+        Chips = [.. new[] { AllCups }.Concat(CourseCups.Cups.Where(cup => offered.Any(c => c.Cup == cup))).Select(label => new CupChip(label) { On = label == AllCups })];
         Shown = [.. Cards];
     }
 

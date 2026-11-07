@@ -66,5 +66,5 @@ public sealed partial class LobbyViewModel
     /// lobby's state names it (<see cref="PlayerInfo.Custom"/>; a server from before names none: the stock machine).</summary>
     internal static RacedMachine RacedOf(PlayerInfo p, QuickPlaySession session) =>
         new(Math.Clamp(p.Machine, 0, Machines.Names.Count - 1),
-            p.Id == session.PlayerId ? session.Sent?.Custom : p.Custom);
+            p.Id == session.PlayerId ? (session.CustomsOff ? null : session.Sent?.Custom) : p.Custom);
 }

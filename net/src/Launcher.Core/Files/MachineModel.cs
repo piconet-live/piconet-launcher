@@ -39,8 +39,10 @@ public sealed record MachineTexture(Picture Picture, bool AlphaOnly = false);
 /// A machine's model as the game draws the player's own machine (<c>vehicle/NAME_p.arc</c>: <c>NAME.gma</c> and its
 /// textures <c>NAME.tpl</c>, the main stock set's colour 0), for the garage's preview. Its first textures are the
 /// machine's own (<see cref="OwnTextures"/>, the ones the paint changes); the rest are the shared machine textures
-/// (<c>vehicle/carcmntex.tpl</c>) the meshes use. The steering grips and the empty pilot-position marker are left out:
-/// the game places them through the machine's other data.
+/// (<c>vehicle/carcmntex.tpl</c>) the meshes use. Objects after the first that move on their own (Fire Stingray's fin,
+/// Rainbow Phoenix's wings) are stored around their hinges and go where the attachment file <c>NAME.fmi</c> says
+/// (<see cref="Attachments"/>). The steering grips and the empty pilot-position marker are left out: the pilot who
+/// holds the grips is not drawn here.
 /// <para>A material says which of the two files its texture number is from (<see cref="CommonTexture"/> in its first
 /// field). The shared numbers are the game's own list of 76, not the shared file's order of 57
 /// (<see cref="SharedSlot"/>).</para>
@@ -113,11 +115,12 @@ public sealed class MachineModel
     public float Radius { get; }
 
     /// <summary>The model of <paramref name="gma"/> with the machine's texture file <paramref name="own"/> and the
-    /// shared one <paramref name="shared"/> (when there is one).</summary>
+    /// shared one <paramref name="shared"/> (when there is one), its objects moved to their places in the attachment
+    /// file <paramref name="attachments"/> (when there is one).</summary>
     /// <exception cref="InvalidDataException">The files cannot be read.</exception>
     [SuppressMessage("Maintainability", "CA1502:AvoidExcessiveComplexity",
         Justification = "Pre-existing when the code metrics were turned on: to be broken up when the class is next worked on")]
-    public static MachineModel Read(byte[] gma, byte[] own, byte[]? shared)
+    public static MachineModel Read(byte[] gma, byte[] own, byte[]? shared, byte[]? attachments = null)
     {
         ArgumentNullException.ThrowIfNull(gma);
         ArgumentNullException.ThrowIfNull(own);
@@ -175,6 +178,7 @@ public sealed class MachineModel
         var models = GmaReader.Read(gma);
         var looks = MeshLooks(gma);
         var layers = TextureLayers(gma);
+        var places = Attachments(attachments);
         var meshes = new List<MachineMesh>();
         for (var m = 0; m < models.Count; m++)
         {
@@ -183,6 +187,7 @@ public sealed class MachineModel
             {
                 continue;
             }
+            var place = places.GetValueOrDefault(model.Name);
             var modelLooks = looks.Count > m && looks[m].Count == model.Meshes.Length ? looks[m] : null;
             for (var k = 0; k < model.Meshes.Length; k++)
             {
@@ -202,7 +207,7 @@ public sealed class MachineModel
                     look.Alpha, texture, mesh.IsTranslucent || look.Alpha < 0.99f, mesh.IsTwoSided,
                     layer?.WrapS ?? TextureWrap.Repeat, layer?.WrapT ?? TextureWrap.Repeat, look.Painted);
                 meshes.Add(new MachineMesh(
-                    [.. mesh.Vertices.Select(v => v.Position)],
+                    [.. mesh.Vertices.Select(v => v.Position + place)],
                     [.. mesh.Vertices.Select(v => v.Normal == Vector3.Zero ? Vector3.UnitY : Vector3.Normalize(v.Normal))],
                     [.. mesh.Vertices.Select(v => v.Uv)],
                     [.. mesh.Vertices.Select(v => Rgba(v.Color))],
@@ -212,6 +217,37 @@ public sealed class MachineModel
         }
         parse.Dispose();
         return new MachineModel(meshes, textures, ownTpl?.Textures.Count ?? 0);
+    }
+
+    /// <summary>
+    /// Where an attachment file (<c>.fmi</c>) puts a model's separate objects, by name: a count at byte 2, that many
+    /// records of 0x14 bytes from 0x200 (a word, the name's place in the names from 0x2A0, the point as three floats,
+    /// high byte first). The game draws each object at its point (main.rel <c>fn_1_87610</c>, and
+    /// <c>fn_1_87750</c>.. by machine, the table at .data 0x1F5A0); only a machine in motion turns them there (the fin
+    /// by the steering, the wings when boosting), so at rest the point is all there is. A record that does not fit
+    /// the file, or whose point is no number, places nothing.
+    /// </summary>
+    public static IReadOnlyDictionary<string, Vector3> Attachments(byte[]? fmi)
+    {
+        const int Records = 0x200, Size = 0x14, Names = 0x2A0;
+        var places = new Dictionary<string, Vector3>(StringComparer.Ordinal);
+        if (fmi is null || fmi.Length < Names)
+        {
+            return places;
+        }
+        for (var i = 0; i < fmi[2] && Records + ((i + 1) * Size) <= Names; i++)
+        {
+            var at = Records + (i * Size);
+            var name = (long)Names + BinaryPrimitives.ReadUInt32BigEndian(fmi.AsSpan(at + 4));
+            var end = name < fmi.Length ? Array.IndexOf(fmi, (byte)0, (int)name) : -1;
+            var point = new Vector3(BinaryPrimitives.ReadSingleBigEndian(fmi.AsSpan(at + 8)),
+                BinaryPrimitives.ReadSingleBigEndian(fmi.AsSpan(at + 12)), BinaryPrimitives.ReadSingleBigEndian(fmi.AsSpan(at + 16)));
+            if (end >= 0 && float.IsFinite(point.X) && float.IsFinite(point.Y) && float.IsFinite(point.Z))
+            {
+                places.TryAdd(System.Text.Encoding.ASCII.GetString(fmi, (int)name, end - (int)name), point);
+            }
+        }
+        return places;
     }
 
     /// <summary>One model of several, each moved by its offset (a custom machine: the body as it is, the cockpit and

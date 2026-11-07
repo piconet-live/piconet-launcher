@@ -34,11 +34,11 @@ public sealed class ReplayTabsTests : IDisposable
         """;
 
     /// <summary>A replay of one racer, with results; <paramref name="practice"/>: the header's word, as written.</summary>
-    private void Write(string name, string recorded, string? practice)
+    private void Write(string name, string recorded, string? practice, string mode = "", byte version = 2)
     {
         var header = $$$"""
             {"match": {"matchId": "x", "seat": 0, "setup": {"course": 5, "laps": 3, "seats": [
-              {"seat": 0, "playerId": "p1", "name": "ANA", "machine": 1}]}},
+              {"seat": 0, "playerId": "p1", "name": "ANA", "machine": 1}]{{{mode}}}}},
              "seat": 0, "mask": 1, "delay": 2, "recorded": "{{{recorded}}}"{{{(practice is null ? "" : ", \"practice\": " + practice)}}}}
             """;
         Directory.CreateDirectory(Replays);
@@ -48,7 +48,7 @@ public sealed class ReplayTabsTests : IDisposable
         Span<byte> u32 = stackalloc byte[4];
         w.Write("FZRP"u8);
         w.Write((byte)0);
-        w.Write((byte)2);
+        w.Write(version);
         BinaryPrimitives.WriteUInt32BigEndian(u32, (uint)json.Length);
         w.Write(u32);
         w.Write(json);
@@ -88,6 +88,143 @@ public sealed class ReplayTabsTests : IDisposable
         }
         Assert.False(page.Loading, "the replays were not read in 10 s");
         Dispatcher.UIThread.RunJobs();
+    }
+
+    /// <summary>A mode's race with teams: each racer's team in the results; anything but a list of teams: none.</summary>
+    [Theory]
+    [InlineData(", \"mode\": {\"teams\": [1, 0]}", "Team 2")]
+    [InlineData(", \"mode\": {\"teams\": []}", "Team 1")]   // (a seat past the list: its own number)
+    [InlineData(", \"mode\": {\"teams\": [\"x\"]}", "")]
+    [InlineData(", \"mode\": {\"teams\": 3}", "")]
+    [InlineData(", \"mode\": {}", "")]
+    [InlineData("", "")]
+    public void AReplaysResultsSayEachRacersTeam(string mode, string says)
+    {
+        Write("t.fzrp", "2026-10-18T10:00:00+00:00", null, mode);
+        Assert.Equal(says, ReplayWords.Results(Assert.Single(ReplayFile.List(Replays))).Single().Team);
+    }
+
+    /// <summary>The Results of a row, drawn with the racer's team. LOBBY_SHOTS keeps it.</summary>
+    [Fact]
+    public async Task TheResultsShowTheTeam()
+    {
+        Write("t.fzrp", DateTimeOffset.Now.ToString("o"), null, ", \"mode\": {\"teams\": [1]}");
+        var state = State();
+        var ui = HeadlessUnitTestSession.StartNew(typeof(GameSkinTests));
+        try
+        {
+            await ui.Dispatch(() =>
+            {
+                GameSkin.Load(null);
+                var page = new ReplaysViewModel(state, () => DateTimeOffset.Now);
+                var window = new Window { Content = new ReplaysView { DataContext = page }, Width = 1100, Height = 700 };
+                window.Show();
+                try
+                {
+                    Loaded(page);
+                    Click(window, window.GetVisualDescendants().OfType<Button>().First(b => AutomationProperties.GetName(b) == "Results" && b.IsEffectivelyVisible));
+                    Dispatcher.UIThread.RunJobs();
+                    Assert.Contains("Team 2", window.GetVisualDescendants().OfType<TextBlock>().Where(t => t.IsEffectivelyVisible).Select(t => t.Text));
+                    if (Environment.GetEnvironmentVariable("LOBBY_SHOTS") is { Length: > 0 } folder)
+                    {
+                        Avalonia.Headless.AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+                        window.CaptureRenderedFrame()?.Save(Path.Combine(folder, "replay-results-teams.png"), new Avalonia.Media.Imaging.PngBitmapEncoderOptions());
+                    }
+                }
+                finally
+                {
+                    window.Close();
+                }
+            }, TestContext.Current.CancellationToken);
+        }
+        finally
+        {
+            await ui.DisposeAsync();
+            state.Shutdown();
+        }
+    }
+
+    /// <summary>A mode's race (version 9, the package in its header): "•••" offers Show mode file, which opens the file
+    /// under the row as it was raced, its name with its share code, its settings' values and its text (language 1); a
+    /// row without a mode offers none. LOBBY_SHOTS keeps the offer and the file.</summary>
+    [Fact]
+    public async Task AModesReplayShowsItsModeFile()
+    {
+        var text = File.ReadAllText(TestSupport.RepositoryFolder.Protocol("protocol", "quickplay", "ghost_race.fzmode"));
+        var start = Online.Protocol.ModeCompiler.Compile(text).Mode!.Start();
+        Write("g.fzrp", DateTimeOffset.Now.ToString("o"), null,
+            $$""", "mode": {"package": "{{start.Package}}", "hash": "{{start.Hash}}", "api": {{start.Api}}, "params": [1, 0, 0]}""", version: 9);
+        Write("n.fzrp", DateTimeOffset.Now.AddMinutes(-1).ToString("o"), null);
+        var state = State();
+        var ui = HeadlessUnitTestSession.StartNew(typeof(GameSkinTests));
+        try
+        {
+            await ui.Dispatch(() =>
+            {
+                GameSkin.Load(null);
+                // (the launcher's own window, so the page is drawn on its theme as a player sees it)
+                var main = new MainViewModel(state);
+                var window = new MainWindow { DataContext = main, Width = 1280, Height = 800 };
+                window.Show();
+                main.Current = main.Replays;
+                var page = main.Replays;
+                try
+                {
+                    Loaded(page);
+                    var (mode, none) = (page.Items[0], page.Items[1]);
+                    Assert.Equal((true, false), (mode.HasModeFile, none.HasModeFile));
+                    page.ToggleMoreCommand.Execute(mode);
+                    Dispatcher.UIThread.RunJobs();
+                    var offers = window.GetVisualDescendants().OfType<Button>().Where(b => b.Name == "ModeFileButton").ToList();
+                    Assert.Equal([true, false], offers.Select(b => b.IsEffectivelyVisible));
+                    // the file's actions take the result's room, and the row's columns stay where the others' are
+                    Assert.Equal((false, true), (mode.ResultShown, none.ResultShown));
+                    var racers = window.GetVisualDescendants().OfType<TextBlock>().Where(t => t.Text == "ANA" && t.IsEffectivelyVisible)
+                        .Select(t => Math.Round(Avalonia.VisualExtensions.TranslatePoint(t, default, window)!.Value.X)).ToList();
+                    Assert.Equal(2, racers.Count);
+                    Assert.Equal(racers[0], racers[1]);
+                    Shot(window, "replay-mode-file-offer");
+                    Click(window, offers[0]);
+                    Dispatcher.UIThread.RunJobs();
+                    Assert.True(mode.ShowingMode);
+                    Assert.True(mode.Acting);
+                    Assert.Equal($"Ghost race · code {Online.Protocol.ModePackage.ShareCode(start.Hash)}", mode.ModeHeading);
+                    Assert.Equal("Laps 1 · Ghosts on the map Show · Gap Live", mode.ModeSettings);
+                    var source = window.GetVisualDescendants().OfType<SelectableTextBlock>().Single(t => t.Name == "ModeSource" && t.IsEffectivelyVisible);
+                    Assert.Equal(text.Replace("\r\n", "\n", StringComparison.Ordinal).TrimEnd(), source.Text);
+                    Assert.Contains("param lap_count \"Laps\" number 1..99 or \"By course\" default \"By course\";", source.Text, StringComparison.Ordinal);
+                    Shot(window, "replay-mode-file");
+
+                    // the results open in its place, and Close puts the file away
+                    page.ToggleStatsCommand.Execute(mode);
+                    Assert.Equal((true, false), (mode.ShowingStats, mode.ShowingMode));
+                    page.ShowModeFileCommand.Execute(mode);
+                    Assert.Equal((false, true), (mode.ShowingStats, mode.ShowingMode));
+                    page.HideModeFileCommand.Execute(mode);
+                    Assert.False(mode.ShowingMode);
+                }
+                finally
+                {
+                    window.Close();
+                }
+            }, TestContext.Current.CancellationToken);
+        }
+        finally
+        {
+            await ui.DisposeAsync();
+            state.Shutdown();
+        }
+    }
+
+    private static void Shot(Window window, string name)
+    {
+        if (Environment.GetEnvironmentVariable("LOBBY_SHOTS") is { Length: > 0 } folder)
+        {
+            Dispatcher.UIThread.RunJobs();
+            Avalonia.Headless.AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+            Directory.CreateDirectory(folder);
+            window.CaptureRenderedFrame()?.Save(Path.Combine(folder, name + ".png"), new Avalonia.Media.Imaging.PngBitmapEncoderOptions());
+        }
     }
 
     [Fact]

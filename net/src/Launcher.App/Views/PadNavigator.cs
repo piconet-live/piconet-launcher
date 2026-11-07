@@ -19,10 +19,10 @@ namespace Launcher.App.Views;
 /// tabs (on the Garage roster's tiles: its shelves), Z through a tab's pages; Start
 /// presses the page's main action (<c>PadNav.Main</c>); left and right change a value; the C-stick scrolls. The
 /// focus shows as a soft mark (<see cref="PadMark"/>) from the pad's first press until the mouse moves. The pad is
-/// read by <see cref="PadReader"/> only while the window is in front and no game runs (this tells it when the
-/// window is in front), and works the pages only with "Controller navigation" on (Settings, Launcher; off by default). With "Navigation sounds" on (Settings, Launcher; off by default) a move between controls
-/// sounds the game's cursor, by the pad or by the keyboard's Tab, and the pad's B the game's cancel when it closed
-/// or left something; the mouse never sounds (<see cref="LauncherSound"/>).
+/// read from the launcher's helper (<see cref="PadReader"/>, which holds the devices while no game runs) and acts only
+/// while the window is in front (this tells it when the window is in front), and works the pages only with "Controller navigation" on (Settings, Launcher; off by default). Then a
+/// move of the pad between controls sounds the game's cursor, and its B the game's cancel when it closed or left
+/// something; the keyboard and the mouse never sound (<see cref="LauncherSound"/>).
 /// </summary>
 public sealed partial class PadNavigator
 {
@@ -36,7 +36,6 @@ public sealed partial class PadNavigator
     private Control? _on;
     private Control? _focusedAtLanding;
     private Point? _pointer;
-    private bool _landing;   // the pad moves the keyboard's focus: its own sound, not the keyboard's
 
     /// <param name="page">The page's place in the window (the page's own controls come before the left column's).</param>
     public PadNavigator(Window window, MainViewModel main, PadMark mark, Control? page)
@@ -49,7 +48,6 @@ public sealed partial class PadNavigator
         _page = page;
         _tick = new DispatcherTimer(TimeSpan.FromMilliseconds(16), DispatcherPriority.Input, (_, _) => Tick());
         window.AddHandler(InputElement.PointerMovedEvent, OnPointerMoved, RoutingStrategies.Tunnel, handledEventsToo: true);
-        window.AddHandler(InputElement.GotFocusEvent, OnFocused, RoutingStrategies.Bubble, handledEventsToo: true);
         window.AddHandler(InputElement.PointerPressedEvent, (_, _) => Leave(), RoutingStrategies.Tunnel, handledEventsToo: true);
         window.AddHandler(InputElement.PointerWheelChangedEvent, (_, _) => Leave(), RoutingStrategies.Tunnel, handledEventsToo: true);
         window.LayoutUpdated += (_, _) => Follow();
@@ -183,11 +181,15 @@ public sealed partial class PadNavigator
         }
     }
 
-    /// <summary>B: what is open over the page closes (the question before leaving a lobby: stay; the notices'
-    /// list; a replay's file actions or results), else the page goes one step up.</summary>
+    /// <summary>B: what is open over the page closes (the question before ray tracing: cancel; the question before
+    /// leaving a lobby: stay; the notices' list; a replay's file actions or results), else the page goes one step up.</summary>
     private void Back(Control? on)
     {
-        if (_main.Control.Asking)
+        if (_main.Graphics.Asking)
+        {
+            _main.Graphics.CancelCommand.Execute(null);
+        }
+        else if (_main.Control.Asking)
         {
             _main.Control.StayCommand.Execute(null);
         }
@@ -239,16 +241,6 @@ public sealed partial class PadNavigator
     /// <summary>A navigation sound, when the settings have them on (<see cref="LauncherSounds.Heard"/>).</summary>
     private void Hear(LauncherSound sound) => Attention.Sound(sound, _main.SoundSettings);
 
-    /// <summary>The keyboard moved the focus (Tab, or the arrows where a control moves it): the cursor's sound. A
-    /// click's focus (the pointer) never sounds, nor does the pad's own landing (its move sounded already).</summary>
-    private void OnFocused(object? sender, FocusChangedEventArgs e)
-    {
-        if (!_landing && e.NavigationMethod is NavigationMethod.Tab or NavigationMethod.Directional)
-        {
-            Hear(LauncherSound.Cursor);
-        }
-    }
-
     /// <summary>The page changed under the pad: once it is laid out, the pad is on its first control.</summary>
     private void Paged(bool changed)
     {
@@ -275,15 +267,7 @@ public sealed partial class PadNavigator
         _on = control;
         // a row of choices takes the keyboard's focus on its chosen item (the list itself takes none)
         var focus = control is ListBox list && list.ContainerFromIndex(Math.Max(0, list.SelectedIndex)) is { } item ? item : control;
-        _landing = true;
-        try
-        {
-            focus.Focus(NavigationMethod.Directional);
-        }
-        finally
-        {
-            _landing = false;
-        }
+        focus.Focus(NavigationMethod.Directional);
         _focusedAtLanding = Focused();
         control.BringIntoView();
         _mark.Show(MarkBox(control), glide, RadiusOf(control));

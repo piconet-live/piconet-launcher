@@ -33,16 +33,19 @@ public sealed partial class GarageViewModel
     }
 
     /// <summary>A stock machine's colour (Favourites, Stock).</summary>
-    public bool ColourShown => StockShown && ShownSection == ColourSection;
+    public bool ColourShown => StockShown && ShownSection == ColourSection && !TrailPicked;
 
     /// <summary>A stock machine's stats (Favourites, Stock).</summary>
     public bool StatsShown => StockShown && ShownSection == StatsSection;
 
     /// <summary>The custom machine's part colours (Custom).</summary>
-    public bool BuildColourShown => CustomShown && ShownSection == ColourSection;
+    public bool BuildColourShown => CustomShown && ShownSection == ColourSection && !TrailPicked;
 
     /// <summary>The custom machine's stats (Custom).</summary>
     public bool BuildStatsShown => CustomShown && ShownSection == StatsSection;
+
+    /// <summary>The trail's colour, on the Colour tab (every shelf: it goes with the racer, whichever machine).</summary>
+    public bool TrailShown => ShownSection == ColourSection && TrailPicked;
 
     /// <summary>A list of parts or pilots (Custom).</summary>
     public bool PartsShown => CustomShown && ShownSection < ColourSection;
@@ -78,9 +81,14 @@ public sealed partial class GarageViewModel
             tab.On = tab.Index == ShownSection;
         }
         foreach (var name in (string[])[nameof(ShownSection), nameof(Panel), nameof(ColourShown), nameof(StatsShown), nameof(BuildColourShown),
-            nameof(BuildStatsShown), nameof(PartsShown), nameof(ShownParts), nameof(ShownBuild), nameof(CanRemove)])
+            nameof(BuildStatsShown), nameof(TrailShown), nameof(ColourTabs), nameof(ColourTabIndex), nameof(PartsShown), nameof(ShownParts),
+            nameof(ShownBuild), nameof(CanRemove)])
         {
             OnPropertyChanged(name);
+        }
+        if (TrailShown)
+        {
+            ShowTrailSwatches();
         }
     }
 }

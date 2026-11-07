@@ -41,19 +41,26 @@ public sealed partial class SettingsViewModel : ViewModelBase
         HideSwearWords = s.HideSwearWords;
         WidescreenIndex = Enum.IsDefined(s.Widescreen) ? (int)s.Widescreen : (int)WidescreenMode.Game;
         ShowFrameRate = s.ShowFrameRate || FrameRateAlwaysShown;
+        ShowInputs = s.ShowInputs;
+        AuroraSizeIndex = Math.Max(0, LauncherSettings.AuroraSizes.ToList().FindIndex(a => a.Name == s.AuroraSize));
+        AuroraEdgesIndex = Math.Max(0, LauncherSettings.AuroraEdgeCounts.ToList().FindIndex(a => a.Count == s.AuroraEdges));
+        AuroraTexturesIndex = Math.Max(0, LauncherSettings.AuroraTextureLevels.ToList().FindIndex(a => a.Level == s.AuroraTextures));
+        AuroraColourblindIndex = Math.Max(0, LauncherSettings.AuroraColourblindFilters.ToList().FindIndex(a => a.Name == s.AuroraColourblind));
+        AuroraHighRefreshIndex = Math.Max(0, LauncherSettings.AuroraHighRefreshes.ToList().FindIndex(a => a.Rate == s.AuroraHighRefresh));
+        RayTracing = s.RayTracing;
         Rumble = s.Rumble;
+        ReducedMotion = s.ReducedMotion;
         InputDelayIndex = s.RaceInputDelay;
         VerticalSyncIndex = s.VerticalSync ? 1 : 0;
         FullScreenIndex = s.GameFullScreen == LauncherSettings.FullScreenExclusive ? 1 : 0;
-        RefreshRateIndex = Math.Max(0, RefreshRates.IndexOf(s.RefreshRate));
         AutoUpdate = s.AutoUpdate;
         GameVolume = s.GameVolume;
         SoundVolume = s.SoundVolume;
         SoundMuted = s.SoundMuted;
-        NavigationSounds = s.NavigationSounds;
         PadNavigation = s.PadNavigation;
         PendingScale = _scale = s.ShownInterfaceScale;
         _loading = false;
+        _ = HearTheCardAsync();
         // the first screen can set the disc after this page was made
         state.Changed += () => OnUi(() =>
         {
@@ -62,6 +69,13 @@ public sealed partial class SettingsViewModel : ViewModelBase
                 DiscPath = disc;
             }
             ShowServer();
+            if (_state.Settings.RayTracing != RayTracing && !_askingRays)
+            {
+                // turned on elsewhere (Build, the question's answer): the switch follows, nothing saved again
+                _following = true;
+                RayTracing = _state.Settings.RayTracing;
+                _following = false;
+            }
             if (_state.Settings.ShownInterfaceScale != _scale)
             {
                 // set elsewhere (the keys): the slider shows it, and what was pending there is dropped
@@ -77,10 +91,8 @@ public sealed partial class SettingsViewModel : ViewModelBase
     /// <summary>The interface scale on the slider, in percent: nothing changes until Apply (a scale applied while
     /// the slider is dragged would move the slider under the pointer).</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(PendingScaleText), nameof(CanApplyScale))]
+    [NotifyPropertyChangedFor(nameof(CanApplyScale))]
     public partial int PendingScale { get; set; }
-
-    public string PendingScaleText => $"{PendingScale}%";
 
     public bool CanApplyScale => Applied(PendingScale) != _scale;
 
@@ -98,6 +110,10 @@ public sealed partial class SettingsViewModel : ViewModelBase
     private static int Applied(int value) =>
         Math.Clamp((int)Math.Round(value / (double)LauncherSettings.InterfaceScaleStep) * LauncherSettings.InterfaceScaleStep,
             LauncherSettings.LeastInterfaceScale, LauncherSettings.MostInterfaceScale);
+
+    public static int LeastScaleWhole => LauncherSettings.LeastInterfaceScale;
+
+    public static int MostScaleWhole => LauncherSettings.MostInterfaceScale;
 
     public static double LeastScale => LauncherSettings.LeastInterfaceScale;
 
@@ -133,15 +149,6 @@ public sealed partial class SettingsViewModel : ViewModelBase
     /// <summary>The two kinds of full screen, in the order of <see cref="FullScreenIndex"/>.</summary>
     public static IReadOnlyList<string> FullScreenChoices { get; } = ["Borderless", "Exclusive"];
 
-    /// <summary>The refresh rates, in the order of <see cref="RefreshRateIndex"/>, as the settings file names them
-    /// (<see cref="RefreshRates"/>) and as the page shows them. No choice adds input delay: the game's
-    /// own picture comes at its 60 Hz moment and the pictures after it are guessed forward (stage 5).</summary>
-    public static IReadOnlyList<string> RefreshRateChoices { get; } =
-        ["60 Hz", "120 Hz", "240 Hz", "Display"];
-
-    private static readonly List<string> RefreshRates =
-        [LauncherSettings.RefreshAsTheGame, LauncherSettings.Refresh120, LauncherSettings.Refresh240, LauncherSettings.RefreshAsTheDisplay];
-
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(DiscStatusText), nameof(DiscProblem))]
     public partial string DiscPath { get; set; }
@@ -161,7 +168,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     public partial bool RecordReplays { get; set; }
 
-    /// <summary>"Record practice", beside "Record my races" (<see cref="LauncherSettings.RecordPractice"/>).</summary>
+    /// <summary>"Record practice", under "Record races" (<see cref="LauncherSettings.RecordPractice"/>).</summary>
     [ObservableProperty]
     public partial bool RecordPractice { get; set; }
 
@@ -192,9 +199,101 @@ public sealed partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     public partial bool ShowFrameRate { get; set; }
 
+    [ObservableProperty]
+    public partial bool ShowInputs { get; set; }
+
+    public static IReadOnlyList<string> AuroraSizeChoices { get; } = LauncherSettings.AuroraSizes.Select(a => a.Words).ToList();
+
+    public static IReadOnlyList<string> AuroraEdgesChoices { get; } = LauncherSettings.AuroraEdgeCounts.Select(a => a.Words).ToList();
+
+    public static IReadOnlyList<string> AuroraTexturesChoices { get; } = LauncherSettings.AuroraTextureLevels.Select(a => a.Words).ToList();
+
+    [ObservableProperty]
+    public partial int AuroraSizeIndex { get; set; }
+
+    [ObservableProperty]
+    public partial int AuroraEdgesIndex { get; set; }
+
+    [ObservableProperty]
+    public partial int AuroraTexturesIndex { get; set; }
+
+    public static IReadOnlyList<string> AuroraColourblindChoices { get; } = LauncherSettings.AuroraColourblindFilters.Select(a => a.Words).ToList();
+
+    [ObservableProperty]
+    public partial int AuroraColourblindIndex { get; set; }
+
+    public static IReadOnlyList<string> AuroraHighRefreshChoices { get; } = LauncherSettings.AuroraHighRefreshes.Select(a => a.Words).ToList();
+
+    /// <summary>High refresh (<see cref="LauncherSettings.AuroraHighRefresh"/>): 0 off, 1 up to 120, 2 up to 240; the one
+    /// setting of pictures between the game's steps.</summary>
+    [ObservableProperty]
+    public partial int AuroraHighRefreshIndex { get; set; }
+
+    /// <summary>Ray tracing (<c>"auroraRayTracing"</c>). Its switch can be turned on once the check of the
+    /// graphics card has said it can (<see cref="RayTracingCard"/>); until then, and on a card that cannot, it cannot be
+    /// changed, and <see cref="RayTracingReason"/> says why beside it.</summary>
+    [ObservableProperty]
+    public partial bool RayTracing { get; set; }
+
+    [ObservableProperty]
+    public partial bool RayTracingPossible { get; set; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RayTracingReasonShown))]
+    public partial string RayTracingReason { get; set; } = "";
+
+    public bool RayTracingReasonShown => RayTracingReason.Length > 0;
+
+    /// <summary>The switch follows the setting (<see cref="RayTracing"/>): nothing to save.</summary>
+    private bool _following;
+
+    /// <summary>The switch was turned on and whether ray tracing's graphics are ready is being looked at.</summary>
+    private bool _askingRays;
+
+    /// <summary>Ray tracing turned on: on at once when its graphics cache is ready (or none is built: Aurora does not draw);
+    /// otherwise the switch goes back off and the question is asked (Build turns it on, <see cref="AppState.AnswerRays"/>).</summary>
+    private async Task TurnOnRaysAsync()
+    {
+        _askingRays = true;
+        bool ready;
+        try
+        {
+            ready = await _state.RaysReadyAsync().ConfigureAwait(true);
+        }
+        finally
+        {
+            _askingRays = false;
+        }
+        if (!RayTracing || _state.Settings.RayTracing)
+        {
+            return;   // turned off meanwhile, or on already
+        }
+        if (ready)
+        {
+            Save();
+            return;
+        }
+        _following = true;
+        RayTracing = false;
+        _following = false;
+        _state.AskForRays();
+    }
+
+    /// <summary>The card's answer, from the check the launcher asks once (off the window's thread).</summary>
+    private async Task HearTheCardAsync()
+    {
+        var card = await RayTracingCard.Check().ConfigureAwait(true);
+        RayTracingPossible = card.Can;
+        RayTracingReason = card.Reason ?? "";
+    }
+
     /// <summary>A test build shows the frame rate whatever the setting says (<see cref="LauncherSettings.FrameRateShown"/>):
-    /// its box is ticked and cannot be changed, and the file keeps the player's own value.</summary>
+    /// its switch is on and cannot be changed, and the file keeps the player's own value.</summary>
     public bool FrameRateAlwaysShown { get; } = StackStamp.Current.Test;
+
+    /// <summary>The launcher's animations are off (<see cref="LauncherSettings.ReducedMotion"/>).</summary>
+    [ObservableProperty]
+    public partial bool ReducedMotion { get; set; }
 
     /// <summary>The controllers rumble in the game (<see cref="LauncherSettings.Rumble"/>).</summary>
     [ObservableProperty]
@@ -213,11 +312,6 @@ public sealed partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     public partial int FullScreenIndex { get; set; }
 
-    /// <summary>Refresh rate (<see cref="LauncherSettings.RefreshRate"/>): 0 the game's 60, 1 120, 2 240, 3 the
-    /// display's own.</summary>
-    [ObservableProperty]
-    public partial int RefreshRateIndex { get; set; }
-
     /// <summary>How loud the game is, 0 to 100: it starts at this volume in every start the launcher makes.</summary>
     [ObservableProperty]
     public partial int GameVolume { get; set; }
@@ -229,11 +323,7 @@ public sealed partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     public partial bool SoundMuted { get; set; }
 
-    /// <summary>The game's cursor and cancel as the pad or the keyboard moves (<see cref="LauncherSettings.NavigationSounds"/>).</summary>
-    [ObservableProperty]
-    public partial bool NavigationSounds { get; set; }
-
-    /// <summary>The pad works the launcher's pages (<see cref="LauncherSettings.PadNavigation"/>).</summary>
+    /// <summary>The pad works the launcher's pages, with the game's cursor and cancel as it moves (<see cref="LauncherSettings.PadNavigation"/>).</summary>
     [ObservableProperty]
     public partial bool PadNavigation { get; set; }
 
@@ -323,15 +413,45 @@ public sealed partial class SettingsViewModel : ViewModelBase
 
     partial void OnShowFrameRateChanged(bool value) => Save();
 
+    partial void OnShowInputsChanged(bool value) => Save();
+
+    partial void OnAuroraSizeIndexChanged(int value) => Save();
+
+    partial void OnAuroraEdgesIndexChanged(int value) => Save();
+
+    partial void OnAuroraTexturesIndexChanged(int value) => Save();
+
+    partial void OnAuroraColourblindIndexChanged(int value) => Save();
+
+    partial void OnAuroraHighRefreshIndexChanged(int value) => Save();
+
+    partial void OnRayTracingChanged(bool value)
+    {
+        if (_loading || _following)
+        {
+            return;
+        }
+        if (value && !_state.Settings.RayTracing && _state.RaysBuildFirst)
+        {
+            _ = TurnOnRaysAsync();
+            return;
+        }
+        Save();
+    }
+
     partial void OnRumbleChanged(bool value) => Save();
+
+    partial void OnReducedMotionChanged(bool value)
+    {
+        Controls.Motion.Reduced = value;
+        Save();
+    }
 
     partial void OnInputDelayIndexChanged(int value) => Save();
 
     partial void OnVerticalSyncIndexChanged(int value) => Save();
 
     partial void OnFullScreenIndexChanged(int value) => Save();
-
-    partial void OnRefreshRateIndexChanged(int value) => Save();
 
     partial void OnGameVolumeChanged(int value) => Save();
 
@@ -346,8 +466,6 @@ public sealed partial class SettingsViewModel : ViewModelBase
         Save();
         _ = HearSoonAsync(++_soundChanges);
     }
-
-    partial void OnNavigationSoundsChanged(bool value) => Save();
 
     partial void OnPadNavigationChanged(bool value) => Save();
 
@@ -399,7 +517,16 @@ public sealed partial class SettingsViewModel : ViewModelBase
             HideSwearWords = HideSwearWords,
             Widescreen = (WidescreenMode)Math.Clamp(WidescreenIndex, 0, WidescreenChoices.Count - 1),
             ShowFrameRate = FrameRateAlwaysShown ? s.ShowFrameRate : ShowFrameRate,
+            ShowInputs = ShowInputs,
+            // (a list with nothing selected says -1: the setting stays what it is)
+            AuroraSize = AuroraSizeIndex >= 0 && AuroraSizeIndex < LauncherSettings.AuroraSizes.Count ? LauncherSettings.AuroraSizes[AuroraSizeIndex].Name : s.AuroraSize,
+            AuroraEdges = AuroraEdgesIndex >= 0 && AuroraEdgesIndex < LauncherSettings.AuroraEdgeCounts.Count ? LauncherSettings.AuroraEdgeCounts[AuroraEdgesIndex].Count : s.AuroraEdges,
+            AuroraTextures = AuroraTexturesIndex >= 0 && AuroraTexturesIndex < LauncherSettings.AuroraTextureLevels.Count ? LauncherSettings.AuroraTextureLevels[AuroraTexturesIndex].Level : s.AuroraTextures,
+            AuroraColourblind = AuroraColourblindIndex >= 0 && AuroraColourblindIndex < LauncherSettings.AuroraColourblindFilters.Count ? LauncherSettings.AuroraColourblindFilters[AuroraColourblindIndex].Name : s.AuroraColourblind,
+            AuroraHighRefresh = AuroraHighRefreshIndex >= 0 && AuroraHighRefreshIndex < LauncherSettings.AuroraHighRefreshes.Count ? LauncherSettings.AuroraHighRefreshes[AuroraHighRefreshIndex].Rate : s.AuroraHighRefresh,
+            RayTracing = RayTracing,
             Rumble = Rumble,
+            ReducedMotion = ReducedMotion,
             // (a list with nothing selected says -1: the setting stays what it is)
             InputDelay = InputDelayIndex is >= 0 and <= LauncherSettings.PlayersInputDelay ? InputDelayIndex : s.RaceInputDelay,
             VerticalSync = VerticalSyncIndex is 0 or 1 ? VerticalSyncIndex == 1 : s.VerticalSync,
@@ -409,11 +536,9 @@ public sealed partial class SettingsViewModel : ViewModelBase
                 1 => LauncherSettings.FullScreenExclusive,
                 _ => s.GameFullScreen,
             },
-            RefreshRate = RefreshRateIndex >= 0 && RefreshRateIndex < RefreshRates.Count ? RefreshRates[RefreshRateIndex] : s.RefreshRate,
             GameVolume = Math.Clamp(GameVolume, 0, 100),
             SoundVolume = Math.Clamp(SoundVolume, 0, 100),
             SoundMuted = SoundMuted,
-            NavigationSounds = NavigationSounds,
             PadNavigation = PadNavigation,
         });
     }

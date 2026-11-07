@@ -50,6 +50,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         Control = new PlayControlViewModel(state, _feed, Lobby, () => Current = Lobby, ShowSettings);
         Control.ShowFirstScreen = () => Current = Disc;
         Notices = new NoticesViewModel(state, noticeTime);
+        Graphics = new GraphicsViewModel(state);
         // the message of the day the status shows goes into the bell's list too (Home shows it: HomeViewModel.Motd)
         _feed.Changed += () => OnUi(() =>
         {
@@ -82,15 +83,13 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     /// <summary>Play's Practice page, on the Garage's machine.</summary>
     private PracticeViewModel PracticePage(AppState state) =>
         new(() => _state.Settings.Racer.Raced with { Machine = Garage.ChosenIndex }, () => Current = Garage,
-            [.. state.PracticePackList.Select(p => p.Name)], state.StartPractice, state.Settings.Practice);
+            [.. state.PracticePackList.Select(p => p.Name)], state.PracticeModeFile, state.StartPractice, state.Settings.Practice);
 
-    /// <summary>The Custom lobbies page, and the lobby page's ways to it (leaving a custom lobby, the host's presets).</summary>
+    /// <summary>The Custom lobbies page, and the lobby page's way to it (leaving a custom lobby).</summary>
     private CustomLobbiesViewModel CustomLobbies(AppState state)
     {
-        IReadOnlyList<string> Packs() => [.. state.PracticePackList.Select(p => p.Name)];
-        var lobbies = new CustomLobbiesViewModel(state, () => Current = Lobby, Packs);
+        var lobbies = new CustomLobbiesViewModel(state, () => Current = Lobby);
         Lobby.ToBrowser = () => Current = lobbies;
-        Lobby.PackNames = Packs;
         return lobbies;
     }
 
@@ -122,6 +121,11 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
 
     public ReplaysViewModel Replays { get; }
 
+    /// <summary>The Mods place: the player's mods (made when first shown).</summary>
+    public ModsViewModel Mods => _mods ??= new ModsViewModel(_state);
+
+    private ModsViewModel? _mods;
+
     /// <summary>The Replays tab's second page: the player's figures from their replays (made when first asked for).</summary>
     public StatsViewModel Stats => _stats ??= new StatsViewModel(_state);
 
@@ -132,8 +136,12 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     /// <summary>The left column's name, machine and connection.</summary>
     public AccountViewModel Account { get; }
 
-    /// <summary>The left column's play control: RACE or what the lobby is doing, and "Play F-Zero GX".</summary>
+    /// <summary>The play control: RACE or what the lobby is doing (Quick Play's page), and "Start F-Zero GX" (the left
+    /// column's foot).</summary>
     public PlayControlViewModel Control { get; }
+
+    /// <summary>The graphics cache: its build in the left column, the question before ray tracing.</summary>
+    public GraphicsViewModel Graphics { get; }
 
     /// <summary>The server's notices: the banner, the bell and its list.</summary>
     public NoticesViewModel Notices { get; }
@@ -166,6 +174,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         HomeViewModel or LobbyViewModel or LanViewModel or PracticeViewModel or CustomLobbiesViewModel => "play",
         GarageViewModel => "garage",
         ReplaysViewModel or StatsViewModel => "replays",
+        ModsViewModel => "mods",
         SettingsViewModel or ControllerViewModel => "settings",
         _ => "",
     };
@@ -273,6 +282,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         "play" => _play is LobbyViewModel && !_state.InQuickPlay ? Home : _play,
         "garage" => Garage,
         "replays" => _replays,
+        "mods" => Mods,
         "settings" => _state.Settings.SettingsTab == SettingsTab.Controller ? Controller : SettingsPage(),
         _ => Current,
     };
@@ -377,7 +387,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         MachineShown = !_state.Racing;
         // the machine raced (RacedMachine): once the server has spoken, what it races the player with (the custom
         // machine it was told of); else the player's own, the custom machine when one is set
-        var custom = _state.Settings.Racer.Raced.Custom;
+        var custom = _state.Session?.CustomsOff == true ? null : _state.Settings.Racer.Raced.Custom;
         if (Lobby.Raced is { } raced && Machines.Has(raced.Machine))
         {
             custom = _state.Session is { } session ? LobbyViewModel.RacedOf(raced, session).Custom : custom;
@@ -446,6 +456,9 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         _lobbyScreen = screen;
         // the server is not asked while the game runs
         _feed.Watching = !_state.Racing;
+        // no game starts while the graphics cache is built: Practice's start and the replays' Play are off, with why
+        Practice.Block(_state.PipelinesBlock);
+        Replays.Block(_state.PipelinesBlock);
         Scale = _state.Settings.ShownInterfaceScale / 100.0;
         RefreshSections();
         RefreshMachine();
@@ -456,6 +469,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         _feed.Dispose();
         Disc.Dispose();          // a preparation at work is stopped
         Controller.Hidden();
+        _state.ReleasePads();         // the launcher's helper lets the adapter go with its window
         ControllerHelper.StopAll();   // none outlives the launcher's window
         Account.Dispose();
         Lan.Dispose();

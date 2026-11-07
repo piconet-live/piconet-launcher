@@ -314,7 +314,8 @@ public sealed partial class DiscArt : IDisposable
     }
 
     /// <summary>A machine's model as the player's own machine is drawn in a race (<see cref="MachineModel"/>), from its
-    /// archive <c>vehicle/NAME_p.arc</c> with the shared machine textures (<c>vehicle/carcmntex.tpl</c>). Null when the
+    /// archive <c>vehicle/NAME_p.arc</c> (its objects placed by its <c>NAME.fmi</c>) with the shared machine textures
+    /// (<c>vehicle/carcmntex.tpl</c>). Null when the
     /// files are missing or cannot be read.</summary>
     public MachineModel? MachineModel(int machine)
     {
@@ -327,12 +328,32 @@ public sealed partial class DiscArt : IDisposable
         {
             var archive = Read($"vehicle/{name}_p.arc") is { } arc ? Traced("parse", () => U8Archive.Parse(arc)) : null;
             return archive?.File($"{name}.gma") is { } gma && archive.File($"{name}.tpl") is { } tpl
-                ? Core.MachineModel.Read(gma, tpl, Read("vehicle/carcmntex.tpl"))
+                ? Core.MachineModel.Read(gma, tpl, Read("vehicle/carcmntex.tpl"), archive.File($"{name}.fmi"))
                 : null;
         }
         catch (Exception e) when (Unreadable(e))
         {
             return null;   // (a model without a mesh ended in "Sequence contains no elements", which was not caught)
+        }
+    }
+
+    /// <summary>A stock machine's own trail colours (<see cref="BurnerColours"/>), from its <c>NAME.fmi</c> in
+    /// <c>vehicle/NAME_p.arc</c>; null when the files are missing or cannot be read.</summary>
+    public IReadOnlyList<Online.Protocol.Rgb>? TrailColours(int machine)
+    {
+        if (machine < 0 || machine >= MachineFiles.Count)
+        {
+            return null;
+        }
+        var name = MachineFiles[machine];
+        try
+        {
+            return Read($"vehicle/{name}_p.arc") is { } arc && U8Archive.Parse(arc).File($"{name}.fmi") is { } fmi
+                ? BurnerColours.Read(fmi) : null;
+        }
+        catch (Exception e) when (Unreadable(e))
+        {
+            return null;
         }
     }
 

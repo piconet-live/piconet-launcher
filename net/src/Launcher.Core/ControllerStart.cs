@@ -88,7 +88,8 @@ public static class ControllerProbe
 /// <summary>What the launcher says of the controllers, in a player's words.</summary>
 public static class ControllerWords
 {
-    /// <summary>The GameCube adapter's state, as a label.</summary>
+    /// <summary>The GameCube adapter's state, as a label. "Not asked" is a test's alone: its launch file's
+    /// <c>leaveAdapter</c> keeps the launcher's helper off the owner's adapter.</summary>
     public static string Adapter(HelperAdapter? adapter) => adapter?.State switch
     {
         null => "Looking for the adapter…",
@@ -98,8 +99,12 @@ public static class ControllerWords
         AdapterState.InUse => "In use by another program",
         AdapterState.Error => "Adapter not opened",
         AdapterState.Unused => "No port set to the adapter",
-        _ => "Adapter left to the game",
+        _ => "Adapter off for tests",
     };
+
+    /// <summary>The adapter's label while a game of this launcher runs: the launcher's helper handed it to the game at
+    /// its start, and takes it back when the game has gone.</summary>
+    public const string InUseByTheGame = "In use by the game";
 
     /// <summary>The value beside the adapter's label: what a player needs to know of it, in a word or two (the
     /// adapter's switch; the driver's tool; the error's own words). A found adapter's value is its port's, which the
@@ -207,7 +212,8 @@ public static class ControllerStart
     /// game no controller.</summary>
     /// <param name="controllerFrom">The fork's user folder, whose settings the game takes once.</param>
     /// <param name="adapter">Ask for the GameCube adapter when port 1 is set to it.</param>
-    /// <param name="start">Starts the helper; null: the game's own (<see cref="ControllerHelper.Start"/>).</param>
+    /// <param name="start">Starts the helper; null: the game's own, the launcher's ended first
+    /// (<see cref="ControllerHelper.StartAlone"/>).</param>
     /// <param name="cancel">The launcher is closing: the helper is ended and nothing more is written (a check that
     /// outlived its launcher wrote the game's controller settings into a folder that was being taken away).</param>
     /// <returns>The sentence for the player; null: nothing to say.</returns>
@@ -223,7 +229,7 @@ public static class ControllerStart
             }
             RecompLaunch.PrepareUserFolder(paths.UserFolder, controllerFrom);
             var first = !ControllerFiles.HasSettings(paths.UserFolder);
-            var snapshot = await ControllerProbe.AskAsync(start ?? (() => ControllerHelper.Start(paths)), adapter && !first, cancel: cancel)
+            var snapshot = await ControllerProbe.AskAsync(start ?? (() => ControllerHelper.StartAlone(paths)), adapter && !first, cancel: cancel)
                 .ConfigureAwait(false);
             if (cancel.IsCancellationRequested)
             {

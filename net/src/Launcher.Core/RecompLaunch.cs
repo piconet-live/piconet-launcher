@@ -11,8 +11,10 @@ namespace Launcher.Core;
 /// copy's prepared folder that is not ready (damaged, or with another online part's words in it).</param>
 /// <param name="Installed">The launcher is an installed one (<see cref="Install.Installed"/>; a kind of
 /// <paramref name="PlayerCopy"/>): what is missing is said as it is true for one (Setup puts it back).</param>
+/// <param name="Mods">The files of the player's mods that are on, for each kind of start (<see cref="ModOverlay"/>);
+/// null: none, and no launch file has an <c>overlay</c>.</param>
 public sealed record RecompPaths(string Runner, string Module, string GameFolder, string UserFolder, string? Bundle = null,
-    bool PlayerCopy = false, bool NoGame = false, bool Installed = false);
+    bool PlayerCopy = false, bool NoGame = false, bool Installed = false, ModOverlay? Mods = null);
 
 /// <summary>Where the recompiled game is when the settings do not say (development builds set these): null
 /// leaves the launcher's own place, a <c>recomp</c> folder
@@ -104,11 +106,16 @@ public static partial class RecompLaunch
     /// behaviour. The fork's kind of bundle (Gecko codes) has no part in a plain start and is not named.</summary>
     /// <param name="controllerSetup">The start opens the game's own controller options and the game closes when
     /// the player leaves them (<see cref="GameLaunchFile.Offline"/>).</param>
-    public static string OfflineLaunch(RecompPaths paths, GameDebug? debug = null, GameWindow? window = null, bool controllerSetup = false)
+    /// <param name="widescreen">The picture, as a race has it (the Settings page's "Widescreen"), on or off, whatever
+    /// the save says; null only for the game's own controller options, which keep the save's option.</param>
+    public static string OfflineLaunch(RecompPaths paths, GameDebug? debug = null, GameWindow? window = null, bool controllerSetup = false,
+        WidescreenMode? widescreen = null)
     {
         ArgumentNullException.ThrowIfNull(paths);
         var native = NativeBundle(paths);
-        return GameLaunchFile.Offline(native ? paths.Bundle : null, debug, window, controllerSetup);
+        // offline play takes the whole mod; the game's controller options are a start of their own, and take the guarded part
+        var overlay = paths.Mods?.For(controllerSetup ? OverlayUse.Guarded : OverlayUse.Offline);
+        return GameLaunchFile.Offline(native ? paths.Bundle : null, debug, window, controllerSetup, overlay, widescreen);
     }
 
     /// <summary>The launch file of a race from a match file: the
@@ -122,7 +129,7 @@ public static partial class RecompLaunch
     {
         ArgumentNullException.ThrowIfNull(paths);
         return GameLaunchFile.Race(paths.Bundle ?? throw new ArgumentException("no mod bundle", nameof(paths)),
-            GameLaunchFile.MatchFileText(matchFile), widescreen, replayFile, debug, window, rejoin);
+            GameLaunchFile.MatchFileText(matchFile), widescreen, replayFile, debug, window, rejoin, paths.Mods?.For(OverlayUse.Guarded));
     }
 
     /// <summary>The launch file of a replay's playback: the
@@ -135,7 +142,7 @@ public static partial class RecompLaunch
     {
         ArgumentNullException.ThrowIfNull(paths);
         return GameLaunchFile.Playback(paths.Bundle ?? throw new ArgumentException("no mod bundle", nameof(paths)), replayFile,
-            sounds, widescreen, debug, window);
+            sounds, widescreen, debug, window, paths.Mods?.For(OverlayUse.Guarded));
     }
 
     /// <summary>Where the runner writes its standard output and error (and its line for every slow second) when the
@@ -170,9 +177,10 @@ public static partial class RecompLaunch
     /// <param name="controllerSetup">Straight to the game's own controller options, and closed when the player
     /// leaves them (<see cref="GameLaunchFile.Offline"/>).</param>
     /// <param name="volume">How loud the game is (<see cref="PrepareUserFolder"/>); null: as its settings say.</param>
+    /// <param name="widescreen">The picture, as in a race (<see cref="OfflineLaunch"/>); null only for the game's own controller options.</param>
     public static Process StartOffline(RecompPaths paths, GameWindow window, string? controllerFrom = null, IEnumerable<string>? extra = null,
-        GameDebug? debug = null, bool controllerSetup = false, StartVolume? volume = null) =>
-        Start(paths, window, OfflineLaunch(paths, debug, window, controllerSetup), extra, controllerFrom, volume);
+        GameDebug? debug = null, bool controllerSetup = false, StartVolume? volume = null, WidescreenMode? widescreen = null) =>
+        Start(paths, window, OfflineLaunch(paths, debug, window, controllerSetup, widescreen), extra, controllerFrom, volume);
 
     /// <summary>Starts the game on a race from a match file (<see cref="RaceLaunch"/>).</summary>
     public static Process StartRace(RecompPaths paths, GameWindow window, string matchFile, string? replayFile, WidescreenMode widescreen = WidescreenMode.Game,

@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Online.Protocol;
 
 namespace Launcher.App.ViewModels;
 
@@ -101,7 +102,7 @@ public sealed partial class PackRule : RuleRow
     {
         (_served, File) = (served, file);
         Options = Offered();
-        Selected = Math.Clamp(selected, 0, Options.Count - 1);
+        Selected = Options.Count == 0 ? -1 : Math.Clamp(selected, 0, Options.Count - 1);   // (-1: nothing to choose yet)
     }
 
     /// <summary>The host's own pack file (null: none chosen this session).</summary>
@@ -121,9 +122,9 @@ public sealed partial class PackRule : RuleRow
 
     partial void OnSelectedChanged(int value)
     {
-        if (value < 0 || value >= Options.Count)
+        if ((value < 0 || value >= Options.Count) && Options.Count > 0)
         {
-            Selected = Math.Clamp(value, 0, Math.Max(0, Options.Count - 1));
+            Selected = Math.Clamp(value, 0, Options.Count - 1);
         }
         OnPropertyChanged(nameof(Chosen));
         OnPropertyChanged(nameof(FileChosen));
@@ -148,6 +149,118 @@ public sealed partial class PackRule : RuleRow
     private IReadOnlyList<string> Offered() => File is { } file ? [.. _served, file.Name] : _served;
 }
 
+/// <summary>One mode a custom lobby's host may choose: its name and its line of what it is (the header's about).</summary>
+public sealed record ModeChoice(string Name, string About)
+{
+    public bool HasAbout => About.Length > 0;
+}
+
+/// <summary>
+/// A custom lobby's game mode: the server's official modes (<see cref="LobbyList.Modes"/>, in its order), the lobby's own
+/// mode when it is a host's file the server holds, and the host's own file once one is chosen (From file…: the view opens
+/// the system's file picker and hands the path to <see cref="Load"/>). The create face lists <see cref="Choices"/>; the
+/// host's lobby drops them down. A file that does not compile keeps the choice as it was and says why, with its line,
+/// under the row. A mode file is one choice: its settings are its parameters, on their defaults.
+/// </summary>
+public sealed partial class GameModeRule : RuleRow
+{
+    /// <summary>The choice when the server lists no modes (one from before them): Quick Play's rules, no mode.</summary>
+    public const string NoMode = "Quick Play rules";
+
+    /// <param name="official">The server's official modes, in its order.</param>
+    /// <param name="current">The lobby's mode as the server named it, with its values (null: none, a new lobby).</param>
+    public GameModeRule(string label, IReadOnlyList<LobbyMode> official, LobbyMode? current) : base(label)
+    {
+        ArgumentNullException.ThrowIfNull(official);
+        (Official, Current) = (official, current);
+        Served = current is null || official.Any(m => m.Hash == current.Hash) ? null : current;
+        Options = Offered();
+        var at = current is null ? -1 : official.ToList().FindIndex(m => m.Hash == current.Hash);
+        Selected = at >= 0 ? at : Served is not null ? official.Count : 0;
+    }
+
+    /// <summary>The server's official modes.</summary>
+    public IReadOnlyList<LobbyMode> Official { get; }
+
+    /// <summary>The lobby's mode as the server named it (its values are the lobby's): an official one is chosen with them.</summary>
+    public LobbyMode? Current { get; }
+
+    /// <summary>The lobby's mode when it is a host's own file the server holds: sent again by its hash, to keep it.</summary>
+    public LobbyMode? Served { get; }
+
+    /// <summary>The host's own mode file (null: none chosen while this panel is open).</summary>
+    public Launcher.Core.HostModeFile? File { get; private set; }
+
+    [ObservableProperty]
+    public partial IReadOnlyList<string> Options { get; private set; }
+
+    /// <summary>The choices with their lines, for the create face's list.</summary>
+    [ObservableProperty]
+    public partial IReadOnlyList<ModeChoice> Choices { get; private set; } = [];
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Chosen))]
+    public partial int Selected { get; set; }
+
+    /// <summary>The choice in words.</summary>
+    public ModeChoice? Chosen => Selected >= 0 && Selected < Choices.Count ? Choices[Selected] : null;
+
+    /// <summary>The official mode chosen, with the lobby's values when it is the lobby's mode; null: another choice.</summary>
+    public LobbyMode? OfficialChosen => Selected >= 0 && Selected < Official.Count
+        ? Official[Selected].Hash == Current?.Hash ? Current : Official[Selected] : null;
+
+    /// <summary>The host's file is the choice.</summary>
+    public bool FileChosen => File is not null && Selected == Options.Count - 1;
+
+    /// <summary>The lobby's own file, as the server holds it, is the choice.</summary>
+    public bool ServedChosen => Served is not null && Selected == Official.Count && !FileChosen;
+
+    /// <summary>A mode is chosen (not <see cref="NoMode"/>).</summary>
+    public bool Any => OfficialChosen is not null || ServedChosen || FileChosen;
+
+    /// <summary>The mode chosen as the server names one: the official's or the lobby's own; null for a file or none.</summary>
+    public LobbyMode? Named => OfficialChosen ?? (ServedChosen ? Served : null);
+
+    partial void OnSelectedChanged(int value)
+    {
+        if (value < 0 || value >= Options.Count)
+        {
+            Selected = Math.Clamp(value, 0, Math.Max(0, Options.Count - 1));
+        }
+    }
+
+    /// <summary>The file at <paramref name="path"/> as the choice; a file that does not compile is said under the row.</summary>
+    public void Load(string path)
+    {
+        var (file, problem) = Launcher.Core.HostModeFile.Read(path);
+        Take(file, problem);
+    }
+
+    /// <summary>A file read (or why it is none) as the choice.</summary>
+    public void Take(Launcher.Core.HostModeFile? file, string? problem)
+    {
+        if (file is null)
+        {
+            Note = problem ?? "";
+            return;
+        }
+        Note = "";
+        File = file;
+        Options = Offered();
+        Selected = Options.Count - 1;
+        OnPropertyChanged(nameof(Selected));   // (the same place, another file: the rows follow it)
+    }
+
+    private IReadOnlyList<string> Offered()
+    {
+        Choices = [.. Official.Count == 0 && Served is null ? [new ModeChoice(NoMode, "")] : (ModeChoice[])[],
+            .. Official.Select(m => new ModeChoice(m.Name, m.About)),
+            .. Served is { } served ? [new ModeChoice(served.Name, served.About)] : (ModeChoice[])[],
+            .. File is { } file ? [new ModeChoice(file.Name, file.About)] : (ModeChoice[])[]];
+        return [.. Choices.Select(c => c.Name)];
+    }
+}
+
 /// <summary>One of a few, side by side.</summary>
 public sealed partial class SegmentedRule(string label, IReadOnlyList<string> options, int selected = 0) : RuleRow(label)
 {
@@ -164,14 +277,28 @@ public sealed partial class StepperRule(string label, int value, int minimum, in
 
     public int Maximum { get; } = maximum;
 
+    /// <summary>How much a press changes it; a typed value goes to the nearest step from the least.</summary>
+    public int Step { get; init; } = 1;
+
+    /// <summary>What the number counts ("ms", "s"), shown after it; "": a plain number.</summary>
+    public string Unit { get; init; } = "";
+
+    public bool HasUnit => Unit.Length > 0;
+
     [ObservableProperty]
     public partial int Value { get; set; } = Math.Clamp(value, minimum, maximum);
 
     partial void OnValueChanged(int value)
     {
-        if (value < Minimum || value > Maximum)
+        var kept = Math.Clamp(value, Minimum, Maximum);
+        if (Step > 1)
         {
-            Value = Math.Clamp(value, Minimum, Maximum);
+            var steps = (int)Math.Round((kept - (double)Minimum) / Step);
+            kept = Minimum + (Math.Min(steps, (Maximum - Minimum) / Step) * Step);
+        }
+        if (kept != value)
+        {
+            Value = kept;
         }
     }
 }
@@ -201,6 +328,65 @@ public sealed partial class LapsRule(string label, int value, int maximum) : Rul
         if (value < 1 || value > Maximum)
         {
             Value = Math.Clamp(value, 1, Maximum);
+        }
+    }
+}
+
+/// <summary>A whole number between - and +, or beside it the value with a name that states no number ("By course"): a mode's
+/// optional parameter (<see cref="ModeParam.Or"/>), as Laps' Unlimited sits beside its stepper.</summary>
+public sealed partial class NamedNumberRule(string label, string named, bool isNamed, int value, int minimum, int maximum) : RuleRow(label)
+{
+    /// <summary>The named value's words.</summary>
+    public string Named { get; } = named;
+
+    /// <summary>What the number counts ("ms", "s"), shown after it; "": a plain number.</summary>
+    public string Unit { get; init; } = "";
+
+    /// <summary>The unit shows: there is one and the number is in use.</summary>
+    public bool UnitShown => Unit.Length > 0 && Counted;
+
+    public int Minimum { get; } = minimum;
+
+    public int Maximum { get; } = maximum;
+
+    /// <summary>How much a press changes it.</summary>
+    public int Step { get; init; } = 1;
+
+    [ObservableProperty]
+    public partial int Value { get; set; } = Math.Clamp(value, minimum, maximum);
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Counted), nameof(State), nameof(UnitShown), nameof(StateShown))]
+    public partial bool IsNamed { get; set; } = isNamed;
+
+    /// <summary>The stepper is in use: a number. A named value "Off" makes this the row's switch (On: the number).</summary>
+    public bool Counted
+    {
+        get => !IsNamed;
+        set => IsNamed = !value;
+    }
+
+    /// <summary>The named value is "Off": the row is a switch and its number, as any on/off row.</summary>
+    public bool IsOff => Named == "Off";
+
+    /// <summary>The switch's state in words, when <see cref="IsOff"/>.</summary>
+    public string State => Counted ? "On" : "Off";
+
+    /// <summary>The state's word shows: "Off" beside the switch; on, the number says it (and the row stays narrow
+    /// enough for its label on one line in Practice's panel).</summary>
+    public bool StateShown => IsOff && !Counted;
+
+    partial void OnValueChanged(int value)
+    {
+        var kept = Math.Clamp(value, Minimum, Maximum);
+        if (Step > 1)
+        {
+            kept = Minimum + ((int)Math.Round((kept - (double)Minimum) / Step) * Step);
+            kept = Math.Min(kept, Maximum);
+        }
+        if (kept != value)
+        {
+            Value = kept;
         }
     }
 }
@@ -236,42 +422,6 @@ public sealed partial class SwitchRule(string label, bool on) : RuleRow(label)
     public partial bool On { get; set; } = on;
 
     public string State => On ? "On" : "Off";
-}
-
-/// <summary>A time in milliseconds between - and +, on its steps, that can be typed too, with a switch that turns it
-/// off ("Mines return": 200 ms, or off).</summary>
-public sealed partial class DelayRule(string label, int ms, int minimum, int maximum, int step, int fallback) : RuleRow(label)
-{
-    public int Minimum { get; } = minimum;
-
-    public int Maximum { get; } = maximum;
-
-    public int Step { get; } = Math.Max(1, step);
-
-    /// <summary>The time when on (kept while off, for when it is on again).</summary>
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Ms))]
-    public partial int Value { get; set; } = OnSteps(ms > 0 ? ms : fallback, minimum, maximum, Math.Max(1, step));
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Ms))]
-    public partial bool On { get; set; } = ms > 0;
-
-    /// <summary>The time asked for: the value, or 0 when off.</summary>
-    public int Ms => On ? Value : 0;
-
-    partial void OnValueChanged(int value)
-    {
-        var kept = OnSteps(value, Minimum, Maximum, Step);
-        if (kept != value)
-        {
-            Value = kept;
-        }
-    }
-
-    // the nearest step inside the range
-    private static int OnSteps(int value, int minimum, int maximum, int step) =>
-        Math.Min(maximum, minimum + ((Math.Clamp(value, minimum, maximum) - minimum + (step / 2)) / step * step));
 }
 
 /// <summary>A line of text, with a hint while it is empty.</summary>
@@ -334,43 +484,9 @@ public sealed partial class RangeRule(string label, int low, int high, int minim
 }
 
 /// <summary>
-/// A custom lobby's preset, dropped down as a choice is, with the line under it (<see cref="RuleRow.Note"/>) that says
-/// how the rules differ from Quick Play's, and (where the panel names one) the toggle beside it that shows or hides
-/// every rule.
-/// </summary>
-public sealed partial class PresetRule(string label, IReadOnlyList<string> options, int selected = 0) : RuleRow(label)
-{
-    public IReadOnlyList<string> Options { get; } = options;
-
-    [ObservableProperty]
-    public partial int Selected { get; set; } = Math.Clamp(selected, 0, Math.Max(0, options.Count - 1));
-
-    /// <summary>The toggle shows beside the preset (Create; the host's lobby shows every rule at once).</summary>
-    public bool Toggles { get; init; }
-
-    /// <summary>Every rule shows beside the panel.</summary>
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ToggleText))]
-    public partial bool RulesShown { get; set; }
-
-    public string ToggleText => RulesShown ? "Hide rules" : "Edit rules";
-
-    [RelayCommand]
-    private void Toggle() => RulesShown = !RulesShown;
-
-    partial void OnSelectedChanged(int value)
-    {
-        if (value < 0 || value >= Options.Count)
-        {
-            Selected = Math.Clamp(value, 0, Math.Max(0, Options.Count - 1));
-        }
-    }
-}
-
-/// <summary>
 /// How a custom lobby's course is chosen: Vote, Random or Fixed side by side; Fixed names its one course, chosen in
 /// the course picker (one course, as Practice picks it). Choosing Fixed opens the picker; a course pressed there is
-/// the lobby's and closes it.
+/// the lobby's and closes it. Under a mode's list of courses the picker offers those alone.
 /// </summary>
 public sealed partial class CourseRule : RuleRow
 {
@@ -379,10 +495,10 @@ public sealed partial class CourseRule : RuleRow
 
     public const int Fixed = 2;
 
-    public CourseRule(string label, int selected, int course) : base(label)
+    public CourseRule(string label, int selected, int course, IReadOnlyCollection<int>? only = null) : base(label)
     {
         Selected = Math.Clamp(selected, 0, Choices.Count - 1);
-        Picker = new CoursePickerModel(PickMode.One, [course]);
+        Picker = new CoursePickerModel(PickMode.One, [course], only);
         Picker.Changed += () =>
         {
             OnPropertyChanged(nameof(Course));

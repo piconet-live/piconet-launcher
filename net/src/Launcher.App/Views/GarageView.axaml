@@ -20,7 +20,7 @@
       <StackPanel Orientation="Horizontal" Spacing="5" Margin="0,0,14,0">
         <TextBlock Classes="colhead" Text="{Binding Label}"
                    IsVisible="{Binding Label, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-        <TextBlock Classes="figure" Text="{Binding Value}" VerticalAlignment="Center" />
+        <c:RollingText Classes="figure" Text="{Binding Value}" VerticalAlignment="Center" />
       </StackPanel>
     </DataTemplate>
   </UserControl.Resources>
@@ -49,6 +49,7 @@
               IsVisible="{Binding Previewing}" AutomationProperties.Name="Back to the machines" />
       <!-- the shelves as chips with their counts ("12 / 41" in a lobby that offers twelve) -->
       <Panel Name="Shelves" IsVisible="{Binding Selecting}" HorizontalAlignment="Left">
+          <c:TravelHost Fill="{StaticResource RaisedBrush}" Stroke="{StaticResource AccentBrush}" Shape="Ring">
           <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
             <Button Name="ShelfFavourites" Classes="chip" Classes.on="{Binding ShelfTabs[0].On}" Command="{Binding ShowShelfCommand}"
                     CommandParameter="{x:Static vm:GarageViewModel.FavouritesShelf}" AutomationProperties.Name="Favourites">
@@ -65,13 +66,15 @@
               </StackPanel>
             </Button>
             <Button Name="ShelfCustom" Classes="chip" Classes.on="{Binding ShelfTabs[2].On}" Command="{Binding ShowShelfCommand}"
-                    CommandParameter="{x:Static vm:GarageViewModel.CustomShelf}" AutomationProperties.Name="Custom">
+                    CommandParameter="{x:Static vm:GarageViewModel.CustomShelf}" AutomationProperties.Name="Custom"
+                    IsEnabled="{Binding !CustomsOff}" ToolTip.Tip="{Binding CustomsOffText}">
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <TextBlock Text="{Binding ShelfTabs[2].Label}" VerticalAlignment="Center" />
                 <TextBlock Classes="count" Text="{Binding ShelfTabs[2].Count}" VerticalAlignment="Center" />
               </StackPanel>
             </Button>
           </StackPanel>
+        </c:TravelHost>
       </Panel>
     </DockPanel>
 
@@ -124,7 +127,7 @@
     <Panel Name="RosterPlace" IsVisible="{Binding Selecting}">
       <!-- the tiles, then the shelf's word under them: "No match" under the Custom shelf's New machine, never behind it -->
       <StackPanel VerticalAlignment="Top">
-        <ItemsControl Name="Roster" ItemsSource="{Binding Roster}" HorizontalAlignment="Left" VerticalAlignment="Top">
+        <ItemsControl Name="Roster" c:Motion.Stagger="True" ItemsSource="{Binding Roster}" HorizontalAlignment="Left" VerticalAlignment="Top">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>
               <c:RosterTiles Columns="{Binding #Root.RosterColumns}" TileWidth="{Binding #Root.TileWidth}" TileHeight="{Binding #Root.TileHeight}" Gap="8" />
@@ -257,20 +260,20 @@
                 CornerRadius="{DynamicResource StaticExtraLargeCornerRadius}"
                 BoxShadow="{StaticResource FloatShadow}" VerticalAlignment="Top">
           <Grid Name="Side" Width="360" RowDefinitions="Auto,*,Auto,Auto,Auto" VerticalAlignment="Top">
-            <ItemsControl Name="Sections" ItemsSource="{Binding Sections}" Margin="0,0,0,8" AutomationProperties.Name="Parts, colour or stats">
+            <c:TravelHost Fill="{StaticResource AccentBrush}" Shape="Lean" Margin="0,0,0,8"><ItemsControl Name="Sections" ItemsSource="{Binding Sections}" AutomationProperties.Name="Parts, colour or stats">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:SectionTab">
-                  <Button Classes="section" Classes.on="{Binding On}" IsEnabled="{Binding Enabled}" Padding="4,0" HorizontalAlignment="Stretch"
+                  <Button Classes="section" Classes.on="{Binding On}" IsEnabled="{Binding Enabled}" Padding="1,0" HorizontalAlignment="Stretch"
                           Command="{Binding #Root.((vm:GarageViewModel)DataContext).ShowSectionCommand}" CommandParameter="{Binding}"
                           AutomationProperties.Name="{Binding Label}">
                     <TextBlock Text="{Binding Label}" />
                   </Button>
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
-            </ItemsControl>
+            </ItemsControl></c:TravelHost>
 
             <!-- Colour, a stock machine's: its four stock colours and the player's paint; the wheel and the box paint it. -->
             <StackPanel Grid.Row="1" IsVisible="{Binding ColourShown}">
@@ -294,6 +297,12 @@
                 <c:ColorWheelPicker Name="Wheel" Color="{Binding ColorHex}" Height="168" HorizontalAlignment="Left"
                                     AutomationProperties.Name="Colour wheel: hue and richness, and a brightness bar" />
                 <StackPanel VerticalAlignment="Bottom" Spacing="8">
+                  <ListBox Name="StockColourTabs" Classes="seg part" ItemsSource="{x:Static vm:GarageViewModel.StockColourTabs}"
+                           SelectedIndex="{Binding ColourTabIndex}" AutomationProperties.Name="Machine or trail">
+                    <ListBox.ItemsPanel>
+                      <ItemsPanelTemplate><StackPanel Spacing="2" /></ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                  </ListBox>
                   <TextBlock Classes="warn" Text="#RRGGBB" IsVisible="{Binding !ColorValid}" />
                   <TextBox Classes="field" Classes.bad="{Binding !ColorValid}" Text="{Binding ColorHex}" Width="100" MaxLength="7"
                            AutomationProperties.Name="Colour as hex, such as #E8432E" />
@@ -323,14 +332,50 @@
                 <c:ColorWheelPicker Name="BuildWheel" Color="{Binding ColorHex}" Height="168" HorizontalAlignment="Left"
                                     AutomationProperties.Name="Colour wheel: hue and richness, and a brightness bar" />
                 <StackPanel VerticalAlignment="Bottom" Spacing="8">
-                  <ListBox Name="PartTabs" Classes="seg part" ItemsSource="{x:Static vm:CustomBuilderViewModel.PartTabs}"
-                           SelectedIndex="{Binding PartTabIndex}" AutomationProperties.Name="Which part">
+                  <ListBox Name="PartTabs" Classes="seg part" ItemsSource="{x:Static vm:GarageViewModel.CustomColourTabs}"
+                           SelectedIndex="{Binding #Root.((vm:GarageViewModel)DataContext).ColourTabIndex}" AutomationProperties.Name="Which part, or the trail">
                     <ListBox.ItemsPanel>
                       <ItemsPanelTemplate><StackPanel Spacing="2" /></ItemsPanelTemplate>
                     </ListBox.ItemsPanel>
                   </ListBox>
                   <TextBox Classes="field" Classes.bad="{Binding !ColorValid}" Text="{Binding ColorHex}" Width="100" MaxLength="7"
                            AutomationProperties.Name="Colour as hex, such as #E8432E" />
+                </StackPanel>
+              </StackPanel>
+            </StackPanel>
+
+            <!-- Colour, the trail's: the same picker, its swatches the machine's own trail colours ("Its own": the game's
+                 trail, unset) and the player's; one colour for the flame, the boost and its sparks, the racer's on every machine -->
+            <StackPanel Grid.Row="1" Name="TrailColour" DataContext="{Binding Trail}" IsVisible="{Binding #Root.((vm:GarageViewModel)DataContext).TrailShown}"
+                        ToolTip.Tip="Everyone in the race sees it. Very dark colours are brightened.">
+              <ItemsControl ItemsSource="{Binding Swatches}">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="vm:StockSwatch">
+                    <StackPanel Width="52" Margin="0,0,1,0">
+                      <Button Classes="swatch" Classes.on="{Binding Selected}" IsEnabled="{Binding Known}"
+                              Background="{Binding Hex, Converter={x:Static v:HexToBrush.Instance}}"
+                              Command="{Binding #Root.((vm:GarageViewModel)DataContext).Trail.PickSwatchCommand}" CommandParameter="{Binding Index}"
+                              AutomationProperties.Name="{Binding Label}" />
+                      <TextBlock Classes="colhead" Text="{Binding Label}" HorizontalAlignment="Center" Margin="0,1,0,0" />
+                    </StackPanel>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <StackPanel Orientation="Horizontal" Spacing="16" Margin="0,12,0,0">
+                <c:ColorWheelPicker Name="TrailWheel" Color="{Binding ColorHex}" Height="168" HorizontalAlignment="Left"
+                                    AutomationProperties.Name="Colour wheel: hue and richness, and a brightness bar" />
+                <StackPanel VerticalAlignment="Bottom" Spacing="8">
+                  <ListBox Name="TrailColourTabs" Classes="seg part" ItemsSource="{Binding #Root.((vm:GarageViewModel)DataContext).ColourTabs}"
+                           SelectedIndex="{Binding #Root.((vm:GarageViewModel)DataContext).ColourTabIndex}" AutomationProperties.Name="Which part, or the trail">
+                    <ListBox.ItemsPanel>
+                      <ItemsPanelTemplate><StackPanel Spacing="2" /></ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                  </ListBox>
+                  <TextBox Classes="field" Classes.bad="{Binding !ColorValid}" Text="{Binding ColorHex}" Width="100" MaxLength="7"
+                           AutomationProperties.Name="Trail colour as hex, such as #E8432E" />
                 </StackPanel>
               </StackPanel>
             </StackPanel>
@@ -363,7 +408,7 @@
                           <!-- the value; a green dot before it when the stat pack changes it -->
                           <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
                             <Ellipse Classes="changed" IsVisible="{Binding Changed}" />
-                            <TextBlock Classes="figure" FontSize="{StaticResource Size14}" Text="{Binding Value}"
+                            <c:RollingText Classes="figure" FontSize="{StaticResource Size14}" Text="{Binding Value}"
                                        MinWidth="52" TextAlignment="Right" VerticalAlignment="Center" />
                           </StackPanel>
                           <!-- the stock value beside it, only where the pack changes it -->
@@ -389,7 +434,7 @@
                       <TextBlock Classes="dim" Text="{Binding Label}" VerticalAlignment="Center" />
                       <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
                         <Ellipse Classes="changed" IsVisible="{Binding Changed}" />
-                        <TextBlock Classes="figure" FontSize="{StaticResource Size14}" Text="{Binding Value}" VerticalAlignment="Center" />
+                        <c:RollingText Classes="figure" FontSize="{StaticResource Size14}" Text="{Binding Value}" VerticalAlignment="Center" />
                       </StackPanel>
                       <TextBlock Grid.Column="2" Classes="faint" FontSize="{StaticResource Size12}" Text="{Binding Stock}" Width="62"
                                  TextAlignment="Right" VerticalAlignment="Center"
@@ -424,7 +469,8 @@
                       Value="{Binding ShownSetting}" TickFrequency="5" IsSnapToTickEnabled="True" IsEnabled="{Binding SettingFree}"
                       VerticalAlignment="Center" AutomationProperties.Name="Machine setting, from acceleration to top speed" />
               <TextBlock Grid.Column="2" Classes="dim" Text="Max speed" VerticalAlignment="Center" />
-              <TextBlock Grid.Column="3" Classes="figure" Text="{Binding SettingText}" VerticalAlignment="Center" MinWidth="32" TextAlignment="Right" />
+              <c:NumberBox Grid.Column="3" Name="SettingNumber" Value="{Binding ShownSetting}" Minimum="{Binding SettingLeast}" Maximum="{Binding SettingMost}"
+                           IsEnabled="{Binding SettingFree}" AutomationProperties.Name="Machine setting number" />
               <TextBlock Grid.Column="4" Name="SettingLimit" Classes="colhead" Text="{Binding SettingLimit}" VerticalAlignment="Center" Margin="8,0,0,0"
                          IsVisible="{Binding SettingLimited}" />
             </Grid>
@@ -439,8 +485,9 @@
             <!-- the phase's one primary: USE THIS MACHINE, the machine raced from now on, and SELECT again (a custom machine
                  changed is saved first). In a lobby's machine stage READY on the lobby's line is the primary: none here. -->
             <Panel Grid.Row="4" Height="48" Margin="0,8,0,0">
-              <Button Name="Use" Classes="go" Height="48" Content="USE THIS MACHINE" Command="{Binding UseMachineCommand}"
+              <Button Name="Use" Classes="go" Height="48" Content="USE THIS MACHINE" Command="{Binding UseMachineCommand}" Click="OnUseFlash"
                       IsVisible="{Binding UseShown}" c:PadNav.Main="True" AutomationProperties.Name="Use this machine" />
+              <c:Plate Name="UseFlash" Shape="Lean" Background="{StaticResource TextBrush}" Opacity="0" IsHitTestVisible="False" />
             </Panel>
           </Grid>
         </Border>
@@ -451,7 +498,7 @@
   <!-- Sort & filter, floating over SELECT's roster (SortFilterPanel); a press outside it closes it -->
   <Panel Name="SortFilterLayer" IsVisible="{Binding SortFilterOpen}">
     <Border Name="SortFilterDismiss" Background="Transparent" />
-    <v:SortFilterPanel Name="SortFilterPanel" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,80,0,0" c:PadNav.Scope="True" />
+    <v:SortFilterPanel Name="SortFilterPanel" c:Motion.Reveal="True" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,80,0,0" c:PadNav.Scope="True" />
   </Panel>
   </Panel>
 </UserControl>

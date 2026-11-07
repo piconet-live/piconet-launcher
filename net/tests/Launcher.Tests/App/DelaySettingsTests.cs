@@ -15,8 +15,8 @@ namespace Launcher.Tests;
 /// <summary>
 /// The Settings page's "Input delay" (each player picks 0, 1 or 2; 2 unless they pick less),
 /// "Full screen mode" (Borderless or Exclusive; the one default is <see cref="LauncherSettings.FullScreenDefault"/>)
-/// "Vertical sync" (off unless switched on) and "Refresh rate (experimental)" (60 Hz unless the player picks 120,
-/// 240 or the display's), pressed with the headless window's mouse: a label and its values,
+/// "Vertical sync" (off unless switched on) and "High refresh" (off unless the player picks up to 120 or up to 240),
+/// pressed with the headless window's mouse: a label and its values,
 /// the setting kept as it is pressed, and what a start of the game (a script here that stands for the runner) is
 /// given in its launch file: the kind of full screen, always; vertical sync when it is on; nothing of how pictures are shown for a player, whose
 /// game shows them at a console's moment by itself; the way written into the settings file by hand, "field", when
@@ -56,7 +56,7 @@ public sealed class DelaySettingsTests : IDisposable
         return state;
     }
 
-    /// <summary>The launch file of the game a press of "Play F-Zero GX" starts, read once the game was started.</summary>
+    /// <summary>The launch file of the game a press of "Start F-Zero GX" starts, read once the game was started.</summary>
     private JsonObject LaunchFileOfAStart(AppState state)
     {
         File.Delete(Started);
@@ -69,24 +69,22 @@ public sealed class DelaySettingsTests : IDisposable
         return launch;
     }
 
-    // The refresh rate, experimental: a label and four values, each above 60 with its frame of delay, the game's 60
-    // until the player picks; 60 writes nothing into the
-    // launch file. It is left at 240.
-    private void TheRefreshRateRow(Window window, Control view, AppState state)
+    // High refresh, the one setting of pictures between steps: a label and three values, off until the player picks,
+    // each the launch file's "auroraHighRefresh" (off: left out), and never a "refreshRate" (the emulator's re-draw, not
+    // written since 0.6.0). It is left at Up to 240.
+    private void TheHighRefreshRow(Window window, Control view, AppState state)
     {
-        var refresh = Named<ListBox>(view, "RefreshRate");
-        Assert.Equal(["60 Hz", "120 Hz", "240 Hz", "Display"],
-            refresh.Items.Cast<string>());
-        Assert.Equal((0, "60"), (refresh.SelectedIndex, state.Settings.RefreshRate));
-        Assert.Contains(view.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "Refresh rate (experimental)");
-        Assert.Null(LaunchFileOfAStart(state)["refreshRate"]);
-        Click(window, Value(refresh, 3));
-        Assert.Equal((3, "display"), (refresh.SelectedIndex, state.Settings.RefreshRate));
-        Assert.Equal("display", (string?)LaunchFileOfAStart(state)["refreshRate"]);
-        Click(window, Value(refresh, 0));
-        Assert.Null(LaunchFileOfAStart(state)["refreshRate"]);
-        Click(window, Value(refresh, 2));
-        Assert.Equal("240", (string?)LaunchFileOfAStart(state)["refreshRate"]);
+        var refresh = Named<ListBox>(view, "HighRefresh");
+        Assert.Equal(["Off", "Up to 120", "Up to 240"], refresh.Items.Cast<string>());
+        Assert.Equal((0, 0), (refresh.SelectedIndex, state.Settings.AuroraHighRefresh));
+        Assert.Contains(view.GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "High refresh");
+        Assert.DoesNotContain(view.GetVisualDescendants().OfType<TextBlock>(), t => t.Text?.Contains("Refresh rate", StringComparison.Ordinal) == true);
+        foreach (var (index, aurora) in new (int, int?)[] { (0, null), (1, 120), (2, 240), (0, null), (2, 240) })
+        {
+            Click(window, Value(refresh, index));
+            var launch = LaunchFileOfAStart(state);
+            Assert.Equal((index, aurora, false), (refresh.SelectedIndex, (int?)launch["auroraHighRefresh"], launch.ContainsKey("refreshRate")));
+        }
     }
 
     private static Control Value(ListBox list, int index)
@@ -213,7 +211,7 @@ public sealed class DelaySettingsTests : IDisposable
                 Click(window, Value(sync, 0));
                 Assert.False(state.Settings.VerticalSync);
                 Assert.Null(LaunchFileOfAStart(state)["verticalSync"]);
-                TheRefreshRateRow(window, view, state);
+                TheHighRefreshRow(window, view, state);
                 window.Close();
                 main.Dispose();
             }, cancel);
@@ -223,7 +221,8 @@ public sealed class DelaySettingsTests : IDisposable
             Assert.Equal((1, false, "console", "exclusive"),
                 (again.Settings.InputDelay, again.Settings.VerticalSync, again.Settings.Present, again.Settings.FullScreen));
             Assert.Equal((1, 1), (new SettingsViewModel(again).InputDelayIndex, new SettingsViewModel(again).FullScreenIndex));
-            Assert.Equal(("240", 2), (again.Settings.RefreshRate, new SettingsViewModel(again).RefreshRateIndex));
+            Assert.Equal((240, 2), (again.Settings.AuroraHighRefresh, new SettingsViewModel(again).AuroraHighRefreshIndex));
+            Assert.DoesNotContain("refreshRate", File.ReadAllText(Path.Combine(_dir, "data", "settings.json")), StringComparison.Ordinal);
             again.Shutdown();
         }
         finally

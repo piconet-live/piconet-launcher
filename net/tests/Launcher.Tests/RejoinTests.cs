@@ -52,6 +52,60 @@ public sealed class RejoinTests : IDisposable
         Assert.Equal(offered, session.Rejoin());
     }
 
+    /// <summary>A mode without CPUs (<see cref="MatchStart.NoRejoin"/>): no Rejoin, a plain refusal if asked anyway, Watch
+    /// instead; the server is told the game is done, so it takes them as a watcher, and they race again after it.</summary>
+    [Fact]
+    public async Task AModeWithoutCpusOffersWatchInsteadOfRejoin()
+    {
+        var cancel = TestContext.Current.CancellationToken;
+        await using var server = new LedServer();
+        var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var session = new QuickPlaySession(new LauncherSettings { RecordReplays = false }, Path.Combine(_dir, "race"),
+            _ => started.TrySetResult());
+        var joining = session.JoinAsync(server.Address, cancel: cancel);
+        while (server.Connections == 0)
+        {
+            await Task.Delay(10, cancel);
+        }
+        await server.SendAsync(LedServer.Welcome() with { Spectators = true });
+        await joining;
+        var seat = new SeatSetup(0, "p1", "ANA", 3, new Rgb(1, 2, 3));
+        var setup = new RaceSetup(21, 3, [seat], 1, 2);
+        await server.SendAsync(LedServer.Lobby(LobbyState.Forming));
+        await server.SendAsync(new MatchStart("m1", new RelayEndpoint("r1", "", 47811), "1f2e3d4c5b6a7988", 0, setup, NoRejoin: true));
+        await started.Task.WaitAsync(TimeSpan.FromSeconds(10), cancel);
+        await server.SendAsync(LedServer.Lobby(LobbyState.Racing) with { Race = new LobbyRace("m1", 21, 3, [seat], DateTimeOffset.UtcNow) });
+        while (session.Lobby is not { Stage: LobbyState.Racing })
+        {
+            await Task.Delay(10, cancel);
+        }
+
+        await session.RaceOverAsync(rejoinable: true);
+
+        Assert.Null(session.RejoinableRace);
+        Assert.False(session.CanRejoin);
+        Assert.True(session.CanWatchLeftRace);
+        Assert.False(session.Rejoin());
+        Assert.Null(session.Race);                                    // no game started
+        Assert.Equal(QuickPlaySession.NoRejoinText, session.RejoinRefused);
+
+        await session.WatchLeftRaceAsync();
+        Assert.True(session.Watching);
+        while (server.Of<WatchRace>().Count == 0 || server.Of<RaceOver>().Count == 0)
+        {
+            await Task.Delay(10, cancel);
+        }
+        Assert.True(server.Of<WatchRace>()[0].Yes);
+
+        await server.SendAsync(LedServer.Lobby(LobbyState.Forming));   // the lobby moved on: racing again, nothing kept
+        while (session.Watching)
+        {
+            await Task.Delay(10, cancel);
+        }
+        Assert.Null(session.LeftForGood);
+        Assert.Null(session.RejoinRefused);
+    }
+
     /// <summary>What the game's exit code makes of its race (<see cref="AppState.KeepsTheRace"/>): kept for Rejoin
     /// when the game was closed while its seat raced, crashed or was ended from outside; a normal leave when it
     /// stopped by itself (0: the results left, a desync, closed after finishing or a knock-out, as a spectator), or

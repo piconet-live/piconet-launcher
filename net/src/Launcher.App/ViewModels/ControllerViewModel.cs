@@ -9,8 +9,9 @@ namespace Launcher.App.ViewModels;
 /// The Controller page: the game's four controller ports, each off, a controller through a mapping, or the GameCube
 /// adapter; for a controller its device, its mapping ("press to set" for each control, the standard layout) and the
 /// sticks' dead zones; and the test, a picture of the GameCube controller that lights what the game sees. What is
-/// plugged in, what the player pressed and what the game would read all come from the game's own program started as
-/// a helper (<see cref="ControllerHelper"/>) while the page shows and no game runs; the settings are the game's own
+/// plugged in, what the player pressed and what the game would read all come from the game's own program, the
+/// launcher's controller helper (<see cref="ControllerHelper"/>, <see cref="AppState.Pads"/>), which runs while no game
+/// does; the settings are the game's own
 /// files (<see cref="ControllerFiles"/>), written at every change (the rest of the class: ControllerViewModel.Helper.cs).
 /// </summary>
 public sealed partial class ControllerViewModel : ViewModelBase
@@ -76,9 +77,9 @@ public sealed partial class ControllerViewModel : ViewModelBase
     [ObservableProperty]
     public partial bool HasStandardLayout { get; set; }
 
-    /// <summary>What "Use the standard layout" gives for the device chosen.</summary>
+    /// <summary>The port's mapping differs from its device's standard one.</summary>
     [ObservableProperty]
-    public partial string LayoutNote { get; set; } = "";
+    public partial bool CanResetLayout { get; set; }
 
     [ObservableProperty]
     public partial int StickDeadZone { get; set; }
@@ -102,7 +103,11 @@ public sealed partial class ControllerViewModel : ViewModelBase
 
     /// <summary>What the game reads from the port now; null: nothing known.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PadShown))]
     public partial HelperPad? Pad { get; set; }
+
+    /// <summary><see cref="Pad"/> as the test's controller draws it (clamped as the game reads it; null at rest).</summary>
+    public Controls.PadPicture? PadShown => Controls.PadPicture.Of(Pad);
 
     [ObservableProperty]
     public partial string PadNote { get; set; } = "";
@@ -208,7 +213,7 @@ public sealed partial class ControllerViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void UseStandardLayout()
+    private void ResetLayout()
     {
         if (SelectedDevice?.Device is { } device && StandardLayouts.For(device) is not null)
         {
@@ -352,7 +357,7 @@ public sealed partial class ControllerViewModel : ViewModelBase
         DeviceMissing = port.Kind == PortKind.Controller && port.Device.Length > 0 && !plugged && _helper is not null;
         var device = SelectedDevice?.Device;
         HasStandardLayout = device is not null && StandardLayouts.For(device) is not null;
-        LayoutNote = ControllerWords.Layout(port, device, GamepadProfile());
+        CanResetLayout = HasStandardLayout && !StandardLayouts.IsStandard(port, device!, GamepadProfile());
         CanRumble = port.Kind == PortKind.Adapter
             || (port.Kind == PortKind.Controller && device is { Rumble: true } && port.Map.ContainsKey(PadControls.Rumble));
     }

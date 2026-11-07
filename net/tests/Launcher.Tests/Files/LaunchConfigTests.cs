@@ -35,7 +35,8 @@ public sealed class LaunchConfigTests : IDisposable
                 "faultWithoutWindow": true,
                 "gpuLog": "gpu",
                 "gpuTurn": true,
-                "loadTrace": true
+                "loadTrace": true,
+                "windowComposition": true
               }
             }
             """);
@@ -57,6 +58,7 @@ public sealed class LaunchConfigTests : IDisposable
         Assert.Equal("gpu", debug.GpuLog);
         Assert.True(debug.GpuTurn);
         Assert.True(debug.LoadTrace);
+        Assert.True(debug.WindowComposition);
     }
 
     /// <summary>A file with no <c>"debug"</c> part, or an empty one, sets nothing: what a player's start has.</summary>
@@ -83,6 +85,7 @@ public sealed class LaunchConfigTests : IDisposable
         Assert.Null(debug.GpuLog);
         Assert.False(debug.GpuTurn);
         Assert.False(debug.LoadTrace);
+        Assert.False(debug.WindowComposition);
         Assert.Equal(DebugSettings.Off, debug with { RunnerArguments = DebugSettings.Off.RunnerArguments });
     }
 
@@ -104,6 +107,7 @@ public sealed class LaunchConfigTests : IDisposable
     [InlineData("""{"fault": "task", "faultWithoutWindow": true}""", false)]
     [InlineData("""{"gpuLog": "gpu", "gpuTurn": true}""", false)]
     [InlineData("""{"loadTrace": true}""", false)]
+    [InlineData("""{"windowComposition": true}""", false)]
     [InlineData("""{"runnerArguments": [], "autopilot": false, "testLagMs": 0, "game": {}, "startLimitSeconds": 0}""", false)]
     public void ADebugPartSaysWhetherATestSettingReachesARace(string debug, bool reaches)
     {

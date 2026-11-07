@@ -44,7 +44,6 @@ public sealed partial class LobbyView : UserControl
     {
         AvaloniaXamlLoader.Load(this);
         DataContextChanged += (_, _) => Watch();
-        this.FindControl<ItemsControl>("StandingList")!.PointerPressed += OnStandingPressed;
         // (handled keys too: a cell that has the keyboard takes Enter for itself)
         AddHandler(KeyDownEvent, OnKey, Avalonia.Interactivity.RoutingStrategies.Bubble, handledEventsToo: true);
     }
@@ -209,17 +208,5 @@ public sealed partial class LobbyView : UserControl
             }
         }
         // (the arrow keys on the strip's cards are the Garage's own: GarageView)
-    }
-
-    /// <summary>A racer's line pressed: the map follows them (or stops). On the press rather than a full click: the lines
-    /// refresh 10 times a second, and a click's press and release would have to land on the same line.</summary>
-    private void OnStandingPressed(object? sender, PointerPressedEventArgs e)
-    {
-        if (e.GetCurrentPoint(this).Properties.IsLeftButtonPressed
-            && (e.Source as StyledElement)?.DataContext is StandingRow row && _lobby is { } lobby)
-        {
-            lobby.Race.FollowCommand.Execute(row);
-            e.Handled = true;
-        }
     }
 }

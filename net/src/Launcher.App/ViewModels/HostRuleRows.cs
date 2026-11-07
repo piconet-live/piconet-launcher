@@ -7,12 +7,15 @@ namespace Launcher.App.ViewModels;
 /// A host's rule as a rules panel's row (Practice is a custom lobby's rules panel for one player): the label, the range
 /// and the control come from the rule in the one list (<see cref="HostRules"/>), so a practice and a custom lobby show
 /// a rule alike. Laps get their stepper (and Unlimited), the machine setting its bar, a switch its switch, the mines'
-/// return its milliseconds with Off, the stat pack the packs by name.
+/// return its milliseconds with Off (the row a lobby's mode gives it), the stat pack the packs by name.
 /// </summary>
 public static class HostRuleRows
 {
     /// <summary>The stat pack's choice for none: the disc's own stats.</summary>
     public const string Stock = "Stock";
+
+    /// <summary>A delay's named value for none, as a mode's optional number says it.</summary>
+    public const string Off = "Off";
 
     /// <summary>A rule's row, holding <paramref name="value"/> (a switch: not 0 is on; a delay: 0 is off).</summary>
     /// <param name="packs">The stat packs to choose from, by name (the stat pack's rule only).</param>
@@ -26,9 +29,15 @@ public static class HostRuleRows
             RuleKind.Number when rule == HostRules.Laps => new LapsRule(rule.Label, value, rule.Most) { Unlimited = value == 0 },
             // (a range's one value here: the player's own, as a practice has it)
             RuleKind.Range => new SliderRule(rule.Label, value, rule.Least, rule.Most),
-            RuleKind.Number => new StepperRule(rule.Label, value, rule.Least, rule.Most),
+            RuleKind.Number => new StepperRule(rule.Label, value, rule.Least, rule.Most) { Unit = rule.Unit },
             RuleKind.Switch => new SwitchRule(rule.Label, value != 0),
-            RuleKind.Delay => new DelayRule(rule.Label, value, rule.Least, rule.Most, rule.Step, rule.Default),
+            // the mines' return as a lobby's mode gives it (`number 50..5000 step 50 or "Off"`): the row's switch,
+            // On the delay, which waits on its last value while off
+            RuleKind.Delay => new NamedNumberRule(rule.Label, Off, value == 0, value == 0 ? rule.Default : rule.Kept(value), rule.Least, rule.Most)
+            {
+                Step = rule.Step,
+                Unit = rule.Unit,
+            },
             RuleKind.Pack => new ChoiceRule(rule.Label, [Stock, .. packs ?? []],
                 pack is null ? 0 : Math.Max(0, (packs ?? []).ToList().IndexOf(pack) + 1)),
             _ => throw new NotSupportedException($"no row yet for the rule {rule.Name} ({rule.Kind})"),
@@ -42,7 +51,7 @@ public static class HostRuleRows
         SliderRule slider => slider.Whole,
         StepperRule stepper => stepper.Value,
         SwitchRule on => on.On ? 1 : 0,
-        DelayRule delay => delay.Ms,
+        NamedNumberRule { IsOff: true } delay => delay.Counted ? delay.Value : 0,
         _ => throw new NotSupportedException($"the row {row?.Label} holds no number"),
     };
 
@@ -65,8 +74,9 @@ public static class HostRuleRows
     /// the others as <see cref="For"/> gives them.</summary>
     /// <param name="file">The host's own pack file, the pack's row's last choice; it is the choice when the rules name
     /// its pack and none of the server's is the same by name.</param>
+    /// <param name="courses">The chosen mode's list of courses: the course row's fixed course is one of them.</param>
     public static RuleRow ForLobby(HostRule rule, LobbyRules? rules, LobbyRules? quickPlay, IReadOnlyList<string>? packs,
-        HostPackFile? file = null)
+        HostPackFile? file = null, IReadOnlyCollection<int>? courses = null)
     {
         ArgumentNullException.ThrowIfNull(rule);
         var value = CustomRules.Value(rules, rule.Name, quickPlay);
@@ -74,8 +84,8 @@ public static class HostRuleRows
         {
             RuleKind.Range => new RangeRule(rule.Label, value, CustomRules.Value(rules, LobbyRules.SettingHighKey, quickPlay), rule.Least, rule.Most),
             RuleKind.Choice when rule == HostRules.CpuFill => new SegmentedRule(rule.Label, CpuFillChoices, value),
-            RuleKind.Course => new CourseRule(rule.Label, value, CustomRules.Value(rules, LobbyRules.FixedCourseKey, quickPlay)),
-            RuleKind.Text => new StepperRule(rule.Label, value, rule.Least, rule.Most),
+            RuleKind.Course => new CourseRule(rule.Label, value, CustomRules.Value(rules, LobbyRules.FixedCourseKey, quickPlay), courses),
+            RuleKind.Text => new StepperRule(rule.Label, value, rule.Least, rule.Most) { Unit = rule.Unit },
             RuleKind.Pack => PackRow(rule, rules?.StatPack, packs ?? [], file),
             _ => For(rule, value, packs),
         };
