@@ -104,11 +104,14 @@ public sealed class ModsPageTests : IDisposable
         MadeUpMod(mods, "aaaaaaaaaaaa", "Looks", new ModFile("stage/st05.tpl.lz", ModFileClass.Look, true, null, false, 3, ""));
         MadeUpMod(mods, "bbbbbbbbbbbb", "Ghosts", new ModFile("staff_ghost/ghost1.dat", ModFileClass.Ghost, false, "Ghosts: single player only", false, 3, ""),
             new ModFile("enemy_line/line__.bin", ModFileClass.Code, false, ModGuard.CodeWhy, false, 3, ""));
-        new ModLibrary(Data).Save([.. new ModLibrary(Data).Read().Select(m => m with { On = true })]);
+        // Looks on top, said in the list: mods the list does not name come in the folder's order (both were imported at
+        // the same moment), which is the file system's (ext4 hashes the names), so another computer has Ghosts first
+        new ModLibrary(Data).Save([.. new ModLibrary(Data).Read().OrderBy(m => m.Manifest.Name == "Looks" ? 0 : 1).Select(m => m with { On = true })]);
         // a server nobody answers on: the test asks no real one (trap 1)
         File.WriteAllText(Path.Combine(Data, "settings.json"), """{"server": "ws://127.0.0.1:9/ws"}""");
         var state = AppState.Load(Data);
         await state.LoadModsAsync();
+        Assert.Equal(["Looks", "Ghosts"], state.Mods!.Select(m => m.Manifest.Name));
 
         await OnAWindow(state, (window, main) =>
         {
