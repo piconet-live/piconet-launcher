@@ -9,7 +9,7 @@ public enum GameRun
     /// <summary>No game of this launcher runs.</summary>
     None,
 
-    /// <summary>"Play F-Zero GX": the game on its own, to its title screen.</summary>
+    /// <summary>"Start F-Zero GX": the game on its own, to its title screen.</summary>
     Offline,
 
     /// <summary>A race from a match file (development's <c>--play-match</c>).</summary>

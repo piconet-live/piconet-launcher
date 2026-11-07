@@ -24,7 +24,7 @@ public static class MachineCache
 {
     /// <summary>The kept form's version: raised whenever <see cref="MachineModel"/>, its reading or this file's
     /// layout changes.</summary>
-    public const int Recipe = 1;
+    public const int Recipe = 2;
 
     private const uint Magic = 0x434D5A46;   // "FZMC"
 
@@ -47,7 +47,7 @@ public static class MachineCache
         Path.Combine(folder, string.Create(CultureInfo.InvariantCulture, $"c{body}-{cockpit}-{booster}.bin"));
 
     /// <summary>The Garage's card stills' look: raised whenever their camera, lighting or drawing changes.</summary>
-    public const int StillRecipe = 1;
+    public const int StillRecipe = 2;
 
     /// <summary>A card still of stock machine <paramref name="machine"/> in a look (stock colour <paramref name="stock"/>,
     /// else the colour <paramref name="paint"/>) of this size, in that folder:

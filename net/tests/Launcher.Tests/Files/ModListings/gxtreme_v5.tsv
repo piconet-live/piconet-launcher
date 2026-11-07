@@ -1,0 +1,134 @@
+76509	Changed Game ID/boxart_images/2D/XFZE01.png
+78478	Changed Game ID/boxart_images/2D/XFZJ01.png
+76451	Changed Game ID/boxart_images/2D/XFZP01.png
+993332	Changed Game ID/boxart_images/full/XFZE01.png
+1025090	Changed Game ID/boxart_images/full/XFZJ01.png
+977557	Changed Game ID/boxart_images/full/XFZP01.png
+76509	Changed Game ID/boxart_images/XFZE01.png
+78478	Changed Game ID/boxart_images/XFZJ01.png
+76451	Changed Game ID/boxart_images/XFZP01.png
+265	Changed Game ID/boxart_readme.txt
+524	Changed Game ID/GameID_readme_warning.txt
+9280	Changed Game ID/JP_XFZJ01_ISO.hdr
+9280	Changed Game ID/NA_XFZE01_ISO.hdr
+9280	Changed Game ID/PAL_XFZP01_ISO.hdr
+32832	Changed Game ID/savefiles/8P-XFZE-f_zero.dat.gci
+32832	Changed Game ID/savefiles/8P-XFZJ-f_zero.dat.gci
+32832	Changed Game ID/savefiles/8P-XFZP-f_zero.dat.gci
+210	Changed Game ID/savefiles/saves_install.txt
+2097152	Changed Game ID/savefiles/XFZE.raw
+2097152	Changed Game ID/savefiles/XFZJ.raw
+2097152	Changed Game ID/savefiles/XFZP.raw
+1823	contents.txt
+921	credits.txt
+47707	GXTREME.png
+1029	installation.txt
+2860	introduction.txt
+41358	Japanese fixes/bmp/bmp_adv.tpl.lz
+78639	Japanese fixes/bmp/bmp_advgc.tpl.lz
+30522	Japanese fixes/bmp/bmp_com.tpl.lz
+32323	Japanese fixes/bmp/bmp_gov.tpl.lz
+151028	Japanese fixes/bmp/bmp_gra.tpl.lz
+160962	Japanese fixes/bmp/bmp_logo.tpl.lz
+338611	Japanese fixes/bmp/bmp_rac.tpl.lz
+18589	Japanese fixes/bmp/bmp_rep.tpl.lz
+283161	Japanese fixes/bmp/bmp_sel.tpl.lz
+318368	Japanese fixes/init/efcmdl.tpl
+379616	Japanese fixes/init/race.tpl
+5918	old versions/XTREMEv1_cardata.lz
+5988	old versions/XTREMEv2_cardata.lz
+6287	old versions/XTREMEv3_cardata.lz
+481775	Story Course Replacements/root/bg/bg_ele.gma.lz
+260061	Story Course Replacements/root/bg/bg_ele.tpl.lz
+16288	Story Course Replacements/root/staff_ghost/ghost16.dat
+16288	Story Course Replacements/root/staff_ghost/ghost24.dat
+16288	Story Course Replacements/root/staff_ghost/ghost28.dat
+16288	Story Course Replacements/root/staff_ghost/ghost3.dat
+55077	Story Course Replacements/root/stage/COLI_COURSE03.lz
+79725	Story Course Replacements/root/stage/COLI_COURSE16.lz
+896806	Story Course Replacements/root/stage/COLI_COURSE24.lz
+56465	Story Course Replacements/root/stage/COLI_COURSE28.lz
+20029	Story Course Replacements/root/stage/selst03.gma.lz
+613	Story Course Replacements/root/stage/selst03.tpl.lz
+9856	Story Course Replacements/root/stage/selst16.gma.lz
+612	Story Course Replacements/root/stage/selst16.tpl.lz
+36187	Story Course Replacements/root/stage/selst24.gma.lz
+602	Story Course Replacements/root/stage/selst24.tpl.lz
+37486	Story Course Replacements/root/stage/selst28.gma.lz
+613	Story Course Replacements/root/stage/selst28.tpl.lz
+359292	Story Course Replacements/root/stage/st03.gma.lz
+505840	Story Course Replacements/root/stage/st03.tpl.lz
+499451	Story Course Replacements/root/stage/st16.gma.lz
+285587	Story Course Replacements/root/stage/st16.tpl.lz
+1551751	Story Course Replacements/root/stage/st24.gma.lz
+1282397	Story Course Replacements/root/stage/st24.tpl.lz
+2353009	Story Course Replacements/root/stage/st28.gma.lz
+75419	Story Course Replacements/root/stage/st28.tpl.lz
+1987	Story Course Replacements/story_install.txt
+41358	_XTREMEv5/root/bmp_e/bmp_adv.tpl.lz
+78639	_XTREMEv5/root/bmp_e/bmp_advgc.tpl.lz
+30522	_XTREMEv5/root/bmp_e/bmp_com.tpl.lz
+32323	_XTREMEv5/root/bmp_e/bmp_gov.tpl.lz
+151028	_XTREMEv5/root/bmp_e/bmp_gra.tpl.lz
+160962	_XTREMEv5/root/bmp_e/bmp_logo.tpl.lz
+340552	_XTREMEv5/root/bmp_e/bmp_rac.tpl.lz
+15056	_XTREMEv5/root/bmp_e/bmp_rep.tpl.lz
+280861	_XTREMEv5/root/bmp_e/bmp_sel.tpl.lz
+6398	_XTREMEv5/root/game/cardata.lz
+108064	_XTREMEv5/root/init/custom.tpl
+318048	_XTREMEv5/root/init/efcmdl.tpl
+379616	_XTREMEv5/root/init/race.tpl
+218848	_XTREMEv5/root/init/sel.tpl
+6496	_XTREMEv5/root/opening.bnr
+8570754	_XTREMEv5/root/snd/adx_bgm/adv_gc.adx
+9568256	_XTREMEv5/root/snd/adx_bgm/customize.adx
+3047424	_XTREMEv5/root/snd/adx_bgm/garage.adx
+4206592	_XTREMEv5/root/snd/adx_bgm/selector.adx
+4143104	_XTREMEv5/root/snd/adx_bgm/selector_yobi.adx
+5506974	_XTREMEv5/root/snd/adx_bgm/winingrun.adx
+3876864	_XTREMEv5/root/snd/adx_bgm/yobi2.adx
+16288	_XTREMEv5/root/staff_ghost/ghost1.dat
+16288	_XTREMEv5/root/staff_ghost/ghost10.dat
+16288	_XTREMEv5/root/staff_ghost/ghost11.dat
+16288	_XTREMEv5/root/staff_ghost/ghost13.dat
+16288	_XTREMEv5/root/staff_ghost/ghost14.dat
+16320	_XTREMEv5/root/staff_ghost/ghost15.dat
+16288	_XTREMEv5/root/staff_ghost/ghost16.dat
+16288	_XTREMEv5/root/staff_ghost/ghost17.dat
+16288	_XTREMEv5/root/staff_ghost/ghost21.dat
+16288	_XTREMEv5/root/staff_ghost/ghost24.dat
+16288	_XTREMEv5/root/staff_ghost/ghost25.dat
+16288	_XTREMEv5/root/staff_ghost/ghost26.dat
+16288	_XTREMEv5/root/staff_ghost/ghost27.dat
+16288	_XTREMEv5/root/staff_ghost/ghost28.dat
+16288	_XTREMEv5/root/staff_ghost/ghost29.dat
+16288	_XTREMEv5/root/staff_ghost/ghost3.dat
+16288	_XTREMEv5/root/staff_ghost/ghost31.dat
+16288	_XTREMEv5/root/staff_ghost/ghost32.dat
+16288	_XTREMEv5/root/staff_ghost/ghost33.dat
+16288	_XTREMEv5/root/staff_ghost/ghost34.dat
+16288	_XTREMEv5/root/staff_ghost/ghost35.dat
+16288	_XTREMEv5/root/staff_ghost/ghost36.dat
+16288	_XTREMEv5/root/staff_ghost/ghost5.dat
+16288	_XTREMEv5/root/staff_ghost/ghost7.dat
+16288	_XTREMEv5/root/staff_ghost/ghost8.dat
+16288	_XTREMEv5/root/staff_ghost/ghost9.dat
+672	_XTREMEv5/root/vehicle_parts/parts_bst01.fmi
+672	_XTREMEv5/root/vehicle_parts/parts_bst02.fmi
+672	_XTREMEv5/root/vehicle_parts/parts_bst03.fmi
+672	_XTREMEv5/root/vehicle_parts/parts_bst04.fmi
+672	_XTREMEv5/root/vehicle_parts/parts_bst05.fmi
+672	_XTREMEv5/root/vehicle_parts/parts_bst06.fmi
+672	_XTREMEv5/root/vehicle_parts/parts_bst07.fmi
+672	_XTREMEv5/root/vehicle_parts/parts_bst08.fmi
+672	_XTREMEv5/root/vehicle_parts/parts_bst09.fmi
+672	_XTREMEv5/root/vehicle_parts/parts_bst10.fmi
+672	_XTREMEv5/root/vehicle_parts/parts_bst12.fmi
+672	_XTREMEv5/root/vehicle_parts/parts_bst14.fmi
+672	_XTREMEv5/root/vehicle_parts/parts_bst15.fmi
+672	_XTREMEv5/root/vehicle_parts/parts_bst16.fmi
+672	_XTREMEv5/root/vehicle_parts/parts_bst17.fmi
+672	_XTREMEv5/root/vehicle_parts/parts_bst18.fmi
+672	_XTREMEv5/root/vehicle_parts/parts_bst19.fmi
+672	_XTREMEv5/root/vehicle_parts/parts_bst21.fmi
+672	_XTREMEv5/root/vehicle_parts/parts_bst22.fmi

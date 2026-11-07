@@ -75,8 +75,8 @@
   </UserControl.Styles>
 
   <StackPanel Spacing="24">
-    <!-- Quick Play's action: RACE, or the lobby's box and the way out; "Play F-Zero GX" (PlayControlView, on the
-         window's PlayControlViewModel) -->
+    <!-- Quick Play's action: RACE, or the lobby's box and the way out (PlayControlView, on the window's
+         PlayControlViewModel; "Start F-Zero GX" is the left column's, StartGameView) -->
     <v:PlayControlView DataContext="{Binding $parent[Window].((vm:MainViewModel)DataContext).Control}" />
     <!-- The race, and what stands in its place: the same block at the same size in every state. -->
     <Grid Name="Top" ColumnDefinitions="520,16,*" RowDefinitions="Auto,Auto">
@@ -173,8 +173,10 @@
                     <Border Grid.Column="1" Classes="chip" HorizontalAlignment="Left"
                             Background="{Binding ColorHex, Converter={x:Static v:HexToBrush.Instance}}" />
                     <TextBlock Grid.Column="2" Text="{Binding Name}" Classes.strong="{Binding You}" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Grid.Column="3" Classes="figure detail" Text="{Binding Detail}" Margin="8,0,0,0" FontSize="{StaticResource Size15}"
-                               Classes.ko="{Binding Out}" />
+                    <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="8" Margin="8,0,0,0">
+                      <TextBlock Classes="dim" Text="{Binding Team}" FontSize="{StaticResource Size12}" VerticalAlignment="Center" IsVisible="{Binding HasTeam}" />
+                      <TextBlock Classes="figure detail" Text="{Binding Detail}" FontSize="{StaticResource Size15}" Classes.ko="{Binding Out}" />
+                    </StackPanel>
                   </Grid>
                 </Border>
               </DataTemplate>
@@ -222,7 +224,7 @@
           <TextBlock Grid.Column="3" Classes="colhead" Text="" Width="100" Margin="12,0,0,0" />
         </Grid>
       </Border>
-      <ItemsControl ItemsSource="{Binding Lobbies}">
+      <ItemsControl ItemsSource="{Binding Lobbies}" c:Motion.Stagger="True">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:LobbyRow">
             <v:LobbyRowView />
@@ -259,7 +261,7 @@
           <TextBlock Grid.Column="6" Classes="colhead" Text="" Width="44" />
         </Grid>
       </Border>
-      <ItemsControl ItemsSource="{Binding Recent}">
+      <ItemsControl ItemsSource="{Binding Recent}" c:Motion.Stagger="True">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:RecentRace">
             <Border Classes="row">

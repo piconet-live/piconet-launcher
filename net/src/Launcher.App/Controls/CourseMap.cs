@@ -88,10 +88,6 @@ public sealed class CourseMap : Panel
 /// <see cref="CourseMap"/>).</summary>
 internal sealed class CourseMapView : GpuView
 {
-    /// <summary>How quickly the followed view turns to a new heading: through a bend with the machine, not at every
-    /// wobble of its line.</summary>
-    private const double TurnMs = 350;
-
     private static readonly Vector4 FollowRing = Premultiplied(Color.FromRgb(0x3C, 0xDC, 0xFF));
     private static readonly Vector4 White = Vector4.One;
     private static readonly Vector4 Dim = Premultiplied(Color.FromArgb(160, 10, 14, 22));
@@ -285,7 +281,7 @@ internal sealed class CourseMapView : GpuView
             {
                 if (_heading.Yaw is { } heading)
                 {
-                    _yaw = MapCamera.Approach(_yaw, heading, elapsed, TurnMs);
+                    _yaw = MapCamera.Approach(_yaw, heading, elapsed, MapCamera.TurnMs);
                 }
                 target = MapCamera.Following(place, _yaw);
             }

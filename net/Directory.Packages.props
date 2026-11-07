@@ -21,7 +21,8 @@
     <!-- The launcher's installer and its automatic updates (Launcher.App Updates.cs): Velopack,
          MIT. Its command-line tool vpk, of the same version, packs the releases (the private release script). -->
     <PackageVersion Include="Velopack" Version="1.2.161" />
-    <!-- recomp/manifest.toml read by the developer's tool tools/DiscPinsWriter (not shipped): Tomlyn, BSD-2-Clause. -->
+    <!-- Quick Play's rotation, quickplay.toml (the protocol's QuickPlayRotation, which the stand-in service reads), and
+         recomp/manifest.toml read by the developer's tool tools/DiscPinsWriter: Tomlyn, BSD-2-Clause. -->
     <PackageVersion Include="Tomlyn" Version="2.10.1" />
     <!-- The compact replay file's header (version 8: xz) read for the Replays list (Launcher.Core ReplayParts,
          generated from the protocol's replay.toml): SharpCompress's managed XZ reader, MIT. Managed, so no native

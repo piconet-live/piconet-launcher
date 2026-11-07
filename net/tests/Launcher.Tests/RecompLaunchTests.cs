@@ -121,6 +121,15 @@ public sealed class RecompLaunchTests : IDisposable
         Assert.True((bool)wide["widescreen"]! && (bool)wide["trueWidescreen"]!);
         var replay = JsonNode.Parse(RecompLaunch.PlaybackLaunch(paths, "r.fzrp", OtherSounds.Off, WidescreenMode.TrueWide))!.AsObject();
         Assert.Equal(["about", "bundle", "widescreen", "trueWidescreen", "lanes", "replay"], replay.Select(m => m.Key));
+        // offline play has the picture as a race does; without a choice (the game's own controller options) none, and
+        // the player's saved option stands
+        var offline = JsonNode.Parse(RecompLaunch.OfflineLaunch(paths, widescreen: WidescreenMode.TrueWide))!.AsObject();
+        Assert.Equal(["widescreen", "trueWidescreen", "lanes"], offline.Select(m => m.Key).SkipWhile(k => k != "widescreen"));
+        Assert.True((bool)offline["widescreen"]! && (bool)offline["trueWidescreen"]!);
+        var normal = JsonNode.Parse(RecompLaunch.OfflineLaunch(paths, widescreen: WidescreenMode.Off))!.AsObject();
+        Assert.False((bool)normal["widescreen"]!);
+        Assert.Null(normal["trueWidescreen"]);
+        Assert.Null(JsonNode.Parse(RecompLaunch.OfflineLaunch(paths, controllerSetup: true))!["widescreen"]);
         Assert.Throws<ArgumentException>(() => RecompLaunch.RaceLaunch(paths with { Bundle = null }, matchFile, null));
         // a match file that is no JSON object: said, not started
         File.WriteAllText(matchFile, "[]");
@@ -391,6 +400,7 @@ public sealed class RecompLaunchTests : IDisposable
         Assert.Equal("1.0", RecompLaunch.Setting(fresh, "Core", "EmulationSpeed"));
         Assert.Equal("False", RecompLaunch.Setting(fresh, "Core", "EnableCheats"));
         Assert.Equal("False", RecompLaunch.Setting(fresh, "Interface", "ConfirmStop"));
+        Assert.Equal("True", RecompLaunch.Setting(fresh, "Interface", "UsePanicHandlers"));   // the runner's handler: a line, no box
         Assert.Null(RecompLaunch.Setting(fresh, "DSP", "Volume"));                 // the emulator's own: full volume
         Assert.Null(RecompLaunch.Setting(fresh, "Core", "EnableCustomRTC"));       // offline play runs on the real clock
 
@@ -400,6 +410,7 @@ public sealed class RecompLaunchTests : IDisposable
             "[Core]", "Overclock = 1.0", "EmulationSpeed = 0.5", "EnableCheats = True", "CPUThread = True",
             "[DSP]", "Volume = 35", "Backend = OpenAL",
             "[Display]", "Fullscreen = True",
+            "[Interface]", "UsePanicHandlers = False",   // an older launcher's
         ];
         var kept = RecompLaunch.WithDefaults(used);
         Assert.Equal("6.0", RecompLaunch.Setting(kept, "Core", "Overclock"));
@@ -409,6 +420,7 @@ public sealed class RecompLaunchTests : IDisposable
         Assert.Equal("35", RecompLaunch.Setting(kept, "DSP", "Volume"));
         Assert.Equal("OpenAL", RecompLaunch.Setting(kept, "DSP", "Backend"));
         Assert.Equal("True", RecompLaunch.Setting(kept, "Display", "Fullscreen"));
+        Assert.Equal("True", RecompLaunch.Setting(kept, "Interface", "UsePanicHandlers"));
         Assert.Equal(kept, RecompLaunch.WithDefaults(kept));                       // and a second start changes nothing
     }
 

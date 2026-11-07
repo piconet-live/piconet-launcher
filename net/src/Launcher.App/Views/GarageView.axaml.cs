@@ -22,6 +22,15 @@ namespace Launcher.App.Views;
     Justification = "Pre-existing when the code metrics were turned on: to be broken up when the class is next worked on")]
 public sealed partial class GarageView : UserControl
 {
+    /// <summary>USE THIS MACHINE taken: a small flash on the button (its sound is the Garage's Confirmed).</summary>
+    private void OnUseFlash(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (this.FindControl<Plate>("UseFlash") is { } flash)
+        {
+            Motion.Flash(flash);
+        }
+    }
+
     /// <summary>The roster's columns, and its tiles' size (<see cref="RosterTiles.Fit"/>).</summary>
     public static readonly StyledProperty<int> RosterColumnsProperty =
         AvaloniaProperty.Register<GarageView, int>(nameof(RosterColumns), 8);

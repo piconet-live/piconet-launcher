@@ -15,7 +15,7 @@ namespace Launcher.Core;
 /// <param name="Players">The player seats' names (<see cref="ReplayInfo.Players"/>).</param>
 public sealed record ReplayListing(string Path, DateTimeOffset Recorded, int Course, int Laps, bool Practice,
     string StatPackLabel, string Racer, Online.Protocol.Rgb? Color, RacedMachine? Raced, string Place, string Of, string Time,
-    int? Placed, long? TimeMs, int Racers, IReadOnlyList<string> Players)
+    int? Placed, long? TimeMs, int Racers, IReadOnlyList<string> Players, string ModeLabel = "")
 {
     public static ReplayListing From(ReplayInfo info)
     {
@@ -25,7 +25,7 @@ public sealed record ReplayListing(string Path, DateTimeOffset Recorded, int Cou
             ReplayWords.Racer(info), info.Recorder?.Color, info.Recorder?.Raced, ReplayWords.Place(info), ReplayWords.Of(info),
             ReplayWords.Time(info), own is { Out: false } ? own.Place : null,
             own?.Time is { } time ? (long)time.TotalMilliseconds : null,
-            Math.Min(info.Results?.Count ?? 0, ReplayWords.MostResults), [.. info.Players.Take(ReplayWords.MostResults).Select(ReplayWords.Name)]);
+            Math.Min(info.Results?.Count ?? 0, ReplayWords.MostResults), [.. info.Players.Take(ReplayWords.MostResults).Select(ReplayWords.Name)], info.ModeLabel);
     }
 
     public string CourseName => Courses.Name(Course);

@@ -34,7 +34,7 @@ public interface ICoordinatorConnection : IAsyncDisposable
     Exception? Fault { get; }
 
     Task EnterQuickPlayAsync(int machine, Rgb color, int? setting = null, int? stockColor = null,
-        CustomMachine? custom = null, CancellationToken cancel = default);
+        CustomMachine? custom = null, BoostTrail? trail = null, CancellationToken cancel = default);
 
     Task RaceOverAsync(string matchId, RaceSnapshot? final = null, CancellationToken cancel = default);
 
@@ -56,7 +56,7 @@ public interface ICoordinatorConnection : IAsyncDisposable
     Task VoteCourseAsync(string matchId, int choice, CancellationToken cancel = default);
 
     Task ChooseMachineAsync(string matchId, int machine, Rgb color, int? setting = null, int? stockColor = null,
-        CustomMachine? custom = null, string? pack = null, CancellationToken cancel = default);
+        CustomMachine? custom = null, string? pack = null, BoostTrail? trail = null, CancellationToken cancel = default);
 
     /// <summary>The custom lobbies' list while the browser shows (<see cref="LobbyList"/>), or no more of it.</summary>
     Task BrowseLobbiesAsync(bool browse, CancellationToken cancel = default);
@@ -71,6 +71,9 @@ public interface ICoordinatorConnection : IAsyncDisposable
 
     /// <summary>The host removes a member from their lobby.</summary>
     Task KickPlayerAsync(string playerId, CancellationToken cancel = default);
+
+    /// <summary>The player's team, or (from the host) another member's; null team: none (<see cref="ChooseTeam"/>).</summary>
+    Task ChooseTeamAsync(int? team, string? playerId, CancellationToken cancel = default);
 
     /// <summary>The host starts their lobby's next race.</summary>
     Task StartLobbyRaceAsync(CancellationToken cancel = default);

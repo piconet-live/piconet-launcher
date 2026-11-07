@@ -11,8 +11,8 @@ namespace Launcher.App.ViewModels;
 /// Out of Quick Play it is RACE, with what pressing it would do under it (from the server's public status). In Quick
 /// Play it is a box that says what the lobby is doing (gathering, voting, choosing machines, racing) and leads to the
 /// lobby page. With no server set (the settings could not be read) it leads to Settings, Online, where one is chosen, and
-/// connects to nothing. Under it, "Play F-Zero GX" starts the whole game on this computer with no server; in a lobby it asks
-/// before leaving, and while the game runs it is greyed out with the reason.
+/// connects to nothing. "Start F-Zero GX" (the left column's foot, on every page: StartGameView) starts the whole game on
+/// this computer with no server; in a lobby it asks before leaving, and while the game runs it is greyed out with the reason.
 /// </summary>
 public sealed partial class PlayControlViewModel : ViewModelBase
 {
@@ -109,7 +109,7 @@ public sealed partial class PlayControlViewModel : ViewModelBase
     [ObservableProperty]
     public partial bool GameEnabled { get; set; } = true;
 
-    /// <summary>The line under "Play F-Zero GX" while it cannot be pressed: why.</summary>
+    /// <summary>The line under "Start F-Zero GX" while it cannot be pressed: why.</summary>
     [ObservableProperty]
     public partial string GameNote { get; set; } = "";
 
@@ -204,7 +204,7 @@ public sealed partial class PlayControlViewModel : ViewModelBase
     [RelayCommand]
     private Task LeaveAsync() => _state.LeaveAsync();
 
-    /// <summary>Play F-Zero GX: the game on its own, at its title screen. In Quick Play it asks first.</summary>
+    /// <summary>Start F-Zero GX: the game on its own, at its title screen. In Quick Play it asks first.</summary>
     [RelayCommand]
     private async Task PlayGameAsync()
     {
@@ -295,7 +295,7 @@ public sealed partial class PlayControlViewModel : ViewModelBase
         // off, with the reason, while a game is open, while a join is on its way, and while the game could not be
         // started (no game program, or its files not prepared from the disc); while it could not, the launcher
         // looks again from time to time
-        if (_state.RaceProblem is not null)
+        if (_state.RaceProblem is not null && _state.PipelinesBlock is null)
         {
             _state.LookAgainSoon();
         }
@@ -313,10 +313,9 @@ public sealed partial class PlayControlViewModel : ViewModelBase
         {
             ShowLobby(session);
         }
-        // the reason the game cannot start is said once, in the column: under RACE when RACE says it, else here
-        var problem = _state.GameProblem ?? "";
-        GameNote = _state.Racing ? session is { Racing: true } ? "In a race" : AppState.GameOpenText
-            : !InQuickPlay && problem == Line1 ? "" : problem;
+        // the reason the game cannot start, under the column's button on every page (RACE, on Quick Play's page only,
+        // says its own under it)
+        GameNote = _state.Racing ? session is { Racing: true } ? "In a race" : AppState.GameOpenText : _state.GameProblem ?? "";
         ShowNotice();
     }
 

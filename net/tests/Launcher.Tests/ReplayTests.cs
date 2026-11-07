@@ -108,4 +108,11 @@ public sealed class ReplayTests : IDisposable
     {
         Assert.Equal("ANA, BEN, CAL and 2 more", Replays.Racers(["ANA", "BEN", "CAL", "DAN", "EVE"]));
     }
+
+    [Fact]
+    public void RevealQuotesThePathAloneForExplorer()
+    {
+        var path = System.IO.Path.GetFullPath("Name With Space/a.fzrp");
+        Assert.Equal("/select,\"" + path + "\"", Replays.RevealArguments("Name With Space/a.fzrp"));
+    }
 }

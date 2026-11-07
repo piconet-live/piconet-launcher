@@ -55,6 +55,12 @@
   </Target>
 
   <ItemGroup>
+    <!-- The stage editor's course file readers (Fzgx.Coli), vendored unchanged in external/fzgx-coli (its README names
+         the commit): the mod guard reads a mod's course files with them (Files/ModGuard.cs). -->
+    <Compile Include="$(MSBuildThisFileDirectory)../../../external/fzgx-coli/*.cs" Link="Files/Coli/%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Discord's activity status, by local IPC to the player's own Discord (DiscordPresence.cs). -->
     <PackageReference Include="DiscordRichPresence" />
   </ItemGroup>

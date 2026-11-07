@@ -168,6 +168,29 @@ public sealed class GarageRowsTests : IDisposable
         {
             states.Add(($"Custom, {tab.Label}", () => Click(window, Tab(view, tab.Index))));
         }
+        states.Add(("Stock, Colour, Trail", () =>
+        {
+            Open("ShelfStock", () => CardOf(view, 11)!);
+            Click(window, Tab(view, GarageViewModel.ColourSection));
+            garage.ColourTabIndex = 1;
+            if (Environment.GetEnvironmentVariable("LOBBY_SHOTS") is { Length: > 0 } folder)
+            {
+                garage.Trail.ColorHex = "#FF28C8";
+                PumpFor(400);
+                Avalonia.Headless.AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+                Directory.CreateDirectory(folder);
+                window.CaptureRenderedFrame()?.Save(Path.Combine(folder, "garage-trail.png"), new Avalonia.Media.Imaging.PngBitmapEncoderOptions());
+            }
+        }));
+        states.Add(("Custom, Colour, Trail", () =>
+        {
+            // the trail stays chosen from shelf to shelf: the custom machine's list has it fourth
+            Open("ShelfCustom", () => Card(view, 1));
+            PumpFor(100);
+            Assert.True(garage.TrailShown, "the trail was left on another shelf");
+            Assert.Equal(3, garage.ColourTabIndex);
+            Assert.Equal(3, Named<ListBox>(view, "TrailColourTabs").SelectedIndex);
+        }));
         states.Add(("Stock again, Stats", () =>
         {
             Open("ShelfStock", () => CardOf(view, 11)!);

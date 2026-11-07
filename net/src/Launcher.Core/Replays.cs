@@ -31,11 +31,25 @@ public sealed record RaceResult(ReplayRacer Racer, int Place, bool Finished, boo
 /// its pack disagree, or the pack is not one this launcher takes), as <see cref="ReplayFile.Problem"/> says it;
 /// null: nothing of the kind.</param>
 /// <param name="Practice">A practice run (its header's <c>practice</c>: true): the player alone, rewinds left out.</param>
+/// <param name="Mode">The name of the game mode the race ran under (its header's <c>setup.mode</c>); null: none, or one
+/// that does not read.</param>
+/// <param name="ModeProblem">Why the game would not play the file for its mode, as <see cref="ReplayFile.Problem"/> says
+/// it; null: nothing of the kind.</param>
+/// <param name="ModeFile">The mode as it was raced (language 1: the package holds the file's text, so a replay can show
+/// what was raced); null: no mode, or a package that does not read.</param>
 public sealed record ReplayInfo(
     string Path, DateTimeOffset Recorded, int Course, int Laps, IReadOnlyList<string> Players, string You, TimeSpan Length,
     ReplayRacer? Recorder = null, IReadOnlyList<RaceResult>? Results = null, string? StatPack = null, string? StatPackProblem = null,
-    bool Practice = false)
+    bool Practice = false, IReadOnlyList<int>? Teams = null, IReadOnlyList<ReplayRacer>? Racers = null,
+    string? Mode = null, string? ModeProblem = null, ReplayModeFile? ModeFile = null)
 {
+    /// <summary>What a row says of the race's mode: its name, "Mode not playable" for a file the game would refuse, or
+    /// nothing for a race with no mode.</summary>
+    public string ModeLabel => ModeProblem is not null ? ModeNotPlayable : Mode ?? "";
+
+    /// <summary><see cref="ModeLabel"/> for a file the game would refuse for its mode.</summary>
+    public const string ModeNotPlayable = "Mode not playable";
+
     /// <summary>What a row says of the race's stats in a word or two: the pack's name, "Stat pack not playable"
     /// for a file the game would refuse, or nothing for the original stats.</summary>
     public string StatPackLabel => StatPackProblem is not null ? "Stat pack not playable" : StatPack ?? "";
@@ -48,6 +62,21 @@ public sealed record ReplayInfo(
     public RaceResult? RecorderResult => Results?.FirstOrDefault(r => r.Racer.Seat == Recorder?.Seat);
 }
 
+/// <summary>A replay's mode as it was raced: its name, its share code (language 12: the content hash's first 8
+/// characters in base32), the file's text from the package, and its settings with the race's values (null: the
+/// replay names none).</summary>
+public sealed record ReplayModeFile(string Name, string Code, string Source, IReadOnlyList<Online.Protocol.ModeParam> Params,
+    IReadOnlyList<int>? Values)
+{
+    /// <summary>A file's text as it is shown: its line ends as one, tabs as four spaces, no other control characters.</summary>
+    public static string Plain(string source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        var text = source.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Replace("\t", "    ", StringComparison.Ordinal);
+        return string.Concat(text.Where(c => c == '\n' || !char.IsControl(c))).TrimEnd();
+    }
+}
+
 /// <summary>What the launcher does with a replay beside reading it (<see cref="ReplayFile"/>): the file shown in the
 /// system's file browser, a line of its racers.</summary>
 public static class Replays
@@ -57,10 +86,14 @@ public static class Replays
     {
         ArgumentNullException.ThrowIfNull(path);
         var info = OperatingSystem.IsWindows()
-            ? new ProcessStartInfo("explorer.exe") { ArgumentList = { "/select," + System.IO.Path.GetFullPath(path) } }
+            ? new ProcessStartInfo("explorer.exe") { Arguments = RevealArguments(path) }
             : new ProcessStartInfo(System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(path)) ?? ".") { UseShellExecute = true };
         Process.Start(info)?.Dispose();
     }
+
+    /// <summary>Explorer's own form: its parser wants the quotes around the path alone, so an ArgumentList (which
+    /// quotes the whole argument when the path has a space) opens a default folder instead.</summary>
+    public static string RevealArguments(string path) => $"/select,\"{System.IO.Path.GetFullPath(path)}\"";
 
     /// <summary><see cref="Reveal"/> for a button: false when the file cannot be shown (a path that is none, no
     /// file browser), and the launcher goes on.</summary>

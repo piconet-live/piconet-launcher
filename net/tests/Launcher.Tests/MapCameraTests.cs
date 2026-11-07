@@ -107,4 +107,107 @@ public sealed class MapCameraTests
         heading.Reset();
         Assert.Null(heading.Yaw);
     }
+
+    private const double FrameMs = 1000.0 / 60;
+
+    /// <summary>A machine at about 1200 km/h: its place each frame.</summary>
+    private const float Pace = 5.5f;
+
+    /// <summary>The view turning after a followed racer, as the map does: the most it turned in one frame once settled,
+    /// the most its heading strayed from the way the path really goes.</summary>
+    private static (float MostPerFrame, float MostOff) Turning(IEnumerable<Vector3> path, Func<int, float> way)
+    {
+        const int settled = 200;
+        var heading = new HeadingTracker();
+        float? yaw = null;
+        float perFrame = 0, off = 0;
+        var i = 0;
+        foreach (var at in path)
+        {
+            heading.Add(at);
+            if (heading.Yaw is { } target)
+            {
+                var next = MapCamera.Approach(yaw ?? target, target, FrameMs, MapCamera.TurnMs);
+                if (i > settled)
+                {
+                    perFrame = MathF.Max(perFrame, MathF.Abs(MapCamera.Wrap(next - (yaw ?? next))));
+                    off = MathF.Max(off, MathF.Abs(MapCamera.Wrap(way(i) - next)));
+                }
+                yaw = next;
+            }
+            i++;
+        }
+        return (perFrame * 180 / MathF.PI, off * 180 / MathF.PI);
+    }
+
+    private static readonly float Straight = MapCamera.YawAlong(-Vector3.UnitZ)!.Value;
+
+    /// <summary>Along a straight road with a burst of 15 units across it each way every few steps: the view stands
+    /// nearly still. (With a heading from each move of 8 units and the old 350 ms, this turned 3.4 degrees a frame.)</summary>
+    [Fact]
+    public void AWeaveOnAStraightBarelyTurnsTheView()
+    {
+        var weave = Enumerable.Range(0, 600).Select(i => new Vector3((i / 4 % 2 == 0 ? -15 : 15), 0, -Pace * i));
+        var (perFrame, off) = Turning(weave, _ => Straight);
+        Assert.True(perFrame < 1.2f, $"{perFrame} degrees in a frame");
+        Assert.True(off < 8f, $"{off} degrees off the road");
+    }
+
+    /// <summary>Places that step back and forth along the road (two reports of one race, one older): the view does not
+    /// swing round. (A heading from each move turned 7.3 degrees a frame at the old 350 ms.)</summary>
+    [Fact]
+    public void PlacesSteppingBackAndForthDoNotTurnTheView()
+    {
+        var path = Enumerable.Range(0, 600).Select(i => new Vector3(0, 0, -Pace * i + (i % 12 >= 6 ? 30 : 0)));
+        var (perFrame, off) = Turning(path, _ => Straight);
+        Assert.True(perFrame < 0.1f, $"{perFrame} degrees in a frame");
+        Assert.True(off < 0.1f, $"{off} degrees off the road");
+    }
+
+    /// <summary>A real bend is followed, within a set lag: half the chord's angle and the view's own turn.</summary>
+    [Theory]
+    [InlineData(150, 60)]
+    [InlineData(300, 30)]
+    [InlineData(600, 15)]
+    public void ABendIsFollowedWithinALag(float radius, float most)
+    {
+        float Angle(int i) => Pace * i / radius;
+        var bend = Enumerable.Range(0, 600).Select(i => new Vector3(radius * MathF.Sin(Angle(i)), 0, radius - (radius * MathF.Cos(Angle(i)))));
+        var (_, off) = Turning(bend, i => MapCamera.YawAlong(new Vector3(MathF.Cos(Angle(i)), 0, MathF.Sin(Angle(i))))!.Value);
+        Assert.True(off < most, $"{off} degrees behind the bend of radius {radius}");
+    }
+
+    /// <summary>A respawn: the heading holds through the jump and the places before it no longer count.</summary>
+    [Fact]
+    public void AJumpForgetsThePlacesBeforeIt()
+    {
+        var heading = new HeadingTracker();
+        for (var i = 0; i < 40; i++)
+        {
+            heading.Add(new Vector3(10 * i, 0, 0));
+        }
+        var before = heading.Yaw;
+        Assert.Equal(MapCamera.YawAlong(Vector3.UnitX), before);
+        heading.Add(new Vector3(0, 0, 2000));
+        Assert.Equal(before, heading.Yaw);
+        heading.Add(new Vector3(0, 0, 1990));
+        Assert.Equal(MapCamera.YawAlong(-Vector3.UnitZ), heading.Yaw);   // not from before the jump
+    }
+
+    /// <summary>Straight up a wall: the last heading stands.</summary>
+    [Fact]
+    public void AClimbTooSteepKeepsTheHeading()
+    {
+        var heading = new HeadingTracker();
+        for (var i = 0; i < 40; i++)
+        {
+            heading.Add(new Vector3(10 * i, 0, 0));
+        }
+        var before = heading.Yaw;
+        for (var i = 1; i < 80; i++)
+        {
+            heading.Add(new Vector3(390, 10 * i, 0));
+        }
+        Assert.Equal(before, heading.Yaw);
+    }
 }

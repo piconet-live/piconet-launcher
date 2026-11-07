@@ -6,18 +6,29 @@ using Online.Protocol;
 namespace Launcher.App.ViewModels;
 
 /// <summary>
-/// Play's Practice page: solo, alone, no CPU racers, in
-/// the game's own Practice mode. The courses on the left (one picked), the set-up on the right: a custom lobby's
-/// rules panel for one player: the machine with the Garage, then every host's rule that
-/// means something alone (<see cref="HostRules.Alone"/>: the stats and the machine setting with the machine, then
-/// the race's: laps, boosting from the start, Restore, the mines' return), as rows of the one list
-/// (<see cref="HostRuleRows"/>); the rewind's reach and the save's buttons as values; START PRACTICE. It opens on
-/// the practice last started, else Quick Play's rules. Labels and values only.
+/// Play's Practice page: solo, alone, no CPU racers, in Practice's game mode (<see cref="PracticeMode"/>). The courses
+/// on the left (one picked), the set-up on the right as a custom lobby's rules panel for one player: the machine with
+/// the Garage, its stats and its setting; under "Practice" the mode's parameters, each the row a custom lobby's host
+/// gets for it (<see cref="ModeParamRow"/>; a parameter added to the mode file is a row more), then the rewind's reach
+/// and the save's buttons as values; under "Race rules" the host's other rules that mean something alone
+/// (<see cref="HostRules.Alone"/>), the rows a lobby shows (<see cref="HostRuleRows"/>). A rule the mode states is the
+/// mode's and has no row. START PRACTICE. It opens on the practice last started, else the mode's defaults and Quick
+/// Play's rules. Labels and values only.
 /// </summary>
 public sealed partial class PracticeViewModel : ViewModelBase
 {
-    /// <summary>The rules shown with the machine; the other rules alone are the race's.</summary>
+    /// <summary>The section of the mode's parameters.</summary>
+    public const string ModeHeading = "Practice";
+
+    /// <summary>The section of the host's rules beside the mode.</summary>
+    public const string RulesHeading = "Race rules";
+
+    /// <summary>The host's rules shown with the machine.</summary>
     private static readonly HostRule[] MachineRules = [HostRules.StatPack, HostRules.MachineSetting];
+
+    /// <summary>The host's rules of the race that mean something alone and that a practice's set-up holds; the laps and
+    /// Restore are the mode's (its parameters).</summary>
+    private static readonly HostRule[] RaceRules = [HostRules.BoostStart, HostRules.MinesRespawn];
 
     private readonly MachineRule _machine;
     private readonly Dictionary<string, RuleRow> _rules;
@@ -28,12 +39,14 @@ public sealed partial class PracticeViewModel : ViewModelBase
     /// a custom machine when one is raced.</param>
     /// <param name="garage">Shows the Garage.</param>
     /// <param name="packs">The stat packs a practice can run on, by name, after the disc's own.</param>
+    /// <param name="mode">Practice's game mode (<see cref="AppState.PracticeModeFile"/>); null: none could be read,
+    /// and there are no rows of it.</param>
     /// <param name="start">Starts the game on a set-up: null when it started, else the notice; null: nothing to
     /// start.</param>
     /// <param name="last">The practice last started (the settings'): the page opens on its course and rules; null:
     /// <see cref="PracticeSetup.Default"/>.</param>
-    public PracticeViewModel(Func<RacedMachine> machine, Action garage, IReadOnlyList<string> packs, Func<PracticeSetup, string?>? start = null,
-                             PracticeSetup? last = null)
+    public PracticeViewModel(Func<RacedMachine> machine, Action garage, IReadOnlyList<string> packs, ModePackage? mode,
+                             Func<PracticeSetup, string?>? start = null, PracticeSetup? last = null)
     {
         ArgumentNullException.ThrowIfNull(machine);
         ArgumentNullException.ThrowIfNull(packs);
@@ -42,30 +55,46 @@ public sealed partial class PracticeViewModel : ViewModelBase
         var opened = (last ?? PracticeSetup.Default).Kept();
         Courses = new CoursePickerModel(PickMode.One, [opened.Course]);
         _machine = new MachineRule("Machine", NameOf(machine()), garage);
-        _rules = HostRules.Alone.ToDictionary(r => r.Name, r => HostRuleRows.For(r, ValueOf(r, opened), packs, opened.StatPack));
-        Groups = RuleGroup.Of(
-            [_machine, .. MachineRules.Select(r => _rules[r.Name])],
-            [.. HostRules.Alone.Except(MachineRules).Select(r => _rules[r.Name])],
-            [new ValueRule("Rewind", Clock(PracticeSetup.RewindSeconds)), new ValueRule("Save · Load", "D-pad right · left")]);
+        bool HasRow(HostRule rule) => mode is null || !PracticeMode.States(mode, rule);
+        _rules = MachineRules.Concat(RaceRules).Where(HasRow)
+            .ToDictionary(r => r.Name, r => HostRuleRows.For(r, ValueOf(r, opened), packs, opened.StatPack));
+        var values = mode is null ? [] : PracticeMode.Values(mode, opened);
+        var stats = mode is null ? null : ModeTerms.Of(mode, values).PackParam;
+        Params = mode is null ? [] : [.. mode.Params.Select((p, i) => new ModeParamRow(p, values[i], i == stats))];
+        List<RuleRow> fixedWords = [];
+        if (mode is not null && PracticeMode.RewindSeconds(mode, values) is { } rewind)
+        {
+            fixedWords.Add(new ValueRule("Rewind", Clock(rewind)));
+        }
+        RuleRow[] practice = [.. Params.Select(p => p.Row), .. fixedWords];
+        RuleRow[] race = [.. RaceRules.Where(r => _rules.ContainsKey(r.Name)).Select(r => _rules[r.Name])];
+        Groups = [.. new (string? Heading, RuleRow[] Rows)[]
+            {
+                (null, [_machine, .. MachineRules.Where(r => _rules.ContainsKey(r.Name)).Select(r => _rules[r.Name])]),
+                (ModeHeading, practice),
+                (RulesHeading, race),
+            }.Where(g => g.Rows.Length > 0).Select((g, i) => new RuleGroup(g.Rows) { Later = i > 0, Heading = g.Heading })];
     }
 
     /// <summary>A rule's number in a set-up (<see cref="HostRuleRows.Number"/>'s form).</summary>
     private static int ValueOf(HostRule rule, PracticeSetup s) => rule.Name switch
     {
-        "laps" => s.Laps,
         "boost-start" => s.BoostFromStart ? 1 : 0,
-        "restore" => s.Restore ? 1 : 0,
         "mine-regen" => s.MineRegenMs,
         "machine-setting" => s.MachineSetting,
         "stat-pack" => 0,
         _ => throw new NotSupportedException($"a practice has no {rule.Name}"),
     };
 
-    private int Number(HostRule rule) => HostRuleRows.Number(_rules[rule.Name]);
+    /// <summary>A rule's row's number; the rule's own default when the mode states it (no row).</summary>
+    private int Number(HostRule rule) => _rules.TryGetValue(rule.Name, out var row) ? HostRuleRows.Number(row) : rule.Default;
 
     public CoursePickerModel Courses { get; }
 
     public IReadOnlyList<RuleGroup> Groups { get; }
+
+    /// <summary>The rows of the mode's parameters, in the mode file's order.</summary>
+    public IReadOnlyList<ModeParamRow> Params { get; }
 
     [ObservableProperty]
     public partial string Notice { get; set; } = "";
@@ -77,14 +106,17 @@ public sealed partial class PracticeViewModel : ViewModelBase
         {
             var raced = _machineOf();
             return new PracticeSetup(
-                Courses.Picked, raced.Machine, HostRuleRows.Pack(_rules[HostRules.StatPack.Name]), Number(HostRules.MachineSetting),
-                Number(HostRules.Laps), Number(HostRules.Restore) != 0, Number(HostRules.BoostStart) != 0, Number(HostRules.MinesReturn),
-                raced.Custom).Kept();
+                Courses.Picked, raced.Machine, _rules.TryGetValue(HostRules.StatPack.Name, out var pack) ? HostRuleRows.Pack(pack) : null,
+                Number(HostRules.MachineSetting), Number(HostRules.BoostStart) != 0, Number(HostRules.MinesRespawn),
+                new ParamDictionary(Params.Select(p => KeyValuePair.Create(p.Param.Name, p.Value))), raced.Custom).Kept();
         }
     }
 
     /// <summary>A rule's row by the rule's name (<see cref="HostRules"/>).</summary>
     public RuleRow Rule(string name) => _rules[name];
+
+    /// <summary>A mode parameter's row by the parameter's name in the mode file.</summary>
+    public RuleRow Param(string name) => Params.Single(p => p.Param.Name == name).Row;
 
     /// <summary>The page shows: the machine is the Garage's as it is now.</summary>
     public void Shown() => _machine.Value = NameOf(_machineOf());
@@ -93,7 +125,30 @@ public sealed partial class PracticeViewModel : ViewModelBase
     /// the disc's tables are read).</summary>
     private string NameOf(RacedMachine raced) => Theme.GameSkin.NameOf(raced, () => OnUi(Shown));
 
-    private bool CanStart => _start is not null;
+    private string? _blocked;
+
+    private bool CanStart => _start is not null && _blocked is null;
+
+    /// <summary>No game starts now (<see cref="AppState.PipelinesBlock"/>): START PRACTICE is off and the line under it
+    /// says why; null: it starts again.</summary>
+    public void Block(string? why)
+    {
+        if (why == _blocked)
+        {
+            return;
+        }
+        var before = _blocked;
+        _blocked = why;
+        StartCommand.NotifyCanExecuteChanged();
+        if (why is not null)
+        {
+            Notice = why;
+        }
+        else if (Notice == before)
+        {
+            Notice = "";
+        }
+    }
 
     [RelayCommand(CanExecute = nameof(CanStart))]
     private void Start() => Notice = _start?.Invoke(Setup) ?? "";

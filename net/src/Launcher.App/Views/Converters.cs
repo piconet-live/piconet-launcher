@@ -23,7 +23,14 @@ public sealed class ShareToScale : IValueConverter
     public static ShareToScale Instance { get; } = new();
 
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) =>
-        new ScaleTransform(value is double share && double.IsFinite(share) ? Math.Clamp(share, 0, 1) : 0, 1);
+        Scaled(value is double share && double.IsFinite(share) ? Math.Clamp(share, 0, 1) : 0);
+
+    private static Avalonia.Media.Transformation.TransformOperations Scaled(double x)
+    {
+        var build = Avalonia.Media.Transformation.TransformOperations.CreateBuilder(1);
+        build.AppendScale(x, 1);
+        return build.Build();
+    }
 
     public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture) =>
         throw new NotSupportedException();

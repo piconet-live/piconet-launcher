@@ -126,11 +126,11 @@ public sealed class ReplayReadersTests : IDisposable
     [Fact]
     public void AnotherFormatVersionIsSaidAndOnlyWhatRecordedItIsStillRead()
     {
-        const string said = "Replay of another version of the game · format 9";
-        Assert.Equal((null, said, Native, null), Read(Replay(version: 9)));
-        Assert.Equal((null, said, Nobody, null), Read(Replay(version: 9, named: (1 << 20) + 1)));   // the version first
-        Assert.Equal((null, said, Nobody, null), Read(Replay(version: 9, cut: HeaderEnd - 5)));
-        Assert.Equal((null, said.Replace("format 9", "format 1", StringComparison.Ordinal), Native, null), Read(Replay(version: 1)));
+        const string said = "Replay of another version of the game · format 10";
+        Assert.Equal((null, said, Native, null), Read(Replay(version: 10)));
+        Assert.Equal((null, said, Nobody, null), Read(Replay(version: 10, named: (1 << 20) + 1)));   // the version first
+        Assert.Equal((null, said, Nobody, null), Read(Replay(version: 10, cut: HeaderEnd - 5)));
+        Assert.Equal((null, said.Replace("format 10", "format 1", StringComparison.Ordinal), Native, null), Read(Replay(version: 1)));
         // a recording's layout under the compact file's number (8) is no compact file: its header is not read
         Assert.Equal((null, "Replay of another version of the game · format 8", Nobody, null), Read(Replay(version: 8)));
     }
@@ -158,7 +158,7 @@ public sealed class ReplayReadersTests : IDisposable
     [Fact]
     public void AReplayOfARaceWhoseMinesCameBackIsFormat5AndOneThatDisagreesSaysSo()
     {
-        Assert.True(ReplayFormat.Plays(5) && ReplayFormat.Plays(6) && ReplayFormat.Plays(7) && ReplayFormat.Plays(8) && !ReplayFormat.Plays(9));
+        Assert.True(ReplayFormat.Plays(5) && ReplayFormat.Plays(6) && ReplayFormat.Plays(7) && ReplayFormat.Plays(8) && ReplayFormat.Plays(9) && !ReplayFormat.Plays(10));
         foreach (var ms in new[] { "200", "50", "5000", "100000" })
         {
             Assert.Equal((("BEN", 60), null, Native, Image), Read(Replay(WithMines(ms), version: 5)));
@@ -195,7 +195,7 @@ public sealed class ReplayReadersTests : IDisposable
     public void AReplayOfARaceWithAStatPackIsListedWithItsNameAndOneTheGameWouldRefuseSaysSo()
     {
         var pack = Online.Protocol.StatPack.Of("GX Made Up 1.0", [Online.Protocol.StatEntry.Of(6, 4, 2520)]).Pack!.ToWire();
-        Assert.True(ReplayFormat.Plays(2) && ReplayFormat.Plays(3) && !ReplayFormat.Plays(1) && ReplayFormat.Plays(4) && ReplayFormat.Plays(6) && ReplayFormat.Plays(7) && ReplayFormat.Plays(8) && !ReplayFormat.Plays(9));
+        Assert.True(ReplayFormat.Plays(2) && ReplayFormat.Plays(3) && !ReplayFormat.Plays(1) && ReplayFormat.Plays(4) && ReplayFormat.Plays(6) && ReplayFormat.Plays(7) && ReplayFormat.Plays(8) && ReplayFormat.Plays(9) && !ReplayFormat.Plays(10));
 
         var good = Replay(WithPack(pack), version: 3);
         Assert.Null(ReplayFile.Problem(good));
@@ -219,6 +219,46 @@ public sealed class ReplayReadersTests : IDisposable
             Assert.Equal(c.Why, ReplayFile.Problem(c.Path));
             var listed = ReplayFile.Read(c.Path);                              // still a row of the list, which says it
             Assert.Equal((c.Why, "Stat pack not playable"), (listed!.StatPackProblem, listed.StatPackLabel));
+        });
+    }
+
+    /// <summary>The header of a race under this <c>setup.mode</c> (JSON).</summary>
+    private static string WithMode(string mode) =>
+        Header(Match.Replace("\"setup\": {", $"\"setup\": {{\"mode\": {mode}, ", StringComparison.Ordinal));
+
+    /// <summary>A mode's replay is version 9 and names its mode in its header: the row says the mode's name. One the game
+    /// would refuse for its mode says so before any game is started, by the game's own tests (files_mode.cpp,
+    /// files_replay.cpp): a newer api, a hash that is not the package's, a package that does not read, another format.</summary>
+    [Fact]
+    public void AModesReplayNamesItsModeAndOneTheGameWouldRefuseSaysSo()
+    {
+        var compiled = Online.Protocol.ModeCompiler.Compile("mode \"Test Mode\" { api 1; about \"A test.\"; }\nlaps 1;\n");
+        var start = compiled.Mode!.Start();
+        string Json(string package, string hash, int api) =>
+            $"{{\"package\": \"{package}\", \"hash\": \"{hash}\", \"api\": {api}, \"params\": []}}";
+        var good = WithMode(Json(start.Package, start.Hash, start.Api));
+
+        var raced = Replay(good, version: 9);
+        Assert.Null(ReplayFile.Problem(raced));
+        var read = ReplayFile.Read(raced)!;
+        Assert.Equal(("Test Mode", null, "Test Mode"), (read.Mode, read.ModeProblem, read.ModeLabel));
+        Assert.Equal("Test Mode", ReplayListing.From(read).ModeLabel);
+        Assert.Equal((null, null, ""), (ReplayFile.Read(Replay())!.Mode, ReplayFile.Read(Replay())!.ModeProblem, ReplayFile.Read(Replay())!.ModeLabel));
+
+        var cases = new (string Path, string Why)[]
+        {
+            (Replay(WithMode(Json(start.Package, start.Hash, Online.Protocol.ModeWords.Api + 1)), version: 9), ReplayFile.ModeNewer),
+            (Replay(WithMode(Json(start.Package, new string('0', 64), start.Api)), version: 9), ReplayFile.ModeDamaged),
+            (Replay(WithMode(Json("not base64", start.Hash, start.Api)), version: 9), ReplayFile.ModeDamaged),
+            (Replay(WithMode(Json("AAAA", Online.Protocol.ModePackage.Hash(new byte[3]), start.Api)), version: 9), ReplayFile.ModeDamaged),
+            (Replay(WithMode("7"), version: 9), ReplayFile.ModeDamaged),
+            (Replay(good, version: 7), ReplayFile.ModeDamaged),
+        };
+        Assert.All(cases, c =>
+        {
+            Assert.Equal(c.Why, ReplayFile.Problem(c.Path));
+            var listed = ReplayFile.Read(c.Path);                              // still a row of the list, which says it
+            Assert.Equal((c.Why, "Mode not playable"), (listed!.ModeProblem, listed.ModeLabel));
         });
     }
 

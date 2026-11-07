@@ -12,7 +12,7 @@ public enum OtherSounds
     Off,
 }
 
-/// <summary>The game's picture in a race and a replay (the Settings page's "Widescreen"). <see cref="Off"/>: the
+/// <summary>The game's picture in a race, a replay and offline play (the Settings page's "Widescreen"). <see cref="Off"/>: the
 /// game's Normal, 4:3. <see cref="Game"/>: the game's own Wide Screen, 16:9, which shows a little more at the sides
 /// than Normal and cuts the top and bottom. <see cref="TrueWide"/>: true widescreen, 16:9 with Normal's whole height
 /// and the sides widened (the launch file's <c>"trueWidescreen"</c>; port/image/sites_view.py). For the picture
@@ -47,9 +47,12 @@ public sealed record MachineLook(int Machine, int? StockColor = 0, Rgb? Color = 
 /// machine; <see cref="LookOf"/> reads both. <see cref="Custom"/>: a garage-built machine the racer races in place
 /// of <see cref="Machine"/> (sent with the queue and the machine choice; picked in the Garage's builder); null: the
 /// stock machine. <see cref="Customs"/>: the machines saved in the builder, the one raced among them.
+/// <see cref="Trail"/>: the racer's boost trail, whichever machine they race: one colour in its three words
+/// (<see cref="TrailColour"/>); null: the machine's own.
 /// </summary>
 public sealed record RacerProfile(string Name, int Machine, Rgb Color, int Setting = 100, int? StockColor = 0,
-    IReadOnlyList<MachineLook>? Looks = null, CustomMachine? Custom = null, IReadOnlyList<CustomBuild>? Customs = null)
+    IReadOnlyList<MachineLook>? Looks = null, CustomMachine? Custom = null, IReadOnlyList<CustomBuild>? Customs = null,
+    BoostTrail? Trail = null)
 {
     /// <summary>The most machines the builder keeps.</summary>
     public const int MostCustoms = 12;
@@ -93,7 +96,7 @@ public sealed record RacerProfile(string Name, int Machine, Rgb Color, int Setti
         other is not null && Name == other.Name && Machine == other.Machine && Color == other.Color &&
         Setting == other.Setting && StockColor == other.StockColor &&
         (Looks ?? []).SequenceEqual(other.Looks ?? []) && SameCustom(Custom, other.Custom) &&
-        (Customs ?? []).SequenceEqual(other.Customs ?? []);
+        (Customs ?? []).SequenceEqual(other.Customs ?? []) && Trail == other.Trail;
 
     private static bool SameCustom(CustomMachine? a, CustomMachine? b) =>
         a is null ? b is null : b is not null && a with { Colors = null } == b with { Colors = null }
@@ -101,6 +104,10 @@ public sealed record RacerProfile(string Name, int Machine, Rgb Color, int Setti
 
     public override int GetHashCode() => HashCode.Combine(Name, Machine, Color, Setting, StockColor, Looks?.Count ?? 0);
 }
+
+/// <summary>Where the Inputs window stands and its size, in the screen's pixels (<see cref="LauncherSettings.InputsWindow"/>).
+/// A file edited by hand may hold anything: the window keeps only a place on a screen and a size within its bounds.</summary>
+public sealed record InputsPlace(int X, int Y, int Width, int Height);
 
 /// <summary>Everything the launcher keeps between runs. Paths are local to this computer.</summary>
 public sealed record LauncherSettings
@@ -157,13 +164,13 @@ public sealed record LauncherSettings
     /// (<see cref="StackStamp"/>); null for a build that names none, which has no official server.</summary>
     public static string? OnlineServer => StackStamp.Current.Server;
 
-    /// <summary>Saved values that mean "the official server": the official address itself (written by launchers
-    /// that stored the default; they knew the first official server only, so on a build made for another stack that
-    /// address still means "this build's official server"); it loads as blank. The early local default
+    /// <summary>Saved values that mean "the official server": the official address itself, and each one a
+    /// launcher had before (written by launchers that stored the default: on any later build they still mean "this
+    /// build's official server"); it loads as blank. The early local default
     /// (ws://127.0.0.1:47810/ws) is not one of them: a local address must never become the live service without the
     /// player's word, so it stays what the file says, a server of the player's own.</summary>
     public static readonly IReadOnlyList<string> FormerDefaultServers =
-        [.. new[] { StackStamp.FirstServer, OnlineServer }.OfType<string>().Distinct()];
+        [.. new[] { StackStamp.FirstServer, StackStamp.SecondServer, OnlineServer }.OfType<string>().Distinct()];
 
     /// <summary>Online races are recorded (by default). Practice runs are <see cref="RecordPractice"/>'s.</summary>
     public bool RecordReplays { get; init; } = true;
@@ -187,6 +194,74 @@ public sealed record LauncherSettings
     /// a test game show it whatever this says: <see cref="FrameRateShown"/>.</summary>
     public bool ShowFrameRate { get; init; }
 
+    /// <summary>"Show inputs": the launcher's Inputs window, the controller live as the game reads it, opens with each
+    /// game start (off by default; the status board's LocalPad: <see cref="GameBoard.Pad"/>). Never in the game's picture.</summary>
+    public bool ShowInputs { get; init; }
+
+    /// <summary>Where the Inputs window was last, and its size (in the screen's pixels); null: none yet, and it opens at its
+    /// own size beside the launcher.</summary>
+    [JsonConverter(typeof(SettingAsWritten.Whole<InputsPlace>))]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public InputsPlace? InputsWindow { get; init; }
+
+    /// <summary>Aurora's picture size (<c>"auroraSize"</c>): one of <see cref="AuroraSizes"/>; the default, Auto, is the
+    /// window's own pixels and follows its size. An older file's <c>"native"</c> is that same thing, so it reads as Auto.</summary>
+    public string AuroraSize { get; init; } = AuroraSizes[0].Name;
+
+    public static IReadOnlyList<(string Name, string Words)> AuroraSizes { get; } =
+        [("auto", "Auto"), ("2", "2x"), ("3", "3x"), ("4", "4x")];
+
+    /// <summary>Aurora's samples for each pixel (<c>"auroraEdges"</c>): one of <see cref="AuroraEdgeCounts"/>.</summary>
+    public int AuroraEdges { get; init; } = AuroraEdgeCounts[0].Count;
+
+    public static IReadOnlyList<(int Count, string Words)> AuroraEdgeCounts { get; } = [(1, "Off"), (4, "4x MSAA")];
+
+    /// <summary>Aurora's anisotropic filtering (<c>"auroraTextures"</c>): one of <see cref="AuroraTextureLevels"/>.</summary>
+    public int AuroraTextures { get; init; } = AuroraTextureLevels[0].Level;
+
+    public static IReadOnlyList<(int Level, string Words)> AuroraTextureLevels { get; } = [(1, "Off"), (4, "4x"), (8, "8x"), (16, "16x")];
+
+    /// <summary>Aurora's colour filter of the whole picture (<c>"auroraColourblind"</c>): one of <see cref="AuroraColourblindFilters"/>, off by default.</summary>
+    public string AuroraColourblind { get; init; } = AuroraColourblindFilters[0].Name;
+
+    public static IReadOnlyList<(string Name, string Words)> AuroraColourblindFilters { get; } =
+        [("off", "Off"), ("deuteranopia", "Deuteranopia"), ("protanopia", "Protanopia"), ("tritanopia", "Tritanopia")];
+
+    /// <summary>Pictures between the game's own steps (the Settings page's "High refresh", Game): one of
+    /// <see cref="AuroraHighRefreshes"/>, off by default; the launch file's <c>"auroraHighRefresh"</c> (off: left out). The
+    /// launcher writes no <c>"refreshRate"</c> since 0.6.0 (the emulator's re-draw, never shown with Aurora). A settings
+    /// file of before 0.6.0 may hold <c>"refreshRate"</c>, the setting of its own that this one took over: the higher of
+    /// the two is kept, and it is not written back (<see cref="SettingsStore.Load"/>).</summary>
+    public int AuroraHighRefresh { get; init; } = AuroraHighRefreshes[0].Rate;
+
+    public static IReadOnlyList<(int Rate, string Words)> AuroraHighRefreshes { get; } = [(0, "Off"), (120, "Up to 120"), (240, "Up to 240")];
+
+    /// <summary>Ray tracing (<c>"auroraRayTracing"</c>: the runner turns on its tested set of Aurora's ray switches),
+    /// off by default; offered on a graphics card that can ray trace (<see cref="RayTracingCard"/>).</summary>
+    public bool RayTracing { get; init; }
+
+    /// <summary>The Aurora settings as the launch file has them (Aurora draws every start: <see cref="GameWindow.Renderer"/>):
+    /// each left out at its default, and anything not on the lists left out (a settings file edited by hand must not stop
+    /// the game from starting). A settings file of before 0.6.0 may hold <c>"pictureEngine"</c>: it is read past.</summary>
+    /// <param name="cardRayTraces">The graphics card can ray trace, or the check has not answered yet: ray tracing is
+    /// written only then (<see cref="RayTracingCard.Known"/>).</param>
+    public (string? Size, int Edges, int Textures, string? Colourblind, int HighRefresh, bool RayTracing) AuroraLaunchKeys(bool cardRayTraces = true) =>
+        (AuroraSize != AuroraSizes[0].Name && AuroraSizes.Any(a => a.Name == AuroraSize) ? AuroraSize : null,
+            AuroraEdges != AuroraEdgeCounts[0].Count && AuroraEdgeCounts.Any(a => a.Count == AuroraEdges) ? AuroraEdges : 0,
+            AuroraTextures != AuroraTextureLevels[0].Level && AuroraTextureLevels.Any(a => a.Level == AuroraTextures) ? AuroraTextures : 0,
+            AuroraColourblind != AuroraColourblindFilters[0].Name && AuroraColourblindFilters.Any(a => a.Name == AuroraColourblind) ? AuroraColourblind : null,
+            AuroraHighRefreshes.Any(a => a.Rate == AuroraHighRefresh) ? AuroraHighRefresh : 0,
+            RayTracing && cardRayTraces);
+
+    /// <summary>What a settings file of before 0.6.0 said in its <c>"refreshRate"</c>, as <see cref="AuroraHighRefresh"/>:
+    /// "120" is 120, "240" and "display" (the display's own rate) are 240, anything else 0.</summary>
+    public static int HighRefreshOfFormerRefreshRate(string? refreshRate) => refreshRate switch
+    {
+        "120" => 120,
+        "240" or "display" => 240,
+        _ => 0,
+    };
+
     /// <summary>The controllers rumble in the game (the Settings page's "Rumble", Game; on by default).
     /// Off reaches the game's launch file as <c>"rumble": false</c> (on is the game's default, and a runner
     /// from before the key refuses the member), and the game then holds every motor still.
@@ -195,13 +270,17 @@ public sealed record LauncherSettings
     /// "Set up in the game") still applies: off there is off too.</summary>
     public bool Rumble { get; init; } = true;
 
-    /// <summary>The chase camera view (1 to 3) the player last raced in: the game says each view chosen with the
+    /// <summary>The launcher's animations are off: pages and lists stand at once (the Settings page's "Reduced motion",
+    /// Launcher; off by default).</summary>
+    public bool ReducedMotion { get; init; }
+
+    /// <summary>The chase camera view (1 to 3, 4 first person) the player last raced in: the game says each view chosen with the
     /// camera button on its status board (<see cref="Board.BoardEventKind.Camera"/>), and the next race starts in it
     /// (the launch file's <c>match.camera</c>). 0: none yet, and the game starts in its own. The player's picture
     /// only: no other game of the race sees it.</summary>
     public int RaceCamera { get; init; }
 
-    /// <summary>The view a race starts in: <see cref="RaceCamera"/> when it is one the game takes (1 to 3), else 0
+    /// <summary>The view a race starts in: <see cref="RaceCamera"/> when it is one the game takes (1 to 3, 4 first person), else 0
     /// (the game's own, and the launch file holds no <c>match.camera</c>).</summary>
     public int StartCamera => RaceCamera is >= LaunchFormat.MatchCameraLow and <= LaunchFormat.MatchCameraHigh ? RaceCamera : 0;
 
@@ -216,7 +295,7 @@ public sealed record LauncherSettings
     }
 
     /// <summary>The practice last started (Play's Practice, START PRACTICE): its course and rules, which the page
-    /// opens on; null: the first course and Quick Play's rules (<see cref="PracticeSetup.Default"/>). Its machine
+    /// opens on; null: the first course, the mode's defaults and Quick Play's rules (<see cref="PracticeSetup.Default"/>). Its machine
     /// is not read back: the page's machine is the Garage's.</summary>
     [JsonConverter(typeof(SettingAsWritten.Whole<PracticeSetup>))]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -271,13 +350,10 @@ public sealed record LauncherSettings
     /// <summary>The launcher's own sounds are off; the volume is kept for when they are on again.</summary>
     public bool SoundMuted { get; init; }
 
-    /// <summary>The game's menu sounds as the pad or the keyboard moves between controls (the cursor) and on the
-    /// pad's B (back); never for the mouse (the Settings page's "Navigation sounds", Launcher; off by default:
-    /// minimal sounds). Muted and at the volume as the launcher's other sounds.</summary>
-    public bool NavigationSounds { get; init; }
-
     /// <summary>The pad works the launcher's pages (the Settings page's "Controller navigation", Launcher; off by default: a
-    /// controller left in the window does nothing to it). Setting a control on the Controller page reads the pad either way.</summary>
+    /// controller left in the window does nothing to it). Setting a control on the Controller page reads the pad either way.
+    /// On, the pad's moves between controls sound the game's cursor and its B the game's cancel (muted and at the volume
+    /// as the launcher's other sounds); the keyboard and the mouse never sound.</summary>
     public bool PadNavigation { get; init; }
 
     /// <summary>The server's notices come without their tone and the taskbar's flash (the Settings page's "Notices":
@@ -338,22 +414,6 @@ public sealed record LauncherSettings
     /// comparison, else null (the launch file then says nothing of it: the game's own way is a console's).</summary>
     [JsonIgnore]
     public string? GamePresent => Present is PresentAsBefore or PresentAtTheCopy ? Present : null;
-
-    /// <summary>Pictures a second in a race or a replay (the launch file's <c>"refreshRate"</c>; the Settings page's "Refresh rate").
-    /// <c>"60"</c>: the game's own picture a step, every player's. <c>"120"</c>, <c>"240"</c>, <c>"display"</c> (the
-    /// display's own rate): frames drawn between two steps, machines and cameras between where they were and where
-    /// they are, each shown at its time; the simulation keeps the console's clock. Anything else reads as
-    /// <c>"60"</c> (<see cref="SettingsCheck"/>).</summary>
-    [JsonConverter(typeof(SettingAsWritten.Words))]
-    public string RefreshRate { get; init; } = RefreshAsTheGame;
-
-    /// <summary>The refresh rates a settings file can name; the first is every player's.</summary>
-    public const string RefreshAsTheGame = "60", Refresh120 = "120", Refresh240 = "240", RefreshAsTheDisplay = "display";
-
-    /// <summary>What a game is started with: <see cref="RefreshRate"/> when it draws frames between steps, else null
-    /// (the launch file then says nothing of it).</summary>
-    [JsonIgnore]
-    public string? GameRefreshRate => RefreshRate is Refresh120 or Refresh240 or RefreshAsTheDisplay ? RefreshRate : null;
 
     /// <summary>The game's pictures wait for the display's refresh (off by default; the Settings page's "Vertical
     /// sync"). Off suits a display with variable refresh and a window the system composes; on is for a display of

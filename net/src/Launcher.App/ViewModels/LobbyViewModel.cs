@@ -235,6 +235,13 @@ public sealed partial class LobbyViewModel : ViewModelBase
     [RelayCommand]
     private void Rejoin() => _state.Rejoin();
 
+    /// <summary>The player's game left a race whose mode has no rejoin: Watch stands where Rejoin would.</summary>
+    [ObservableProperty]
+    public partial bool CanWatchLeftRace { get; set; }
+
+    [RelayCommand]
+    private Task WatchLeftRaceAsync() => _session?.WatchLeftRaceAsync() ?? Task.CompletedTask;
+
     /// <summary>The server takes spectators: the player may watch the lobby's races instead of racing.</summary>
     [ObservableProperty]
     public partial bool CanWatch { get; set; }
@@ -304,7 +311,8 @@ public sealed partial class LobbyViewModel : ViewModelBase
         {
             return;
         }
-        RulesText = _session.Lobby is { Custom: true } ? "" : _session.Rules is { } rules ? Describe(rules) : "";
+        // (a vote of game modes: each card says its own laps, so the line says none)
+        RulesText = _session.Lobby is { Custom: true } ? "" : _session.Rules is { } rules ? Describe(rules, _session.CourseVote?.Vote.Cards is null) : "";
         ShowVote(_session);
         var lobby = _session.Lobby;
         Screen = LobbyScreens.Of(lobby);
@@ -315,7 +323,8 @@ public sealed partial class LobbyViewModel : ViewModelBase
         Clock(_session);
         LeaveText = lobby is null ? "Leave the queue" : "Leave the lobby";
         CanRejoin = _session.CanRejoin && !_state.Racing;
-        CanWatch = _session.CanWatch && _session.Race is null;
+        CanWatchLeftRace = _session.CanWatchLeftRace && !_state.Racing;
+        CanWatch = _session.CanWatch && _session.Race is null && !CanWatchLeftRace;
         WatchText = _session.Watching ? "Race" : "Watch";
         Watching = _session.Watching;
         ShowNotice(_session, lobby);
@@ -399,12 +408,13 @@ public sealed partial class LobbyViewModel : ViewModelBase
             }
             var ticked = lobby.Stage == LobbyState.Starting ? voted?.Contains(p.Id) == true : lobby.Stage == LobbyState.Choosing && p.Chosen;
             rows.Add(new SeatRow((rows.Count + 1).ToString(System.Globalization.CultureInfo.InvariantCulture), p.Name,
-                Rgb.Hex(p.Color), MachineWithPack(p, session), p.Id == session.PlayerId, false, ticked,
+                Rgb.Hex(p.Color), SeatMachine(p, session, lobby),
+                p.Id == session.PlayerId, false, ticked,
                 session.Pings.TryGetValue(p.Id, out var ms) ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{ms} ms") : "",
                 p.Tag)
             {
                 Id = p.Id, Host = lobby.Custom && p.Id == lobby.HostId, Kickable = session.IsHost && p.Id != session.PlayerId,
-            });
+            }.OnTeam(p, TeamsOf(lobby), TeamChanges(session, lobby, p)));
         }
         var racers = rows.Count;
         var empty = CpuFill(session, lobby) == CpuFillMode.Never ? "" : "CPU";
@@ -429,12 +439,15 @@ public sealed partial class LobbyViewModel : ViewModelBase
 
     private void ShowNotice(QuickPlaySession session, LobbyState? lobby)
     {
-        var (label, values, whole) = CustomNotice(session) is { } custom ? custom
+        var (label, values, whole) = session.RejoinRefused is { } noRejoin ? ("Can't rejoin", [], noRejoin)
+            : CustomNotice(session) is { } custom ? custom
             : session.LastError is { Code: "machine_not_allowed" } error
             ? ("Machine not allowed", session.Rules is { } rules ? [new NoticeValue("allowed", Allowed(rules) ?? "any")] : [], error.Message)
             // (until a race starts, the lobby is left or its pack changes)
             : lobby is not null && session.StatPackProblem is { } refused
                 ? ("Stat pack not taken", LobbyScreens.PackLabel(lobby.StatPack) is { Length: > 0 } pack ? [new NoticeValue("pack", pack)] : [], refused)
+            : lobby?.CannotRace?.Contains(session.PlayerId ?? "") == true
+                ? ("Can't race this mode", ModeValues(lobby), "This lobby races a game mode your launcher can't run. Update the launcher to race it.")
             : lobby is { Stage: LobbyState.Forming, OtherBuilds: { Count: > 0 } others } ? Others(session.Build, others)
             : ("", (IReadOnlyList<NoticeValue>)[], "");
         (Notice, NoticeWhole) = (label, whole);
@@ -451,58 +464,78 @@ public sealed partial class LobbyViewModel : ViewModelBase
     }
 
 
-    /// <summary>How the empty seats are filled: a custom lobby's rule, else the server's (a vote where it names none).</summary>
-    private static CpuFillMode CpuFill(QuickPlaySession session, LobbyState? lobby) => lobby is { Custom: true, Rules: { } rules }
+    /// <summary>A member's seat whose launcher cannot run the lobby's mode (<see cref="LobbyState.CannotRace"/>): they
+    /// watch its races.</summary>
+    public const string CannotRaceText = "Can't race this mode";
+
+    /// <summary>A seat's machine as its row says it, or that its player cannot race the lobby's mode.</summary>
+    private string SeatMachine(PlayerInfo p, QuickPlaySession session, LobbyState lobby) =>
+        lobby.CannotRace?.Contains(p.Id) == true ? CannotRaceText : MachineWithPack(p, session);
+
+    /// <summary>The lobby's mode, as a notice's value; none when it names none.</summary>
+    private static IReadOnlyList<NoticeValue> ModeValues(LobbyState lobby) =>
+        lobby.Rules?.Mode is { } mode ? [new NoticeValue("mode", mode.Name)] : [];
+
+    /// <summary>How the empty seats are filled: never when the lobby's modes allow no CPUs (no vote then), else a
+    /// custom lobby's rule, else the server's (a vote where it names none).</summary>
+    /// <summary>The teams of a lobby's next race; 0: none.</summary>
+    private static bool TeamChanges(QuickPlaySession session, LobbyState lobby, PlayerInfo p) =>
+        lobby.Stage == LobbyState.Forming && (session.IsHost || p.Id == session.PlayerId);
+
+    private static int TeamsOf(LobbyState lobby) => lobby.Rules is { Mode: not null } rules ? rules.Value(LobbyRules.TeamsKey) ?? 0 : 0;
+
+    private static CpuFillMode CpuFill(QuickPlaySession session, LobbyState? lobby) => lobby is { NoCpuVote: true } ? CpuFillMode.Never
+        : lobby is { Custom: true, Rules: { } rules }
         ? (CpuFillMode)CustomRules.Value(rules, HostRules.CpuFill.Name, session.QuickPlayRules)
         : session.Rules?.CpuFill ?? CpuFillMode.Vote;
 
     /// <summary>The machines a server allows, when not all: "Blue Falcon only", "12 machines"; null: all.</summary>
     private static string? Allowed(ServerRules r) =>
-        r.AllowedMachines.Count >= Machines.Names.Count ? null
-        : r.AllowedMachines.Count == 1 && r.AllowedMachines[0] is var only && Machines.Has(only) ? Machines.Names[only] + " only"
-        : $"{r.AllowedMachines.Count} machines";
+        CustomRules.MachinesLine(r.AllowedMachines) is { Length: > 0 } line ? line : null;
 
-    /// <summary>Quick Play's mines' rule (the server's default, the rule's own: <see cref="HostRules.MinesReturn"/>):
+    /// <summary>Quick Play's mines' rule (the server's default, the rule's own: <see cref="HostRules.MinesRespawn"/>):
     /// the rules line says nothing of it.</summary>
-    public static int QuickPlayMinesMs => HostRules.MinesReturn.Default;
+    public static int QuickPlayMinesMs => HostRules.MinesRespawn.Default;
 
     /// <summary>The mines' rule as the rules line says it, only when it is not Quick Play's:
-    /// "mines stay gone" (0: the game's own way), "mines back after 0.5 s"; null at Quick Play's 0.2 s.</summary>
-    public static string? MinesRule(int ms) => ms == QuickPlayMinesMs ? null
-        : ms <= 0 ? "mines stay gone"
-        : "mines back after " + (ms / 1000.0).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + " s";
+    /// "Mines respawn Off" (0: the game's own way), "Mines respawn 500 ms"; null at Quick Play's 0.2 s. The rule's label
+    /// and its value, as every rule the line names.</summary>
+    public static string? MinesRule(int ms) => ms == QuickPlayMinesMs ? null : MinesText(ms);
+
+    /// <summary>The mines' rule in words whatever its value: "Mines respawn Off", "Mines respawn 200 ms".</summary>
+    public static string MinesText(int ms) => HostRules.MinesRespawn.Label + (ms <= 0 ? " Off"
+        : FormattableString.Invariant($" {ms} {HostRules.MinesRespawn.Unit}"));
 
     /// <summary>The machine setting's rule as the rules line says it, when it is not Quick Play's (100 for everyone):
-    /// "setting 80-100", "setting 50", "your own setting" (0-100); null: Quick Play's.</summary>
-    public static string? SettingRule(SettingRange range) => range == SettingRange.QuickPlay ? null
-        : range.IsFree ? "your own setting" : $"setting {range.Text}";
+    /// "Machine setting 80-100", "Machine setting 50", "Machine setting 0-100" (each racer's own); null: Quick Play's.</summary>
+    public static string? SettingRule(SettingRange range) => range == SettingRange.QuickPlay ? null : SettingText(range);
 
-    /// <summary>The lobby's latency limit as the rules line says it, when it is not Quick Play's 250 ms: "ping limit
+    /// <summary>The machine setting's rule in words whatever its value: "Machine setting 100".</summary>
+    public static string SettingText(SettingRange range) => $"{HostRules.MachineSetting.Label} {range.Text}";
+
+    /// <summary>The lobby's latency limit as the rules line says it, when it is not Quick Play's 250 ms: "Latency limit
     /// 150 ms"; null: Quick Play's.</summary>
-    public static string? PingRule(int ms) => ms == ServerRules.QuickPlayLatencyLimitMs ? null : $"ping limit {ms} ms";
+    public static string? PingRule(int ms) => ms == ServerRules.QuickPlayLatencyLimitMs ? null : $"{HostRules.LatencyLimit.Label} {ms} ms";
 
-    private static string Describe(ServerRules r)
+    /// <param name="laps">The server's laps are the race's: false where the vote's cards say each race's laps.</param>
+    private static string Describe(ServerRules r, bool laps = true)
     {
         // the course vote and CPUs on a vote are Quick Play's own way, which the page shows itself (its steps, its
         // CPU vote): only another way is said
-        var parts = new List<string> { $"{r.Laps} {(r.Laps == 1 ? "lap" : "laps")}" };
+        var parts = laps ? new List<string> { $"{r.Laps} {(r.Laps == 1 ? "lap" : "laps")}" } : [];
         if (r.CourseSelect != CourseSelectMode.Vote)
         {
-            parts.Add(r.CourseSelect == CourseSelectMode.Random ? "random course"
+            parts.Add(r.CourseSelect == CourseSelectMode.Random ? $"{HostRules.CourseSelect.Label} Random"
                 : r.FixedCourse is { } c ? Courses.Name(c) : "the host's course");
         }
         if (r.CpuFill != CpuFillMode.Vote)
         {
-            parts.Add(r.CpuFill == CpuFillMode.Never ? "no CPUs"
-                : $"CPUs fill empty seats ({LanViewModel.CpuLevels[Math.Clamp(r.Race.CpuLevel, 0, 3)]})");
+            parts.Add(r.CpuFill == CpuFillMode.Never ? $"{HostRules.CpuFill.Label} Off"
+                : $"{HostRules.CpuFill.Label} Always · {HostRules.CpuLevel.Label} {LanViewModel.CpuLevels[Math.Clamp(r.Race.CpuLevel, 0, 3)]}");
         }
         if (r.Race.BoostFromStart)
         {
-            parts.Add("boost from the start");
-        }
-        if (r.Race.Restore)
-        {
-            parts.Add("machines come back");
+            parts.Add($"{HostRules.BoostStart.Label} On");
         }
         // the mines' rule only when it is not Quick Play's 0.2 s
         if (MinesRule(r.Race.MineRegenMs) is { } mines)

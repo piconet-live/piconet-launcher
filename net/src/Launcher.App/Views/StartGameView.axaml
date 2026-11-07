@@ -1,0 +1,15 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             x:Class="Launcher.App.Views.StartGameView"
+             x:DataType="vm:PlayControlViewModel">
+  <!-- "Start F-Zero GX", the whole game on this computer, at the left column's foot on every page, above Settings: a
+       filled button of the column's width in the places' lettering, quieter than RACE's green; while it cannot be
+       pressed, the line under it says why (GameNote). -->
+  <StackPanel Spacing="4">
+    <Button Name="StartGame" Classes="startgame" Command="{Binding PlayGameCommand}" IsEnabled="{Binding GameEnabled}"
+            Content="Start F-Zero GX" Tag="{StaticResource GlyphPlay}" AutomationProperties.Name="Start F-Zero GX" />
+    <TextBlock Name="GameNote" Classes="faint" Text="{Binding GameNote}" TextWrapping="Wrap"
+               IsVisible="{Binding GameNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+  </StackPanel>
+</UserControl>

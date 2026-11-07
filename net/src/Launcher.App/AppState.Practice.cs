@@ -10,8 +10,20 @@ public sealed partial class AppState
 
     private IReadOnlyList<Online.Protocol.StatPack>? _practicePacks;
 
+    /// <summary>Practice's game mode (<see cref="Launcher.Core.PracticeMode"/>): the file beside the program, compiled
+    /// once; null when it is missing or does not compile (<see cref="PracticeModeProblem"/> says which).</summary>
+    public Online.Protocol.ModePackage? PracticeModeFile => (_practiceMode ??= ReadPracticeMode()).Mode;
+
+    /// <summary>Why there is no <see cref="PracticeModeFile"/>; null when there is one.</summary>
+    public string? PracticeModeProblem => (_practiceMode ??= ReadPracticeMode()).Problem;
+
+    private (Online.Protocol.ModePackage? Mode, string? Problem)? _practiceMode;
+
+    private static (Online.Protocol.ModePackage?, string?) ReadPracticeMode() =>
+        (PracticeMode.Read(Path.Combine(AppContext.BaseDirectory, "quickplay"), out var problem), problem);
+
     /// <summary>Starts the game on a practice (Play's Practice, START PRACTICE): its match file
-    /// (<see cref="PracticeMatch"/>) in the data folder, raced as a match file is (<see cref="PlayMatch"/>), recorded
+    /// (<see cref="PracticeMatch"/>, under <see cref="PracticeModeFile"/>, the rules it states its own) in the data folder, raced as a match file is (<see cref="PlayMatch"/>), recorded
     /// in the replay folder only while "Record practice" is on (<see cref="LauncherSettings.RecordPractice"/>),
     /// remembered in the settings; a problem string otherwise.</summary>
     public string? StartPractice(PracticeSetup setup)
@@ -21,10 +33,19 @@ public sealed partial class AppState
         {
             return GameOpenText;
         }
+        if (PipelinesBlock is { } preparing)
+        {
+            return preparing;
+        }
+        if (PracticeModeFile is not { } mode)
+        {
+            return PracticeModeProblem;
+        }
         var racer = Settings.Racer;
         var file = Path.Combine(dataFolder, "practice-match.json");
-        var pack = setup.StatPack is { } named ? PracticePackList.FirstOrDefault(p => p.Name == named) : null;
-        if (setup.StatPack is not null && pack is null)
+        var raced = PracticeMode.Over(mode, setup.Kept());
+        var pack = raced.StatPack is { } named ? PracticePackList.FirstOrDefault(p => p.Name == named) : null;
+        if (raced.StatPack is not null && pack is null)
         {
             return "Stat pack not found";
         }
@@ -35,7 +56,7 @@ public sealed partial class AppState
         {
             Update(s => s with { Practice = kept });
         }
-        PracticeMatch.Write(file, setup, racer.Name, racer.LookOf(setup.Machine), DateTimeOffset.Now, pack);
+        PracticeMatch.Write(file, setup, racer.Name, racer.LookOf(setup.Machine), DateTimeOffset.Now, pack, mode, racer.Trail);
         return PlayMatch(file, run: GameRun.Practice, course: setup.Kept().Course, record: Settings.RecordPractice);
     }
 }

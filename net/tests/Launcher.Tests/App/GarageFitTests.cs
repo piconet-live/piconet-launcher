@@ -93,8 +93,36 @@ public sealed class GarageFitTests : IDisposable
         var inset = garage.TranslatePoint(new Point(16, 0), window)!.Value.X - garage.TranslatePoint(default, window)!.Value.X;
         Assert.True(panel.Right <= stage.Right - inset + 0.5, $"{at}: the panel ends at {panel.Right}, not 16 px in from the stage's edge {stage.Right}");
         Assert.True(page.Extent.Height <= page.Viewport.Height + 0.5, $"{at}: PREVIEW scrolls ({page.Extent.Height} in {page.Viewport.Height})");
+        TrailFits(window, garage, model, at);
         model.BackCommand.Execute(null);
         PumpFor(100);
+    }
+
+    /// <summary>The Colour tab's trail: its wheel, choices and box end in the panel as the machine's do.</summary>
+    private static void TrailFits(Window window, GarageView garage, GarageViewModel model, string at)
+    {
+        model.ColourTabIndex = model.ColourTabs.Count - 1;
+        PumpFor(150);
+        var panel = In(window, Named<Control>(garage, "SidePanel"));
+        var trail = Named<Control>(garage, "TrailColour");
+        Assert.True(trail.IsEffectivelyVisible, $"{at}: no trail picker");
+        Assert.False(Named<Control>(garage, "Wheel").IsEffectivelyVisible, $"{at}: the machine's wheel shows with the trail's");
+        var wheel = In(window, Named<Control>(garage, "TrailWheel"));
+        var tabs = In(window, Named<Control>(garage, "TrailColourTabs"));
+        Assert.True(wheel.Bottom <= panel.Bottom, $"{at}: the trail's wheel ends at {wheel.Bottom}, under the panel's foot {panel.Bottom}");
+        Assert.True(tabs.Bottom <= panel.Bottom && tabs.Right <= panel.Right + 0.5, $"{at}: the trail's choices end outside the panel");
+        if (Environment.GetEnvironmentVariable("LOBBY_SHOTS") is { Length: > 0 } folder)
+        {
+            model.Trail.ColorHex = "#28FF3C";
+            PumpFor(150);
+            AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+            Directory.CreateDirectory(folder);
+            window.CaptureRenderedFrame()?.Save(Path.Combine(folder, $"garage-trail-{window.Width}x{window.Height}-{garage.Bounds.Width:0}.png"), new Avalonia.Media.Imaging.PngBitmapEncoderOptions());
+            model.Trail.PickSwatchCommand.Execute(0);
+        }
+        model.ColourTabIndex = 0;
+        PumpFor(50);
+        Assert.True(Named<Control>(garage, "Wheel").IsEffectivelyVisible, $"{at}: the machine's wheel is not back");
     }
 
     [Theory]

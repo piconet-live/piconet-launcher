@@ -12,7 +12,7 @@ internal static class Program
     /// <summary>
     /// The launcher's window; or one of the modes without it, as the command line says (<see cref="CommandLine"/>
     /// describes every option): <c>--play-offline</c>, the recompiled game started for offline play (the same start
-    /// as the left column's Play F-Zero GX), waiting until the game is closed; <c>--play-match FILE</c>, the game
+    /// as the left column's Start F-Zero GX), waiting until the game is closed; <c>--play-match FILE</c>, the game
     /// started on the race of that match file (tests and development), recorded into the replay folder or where
     /// <c>--replay FILE</c> says; <c>--play-replay FILE</c>, the game playing that replay file back, which stays paused
     /// on the race's last picture until the game is closed (the replay scrubber); <c>--list-replays</c>, the replay folder's replays as the Replays page lists them, one line
@@ -97,6 +97,9 @@ internal static class Program
         }
         state.BoardMade += board => Launcher.Core.BoardLines.Follow(board, Say);
         state.Noted += text => Say(System.Text.Json.JsonSerializer.Serialize(new { @event = "noted", values = new { text } }));
+        // the mods' list is read off the main thread at the start: a start from here waits for it, or its game could
+        // go without the overlay of the mods that are on
+        state.ModsRead.Wait();
         var problem = line.Mode switch
         {
             StartMode.PlayReplay => state.Play(line.File!),
@@ -150,11 +153,12 @@ internal static class Program
         }
         state.BoardMade += board => Launcher.Core.BoardLines.Follow(board, Write);
         var script = new Launcher.Core.QuickPlayScript(new Launcher.Core.QuickPlayScriptOptions(
-            visit.Races, visit.StartWith, visit.VoteCourse, Watch: visit.Watch), Write);
+            visit.Races, visit.StartWith, visit.VoteCourse, Watch: visit.Watch, Custom: visit.Custom, AfterLeave: visit.AfterLeave,
+            Rejoin: state.Rejoin), Write);
         Launcher.Core.QuickPlaySession session;
         try
         {
-            session = state.JoinAsync(new Uri(url)).GetAwaiter().GetResult();
+            session = state.JoinAsync(new Uri(url), visit.Custom is not null).GetAwaiter().GetResult();
         }
         catch (Exception e) when (e is System.Net.WebSockets.WebSocketException or UriFormatException or IOException)
         {
@@ -235,6 +239,7 @@ internal static class Program
                     $"place {own.Place} of {r.Results!.Count}, {(own.Time is { } t ? t.ToString("m\\:ss\\.fff", System.Globalization.CultureInfo.InvariantCulture) : own.Out ? "out" : "disqualified")}"),
                 "players " + Launcher.Core.Replays.Racers(r.Players),
                 r.StatPackLabel.Length > 0 ? "stat pack: " + r.StatPackLabel : "original stats",
+                r.ModeLabel.Length > 0 ? "mode: " + r.ModeLabel : "no mode",
                 $"recorded by {engine ?? "?"} {(module is null ? "?" : module[..8])}",
                 Launcher.Core.ReplayFile.Problem(r.Path) ?? "whole"));
         }
@@ -428,5 +433,5 @@ internal static class Program
         return 0;
     }
     public static AppBuilder BuildAvaloniaApp() =>
-        AppBuilder.Configure<App>().UsePlatformDetect().LogToTrace();
+        AppBuilder.Configure<App>().UsePlatformDetect().With(WindowsDrawing.Options(Line.Debug)).LogToTrace();
 }

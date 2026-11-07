@@ -21,7 +21,7 @@
 
   <!-- Package metadata; the version is bumped deliberately, see CHANGELOG.md. -->
   <PropertyGroup>
-    <VersionPrefix>0.5.2</VersionPrefix>
+    <VersionPrefix>0.6.0</VersionPrefix>
     <!-- The product's name, never a person's: an assembly's company is in every program and library a player is
          handed (their properties in Explorer, and their text). The launcher's AssemblyNamesTests holds it equal to
          the name players see; port/build/package.py refuses a copy that names anybody. -->
@@ -42,6 +42,8 @@
     <OnlineProtocolProject Condition="'$(OnlineProtocolProject)' == ''">$(ProtocolFolder)net/src/Online.Protocol/Online.Protocol.csproj</OnlineProtocolProject>
     <ProtocolGenerated Condition="'$(ProtocolGenerated)' == ''">$(ProtocolFolder)protocol/generated/</ProtocolGenerated>
     <ProtocolPacks Condition="'$(ProtocolPacks)' == ''">$(ProtocolFolder)protocol/packs/</ProtocolPacks>
+    <!-- Quick Play's rotation, quickplay.toml and its mode files (the stand-in service races what the service races) -->
+    <ProtocolQuickPlay Condition="'$(ProtocolQuickPlay)' == ''">$(ProtocolFolder)protocol/quickplay/</ProtocolQuickPlay>
   </PropertyGroup>
 
   <!-- The runner's table of pins (port/setup/pins.tsv), where the launcher's disc tests find your disc image

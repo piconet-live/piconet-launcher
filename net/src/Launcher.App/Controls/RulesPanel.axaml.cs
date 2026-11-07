@@ -26,13 +26,18 @@ public sealed partial class RulesPanel : UserControl
         AddHandler(Button.ClickEvent, OnClick);
     }
 
-    /// <summary>A stat pack row's Choose file: the system's file picker, and the file into the row.</summary>
+    /// <summary>A stat pack's or a mode's row's Choose file: the system's file picker, and the file into the row.</summary>
     private async void OnClick(object? sender, RoutedEventArgs e)
     {
         if (e.Source is Button { Name: "PackFile", DataContext: PackRule row } button &&
             await Views.StatPackPicker.PickAsync(button).ConfigureAwait(true) is { } path)
         {
             row.Load(path);
+        }
+        else if (e.Source is Button { Name: "ModeFile", DataContext: GameModeRule mode } modeButton &&
+                 await Views.StatPackPicker.PickModeAsync(modeButton).ConfigureAwait(true) is { } modePath)
+        {
+            mode.Load(modePath);
         }
     }
 

@@ -349,6 +349,9 @@ public sealed partial class ControllerHelperTests : IDisposable
         Assert.Null(ControllerWords.Port1Problem(null));
         // every state of the adapter has its sentence
         Assert.All(Enum.GetValues<AdapterState>(), s => Assert.NotEmpty(ControllerWords.Adapter(new HelperAdapter(s, "why", [false, false, false, false]))));
+        // "not asked" only where a test's launch file keeps the helper off the adapter (leaveAdapter); a game's own
+        Assert.Equal("Adapter off for tests", ControllerWords.Adapter(new HelperAdapter(AdapterState.NotAsked, "", [false, false, false, false])));
+        Assert.Equal("In use by the game", ControllerWords.InUseByTheGame);
         Assert.Equal("the keyboard", ControllerWords.DeviceName("DInput/0/Keyboard Mouse"));
     }
 

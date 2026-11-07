@@ -1,3 +1,5 @@
+using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Threading;
@@ -82,6 +84,19 @@ public sealed class SettingsTabsTests : IDisposable
         }
     }
 
+    /// <summary>With INPUTS_SHOTS naming a folder, the window there as a PNG.</summary>
+    private static void Shot(Window window, string name)
+    {
+        if (Environment.GetEnvironmentVariable("INPUTS_SHOTS") is not { Length: > 0 } folder)
+        {
+            return;
+        }
+        PumpFor(300);
+        Avalonia.Headless.AvaloniaHeadlessPlatform.ForceRenderTimerTick();
+        Directory.CreateDirectory(folder);
+        window.CaptureRenderedFrame()?.Save(Path.Combine(folder, name + ".png"), new Avalonia.Media.Imaging.PngBitmapEncoderOptions());
+    }
+
     /// <summary>A tab of the window's top row by its word.</summary>
     /// <summary>A tab above the page; Settings: its button at the left column's foot.</summary>
     private static Button TopTab(MainWindow window, string word) => word == "Settings"
@@ -100,18 +115,38 @@ public sealed class SettingsTabsTests : IDisposable
         [.. window.GetVisualDescendants().OfType<SettingsView>().Single().GetVisualDescendants().OfType<TextBlock>()
             .Where(t => t.Classes.Contains("label") && t.IsEffectivelyVisible).Select(t => t.Text ?? "")];
 
+    /// <summary>The Settings page as it reads down the screen: each group's heading ("# Display") and the labels of its
+    /// rows, in the order they are drawn, not the order they are written.</summary>
+    private static string[] Form(MainWindow window)
+    {
+        var view = window.GetVisualDescendants().OfType<SettingsView>().Single();
+        return [.. view.GetVisualDescendants().OfType<TextBlock>()
+            .Where(t => t.IsEffectivelyVisible && (t.Classes.Contains("label") || t.Classes.Contains("section")))
+            .OrderBy(t => t.TranslatePoint(default, view)!.Value.Y)
+            .Select(t => t.Classes.Contains("section") ? "# " + t.Text : t.Text ?? "")];
+    }
+
     [Fact]
     public Task TheSettingsTabHasFourPagesEachWithItsOwnRows() => OnAWindow(State("""{"noServer": true}"""), (window, main) =>
     {
         Click(window, TopTab(window, "Settings"));
         Assert.Equal(["Game", "Online", "Controller", "Launcher"], Headings(window).Select(b => ((SectionLink)b.DataContext!).Label));
-        // a first start: Game
+        // a first start: Game (Aurora's rows in every build: it draws every start; these tests are stamped public)
         Assert.Same(main.Settings, main.Current);
-        Assert.Equal(["Widescreen", "Full screen mode", "Vertical sync", "Refresh rate (experimental)", "Frame rate", "Volume", "Other racers' sounds", "Rumble"], Rows(window));
+        // each page in groups under headings, as the Launcher page's Replays
+        Assert.Equal(["# Display", "Widescreen", "Full screen mode", "Vertical sync", "High refresh", "Show frame rate",
+            "# Graphics", "Resolution", "Anti-aliasing", "Anisotropic filtering", "Ray tracing", "Colourblind filter",
+            "# Sound", "Volume", "Other racers' sounds",
+            "# Controller", "Rumble", "Show inputs"], Form(window));
+        // Show frame rate and Ray tracing: switches, as Rumble's
+        Assert.IsType<ToggleSwitch>(Named<Control>(window.GetVisualDescendants().OfType<SettingsView>().Single(), "ShowFrameRate"));
+        Assert.IsType<ToggleSwitch>(Named<Control>(window.GetVisualDescendants().OfType<SettingsView>().Single(), "RayTracing"));
+        Assert.DoesNotContain(window.GetVisualDescendants().OfType<Control>(), c => Equals(AutomationProperties.GetName(c), "Picture engine"));
+        Shot(window, "settings-game");
         Assert.Contains("on", Heading(window, "Game").Classes);
 
         Click(window, Heading(window, "Online"));
-        Assert.Equal(["Input delay", "Server", "Account", "Notices", "Activity", "Chat"], Rows(window));
+        Assert.Equal(["# Connection", "Input delay", "Server", "Account", "# Social", "Notices", "Show on Discord", "Hide swear words"], Form(window));
         Assert.Equal(["Online"], Headings(window).Where(b => b.Classes.Contains("on")).Select(b => ((SectionLink)b.DataContext!).Label));
 
         Click(window, Heading(window, "Controller"));
@@ -122,11 +157,71 @@ public sealed class SettingsTabsTests : IDisposable
         Click(window, Heading(window, "Launcher"));
         Assert.Same(main.Settings, main.Current);
         // (Updates shown since 0.5.0: NotYet; Older copy as this launcher is no portable copy: DataMoveViewModel.Offered)
-        Assert.Equal(["Disc image", "Sounds", "Menus", "Interface scale", "Updates", "Recording", "Folder", "Older copy"], Rows(window));
+        Assert.Equal(["# General", "Disc image", "Update automatically", "Older copy",
+            "# Interface", "Sounds", "Mute", "Controller navigation", "Reduced motion", "Interface scale",
+            "# Replays", "Record races", "Record practice", "Folder"], Form(window));
+        // one setting a row: every on/off one a switch, no box with its own words beside a label
+        Assert.DoesNotContain(window.GetVisualDescendants().OfType<SettingsView>().Single().GetVisualDescendants().OfType<CheckBox>(),
+            c => c.IsEffectivelyVisible);
         Assert.Equal(["Launcher"], Headings(window).Where(b => b.Classes.Contains("on")).Select(b => ((SectionLink)b.DataContext!).Label));
 
         Click(window, Heading(window, "Game"));
         Assert.Equal("Widescreen", Rows(window)[0]);
+    });
+
+    /// <summary>Ray tracing is experimental in 0.6.0 (it smears at High refresh 240): on a card that can ray trace, a faint
+    /// "Experimental" beside its switch, the row's label still "Ray tracing"; on one that cannot, only the card's reason.</summary>
+    [Fact]
+    public Task RayTracingSaysExperimentalBesideItsSwitch() => OnAWindow(State("""{"noServer": true}"""), (window, main) =>
+    {
+        Click(window, TopTab(window, "Settings"));
+        Pump(() => main.Settings.RayTracingReason.Length > 0 || main.Settings.RayTracingPossible);   // the card's answer first
+        var view = window.GetVisualDescendants().OfType<SettingsView>().Single();
+        var word = Named<TextBlock>(view, "RayTracingExperimental");
+        Assert.Equal("Experimental", word.Text);
+        Assert.Contains("faint", word.Classes);
+        Assert.Equal("Ray tracing, experimental", AutomationProperties.GetName(Named<ToggleSwitch>(view, "RayTracing")));
+        Assert.Contains("Ray tracing", Rows(window));
+        Assert.DoesNotContain(Rows(window), r => r.Contains("xperimental"));
+        bool Shows(string text) => view.GetVisualDescendants().OfType<TextBlock>().Any(t => t.IsEffectivelyVisible && t.Text == text);
+
+        main.Settings.RayTracingPossible = true;                                  // a card that can: the word, no reason
+        main.Settings.RayTracingReason = "";
+        Pump(() => word.IsEffectivelyVisible, "no Experimental beside the switch on a card that can ray trace");
+        Assert.False(Shows("No card"));
+
+        main.Settings.RayTracingPossible = false;                                 // one that cannot: its reason, no word
+        main.Settings.RayTracingReason = "No card";
+        Pump(() => Shows("No card"), "the card's reason did not show");
+        Assert.False(word.IsEffectivelyVisible);
+    });
+
+    /// <summary>At the launcher's least window, 1280 by 720, each page scrolls down to its last group, and its last
+    /// row comes into the window. With INPUTS_SHOTS naming a folder, each page there at its top and at its foot.</summary>
+    [Fact]
+    public Task AtTheLeastWindowEachPageScrollsToItsLastGroup() => OnAWindow(State("""{"noServer": true}"""), (window, main) =>
+    {
+        window.Width = 1280;
+        window.Height = 720;
+        Click(window, TopTab(window, "Settings"));
+        var scroll = Named<ScrollViewer>(window, "PageScroll");
+        foreach (var (page, first, last) in new[] { ("Game", "# Display", "Show inputs"), ("Online", "# Connection", "Hide swear words"),
+                     ("Launcher", "# General", "Folder") })
+        {
+            Click(window, Heading(window, page));
+            scroll.Offset = default;
+            Dispatcher.UIThread.RunJobs();
+            Assert.Equal(first, Form(window)[0]);
+            Shot(window, $"settings-{page.ToLowerInvariant()}-top");
+
+            scroll.Offset = new Vector(0, scroll.Extent.Height);
+            Dispatcher.UIThread.RunJobs();
+            var label = window.GetVisualDescendants().OfType<SettingsView>().Single().GetVisualDescendants().OfType<TextBlock>()
+                .Single(t => t.Classes.Contains("label") && t.Text == last && t.IsEffectivelyVisible);
+            Assert.Equal(last, Form(window)[^1]);
+            Assert.InRange(label.TranslatePoint(default, scroll)!.Value.Y, 0, scroll.Viewport.Height - label.Bounds.Height);
+            Shot(window, $"settings-{page.ToLowerInvariant()}-foot");
+        }
     });
 
     [Fact]

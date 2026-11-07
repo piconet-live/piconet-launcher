@@ -182,7 +182,7 @@ public sealed partial class SetUpInGameTests
         }
     }
 
-    /// <summary>The start itself looks, for both buttons that come to it ("Play F-Zero GX" asks before it leaves
+    /// <summary>The start itself looks, for both buttons that come to it ("Start F-Zero GX" asks before it leaves
     /// Quick Play, and waits for the controllers' check after its look: a join can land in that wait).</summary>
     [Fact]
     public async Task InQuickPlayOfflinePlayStartsNoGame()

@@ -60,6 +60,10 @@ public sealed partial class GarageViewModel : ViewModelBase
             {
                 OnPropertyChanged(nameof(ShownBuild));
                 OnPropertyChanged(nameof(CanRemove));
+                if (TrailShown && CustomShown)
+                {
+                    ShowTrailSwatches();   // (another booster: its own trail colours)
+                }
             }
         };
         LoadLenses();
@@ -119,14 +123,12 @@ public sealed partial class GarageViewModel : ViewModelBase
     public partial IReadOnlyList<StockSwatch> Swatches { get; set; } = [];
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(SettingText), nameof(ShownSetting))]
+    [NotifyPropertyChangedFor(nameof(ShownSetting))]
     public partial int Setting { get; set; } = 100;
 
     public string MachineName => Machines.Names[Math.Clamp(MachineIndex, 0, Machines.Names.Count - 1)];
 
     public bool ColorValid => Rgb.Parse(ColorHex) is not null;
-
-    public string SettingText => ShownSetting.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
     // the paint this machine had or was given, kept while a stock colour is chosen so it can be picked again
     private Rgb? _paint;
@@ -150,6 +152,10 @@ public sealed partial class GarageViewModel : ViewModelBase
         _loading = false;
         Swatches = Placeholders();
         _ = RefreshSwatchesAsync(value);
+        if (TrailShown && !CustomShown)
+        {
+            ShowTrailSwatches();
+        }
     }
 
     partial void OnColorHexChanged(string value)
@@ -193,7 +199,7 @@ public sealed partial class GarageViewModel : ViewModelBase
     /// unless a custom machine is raced (<see cref="RacerProfile.Raced"/>): then its tile alone, and no stock tile.</summary>
     private void ShowSelected()
     {
-        var lit = _state.Settings.Racer.Raced.IsCustom ? -1 : ChosenIndex;
+        var lit = _state.Settings.Racer.Raced.IsCustom && !CustomsOff ? -1 : ChosenIndex;
         foreach (var card in _cards)
         {
             card.Selected = card.Id == lit;
@@ -284,6 +290,7 @@ public sealed partial class GarageViewModel : ViewModelBase
     /// raced are not the garage's.</summary>
     public void SaveNow()
     {
+        SaveTrailNow();
         if (!_changed || MachineIndex < 0)
         {
             return;

@@ -13,7 +13,7 @@ namespace Launcher.Core;
 public static class ReplayIndex
 {
     /// <summary>The index's format: raised whenever <see cref="ReplayRow"/> changes, and the index is made again.</summary>
-    public const int Format = 2;   // 2: the Replays page's listing
+    public const int Format = 3;   // 2: the Replays page's listing; 3: its mode
 
     /// <summary>The largest index read back (one row is a few hundred bytes: this is tens of thousands of replays).</summary>
     private const long Largest = 32L << 20;

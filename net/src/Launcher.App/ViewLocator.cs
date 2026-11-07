@@ -20,6 +20,7 @@ public sealed class ViewLocator : IDataTemplate
         ControllerViewModel => new ControllerView(),
         ReplaysViewModel => new ReplaysView(),
         StatsViewModel => new StatsView(),
+        ModsViewModel => new ModsView(),
         DiscViewModel => new DiscView(),
         _ => new TextBlock { Text = param?.GetType().Name ?? "" },
     };

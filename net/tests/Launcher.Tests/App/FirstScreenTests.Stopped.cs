@@ -141,7 +141,7 @@ public sealed partial class FirstScreenTests
 
             Assert.True(screen.Main.Navigation);                               // Settings and Replays can be reached
             Assert.Equal(Why, state.Problem);                                  // said where the launcher's notices go
-            Assert.Equal((true, Why, false, null), Buttons(screen));            // and no game is started on those files
+            Assert.Equal((true, Why, false, Why), Buttons(screen));             // and no game is started on those files
             Assert.Equal("PREPARE AGAIN", screen.Main.Control.GoText);         // the big button leads back, with no restart
             Assert.Equal(image, state.Settings.DiscPath);
             Assert.NotNull(state.PlayOffline());

@@ -9,11 +9,33 @@
   <!-- Play's Custom lobbies page (direction D), two faces. The browser: a table of the lobbies (a lock where one has
        a password, its name, its host, the players of its room, its stage, the rules that differ from Quick Play's),
        a row pressed to join; a locked row asks for the password first, in a strip over the table. Create beside the
-       table's head. Create: a line with its title and Back (where the lobby page has Leave); the name, the password
-       and the preset in a rules panel with CREATE at its foot, the rules that differ under the preset, and beside the
-       preset Edit rules, which opens every rule in its groups beside the panel (Hide rules closes them). A fixed
-       course opens the course picker in the rules' place. -->
+       table's head. Create: a line with its title and Back (where the lobby page has Leave); the modes to pick from,
+       then the name, the password and the mode's settings in a rules panel with CREATE at its foot, and the lobby's
+       own settings beside it. A fixed course opens the course picker in the settings' place. -->
   <UserControl.Styles>
+    <!-- the create face's modes: rows, not the theme's list items -->
+    <Style Selector="ListBox.modes">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Padding" Value="0" />
+    </Style>
+    <Style Selector="ListBox.modes ListBoxItem">
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Margin" Value="0" />
+      <Setter Property="MinHeight" Value="0" />
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    </Style>
+    <Style Selector="ListBox.modes ListBoxItem /template/ ContentPresenter, ListBox.modes ListBoxItem:pointerover /template/ ContentPresenter, ListBox.modes ListBoxItem:selected /template/ ContentPresenter, ListBox.modes ListBoxItem:focus-visible /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="Padding" Value="0" />
+    </Style>
+    <Style Selector="TextBlock.grouphead">
+      <Setter Property="Foreground" Value="{StaticResource FaintBrush}" />
+    </Style>
     <Style Selector="Path.lock">
       <Setter Property="Fill" Value="{StaticResource DimBrush}" />
       <Setter Property="Width" Value="12" />
@@ -80,7 +102,7 @@
             <TextBlock Grid.Column="5" Classes="colhead" Text="RULES" LetterSpacing="1" Margin="12,0,0,0" />
           </Grid>
         </Border>
-        <ItemsControl Name="LobbyList" ItemsSource="{Binding Rows}">
+        <ItemsControl Name="LobbyList" ItemsSource="{Binding Rows}" c:Motion.Stagger="True">
           <ItemsControl.ItemTemplate>
             <DataTemplate x:DataType="vm:CustomLobbyRow">
               <Button Classes="plain lobbyrow" AutomationProperties.Name="{Binding Name}"
@@ -105,36 +127,63 @@
       </StackPanel>
     </StackPanel>
 
-    <!-- Create -->
-    <Grid RowDefinitions="Auto,*" IsVisible="{Binding Creating}">
+    <!-- Create: pick a mode, then its settings. The modes the server lists (Quick Play's rules first, then with each stat
+         pack, then the others) and From file… for the host's own; beside them the name, the password and the chosen
+         mode's settings with CREATE at their foot, and the lobby's own settings. A fixed course opens the course picker
+         in the settings' place. -->
+    <Grid RowDefinitions="Auto,*" IsVisible="{Binding Creating}" c:Motion.Reveal="True">
       <!-- the line: the face's title, and at its end the way back, where the lobby page has its Leave -->
       <Grid Name="CreateLine" ColumnDefinitions="*,Auto" Height="32" Margin="0,0,0,16">
         <TextBlock Classes="display d20" Text="NEW LOBBY" VerticalAlignment="Center" />
         <Button Grid.Column="1" Name="Back" Classes="secondary surface" Content="Back" Command="{Binding BackCommand}" />
       </Grid>
       <Grid Grid.Row="1" ColumnDefinitions="344,16,*">
+        <!-- the modes: a row each, its line of what it is under its name; the chosen one lit with a mark at its edge -->
         <StackPanel Spacing="12">
-          <c:RulesPanel Name="CreatePanel" Groups="{Binding Editor.LobbyGroups}" Action="CREATE" ActionCommand="{Binding CreateCommand}" />
+          <c:Plate Shape="Chamfer" Background="{StaticResource WellBrush}" Padding="16,8,16,16">
+            <StackPanel Spacing="4">
+              <TextBlock Classes="caps grouphead" Text="MODE" Margin="0,4,0,2" />
+              <ListBox Name="ModeList" Classes="modes" ItemsSource="{Binding Editor.ModeRow.Choices}"
+                       SelectedIndex="{Binding Editor.ModeRow.Selected}" AutomationProperties.Name="Mode">
+                <ListBox.ItemTemplate>
+                  <DataTemplate x:DataType="vm:ModeChoice">
+                    <Border Classes="row hover" Classes.on="{Binding $parent[ListBoxItem].IsSelected}" Padding="0">
+                      <Grid ColumnDefinitions="3,*">
+                        <Border Background="{StaticResource AccentBrush}" IsVisible="{Binding $parent[ListBoxItem].IsSelected}" />
+                        <StackPanel Grid.Column="1" Margin="10,8" Spacing="2">
+                          <TextBlock Classes="strong" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                          <TextBlock Classes="dim" Text="{Binding About}" TextWrapping="Wrap" IsVisible="{Binding HasAbout}" />
+                        </StackPanel>
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+              <Button Name="ModeFromFile" Classes="link" Content="From file…" HorizontalAlignment="Left" Margin="0,8,0,0"
+                      Click="OnModeFromFile" AutomationProperties.Name="A mode from a file" />
+            </StackPanel>
+          </c:Plate>
           <Grid Classes="warnline" ColumnDefinitions="Auto,*"
-                IsVisible="{Binding Notice, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                IsVisible="{Binding Editor.ModeRow.HasNote, FallbackValue=False}">
             <Path Classes="warnmark" />
-            <TextBlock Grid.Column="1" Text="{Binding Notice}" />
+            <TextBlock Grid.Column="1" Text="{Binding Editor.ModeRow.Note}" TextWrapping="Wrap" />
           </Grid>
         </StackPanel>
         <Panel Grid.Column="2">
-          <ScrollViewer IsVisible="{Binding RulePanelsShown}" VerticalScrollBarVisibility="Auto">
-            <ItemsControl Name="RulePanels" ItemsSource="{Binding RulePanels}">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate><UniformGrid Rows="1" /></ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate x:DataType="vm:RulePanel">
-                  <c:RulesPanel Groups="{Binding Groups}" Margin="0,0,16,0" VerticalAlignment="Top" />
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </ScrollViewer>
-          <!-- a fixed course: the course picker in the rules' place, a course pressed is the lobby's -->
+          <Grid ColumnDefinitions="*,16,*" IsVisible="{Binding RulePanelsShown}">
+            <StackPanel Spacing="12" VerticalAlignment="Top">
+              <c:RulesPanel Name="CreatePanel" Groups="{Binding Editor.CreateGroups}" Action="CREATE" ActionCommand="{Binding CreateCommand}" />
+              <Grid Classes="warnline" ColumnDefinitions="Auto,*"
+                    IsVisible="{Binding Notice, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                <Path Classes="warnmark" />
+                <TextBlock Grid.Column="1" Text="{Binding Notice}" TextWrapping="Wrap" />
+              </Grid>
+            </StackPanel>
+            <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
+              <c:RulesPanel Name="LobbyPanel" Groups="{Binding RuleGroups}" VerticalAlignment="Top" />
+            </ScrollViewer>
+          </Grid>
+          <!-- a fixed course: the course picker in the settings' place, a course pressed is the lobby's -->
           <StackPanel Name="CoursePane" Spacing="12" IsVisible="{Binding PickerShown}">
             <Grid ColumnDefinitions="*,Auto" Height="32">
               <TextBlock Classes="display d20" Text="CHOOSE THE COURSE" VerticalAlignment="Center" />

@@ -73,6 +73,12 @@ public sealed record TaskbarGroup(string Id, string Program, string Name)
 /// <param name="Title">The window's title, the runner's <c>--title</c>.</param>
 /// <param name="Name">The name in the strip (the launch file's <c>"windowName"</c>); null: none.</param>
 /// <param name="ShowFrameRate">The strip shows the frame rate (<c>"showFrameRate"</c>).</param>
+/// <param name="AuroraSize">Aurora's picture size (<c>"auroraSize"</c>); null: Auto.</param>
+/// <param name="AuroraEdges">Aurora's samples for each pixel (<c>"auroraEdges"</c>); 0: left out.</param>
+/// <param name="AuroraTextures">Aurora's anisotropic filtering (<c>"auroraTextures"</c>); 0: left out.</param>
+/// <param name="AuroraColourblind">Aurora's colour filter of the whole picture (<c>"auroraColourblind"</c>); null: off.</param>
+/// <param name="AuroraHighRefresh">Pictures a second asked of Aurora, a step run ahead for those between (<c>"auroraHighRefresh"</c>); 0: left out.</param>
+/// <param name="AuroraRayTracing">Ray tracing, the runner's tested set of Aurora's ray switches (<c>"auroraRayTracing"</c>); false: left out.</param>
 /// <param name="NamePicture">The name as the launcher's own title bar draws it, in the game's lettering from the
 /// player's disc (<c>"windowNamePicture"</c>: the game draws it in place of the name's text); null: the text.</param>
 /// <param name="Taskbar">The launcher's taskbar button, which the game's window joins (<c>"taskbar"</c>); null: the
@@ -87,20 +93,22 @@ public sealed record TaskbarGroup(string Id, string Program, string Name)
 /// neither: not written, and the game's full screen is the borderless window.</param>
 /// <param name="Board">The launcher's status board for this game (<see cref="GameBoard.Path"/>; <c>"board"</c>): the
 /// channel by which the launcher sees the game run and stand still, gets the race, and asks it to stop. Null: none.</param>
-/// <param name="RefreshRate">Pictures a second where frames are drawn between two steps (the player's setting,
-/// <see cref="LauncherSettings.GameRefreshRate"/>; <c>"refreshRate"</c>: "120", "240" or "display"). Null, or none
-/// of them: not written, and the game draws its own picture a step.</param>
 /// <param name="Rumble">The controllers may rumble (the player's setting, <see cref="LauncherSettings.Rumble"/>;
 /// <c>"rumble": false</c>, written only when off: a runner from before the key refuses it).</param>
-/// <param name="Camera">The chase camera view a race starts in, 1 to 3 (the player's last,
+/// <param name="Camera">The chase camera view a race starts in, 1 to 3 or 4 first person (the player's last,
 /// <see cref="LauncherSettings.StartCamera"/>; <c>match.camera</c>, written only in a race's file and only with a
 /// view: a runner from before the key refuses it). 0: the game's own.</param>
 public sealed record GameWindow(string Title, string? Name = null, bool ShowFrameRate = false, Picture? NamePicture = null,
     TaskbarGroup? Taskbar = null, string? Present = null, bool VerticalSync = false, string? FullScreen = null,
-    string? Board = null, string? RefreshRate = null, bool Rumble = true, int Camera = 0)
+    string? Board = null, bool Rumble = true, int Camera = 0,
+    string? AuroraSize = null, int AuroraEdges = 0, int AuroraTextures = 0, string? AuroraColourblind = null, int AuroraHighRefresh = 0, bool AuroraRayTracing = false)
 {
     /// <summary>The largest name picture the game's reader takes.</summary>
     public const int MostPictureWidth = LaunchFormat.WindowNamePictureWidthHigh, MostPictureHeight = LaunchFormat.WindowNamePictureHeightHigh;
+
+    /// <summary>Who draws the picture (<c>"renderer"</c>): Aurora, in every start since 0.6.0 (the emulator's own
+    /// pictures are no choice any more; a runner given no key draws them, which only tests do).</summary>
+    public const string Renderer = "aurora";
 
     /// <summary>The launch file with the window's members.</summary>
     internal LaunchFile Into(LaunchFile file) => file with
@@ -112,15 +120,19 @@ public sealed record GameWindow(string Title, string? Name = null, bool ShowFram
             ? new LaunchNamePicture(picture.Width, picture.Height, Convert.ToBase64String(picture.Rgba))
             : null,
         ShowFrameRate = ShowFrameRate,
+        Renderer = Renderer,
+        AuroraSize = AuroraSize,
+        AuroraEdges = AuroraEdges,
+        AuroraTextures = AuroraTextures,
+        AuroraColourblind = AuroraColourblind,
+        AuroraHighRefresh = AuroraHighRefresh,
+        AuroraRayTracing = AuroraRayTracing,
         // written only when off: the game's default is on, and a runner from before the key (0.3.0) refuses a file with it
         Rumble = Rumble,
         // the game's own ways are left out: the console's moment, 60 a second
         Present = Present is LauncherSettings.PresentAsBefore or LauncherSettings.PresentAtTheCopy ? Present : null,
         VerticalSync = VerticalSync,
         FullScreen = FullScreen is LauncherSettings.FullScreenBorderless or LauncherSettings.FullScreenExclusive ? FullScreen : null,
-        RefreshRate = RefreshRate is LauncherSettings.Refresh120 or LauncherSettings.Refresh240 or LauncherSettings.RefreshAsTheDisplay
-            ? RefreshRate
-            : null,
         // a group the game would refuse is left out, as the picture is: the game's window then has its own button
         Taskbar = Taskbar is { Taken: true } group ? new LaunchTaskbar(group.Id, group.Program, group.Name) : null,
         Board = Board,
@@ -151,17 +163,25 @@ public static class GameLaunchFile
     /// <param name="controllerSetup">The start opens the game's own controller options once its title stands, and
     /// the game closes when the player leaves them (the game's <c>"controllerSetup"</c>: a player's key, no test
     /// setting).</param>
-    public static string Offline(string? bundle, GameDebug? debug = null, GameWindow? window = null, bool controllerSetup = false)
+    /// <param name="overlay">The mods' files the runner lays over the disc at boot (<see cref="ModOverlay"/>); none: the
+    /// file has no <c>overlay</c>.</param>
+    /// <param name="widescreen">The picture, as in a race: the game's screen option is set to it in memory every frame
+    /// (the game's Normal, or its own 16:9 mode), on or off, whatever the save says, with true widescreen's race
+    /// view; null only for the start that opens the game's own controller options, where the runner keeps the save's
+    /// option.</param>
+    public static string Offline(string? bundle, GameDebug? debug = null, GameWindow? window = null, bool controllerSetup = false,
+        IReadOnlyList<OverlayFile>? overlay = null, WidescreenMode? widescreen = null)
     {
         var about = controllerSetup ? "Piconet Launcher: the game's controller options" : "Piconet Launcher: offline play";
-        return Text(new LaunchFile(about, bundle, ControllerSetup: controllerSetup), debug, window);
+        var file = new LaunchFile(about, bundle, ControllerSetup: controllerSetup);
+        return Text(widescreen is { } mode ? Screen(file, mode) : file, debug, window, overlay);
     }
 
     /// <summary>A race from a match file's text (<see cref="MatchFile.Build"/>, or a file somebody wrote).</summary>
     /// <param name="record">Where the race is recorded; null: not recorded.</param>
     /// <exception cref="FormatException">The match file is not a JSON object.</exception>
     public static string Race(string bundle, string matchFile, WidescreenMode widescreen = WidescreenMode.Game, string? record = null,
-        GameDebug? debug = null, GameWindow? window = null, bool rejoin = false)
+        GameDebug? debug = null, GameWindow? window = null, bool rejoin = false, IReadOnlyList<OverlayFile>? overlay = null)
     {
         ArgumentNullException.ThrowIfNull(bundle);
         ArgumentNullException.ThrowIfNull(matchFile);
@@ -171,7 +191,7 @@ public static class GameLaunchFile
             var name = (match["match"] as JsonObject)?["matchId"] is JsonValue id && id.TryGetValue<string>(out var text) ? text : "?";
             // rejoin: started again into its running race
             return Text(Screen(new LaunchFile($"Piconet Launcher: a race (match {name})", bundle,
-                Match: new LaunchMatch(match, record, rejoin)), widescreen), debug, window);
+                Match: new LaunchMatch(match, record, rejoin)), widescreen), debug, window, overlay);
         }
         catch (Exception e) when (e is JsonException or InvalidOperationException or ArgumentException)
         {
@@ -195,12 +215,12 @@ public static class GameLaunchFile
 
     /// <summary>A replay's playback, as the race itself.</summary>
     public static string Playback(string bundle, string replayFile, OtherSounds sounds = OtherSounds.Quieter,
-        WidescreenMode widescreen = WidescreenMode.Game, GameDebug? debug = null, GameWindow? window = null)
+        WidescreenMode widescreen = WidescreenMode.Game, GameDebug? debug = null, GameWindow? window = null, IReadOnlyList<OverlayFile>? overlay = null)
     {
         ArgumentNullException.ThrowIfNull(bundle);
         ArgumentNullException.ThrowIfNull(replayFile);
         return Text(Screen(new LaunchFile("Piconet Launcher: a replay's playback", bundle,
-            Replay: new LaunchReplay(replayFile, sounds.ToString().ToLower(CultureInfo.InvariantCulture))), widescreen), debug, window);
+            Replay: new LaunchReplay(replayFile, sounds.ToString().ToLower(CultureInfo.InvariantCulture))), widescreen), debug, window, overlay);
     }
 
     /// <summary>The picture's keys: <c>"widescreen"</c>, the game's own 16:9 mode, and with true widescreen
@@ -227,9 +247,15 @@ public static class GameLaunchFile
     /// <summary>The file's text, with the window's members and the test settings. Its <c>"lanes"</c> is 0 in
     /// every start (launch.toml): the multicore physics is not in the game, and a
     /// game refuses any other count.</summary>
-    private static string Text(LaunchFile file, GameDebug? debug, GameWindow? window)
+    /// <para>The mods' <c>overlay</c> (<see cref="ModOverlay"/>): with no file in it the key is not written, so a start
+    /// without mods writes the file as before.</para>
+    private static string Text(LaunchFile file, GameDebug? debug, GameWindow? window, IReadOnlyList<OverlayFile>? overlay = null)
     {
-        file = (window?.Into(file) ?? file) with { Debug = debug?.Launch() };
+        file = (window?.Into(file) ?? file) with
+        {
+            Debug = debug?.Launch(),
+            Overlay = overlay is { Count: > 0 } ? [.. overlay.Select(o => new LaunchOverlayEntry(o.Disc, o.From, o.RaceSame))] : null,
+        };
         return file.ToJson().ToJsonString(Indented);
     }
 }

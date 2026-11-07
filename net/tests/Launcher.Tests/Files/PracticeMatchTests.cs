@@ -17,7 +17,8 @@ public sealed class PracticeMatchTests
     [Fact]
     public void APracticeIsOneSeatWithNoRelay()
     {
-        var file = JsonNode.Parse(PracticeMatch.Build(new PracticeSetup(8, 12, null, 30, 2), "PILOT", null, At))!.AsObject();
+        var file = JsonNode.Parse(PracticeMatch.Build(new PracticeSetup(8, 12, null, 30, Params: new() { ["lap_count"] = 2 }), "PILOT", null, At,
+            mode: PracticeMode.Read(Path.Combine(AppContext.BaseDirectory, "quickplay"), out _)))!.AsObject();
         Assert.Equal(["match", "practice"], file.Select(m => m.Key));
         Assert.True((bool)file["practice"]!);
         var match = file["match"]!.AsObject();
@@ -40,10 +41,10 @@ public sealed class PracticeMatchTests
     [Fact]
     public void TheValuesStayInsideTheGamesRangesAndTheLookComesAlong()
     {
-        var stock = JsonNode.Parse(PracticeMatch.Build(new PracticeSetup(999, 77, null, 300, 400), "P", new MachineLook(40, 2), At))!;
+        var stock = JsonNode.Parse(PracticeMatch.Build(new PracticeSetup(999, 77, null, 300), "P", new MachineLook(40, 2), At))!;
         var setup = stock["match"]!["setup"]!;
         Assert.Equal(PracticeSetup.Default.Course, (int)setup["course"]!);
-        Assert.Equal(PracticeSetup.MostLaps, (int)setup["laps"]!);
+        Assert.Equal(ModeTerms.GameLaps, (int)setup["laps"]!);   // (no mode: the game's own laps)
         Assert.Equal(40, (int)setup["seats"]![0]!["machine"]!);
         Assert.Equal(100, (int)setup["seats"]![0]!["setting"]!);
         Assert.Equal(2, (int)setup["seats"]![0]!["stockColor"]!);
@@ -53,7 +54,7 @@ public sealed class PracticeMatchTests
     }
 
     [Fact]
-    public void TheRulesAreTheMatchStartsAndUnlimitedLapsAreLapsZero()
+    public void TheRulesAreTheMatchStarts()
     {
         // Quick Play's rules unless the player changes them: mines come back after 200 ms, no Restore, no boost on
         // the first lap; in the match start's form (RaceRules), which the game's RulesIntoRace reads
@@ -66,10 +67,9 @@ public sealed class PracticeMatchTests
         Assert.Equal(new RaceRules(MineRegenMs: 200), rules.Deserialize<RaceRules>(ControlProtocol.Json));
         var set = JsonNode.Parse(PracticeMatch.Build(PracticeSetup.Default with
         {
-            Restore = true, BoostFromStart = true, MineRegenMs = 1250, Laps = PracticeSetup.Unlimited,
+            BoostFromStart = true, MineRegenMs = 1250,
         }, "P", null, At))!["match"]!["setup"]!;
-        Assert.Equal(new RaceRules(BoostFromStart: true, Restore: true, MineRegenMs: 1250), set["rules"].Deserialize<RaceRules>(ControlProtocol.Json));
-        Assert.Equal(0, (int)set["laps"]!);
+        Assert.Equal(new RaceRules(BoostFromStart: true, MineRegenMs: 1250), set["rules"].Deserialize<RaceRules>(ControlProtocol.Json));
         // Off: the mines stay gone, the game's own way; a delay off its steps is the nearest step
         Assert.Equal(0, (int)Rules(PracticeSetup.Default with { MineRegenMs = 0 })["mineRegenMs"]!);
         Assert.Equal(250, (int)Rules(PracticeSetup.Default with { MineRegenMs = 230 })["mineRegenMs"]!);

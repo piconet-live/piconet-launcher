@@ -102,13 +102,12 @@ public static class ServerMessages
         {
             MatchId = r.MatchId ?? "", Reason = Text(r.Reason, MaxNameLength), Message = r.Message is null ? null : Text(r.Message, MaxChatLength),
         },
-        CourseVote v => v.MatchId is null || v.Options is not { Count: >= 1 and <= MaxVoteOptions } ? null : v,
+        CourseVote v => Vote(v),
         // the counts are added up and compared for the vote's bars and shares: a count no vote can have (less than
         // none, more than MaxPlayers) is none
         CourseVotes v => v.MatchId is null || v.Votes is not { Count: <= MaxVoteOptions } || v.Voted is null ? null
             : v with { Votes = Counts(v.Votes), Voted = [.. v.Voted.Where(id => id is not null).Take(MaxMembers)] },
-        CourseChosen c => c.MatchId is null || c.Options is null || c.Votes is not { Count: <= MaxVoteOptions } || c.Winner < 0 || c.Winner >= c.Votes.Count
-            ? null : c with { Votes = Counts(c.Votes) },
+        CourseChosen c => Chosen(c),
         ChooseMachine c => c.MatchId is null || c.Machines is null ? null
             : c with { Machines = [.. c.Machines.Where(Machines.Has).Distinct()] },
         LiveRace l => l.MatchId is not null && Sound(l.Snapshot) ? l : null,
@@ -238,7 +237,7 @@ public static class ServerMessages
                 // another member's garage-built machine, named and drawn from its parts: only one the game can build
                 Custom = CustomMachine.Checked(p.Custom),
             })],
-        Race = l.Race is { MatchId: not null, Seats: not null } race ? race with { Seats = Seats(race.Seats) } : null,
+        Race = l.Race is { MatchId: not null, Seats: not null } race ? race with { Seats = Seats(race.Seats), Teams = TeamsOfSeats(race.Teams) } : null,
         // the counts are added up for the lobby's notice: one no service has (none, less than none, more than
         // MaxPlayers) is left out
         OtherBuilds = l.OtherBuilds is null ? null : [.. l.OtherBuilds.Where(o => o is { Players: >= 1 and <= MaxPlayers }).Take(MaxSeats)
@@ -251,7 +250,72 @@ public static class ServerMessages
         // the packs a racer may pick (the machine stage's list, by name): as the lobby's own pack, a few at most
         SeatPacks = l.SeatPacks is null ? null
             : [.. l.SeatPacks.Where(PackName).Take(RaceSetup.MostSeatPacks).Select(p => p with { Author = null })],
+        // the members whose launcher cannot race the lobby's mode: ids, a lobby's worth at most
+        CannotRace = l.CannotRace is null ? null : [.. l.CannotRace.Where(id => id is not null).Take(MaxMembers)],
+        // a custom lobby's mode, for its label: texts as text is shown
+        Rules = l.Rules is { Mode: { } mode } rules ? rules with { Mode = Mode(mode), ModeFile = null } : l.Rules,
     };
+
+    /// <summary>The longest text of a mode's line (its header's <c>about</c>) the vote and the lobby show.</summary>
+    private const int MaxAboutLength = 200;
+
+    /// <summary>A course vote with its options, and its cards (a game mode's name, laps and badge an option): one
+    /// an option, or none.</summary>
+    private static CourseVote? Vote(CourseVote v) => v.MatchId is null || v.Options is not { Count: >= 1 and <= MaxVoteOptions } ? null
+        : v with { Cards = v.Cards is { } cards && cards.Count == v.Options.Count && cards.All(c => c is not null) ? [.. cards.Select(c => Card(c)!)] : null };
+
+    private static CourseChosen? Chosen(CourseChosen c) =>
+        c.MatchId is null || c.Options is null || c.Votes is not { Count: <= MaxVoteOptions } || c.Winner < 0 || c.Winner >= c.Votes.Count
+            ? null : c with { Votes = Counts(c.Votes), Card = Card(c.Card) };
+
+    /// <summary>A vote card as a card shows it: texts as text is shown, the laps a race can have (0: unlimited).</summary>
+    private static VoteCard? Card(VoteCard? c) => c is null ? null : c with
+    {
+        Mode = Text(c.Mode, MaxNameLength),
+        Laps = c.Laps is { } laps ? Math.Clamp(laps, 0, HostRules.Laps.Most) : null,
+        Badge = c.Badge is null ? null : Text(c.Badge, MaxNameLength),
+        About = c.About is null ? null : Text(c.About, MaxAboutLength),
+    };
+
+    private static LobbyMode? Mode(LobbyMode m) => m.Hash is not { Length: 64 } ? null : m with
+    {
+        ShareCode = Text(m.ShareCode, MaxNameLength), Name = Text(m.Name, MaxNameLength), Badge = Text(m.Badge, MaxNameLength),
+        About = Text(m.About, MaxAboutLength),
+        Terms = m.Terms is { Count: <= MostModeTerms } ? m.Terms : null,
+        Pack = m.Pack is null ? null : Text(m.Pack, MaxNameLength),
+        Params = SoundParams(m) ? [.. m.Params!.Select(p => p with
+        {
+            Label = Text(p.Label, MaxNameLength), Name = Text(p.Name, MaxNameLength), Choices = [.. p.Choices.Select(c => Text(c, MaxNameLength))],
+        })] : null,
+        Values = SoundParams(m) ? m.Values : null,
+    };
+
+    /// <summary>A mode's parameters as a panel can show them: as many values as parameters, each within its
+    /// declaration; anything else is no control and no value.</summary>
+    private static bool SoundParams(LobbyMode m) => m.Params is { Count: > 0 and <= MostModeParams } declared && m.Values is { } values &&
+        values.Count == declared.Count && Enumerable.Range(0, declared.Count).All(i => declared[i] is { Label: not null, Name: not null } p &&
+            p.Choices is { Count: <= MostModeChoices } choices && choices.All(c => c is not null) &&
+            (p.Kind != ModeParamKind.Choice || p.Most == choices.Count - 1) && p.Fits(values[i]));
+
+    /// <summary>The most parameters and a parameter's most choices shown (a server that sends more is sending something else).</summary>
+    private const int MostModeParams = 64;
+
+    private const int MostModeChoices = 64;
+
+    /// <summary>Each seat's team as a label can say it; anything else: none.</summary>
+    private static IReadOnlyList<int>? TeamsOfSeats(IReadOnlyList<int>? teams) =>
+        teams is { Count: <= MaxSeats } && teams.All(t => t is >= 0 and < ModeWords.Teams) ? teams : null;
+
+    /// <summary>The most rules a mode can own (a server that sends more is sending something else).</summary>
+    private const int MostModeTerms = 64;
+
+    /// <summary>A race's mode as the game can be given it: a package no longer than a package can be (as base64), a
+    /// content hash that is one, and parameters; the game checks the rest (formats.md 9). A start with a mode that is
+    /// not one is dropped, never raced without it: the other games would run it.</summary>
+    private static bool Sound(ModeStart? mode) => mode is null ||
+        (mode.Package is { Length: > 0 and <= (ModeWords.PackageBytes + 2) / 3 * 4 } && mode.Hash is { Length: 64 } hash &&
+         hash.All(char.IsAsciiHexDigitLower) && mode.Params is { Count: <= 256 } &&
+         (mode.Teams is null || (mode.Teams.Count <= GameFacts.Limits.Seats && mode.Teams.All(t => t is >= 0 and < ModeWords.Teams))));
 
     /// <summary>A pack's name as a label can show it: a name a pack can have, and a fingerprint that is one.</summary>
     private static bool PackName(StatPackName? pack) =>
@@ -270,7 +334,7 @@ public static class ServerMessages
     {
         if (string.IsNullOrEmpty(s.MatchId) || s.MatchId.Length > 64 || !Sound(s.Relay) || s.Token is null || s.Seat is < 0 or >= MaxSeats ||
             s.Setup?.Seats is not { Count: >= 1 and <= MaxSeats } seats || seats.Any(x => x is not { Seat: >= 0 and < MaxSeats }) ||
-            s.Setup.Packs is { } packs && (packs.Count > RaceSetup.MostSeatPacks || packs.Any(p => p is null)))
+            s.Setup.Packs is { } packs && (packs.Count > RaceSetup.MostSeatPacks || packs.Any(p => p is null)) || !Sound(s.Setup.Mode))
         {
             return null;
         }

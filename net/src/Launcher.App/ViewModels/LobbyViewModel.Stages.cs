@@ -94,7 +94,9 @@ public sealed partial class LobbyViewModel
             CourseOptions.Clear();
             foreach (var (course, i) in vote.Vote.Options.Select((c, i) => (c, i)))
             {
-                CourseOptions.Add(new CourseOption(i, course == CourseVote.RandomCourse ? "Random course" : Courses.Name(course), course));
+                var option = new CourseOption(i, course == CourseVote.RandomCourse ? "Random course" : Courses.Name(course), course);
+                option.Show(vote.Vote.Cards?[i]);   // (a lobby of game modes: the card's laps, a spicy mode's badge)
+                CourseOptions.Add(option);
             }
             CourseRows = [.. CourseOptions.Chunk(3).Select(row => (IReadOnlyList<CourseOption>)row)];
             if (!Garage.MidEdit)
@@ -179,6 +181,10 @@ public sealed partial class LobbyViewModel
             // "Random course" won: the card turns into the course it drew
             won.Course = chosen.Course;
             won.Name = Courses.Name(chosen.Course);
+            if (chosen.Card is { } card)
+            {
+                won.Show(card);   // (it may have drawn a spicy option)
+            }
             foreach (var o in CourseOptions)
             {
                 o.IsLost = o != won;

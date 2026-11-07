@@ -56,6 +56,11 @@ public sealed partial class DiscArt
         }
     }
 
+    /// <summary>A custom machine's own trail colours: its booster's (<see cref="BurnerColours"/>; the body and the
+    /// cockpit have no burners); null for an id of another kind, or when the file is missing.</summary>
+    public IReadOnlyList<Online.Protocol.Rgb>? PartTrailColours(int booster) =>
+        CustomPartTables.KindOf(booster) == PartKind.Booster && Read(PartFile(booster, "fmi")) is { } fmi ? BurnerColours.Read(fmi) : null;
+
     /// <summary>A part's file: <c>vehicle_parts/parts_bdy01.gma</c> for body 0.</summary>
     private static string PartFile(int part, string extension)
     {

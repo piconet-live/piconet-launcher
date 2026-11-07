@@ -16,9 +16,6 @@ public sealed partial class LobbyViewModel
     /// <summary>Where leaving a custom lobby goes: the browser (the window sets it).</summary>
     public Action? ToBrowser { get; set; }
 
-    /// <summary>The stat packs the host's presets offer, by name (the window sets it).</summary>
-    public Func<IReadOnlyList<string>> PackNames { get; set; } = () => [];
-
     /// <summary>The lobby is a custom lobby.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CustomBarShown), nameof(HostCanEdit))]
@@ -134,14 +131,14 @@ public sealed partial class LobbyViewModel
         {
             return;
         }
-        HostEditor = new LobbyRulesEditor(lobby.Rules, session.QuickPlayRules, PackNames(), LobbyName, session.CustomLocked, editing: true,
+        HostEditor = new LobbyRulesEditor(lobby.Rules, session.QuickPlayRules, session.OfficialModes, LobbyName, session.CustomLocked, editing: true,
             file: session.HostPack);
         HostRulePanels = Panels(HostEditor.RuleGroups);
         HostEditor.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(LobbyRulesEditor.RuleGroups) && HostEditor is { } editor)
             {
-                HostRulePanels = Panels(editor.RuleGroups);   // (a preset chosen)
+                HostRulePanels = Panels(editor.RuleGroups);   // (another mode chosen)
             }
             if (e.PropertyName == nameof(LobbyRulesEditor.Picking))
             {
@@ -176,6 +173,18 @@ public sealed partial class LobbyViewModel
     [RelayCommand]
     private Task KickAsync(SeatRow row) =>
         _session is { IsHost: true } session && row is { Id: { } id } && id != session.PlayerId ? session.KickAsync(id) : Task.CompletedTask;
+
+    /// <summary>A seat's team pressed: the next team, past the last none (the race gives one then).</summary>
+    [RelayCommand]
+    private Task NextTeamAsync(SeatRow row)
+    {
+        if (_session is not { } session || row is not { Id: { } id, TeamChanges: true } || row.Teams == 0)
+        {
+            return Task.CompletedTask;
+        }
+        int? next = row.Team is { } team ? team + 1 < row.Teams ? team + 1 : null : 0;
+        return session.ChooseTeamAsync(next, id == session.PlayerId ? null : id);
+    }
 
     /// <summary>A refusal of the host's or of the lobby's (rules locked, not the host), in the notice's place.</summary>
     private static (string, IReadOnlyList<NoticeValue>, string)? CustomNotice(QuickPlaySession session) =>

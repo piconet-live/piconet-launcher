@@ -10,10 +10,14 @@ The few tests of what only `Launcher.App`'s own code does, run without a window 
   files from a made-up image and the launcher opens; a refused image, Cancel, too little space and another
   preparation at work, each said in the preparation's sentence with the screen still usable. A preparation is held
   where it asks for the free space, so what shows meanwhile is looked at. `.Start.cs`: the start with files that
-  are ready, another online part's, damaged or missing. `.Buttons.cs`: RACE and "Play F-Zero GX" off with the
+  are ready, another online part's, damaged or missing. `.Buttons.cs`: RACE and "Start F-Zero GX" off with the
   reason while a start lacks the game's files or the game program. `.Stopped.cs`: Cancel and the window's close in
   the middle of a copy (held there through `AppState.PreparationWatch`), a preparation that cannot succeed, and a
-  game that becomes startable while the launcher is open. A player copy is made up with `Install.Of`.
+  game that becomes startable while the launcher is open. A player copy is made up with `Install.Of`. `.Graphics.cs`:
+  after CONTINUE, with Aurora, the plain look's graphics cache built at once with no question, the left column's
+  block and bar meanwhile, RACE, "Start F-Zero GX", START PRACTICE, the replays' Play and every start off with
+  "Preparing graphics", all back once it is done (PIPELINE_SHOTS keeps the pictures).
+- `StartGameButtonTests.cs`: "Start F-Zero GX" at the left column's foot on Play and on the Garage: the column's width, just above Settings, off with the reason without the game, on with it; none on Quick Play's page. With `INPUTS_SHOTS` the window as PNGs.
 - `CommandLineTests.cs`: the command line: the modes and their files, a launch file's test settings, and every
   option that is not listed refused.
 - `LanJoinTests.cs`: the Local network tab's Join needs the disc and the whole game, as RACE does; without them
@@ -31,7 +35,11 @@ The few tests of what only `Launcher.App`'s own code does, run without a window 
 - `ReplayTabsTests.cs`: the Replays page's tabs All, Races, Practice with their counts, pressed; a practice run's row
   ("Practice", the time, no Results); the header's word that makes a replay a practice run; "•••" open on one row
   at a time, and a row deleted leaving the others as they were; the rows under their date headings (Today, then
-  each month), in the tab shown.
+  each month), in the tab shown; a mode's replay offering "Show mode file" under "•••" and opening its name, share
+  code, settings and text under the row (LOBBY_SHOTS keeps both).
+- `ModsPageTests.cs`: the Mods place opened from its tab, a card's Down and switch pressed: saved to `Mods/mods.json` and changing the overlay a start is given; with real mods (MODS_SHOTS_DATA) the cards and Unleashed's chooser pictured
+- `InputsWindowTests.cs`: "Show inputs" as the Inputs window with a script for the game and a made-up game's side of its board: opened with the start, the pad drawn, at rest with none and after the game, closed when switched off (its place kept), opened on again in a game and at the next start, gone with the launcher; a place or size that cannot be is left. With `INPUTS_SHOTS` the window as PNGs.
+- `RaceModeBoardTests.cs`: a mode's `board` lines on the race page (the race's, a racer's as columns, a team's), none for a mode without, none for a player with no game; a replay the game plays, from a status board, until its game ends. With `LOBBY_SHOTS` the pages as PNGs.
 - `Headless.cs`: what the newer tests share: a press with the headless window's mouse, a key, waiting for the page, a
   window with the toolkit's layer for menus.
 - `CustomLobbiesTests.cs`: custom lobbies pressed in the launcher's window: on the stand-in the browser, a locked
@@ -58,8 +66,10 @@ The few tests of what only `Launcher.App`'s own code does, run without a window 
 - `VolumeSettingsTests.cs`: the Settings page's game volume moved with the mouse and the keys, then in the game's own
   settings at a start of the game (a script); the launcher's volume heard when set, and Mute. In the Controller
   page's collection: a start of the game ends every controller helper of the process.
-- `SettingsTabsTests.cs`: the Settings tab's four pages pressed by their headings, each with its own rows; the page
-  last chosen kept for this run and the next, a page the file names that is none of them read as Game; RACE
+- `SettingsTabsTests.cs`: the Settings tab's four pages pressed by their headings, each with its own rows in groups
+  under headings (Display, Graphics, Sound, Controller; Connection, Social; General, Interface, Replays), each
+  scrolled to its last group in the least window (1280 by 720; with `INPUTS_SHOTS` the pages as PNGs, top and foot); the
+  page last chosen kept for this run and the next, a page the file names that is none of them read as Game; RACE
   without a disc and Home's "Choose your disc" open Launcher, RACE without a server Online.
 - `InterfaceScaleTests.cs`: the interface scale: the file's value read defensively, the keys' steps and ends, the
   slider dragged changing nothing until Apply, the keys acting at once from a text box, the window's least size
@@ -93,3 +103,7 @@ The pages against a real server (`DebugRefusalTests`, `LobbyChoiceOrderTests`, `
   pages only with Settings' "Controller navigation" on (off by default).
 - `UpdateTimesTests.cs`: when the open launcher looks for an update again: two hours and up to five minutes after
   the last look, and at a game's end or leaving Quick Play only when the last look is over half an hour old.
+- `GraphicsCacheTests.cs`: the graphics cache with a script for the runner's `--build-pipelines`: Ray tracing ticked
+  in Settings asks first (Cancel leaves it off, nothing built; Build turns it on and builds its look, every start
+  waiting, the column saying why); once built it asks nothing; another Aurora clears Dawn's cache and builds again,
+  saying why. With `PIPELINE_SHOTS` set to a folder, the pages are kept there as PNGs.

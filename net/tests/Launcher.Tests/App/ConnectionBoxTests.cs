@@ -63,22 +63,22 @@ public sealed class ConnectionBoxTests : IDisposable
     public async Task ABuildThatNamesNoStackNamesNoServer()
     {
         var none = await Box(StackStamp.From(null, null, null));
-        var own = await Box(null);                                   // this build's own stamp: the tests' stack A (TestStack)
-        var test = await Box(StackStamp.From("B", "wss://piconet-b-coordinator.fly.dev/ws", "test"));
-        var players = await Box(StackStamp.From("B", "wss://piconet-b-coordinator.fly.dev/ws", "public"));
+        var own = await Box(null);                                   // this build's own stamp: the tests' live stack (TestStack)
+        var test = await Box(StackStamp.From("test", "wss://piconet-test-coordinator.fly.dev/ws", "test"));
+        var players = await Box(StackStamp.From("live", "wss://play.piconet.live/ws", "public"));
 
         // the dot's word (the one of a launcher still on its first screen, which asks no server), no server's name
         // (its text block is empty), the version, and no line more
         const string Dot = "No server set";
         Assert.Equal([Dot, "", BuildInfo.Text], none.Shown);
-        Assert.Equal([Dot, "official server A", BuildInfo.Text], own.Shown);
+        Assert.Equal([Dot, "Official Server", BuildInfo.Text], own.Shown);
         Assert.Equal(0, none.Mark);
         Assert.StartsWith("Version ", BuildInfo.Text, StringComparison.Ordinal);
 
         // a stack's own build names the stack, in a box of the same height; a test build has its mark under the version
-        Assert.Equal([Dot, "official server B", BuildInfo.Text], players.Shown);
+        Assert.Equal([Dot, "Official Server", BuildInfo.Text], players.Shown);
         Assert.Equal(none.Height, players.Height);
-        Assert.Equal([Dot, "test server B", BuildInfo.Text, "TEST BUILD"], test.Shown);
+        Assert.Equal([Dot, "Test Server", BuildInfo.Text, "TEST BUILD"], test.Shown);
         Assert.True(test.Mark > 0);
         Assert.Equal(none.Height + test.Mark, test.Height, 0.5);
     }

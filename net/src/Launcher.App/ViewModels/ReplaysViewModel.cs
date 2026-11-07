@@ -21,7 +21,7 @@ public sealed partial class ReplayItem : ObservableObject
         Listing = listing;
         var (venue, track) = ReplayWords.Course(listing.CourseName);
         (Venue, Track) = (venue, track);
-        Under = string.Join(" · ", new[] { venue, ReplayWords.Laps(listing.Laps), listing.StatPackLabel }.Where(word => word.Length > 0));
+        Under = string.Join(" · ", new[] { venue, ReplayWords.Laps(listing.Laps), listing.ModeLabel, listing.StatPackLabel }.Where(word => word.Length > 0));
         RacerMachine = listing.Raced is { } raced ? Theme.GameSkin.NameOf(raced) : "";
         When = ReplayDates.When(listing.Recorded, now ?? DateTimeOffset.Now);
     }
@@ -42,7 +42,7 @@ public sealed partial class ReplayItem : ObservableObject
 
     public string Track { get; }
 
-    /// <summary>Under the track: the venue, the laps, and the race's stat pack when it had one.</summary>
+    /// <summary>Under the track: the venue, the laps, and the race's mode and stat pack when it had them.</summary>
     public string Under { get; }
 
     public string RacerName => Listing.Racer;
@@ -80,6 +80,29 @@ public sealed partial class ReplayItem : ObservableObject
         return _info is null ? [] : ReplayWords.Results(_info);
     }
 
+    /// <summary>The race had a mode the game plays: "•••" offers its file (language 1: a replay can show what was raced).</summary>
+    public bool HasModeFile => Listing.ModeLabel.Length > 0 && Listing.ModeLabel != ReplayInfo.ModeNotPlayable;
+
+    /// <summary>The mode as it was raced, from the file (read the first time it is asked for); null: none that reads.</summary>
+    public ReplayModeFile? ModeFile => HasModeFile ? (_info ??= ReplayFile.Read(Path))?.ModeFile : null;
+
+    /// <summary>Over the mode's text: its name and its share code ("Ghost race · code KQ4XPA2M").</summary>
+    public string ModeHeading => ModeFile is { } mode ? $"{mode.Name} · code {mode.Code}" : "";
+
+    /// <summary>Its settings as they were raced, a value each ("Laps 1 · Gap Live"); "" for a mode without settings.</summary>
+    public string ModeSettings => ModeFile is { Values: { } values } mode && values.Count == mode.Params.Count
+        ? string.Join(" · ", mode.Params.Select((p, i) => $"{p.Label} {ModeParamRow.Text(p, values[i])}")) : "";
+
+    public bool HasModeSettings => ModeSettings.Length > 0;
+
+    /// <summary>The mode file's text, as the package holds it.</summary>
+    public string ModeSource => ModeFile?.Source ?? "";
+
+    /// <summary>The mode's file is open under the row.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ModeHeading), nameof(ModeSettings), nameof(HasModeSettings), nameof(ModeSource))]
+    public partial bool ShowingMode { get; set; }
+
     /// <summary>The row's results are open under it.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StatsLeft), nameof(StatsRight))]
@@ -88,8 +111,11 @@ public sealed partial class ReplayItem : ObservableObject
     /// <summary>What the row's right end offers: "actions" (stats, more, play), "more" (show the file, delete) or
     /// "delete" (the question before deleting).</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Acting), nameof(More), nameof(ConfirmingDelete))]
+    [NotifyPropertyChangedFor(nameof(Acting), nameof(More), nameof(ConfirmingDelete), nameof(ResultShown))]
     public partial string Offer { get; set; } = "actions";
+
+    /// <summary>The result shows, except while "•••" offers the mode file as well: the file's actions take its room.</summary>
+    public bool ResultShown => !(More && HasModeFile);
 
     public bool Acting => Offer == "actions";
 
@@ -140,8 +166,12 @@ public sealed partial class ReplaysViewModel : ViewModelBase
     {
         _state = state;
         _now = now ?? (() => DateTimeOffset.Now);
+        Race = RaceViewModel.ForPlayback(state);
         Refresh();
     }
+
+    /// <summary>The race of the replay the game plays, shown over the list when its mode has lines.</summary>
+    public RaceViewModel Race { get; }
 
     /// <summary>The list as the page draws it: each group's heading (<see cref="ReplayGroup"/>), then its replays
     /// (<see cref="ReplayItem"/>).</summary>
@@ -191,7 +221,7 @@ public sealed partial class ReplaysViewModel : ViewModelBase
     {
         var read = ++_reads;
         Loading = true;
-        Notice = "";
+        Notice = _blocked ?? "";
         var (folder, index) = (_state.Settings.ReplayFolder, ReplayIndex.FileIn(_state.DataFolder));
         _ = Task.Run(() => ReplayIndex.Listings(folder, index)).ContinueWith(done =>
         {
@@ -251,7 +281,32 @@ public sealed partial class ReplaysViewModel : ViewModelBase
         OnPropertyChanged(nameof(Items));
     }
 
-    [RelayCommand]
+    private string? _blocked;
+
+    private bool CanPlay(string? path) => _blocked is null;
+
+    /// <summary>No game starts now (<see cref="AppState.PipelinesBlock"/>): every Play is off and the page's line says
+    /// why; null: they play again.</summary>
+    public void Block(string? why)
+    {
+        if (why == _blocked)
+        {
+            return;
+        }
+        var before = _blocked;
+        _blocked = why;
+        PlayCommand.NotifyCanExecuteChanged();
+        if (why is not null)
+        {
+            Notice = why;
+        }
+        else if (Notice == before)
+        {
+            Notice = "";
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanPlay))]
     private void Play(string path)
     {
         try
@@ -267,7 +322,11 @@ public sealed partial class ReplaysViewModel : ViewModelBase
 
     /// <summary>Stats: the row's results open under it, or close.</summary>
     [RelayCommand]
-    private static void ToggleStats(ReplayItem item) => item.ShowingStats = !item.ShowingStats;
+    private static void ToggleStats(ReplayItem item)
+    {
+        item.ShowingStats = !item.ShowingStats;
+        item.ShowingMode &= !item.ShowingStats;
+    }
 
     /// <summary>"•••": the row offers its file's actions, or its usual ones again; one row at a time, so a row
     /// opened before goes back to its usual actions.</summary>
@@ -288,6 +347,19 @@ public sealed partial class ReplaysViewModel : ViewModelBase
         item.Offer = "actions";
         Notice = Replays.TryReveal(item.Path) ? "" : "File could not be shown";
     }
+
+    /// <summary>"Mode file": the race's mode file opens under the row (its results close), and the row's usual
+    /// actions come back.</summary>
+    [RelayCommand]
+    private static void ShowModeFile(ReplayItem item)
+    {
+        item.Offer = "actions";
+        item.ShowingStats = false;
+        item.ShowingMode = item.ModeFile is not null;
+    }
+
+    [RelayCommand]
+    private static void HideModeFile(ReplayItem item) => item.ShowingMode = false;
 
     [RelayCommand]
     private static void AskDelete(ReplayItem item) => item.Offer = "delete";
