@@ -76,7 +76,7 @@ public static class CustomRules
         var against = quickPlay ?? Defaults;
         // (a game mode first, by its name: "Overdrive · 5 laps")
         return string.Join(" · ", rules.Differing(against).Select(name => Said(name, rules, against))
-            .Prepend(ParamsLine(rules.Mode?.Params, rules.Mode?.Values, rules.Mode?.PackParam)).Prepend(rules.Mode?.Name ?? "")
+            .Prepend(ParamsLine(rules.Mode?.Params, rules.Mode?.Values, rules.Mode?.PackParam, QuickPlaySession.ModeSetting(rules))).Prepend(rules.Mode?.Name ?? "")
             .Append(TeamsLine(rules)).Append(CoursesLine(rules.Mode?.Courses)).Append(MachinesLine(rules.Mode?.Machines)).Append(CustomsLine(rules.Mode?.CustomsOff == true)).Where(s => s.Length > 0));
     }
 
@@ -98,10 +98,21 @@ public static class CustomRules
         : machines.Count == 1 && Machines.Has(machines[0]) ? Machines.Names[machines[0]] + " only"
         : N($"{machines.Count} machines");
 
-    /// <summary>A mode's settings the host moved from their defaults, as the summary says them: "Cut every 15 s"; "" for none.</summary>
-    public static string ParamsLine(IReadOnlyList<ModeParam>? declared, IReadOnlyList<int>? values, int? stats = null) =>
-        declared is null || values is null || values.Count != declared.Count ? ""
-        : string.Join(" · ", declared.Select((p, i) => (p, v: values[i], i)).Where(x => x.v != x.p.Default).Select(x => $"{x.p.Label} {ModeParamRow.Text(x.p, x.v, x.i == stats)}"));
+    /// <summary>A mode's settings the host moved from their defaults, as the summary says them: "Cut every 15 s"; "" for
+    /// none. With the machine setting's range as raced (<paramref name="setting"/>), the settings of its ends are said
+    /// as that one rule, where the first of them stands: "Machine setting 0-100".</summary>
+    public static string ParamsLine(IReadOnlyList<ModeParam>? declared, IReadOnlyList<int>? values, int? stats = null, SettingRange? setting = null)
+    {
+        if (declared is null || values is null || values.Count != declared.Count)
+        {
+            return "";
+        }
+        var moved = declared.Select((p, i) => (p, v: values[i], i)).Where(x => x.v != x.p.Default).ToList();
+        bool End(ModeParam p) => setting is not null && p.Rule == HostRules.MachineSetting.Name;
+        var first = moved.FindIndex(x => End(x.p));
+        return string.Join(" · ", moved.Select((x, k) => !End(x.p) ? $"{x.p.Label} {ModeParamRow.Text(x.p, x.v, x.i == stats)}"
+            : k == first ? LobbyViewModel.SettingText(setting!) : null).OfType<string>());
+    }
 
     /// <summary>The lobby's teams in the summary: "3 teams"; "" for none.</summary>
     private static string TeamsLine(LobbyRules rules) => rules.Mode is not null && rules.Value(LobbyRules.TeamsKey) is > 0 and var teams ? N($"{teams} teams") : "";

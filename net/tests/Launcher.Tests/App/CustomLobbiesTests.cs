@@ -551,6 +551,63 @@ public sealed class CustomLobbiesTests : IDisposable
         });
     }
 
+    /// <summary>A custom lobby on Quick Play's mode races the machine setting its mode's terms give on the host's values
+    /// (the owner, 2026-11-07): the service sends the lobby's own values without the mode (Quick Play's 100), the range
+    /// in <see cref="LobbyMode.Terms"/>. Opened to 0-100, the Garage's slider is free and the choice carries the player's
+    /// own setting; the lobby's line says the range as one rule. At the mode's defaults, and in Quick Play's queue, 100
+    /// is fixed.</summary>
+    [Fact]
+    public async Task ACustomLobbysModeOpensTheMachineSettingToTheHostsRange()
+    {
+        var compiled = ModeCompiler.Compile(File.ReadAllText(TestSupport.RepositoryFolder.Protocol("protocol", "quickplay", "competitive.fzmode")));
+        var package = compiled.Mode!;
+        int[] values = [.. package.Params.Select(p => p.Name == "setting_low" ? 0 : p.Default)];
+        // the lobby's rules as the service's RulesOf sends them: the host's own values, the mode named on its values
+        LobbyRules Raced(IReadOnlyList<int>? on) =>
+            QuickPlayDefaults.Whole() with { Mode = new RotationMode("competitive", package, compiled.Hash!, on).Named() };
+        Assert.Equal(new SettingRange(0, 100), QuickPlaySession.RacedSetting(Raced(values)));
+        Assert.Equal(SettingRange.QuickPlay, QuickPlaySession.RacedSetting(Raced(null)));
+        Assert.Equal("Quick Play · Machine setting 0-100", CustomRules.Summary(Raced(values), QuickPlayDefaults.Whole()));
+
+        var state = State(standIn: false);
+        state.Update(s => s with { Racer = s.Racer with { Setting = 50 } });
+        await using var server = new LedServer();
+        await InTheWindow(state, (window, main) =>
+        {
+            var joining = state.JoinAsync(server.Address, custom: true);
+            Pump(() => server.Of<Hello>().Count == 1, "the launcher did not connect");
+            server.SendAsync(LedServer.Welcome(setting: SettingRange.QuickPlay)).GetAwaiter().GetResult();
+            PumpTelling(state, () => joining.IsCompleted && state.Session?.PlayerId is not null);
+            var session = state.Session!;
+            var garage = main.Garage;
+            session.JoinLobbyAsync("l1", null).GetAwaiter().GetResult();
+            Pump(() => server.Of<JoinLobby>().Count == 1, "the join was not sent");
+
+            // Quick Play's queue: the server's 100, fixed
+            server.SendAsync(LedServer.Lobby(LobbyState.Forming)).GetAwaiter().GetResult();
+            PumpTelling(state, () => session.Lobby is not null, "no lobby came");
+            Assert.Equal(SettingRange.QuickPlay, session.MachineSetting);
+
+            server.SendAsync(LedServer.Lobby(LobbyState.Forming) with { Custom = true, HostId = "p2", Rules = Raced(values), Name = "Open" })
+                .GetAwaiter().GetResult();
+            PumpTelling(state, () => garage.SettingFree && !garage.SettingLimited, "the Garage kept Quick Play's fixed 100");
+            Assert.Equal((0, 100, 50), (garage.SettingLeast, garage.SettingMost, garage.ShownSetting));
+            Assert.Equal("Quick Play · Machine setting 0-100", main.Lobby.RulesSummary);
+
+            server.SendAsync(new ChooseMachine("m1", 1, [.. Enumerable.Range(0, GameMachines.Count)], 40_000)).GetAwaiter().GetResult();
+            PumpTelling(state, () => session.Choice is not null, "no choice came");
+            session.ChooseMachineAsync(6).GetAwaiter().GetResult();
+            Pump(() => server.Of<MachineChoice>().Count == 1, "the choice was not sent");
+            Assert.Equal(50, server.Of<MachineChoice>()[0].Setting);
+
+            // the mode at its defaults: Quick Play's 100, fixed
+            server.SendAsync(LedServer.Lobby(LobbyState.Forming) with { Custom = true, HostId = "p2", Rules = Raced(null), Name = "Plain" })
+                .GetAwaiter().GetResult();
+            PumpTelling(state, () => garage.SettingFixed && garage.SettingMost == 100, "the Garage kept the opened range");
+            Assert.Equal(("Fixed", 100), (garage.SettingLimit, garage.ShownSetting));
+        });
+    }
+
     // the overhaul: restore gone, what a mode owns, teams
 
     /// <summary>A mode's list reaches the Garage from the lobby's rules, before the machine choice opens: the lobby's
