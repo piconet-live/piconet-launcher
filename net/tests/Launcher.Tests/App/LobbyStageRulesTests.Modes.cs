@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.VisualTree;
@@ -48,6 +49,26 @@ public sealed partial class LobbyStageRulesTests
         tipWindow.Close();
         var at = Avalonia.VisualExtensions.TranslatePoint(card, new Avalonia.Point(0, card.Bounds.Height), window)!.Value;
         File.WriteAllText(Path.Combine(folder, name + ".at"), FormattableString.Invariant($"{at.X:0} {at.Y:0}"));
+    }
+
+    /// <summary>On every card that shows its mark (no picture) the spicy badge and the mark never overlap, whatever
+    /// the card's width: the mark keeps to the room right of the badge, cut where it is too long.</summary>
+    private static void BadgesClearOfMarks(Window window, LobbyView view)
+    {
+        var checkedOne = false;
+        foreach (var card in view.GetVisualDescendants().OfType<Button>().Where(b => b.Classes.Contains("votecard")))
+        {
+            var badge = card.GetVisualDescendants().OfType<Border>().SingleOrDefault(b => b.Classes.Contains("modebadge") && b.Parent is Canvas && b.IsEffectivelyVisible);
+            var mark = card.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "Mark");
+            if (badge is null || !mark.IsEffectivelyVisible)
+            {
+                continue;
+            }
+            Rect On(Control c) => new(Avalonia.VisualExtensions.TranslatePoint(c, default, window)!.Value, c.Bounds.Size);
+            Assert.False(On(badge).Intersects(On(mark)), $"the badge {On(badge)} overlaps the mark {On(mark)} ({mark.Text})");
+            checkedOne = true;
+        }
+        Assert.True(checkedOne, "no card showed a badge beside its mark");
     }
 
     /// <summary>The player's game left a race of a mode without CPUs: Watch stands where Rejoin would, the lobby's own
@@ -107,7 +128,7 @@ public sealed partial class LobbyStageRulesTests
             Assert.Equal("Any venue", cards[^1].PlaceLine);                 // Random: no laps before the draw
             Assert.DoesNotContain(cards, c => c.PlaceLine.Contains("normally", StringComparison.OrdinalIgnoreCase));
             var view = window.GetVisualDescendants().OfType<LobbyView>().Single();
-            var badges = view.GetVisualDescendants().OfType<Border>().Where(b => b.Classes.Contains("modebadge") && b.Name != "ModeBadge").ToList();
+            var badges = view.GetVisualDescendants().OfType<Border>().Where(b => b.Classes.Contains("modebadge") && b.Parent is Canvas).ToList();
             Assert.Equal(6, badges.Count);
             var shown = Assert.Single(badges, b => b.IsEffectivelyVisible);
             Assert.Equal("OVERDRIVE", ((TextBlock)shown.Child!).Text);
@@ -132,6 +153,8 @@ public sealed partial class LobbyStageRulesTests
             PumpTelling(state, () => lobby.DrawFinished, "the draw did not run");
             var won = Assert.Single(cards, c => c.IsWon);
             Assert.Equal((8, "OVERDRIVE"), (won.Course, won.Badge));
+            PumpFor(600, state);   // (the drawn card widened, the others narrowed)
+            BadgesClearOfMarks(window, view);
             // drawn: the mode, the course and (unlimited) no laps, under the steps; pointed at, the card's own tip
             Assert.Equal("OVERDRIVE · " + Launcher.Core.Courses.Name(8), lobby.ModeLine?.Text);
             Assert.Equal(cards[spicy].About, lobby.ModeLine!.Tip);
@@ -251,6 +274,8 @@ public sealed partial class LobbyStageRulesTests
             Assert.Equal("QUICK PLAY · " + Launcher.Core.Courses.Name(normal.Course) + " · " + vote[normal.Index].Card.Laps + " laps", lobby.ModeLine?.Text);
             Assert.Null(lobby.ModeLine!.Tip);
             Assert.Contains("plain", Named<Border>(view, "ModeBadge").Classes);
+            PumpFor(600, state);   // (the spicy cards narrowed: a long story name beside its badge is cut, never under it)
+            BadgesClearOfMarks(window, view);
             Shot(window, state, "mode-line-quickplay-drawn");
         });
     }

@@ -422,10 +422,18 @@
                                    ClipToBounds="True">
                               <Image Source="{Binding Course, Converter={x:Static v:GamePicture.Venue}}" Stretch="UniformToFill"
                                      IsVisible="{Binding !ShowsMark}" />
-                              <!-- a course without a picture (a stage of the story; the random course; any without the disc) -->
-                              <TextBlock Classes="head nopicture" Text="{Binding Mark}" HorizontalAlignment="Center" VerticalAlignment="Center"
-                                         FontWeight="SemiBold" FontSize="18" Foreground="{StaticResource HeadBrush}"
-                                         IsVisible="{Binding ShowsMark}" />
+                              <!-- a course without a picture (a stage of the story; the random course; any without the disc):
+                                   its mark, centred in the room the spicy badge leaves (a hidden copy of the badge holds the
+                                   badge's width), cut rather than run under the badge at any card width -->
+                              <Grid Name="MarkRoom" ColumnDefinitions="Auto,*" IsVisible="{Binding ShowsMark}">
+                                <Border Classes="modebadge" Margin="8,0,0,0" VerticalAlignment="Center" Opacity="0" IsHitTestVisible="False"
+                                        IsVisible="{Binding HasBadge}">
+                                  <TextBlock Text="{Binding Badge}" />
+                                </Border>
+                                <TextBlock Grid.Column="1" Name="Mark" Classes="head nopicture" Text="{Binding Mark}" HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" Margin="8,0" TextTrimming="CharacterEllipsis"
+                                           FontWeight="SemiBold" FontSize="18" Foreground="{StaticResource HeadBrush}" />
+                              </Grid>
                               <!-- a spicy card: its mode's badge (on a canvas: the card's row measures its cards on no width
                                    first, and a badge measured there would keep none) -->
                               <Canvas IsVisible="{Binding HasBadge}">
