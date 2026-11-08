@@ -129,7 +129,7 @@ public sealed partial class CourseOption(int index, string name, int course) : O
     {
         Laps = card?.Laps;
         Badge = card?.Badge ?? "";
-        About = card?.Badge is null ? null : string.Join('\n', new[] { card.About }.Concat(card.Rules ?? []).OfType<string>());
+        About = RaceLine.CardTip(card);
     }
 
     /// <summary>The venue line: the venue and the race's laps when the card has them ("Casino Palace · 6 laps";

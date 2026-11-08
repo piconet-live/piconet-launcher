@@ -11,7 +11,7 @@ namespace Launcher.App.ViewModels;
 // them: then the left column shows the stage as a link that brings them there.
 public sealed partial class MainViewModel
 {
-    /// <summary>The stage with a decision the player was not brought to ("Course vote", "Machines"); "" none.</summary>
+    /// <summary>The stage with a decision the player was not brought to ("Vote", "Machines"); "" none.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(DecisionShown))]
     public partial string DecisionText { get; set; } = "";
@@ -26,7 +26,7 @@ public sealed partial class MainViewModel
     {
         if (Garage.MidEdit && (Current is GarageViewModel || (Current is LobbyViewModel && Lobby.GarageShown)))
         {
-            (_decision, DecisionText) = (screen, screen == LobbyScreen.Starting ? "Course vote" : "Machines");
+            (_decision, DecisionText) = (screen, LobbyScreens.Name(screen == LobbyScreen.Starting ? LobbyStep.Vote : LobbyStep.Machines));
             return;
         }
         GoToDecision(screen);

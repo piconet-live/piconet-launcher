@@ -200,6 +200,7 @@ public sealed partial class LobbyViewModel : ViewModelBase
     public ObservableCollection<CourseOption> CourseOptions { get; } = [];
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ModeLineRoom))]
     public partial bool VoteShown { get; set; }
 
     /// <summary>The draw has landed on the course (the vote can close).</summary>
@@ -339,6 +340,7 @@ public sealed partial class LobbyViewModel : ViewModelBase
         }
         ShowSeats(_session, lobby);
         ShowSteps(_session, lobby);
+        ShowRaceLine(_session, lobby);
         // rebuilt only when a line came (the race's live reports refresh the lobby many times a second), so the chat
         // keeps its place while read
         var paints = new Dictionary<string, string>();

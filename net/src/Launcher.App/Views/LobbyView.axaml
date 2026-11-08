@@ -8,15 +8,39 @@
              x:Name="Root">
   <!-- The lobby in direction C (Theme.axaml): 30 racers, the vote and the chat in one window.
        Across the top, in every state, one line: the lobby's steps with the one it is at marked, and at its end the
-       one clock, which never moves. Under it the page has two faces. The lobby's own: the state's part (the votes
-       to start, the course vote with its strip, the race), and under that, in all but the race, the racers' list
+       one clock, which never moves; once the race is known, the race's line under it (its mode, course and laps).
+       Under them the page has two faces. The lobby's own: the state's part (the votes
+       to start, the vote with its draw, the race), and under that, in all but the race, the racers' list
        with the chat beside it. And the Garage (the machine stage is the Garage), which the
        line's button opens all through the lobby; in the machine stage the course drawn, who is ready and Ready
        stand on a second line. -->
   <UserControl.Styles>
     <!-- in the machine stage the line, the course's band and the Garage are closer: 8 px apart, so that the Garage
          keeps the room it had for its cells at 1280 x 800 -->
+    <!-- (set by styles alone: a margin set on the line itself would win over them) -->
+    <Style Selector="Grid#Line">
+      <Setter Property="Margin" Value="0,0,0,16" />
+    </Style>
     <Style Selector="v|LobbyView.choosing Grid#Line">
+      <Setter Property="Margin" Value="0,0,0,8" />
+    </Style>
+    <!-- the race's line under the steps (its mode, course and laps): close under them, the page's gap after it -->
+    <Style Selector="Grid#Line.raced, v|LobbyView.choosing Grid#Line.raced">
+      <Setter Property="Margin" Value="0,0,0,2" />
+    </Style>
+    <Style Selector="StackPanel#ModeLine">
+      <Setter Property="Margin" Value="0,0,0,16" />
+      <Setter Property="Opacity" Value="0" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <DoubleTransition Property="Opacity" Duration="{StaticResource Emphasis}" Easing="{StaticResource EaseOut}" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="StackPanel#ModeLine.on">
+      <Setter Property="Opacity" Value="1" />
+    </Style>
+    <Style Selector="v|LobbyView.choosing StackPanel#ModeLine">
       <Setter Property="Margin" Value="0,0,0,8" />
     </Style>
     <!-- the line of steps, in the display role at 20 (navigation): the one the lobby is at in the accent, the ones
@@ -91,6 +115,13 @@
       <Setter Property="Foreground" Value="{StaticResource OnAccentBrush}" />
       <Setter Property="RenderTransformOrigin" Value="0%,100%" />
       <Setter Property="RenderTransform" Value="skewX(-12deg)" />
+    </Style>
+    <!-- a plain race's title (QUICK PLAY) in the badge's face, white on a raised plate -->
+    <Style Selector="Border.modebadge.plain">
+      <Setter Property="Background" Value="{StaticResource RaisedBrush}" />
+    </Style>
+    <Style Selector="Border.modebadge.plain > TextBlock">
+      <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
     </Style>
     <!-- each card's share of its row, eased as the card drawn widens; its room for the lift -->
     <Style Selector="Button.votecard">
@@ -200,7 +231,8 @@
          the race server is started; at its end the buttons (the stat pack is a race rule: on the machine stage's
          course band, beside the laps; here it would be cut off): Rejoin, Watch, the one that turns the
          page between the lobby and the Garage, and the way out (direction D: not in the column), surface buttons. -->
-    <Grid Name="Line" ColumnDefinitions="Auto,Auto,*,Auto" Height="32" Margin="0,0,0,16">
+    <StackPanel Grid.Row="0">
+    <Grid Name="Line" ColumnDefinitions="Auto,Auto,*,Auto" Height="32" Classes.raced="{Binding ModeLineRoom}">
       <ItemsControl Name="Steps" ItemsSource="{Binding Steps}" VerticalAlignment="Center">
         <ItemsControl.ItemsPanel>
           <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
@@ -233,6 +265,18 @@
         <Button Name="LeaveHere" Classes="secondary surface" Content="{Binding $parent[Window].((vm:MainViewModel)DataContext).Control.LeaveText}" Command="{Binding LeaveCommand}" />
       </StackPanel>
     </Grid>
+    <!-- The race's line, once the draw has landed (or a custom lobby's fixed course is known), through the machines,
+         the start and the race (its room kept through the vote, where it eases in, so nothing moves): its mode's title (a badge as the vote cards draw it for a mode that changes the race),
+         the course and the laps; pointed at, what the mode changes and the rules it changes (RaceLine.cs). -->
+    <StackPanel Name="ModeLine" Orientation="Horizontal" Spacing="10" Height="24" HorizontalAlignment="Left" Background="Transparent"
+                IsVisible="{Binding ModeLineRoom}" Classes.on="{Binding ModeLineShown}" ToolTip.Tip="{Binding ModeLine.Tip}" AutomationProperties.Name="{Binding ModeLine.Text}">
+      <Border Name="ModeBadge" Classes="modebadge" Classes.plain="{Binding !ModeLine.Badged, FallbackValue=True}" VerticalAlignment="Center">
+        <TextBlock Name="ModeTitle" Text="{Binding ModeLine.Title}" />
+      </Border>
+      <TextBlock Name="ModePlace" Text="{Binding ModeLine.Place}" Foreground="{StaticResource TextBrush}" VerticalAlignment="Center"
+                 TextTrimming="CharacterEllipsis" />
+    </StackPanel>
+    </StackPanel>
 
     <!-- The machine stage's own line: the course drawn, with its picture, its cup's gem, its laps and the stat pack its
          race runs on (by name and author, cut at 280 px and whole when pointed at; "Stock" for the game's own); who is
@@ -250,7 +294,8 @@
         <StackPanel Orientation="Horizontal" Spacing="8">
           <TextBlock Name="Course" Classes="head" Text="{Binding ChoiceTrack}" />
           <TextBlock Classes="dim" Text="{Binding LapsText}" VerticalAlignment="Bottom" Margin="0,0,0,2" />
-          <TextBlock Classes="dim" Text="·" VerticalAlignment="Bottom" Margin="0,0,0,2" />
+          <TextBlock Classes="dim" Text="·" VerticalAlignment="Bottom" Margin="0,0,0,2"
+                     IsVisible="{Binding LapsText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
           <TextBlock Name="Pack" Text="{Binding BandPackText}" Foreground="{StaticResource TextBrush}" MaxWidth="280"
                      VerticalAlignment="Bottom" Margin="0,0,0,2" TextTrimming="CharacterEllipsis"
                      ToolTip.Tip="{Binding BandPackTip}" AutomationProperties.Name="Stat pack" />
@@ -348,7 +393,7 @@
         </WrapPanel>
       </Border>
 
-      <!-- The course vote: six courses as cards in two rows, each with its chance of being drawn as the votes stand and
+      <!-- The vote: six courses as cards in two rows, each with its chance of being drawn as the votes stand and
            a pip a vote. The draw: a frame hops from card to card, slows and stops on the course drawn, which widens
            in its row and lifts; the others step back. -->
       <Grid ColumnDefinitions="*" IsVisible="{Binding Starting}">

@@ -33,10 +33,13 @@ public sealed partial class LobbyViewModel
     /// <summary>The line: this server's steps, the one the lobby is at marked, the ones before it passed.</summary>
     private void ShowSteps(QuickPlaySession session, LobbyState? lobby)
     {
-        var votes = session.Rules is null or { CourseSelect: CourseSelectMode.Vote };
+        // (a custom lobby on a fixed or random course, its host's or its mode's, has no vote: the service's way)
+        var votes = lobby is { Custom: true }
+            ? CustomRules.Raced(lobby.Rules, HostRules.CourseSelect.Name, session.QuickPlayRules) == (int)CourseSelectMode.Vote
+            : session.Rules is null or { CourseSelect: CourseSelectMode.Vote };
         // (the race runs once a game has reported it: until then the games are being started)
-        var step = LobbyScreens.Step(lobby, votes || session.CourseVote is not null, session.CourseChosen is not null, !Race.Waiting);
-        var steps = LobbyScreens.Steps(votes || step is LobbyStep.CourseVote or LobbyStep.Draw)
+        var step = LobbyScreens.Step(lobby, votes || session.CourseVote is not null, !Race.Waiting);
+        var steps = LobbyScreens.Steps(votes || step is LobbyStep.Vote)
             .Select(s => new StepMark(LobbyScreens.Name(s), s == step, s < step)).ToList();
         if (!Steps.SequenceEqual(steps))
         {
@@ -53,10 +56,113 @@ public sealed partial class LobbyViewModel
         ClockText = step switch
         {
             LobbyStep.Gathering when session.StartsAt is { } starts => Minutes(starts),
-            LobbyStep.CourseVote when session is { CourseVote: { } vote, CourseChosen: null } => Minutes(vote.Ends),
+            LobbyStep.Vote when session is { CourseVote: { } vote, CourseChosen: null } => Minutes(vote.Ends),
             LobbyStep.Machines when session is { ChoiceOpen: true, Choice: { } choice } => Minutes(choice.Ends),
             _ => "",
         };
+    }
+
+    /// <summary>Under the steps once the race is known: its mode, course and laps (<see cref="RaceLine"/>); null
+    /// before (gathering, the vote until its draw has landed) and where nothing names the race's mode.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ModeLineShown), nameof(ModeLineRoom))]
+    public partial RaceLine? ModeLine { get; set; }
+
+    public bool ModeLineShown => ModeLine is not null;
+
+    /// <summary>The line's room is kept all through the vote, so that nothing moves when it eases in at the draw's
+    /// end.</summary>
+    public bool ModeLineRoom => ModeLineShown || VoteShown;
+
+    partial void OnDrawFinishedChanged(bool value)
+    {
+        if (_session is { } session)
+        {
+            ShowRaceLine(session, session.Lobby);
+        }
+    }
+
+    // the last match start's mode package read (a tick reads the line four times a second)
+    private (string? Hash, ModePackage? Mode) _racedMode;
+
+    /// <summary>The line under the steps: from the card drawn (once the draw has landed: before, it would tell the
+    /// draw's end), else the race's own mode package (the player's match start, a watcher's too), else a custom
+    /// lobby's rules (a fixed course: no vote). The course and laps: the draw's, else the machine stage's and the
+    /// race's.</summary>
+    private void ShowRaceLine(QuickPlaySession session, LobbyState? lobby)
+    {
+        var line = lobby?.Stage is LobbyState.Choosing or LobbyState.Racing || (lobby?.Stage == LobbyState.Starting && DrawFinished)
+            ? RaceLineOf(session, lobby!) : null;
+        if (line != ModeLine)
+        {
+            ModeLine = line;
+        }
+        if (line?.Laps is { } laps)
+        {
+            // (the machine stage's band says the race's laps too: the same as the line)
+            LapsText = laps > 0 ? $"{laps} {(laps == 1 ? "lap" : "laps")}" : "";
+        }
+    }
+
+    private RaceLine? RaceLineOf(QuickPlaySession session, LobbyState lobby)
+    {
+        var start = session.Race?.Start;
+        var race = lobby.Race;
+        if (DrawnCard(session, race) is { } drawn)
+        {
+            return RaceLine.OfCard(drawn.Card, drawn.Course);
+        }
+        var course = session.CourseChosen?.Course ?? session.Choice?.Choose.Course ?? race?.Course ?? start?.Setup.Course;
+        if (course is not { } c)
+        {
+            return null;
+        }
+        int? laps = race?.Laps ?? start?.Setup.Laps;
+        if (start?.Setup.Mode is { } mode && (race is null || race.MatchId == start.MatchId) && Package(mode) is { } package)
+        {
+            return RaceLine.OfPackage(package, c, laps);
+        }
+        if (lobby.Custom)
+        {
+            return RaceLine.OfCustom(lobby.Rules, session.QuickPlayRules, c, laps ?? CustomRules.Raced(lobby.Rules, HostRules.Laps.Name, session.QuickPlayRules));
+        }
+        if (session.CourseVote is null && session.Rules is { CourseSelect: not CourseSelectMode.Vote } rules)
+        {
+            // a Quick Play server without a vote (no modes): its own laps
+            return RaceLine.Plain(c, laps ?? rules.Laps);
+        }
+        return null;   // (a player who came in after the vote: the race's mode is named nowhere)
+    }
+
+    /// <summary>The card drawn for this match, and its course: the vote's result's card, else the vote's card for the
+    /// option drawn; null without a vote of cards, or for a race the result is not this one's.</summary>
+    private static (VoteCard Card, int Course)? DrawnCard(QuickPlaySession session, LobbyRace? race)
+    {
+        if (session.CourseChosen is not { } chosen || (race is not null && race.MatchId != chosen.MatchId))
+        {
+            return null;
+        }
+        var card = chosen.Card ?? (session.CourseVote?.Vote is { } vote && vote.MatchId == chosen.MatchId && vote.Cards is { } cards &&
+            chosen.Winner < cards.Count ? cards[chosen.Winner] : null);
+        return card is null ? null : (card, chosen.Course);
+    }
+
+    private ModePackage? Package(ModeStart mode)
+    {
+        if (_racedMode.Hash != mode.Hash)
+        {
+            ModePackage? read;
+            try
+            {
+                read = ModePackage.Read(Convert.FromBase64String(mode.Package));
+            }
+            catch (Exception e) when (e is FormatException or InvalidDataException or ArgumentException or EndOfStreamException or InvalidOperationException)
+            {
+                read = null;
+            }
+            _racedMode = (mode.Hash, read);
+        }
+        return _racedMode.Mode;
     }
 
     /// <summary>What is left, the series' way: 0'29".</summary>
@@ -136,6 +242,7 @@ public sealed partial class LobbyViewModel
         if (_session is { } session)
         {
             ShowSteps(session, session.Lobby);
+            ShowRaceLine(session, session.Lobby);
             Buzzer(session);
         }
     }
