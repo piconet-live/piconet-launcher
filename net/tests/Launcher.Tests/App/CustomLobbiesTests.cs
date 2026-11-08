@@ -568,6 +568,10 @@ public sealed class CustomLobbiesTests : IDisposable
         Assert.Equal(new SettingRange(0, 100), QuickPlaySession.RacedSetting(Raced(values)));
         Assert.Equal(SettingRange.QuickPlay, QuickPlaySession.RacedSetting(Raced(null)));
         Assert.Equal("Quick Play · Machine setting 0-100", CustomRules.Summary(Raced(values), QuickPlayDefaults.Whole()));
+        // the host's editor: the mode without its terms, the range from the two settings' values
+        Assert.Equal("Machine setting 0-100", CustomRules.ParamsLine(package.Params, values));
+        Assert.Equal("Machine setting 20-80", CustomRules.ParamsLine(package.Params,
+            [.. package.Params.Select(p => p.Name switch { "setting_low" => 20, "setting_high" => 80, _ => p.Default })]));
 
         var state = State(standIn: false);
         state.Update(s => s with { Racer = s.Racer with { Setting = 50 } });
