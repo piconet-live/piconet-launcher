@@ -43,12 +43,13 @@ public sealed partial class MainWindow : AppWindow
         // the interface scale's keys, wherever the keyboard is in the window (a text box too)
         AddHandler(KeyDownEvent, OnScaleKey, RoutingStrategies.Tunnel);
         AddHandler(KeyDownEvent, OnEscape, RoutingStrategies.Bubble);
-        // a press anywhere but the bell's list and the bell closes the list (the press still does its own work)
+        // a press elsewhere closes the bell's list and an unpinned chat sidebar (OnPressOutside)
         AddHandler(PointerPressedEvent, OnPressOutside, RoutingStrategies.Tunnel);
     }
 
     /// <summary>Escape closes what is open over the page: the question before ray tracing (cancel), the question before
-    /// leaving a lobby (stay), else the bell's list. A text box or a menu that takes Escape for itself keeps it.</summary>
+    /// leaving a lobby (stay), else the bell's list, else an unpinned chat sidebar. A text box or a menu that takes Escape
+    /// for itself keeps it.</summary>
     private void OnEscape(object? sender, KeyEventArgs e)
     {
         if (e.Key != Key.Escape || e.Handled || _heard is not { } main)
@@ -70,19 +71,30 @@ public sealed partial class MainWindow : AppWindow
             main.Notices.ListOpen = false;
             e.Handled = true;
         }
+        else if (main.Chat.Overlay)
+        {
+            main.Chat.Open = false;
+            e.Handled = true;
+        }
     }
 
+    /// <summary>A press anywhere but the bell's list and the bell closes the list; anywhere but the chat sidebar and
+    /// its button, an unpinned sidebar (a pinned one stays). The press still does its own work.</summary>
     private void OnPressOutside(object? sender, PointerPressedEventArgs e)
     {
-        if (_heard is not { Notices.ListOpen: true } main || e.Source is not Visual pressed)
+        if (_heard is not { } main || e.Source is not Visual pressed)
         {
             return;
         }
-        var list = this.FindControl<Control>("Notices");
-        var bell = this.FindControl<Control>("NoticeBell");
-        if (!Within(pressed, list) && !Within(pressed, bell))
+        if (main.Notices.ListOpen && !Within(pressed, this.FindControl<Control>("Notices"))
+            && !Within(pressed, this.FindControl<Control>("NoticeBell")))
         {
             main.Notices.ListOpen = false;
+        }
+        if (main.Chat.Overlay && !Within(pressed, this.FindControl<Control>("ChatSidebar"))
+            && !Within(pressed, this.FindControl<Control>("ChatToggle")))
+        {
+            main.Chat.Open = false;
         }
     }
 
@@ -140,6 +152,17 @@ public sealed partial class MainWindow : AppWindow
         if (e.PropertyName == nameof(ViewModels.MainViewModel.Scale))
         {
             Rescaled();
+            ChatRoom();
+        }
+    }
+
+    /// <summary>The room a pinned chat sidebar has beside the page: the window's width at 100% less the left column and
+    /// what the page keeps (ChatSidebarViewModel.PageLeast).</summary>
+    private void ChatRoom()
+    {
+        if (_heard is { } main && this.TryFindResource("ColumnWidth", out var found) && found is double columnWidth)
+        {
+            main.Chat.Room = (ClientSize.Width / Scale) - columnWidth - ViewModels.ChatSidebarViewModel.PageLeast;
         }
     }
 
@@ -174,6 +197,7 @@ public sealed partial class MainWindow : AppWindow
             _heard.Garage.Confirmed += OnConfirmed;
             _heard.Notices.Alert += OnNotice;
             _heard.PropertyChanged += OnMainChanged;
+            ChatRoom();
             _place = Place(_heard);
             Controls.Motion.OpenListWindow();
         }
@@ -277,6 +301,7 @@ public sealed partial class MainWindow : AppWindow
         if (change.Property == ClientSizeProperty)
         {
             Fold();
+            ChatRoom();
         }
     }
 

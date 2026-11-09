@@ -1,0 +1,142 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:c="using:Launcher.App.Controls"
+             x:Class="Launcher.App.Views.ChatSidebar"
+             x:DataType="vm:ChatSidebarViewModel"
+             x:Name="Root">
+  <!-- The chat sidebar (ChatSidebarViewModel), on every page: at its head its name, the pin (lit while pinned) and
+       the close; under them the tabs (Lobby, Global, Players) sharing its width on the surface tone, the one showing
+       on the green plate that leans, as a page's mode bar; a tab with a line not seen yet carries a dot. Under them the tab's chat (LobbyChat:
+       its lines, the latest at the foot, the message box) or its players, or one plain line when there is nothing to
+       show. Its left edge is dragged to make it wider or narrower (ChatSidebar.axaml.cs). Unpinned it floats over the
+       page, with the shadow of what floats; pinned it is the window's column. Rows of text never light under the
+       pointer. -->
+  <UserControl.Styles>
+    <Style Selector="Button.section TextBlock.section">
+      <Setter Property="FontSize" Value="16" />
+      <Setter Property="LineHeight" Value="20" />
+    </Style>
+    <Style Selector="Button.section">
+      <Setter Property="Padding" Value="6,4" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Ellipse.tabdot">
+      <Setter Property="Width" Value="7" />
+      <Setter Property="Height" Value="7" />
+      <Setter Property="Fill" Value="{StaticResource AccentBrush}" />
+      <Setter Property="VerticalAlignment" Value="Top" />
+      <Setter Property="Margin" Value="5,2,0,0" />
+    </Style>
+    <Style Selector="Button.section.on Ellipse.tabdot">
+      <Setter Property="Fill" Value="{StaticResource OnAccentBrush}" />
+    </Style>
+    <Style Selector="Border#Body.floating">
+      <Setter Property="BoxShadow" Value="{StaticResource FloatShadow}" />
+    </Style>
+    <Style Selector="Border#Grip">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Border#Grip:pointerover > Border, Border#Grip.dragging > Border">
+      <Setter Property="Background" Value="{StaticResource OutlineOverBrush}" />
+    </Style>
+  </UserControl.Styles>
+
+  <Border Name="Body" Background="{StaticResource ColumnBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1,0,0,0"
+          Classes.floating="{Binding Overlay}">
+    <Panel>
+      <DockPanel Margin="16,16,12,16">
+        <!-- the head: its name, the pin and the close -->
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto" Height="36">
+          <TextBlock Text="Chat" FontFamily="{StaticResource HeadingFont}" FontWeight="SemiBold" FontSize="18"
+                     VerticalAlignment="Center" />
+          <!-- the pin: a pushpin, lit while the sidebar is pinned -->
+          <Button Name="Pin" Grid.Column="1" Classes="icon" Classes.open="{Binding Pinned}" Command="{Binding TogglePinCommand}"
+                  AutomationProperties.Name="Pin chat">
+            <Viewbox Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center">
+              <Canvas Width="24" Height="24">
+                <Path Classes="glyph" Data="M9 3H15L14 9L18 13H6L10 9Z M12 13V21" />
+              </Canvas>
+            </Viewbox>
+          </Button>
+          <Button Name="CloseChat" Grid.Column="2" Classes="chrome" Width="36" Height="32" Command="{Binding CloseCommand}"
+                  VerticalAlignment="Center" AutomationProperties.Name="Close chat">
+            <Path Data="M0.5 0.5L9.5 9.5M9.5 0.5L0.5 9.5" />
+          </Button>
+        </Grid>
+        <!-- the tabs, the sidebar's width shared -->
+        <Border DockPanel.Dock="Top" Background="{StaticResource WellBrush}" Padding="4" Margin="0,8,4,12"
+                CornerRadius="{DynamicResource StaticMediumCornerRadius}">
+          <c:TravelHost Fill="{StaticResource AccentBrush}" Shape="Lean">
+            <Grid ColumnDefinitions="*,*,*">
+              <Button Name="LobbyTab" Classes="section" Classes.on="{Binding OnLobby}" Command="{Binding ShowTabCommand}"
+                      CommandParameter="{x:Static vm:ChatTab.Lobby}" AutomationProperties.Name="Lobby chat">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                  <TextBlock Classes="section" Text="LOBBY" />
+                  <Ellipse Name="LobbyDot" Classes="tabdot" IsVisible="{Binding LobbyDot}" />
+                </StackPanel>
+              </Button>
+              <Button Name="GlobalTab" Grid.Column="1" Classes="section" Classes.on="{Binding OnGlobal}" Command="{Binding ShowTabCommand}"
+                      CommandParameter="{x:Static vm:ChatTab.Global}" AutomationProperties.Name="Global chat">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                  <TextBlock Classes="section" Text="GLOBAL" />
+                  <Ellipse Name="GlobalDot" Classes="tabdot" IsVisible="{Binding GlobalDot}" />
+                </StackPanel>
+              </Button>
+              <Button Name="PlayersTab" Grid.Column="2" Classes="section" Classes.on="{Binding OnPlayers}" Command="{Binding ShowTabCommand}"
+                      CommandParameter="{x:Static vm:ChatTab.Players}" AutomationProperties.Name="Players">
+                <TextBlock Classes="section" Text="PLAYERS" HorizontalAlignment="Center" />
+              </Button>
+            </Grid>
+          </c:TravelHost>
+        </Border>
+
+        <Panel>
+          <TextBlock Name="Standby" Classes="faint" FontSize="{StaticResource Size14}" Text="{Binding Standby}"
+                     IsVisible="{Binding StandbyShown}" VerticalAlignment="Top" />
+          <v:LobbyChat Name="LobbyChat" DataContext="{Binding Lobby}"
+                       IsVisible="{Binding #Root.((vm:ChatSidebarViewModel)DataContext).LobbyChatShown}" />
+          <v:LobbyChat Name="GlobalChat" Global="True" DataContext="{Binding Lobby}"
+                       IsVisible="{Binding #Root.((vm:ChatSidebarViewModel)DataContext).GlobalChatShown}" />
+          <!-- the players: the lobby's racers, then its watchers; a name's tag while pointed at, the ping -->
+          <ScrollViewer Name="Players" IsVisible="{Binding PlayersShown}" VerticalScrollBarVisibility="Auto"
+                        HorizontalScrollBarVisibility="Disabled">
+            <ItemsControl ItemsSource="{Binding PlayerGroups}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate><StackPanel Spacing="16" /></ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:PlayerGroup">
+                  <StackPanel>
+                    <TextBlock Classes="caps" Foreground="{StaticResource FaintBrush}" Text="{Binding Title}" Height="20" />
+                    <ItemsControl ItemsSource="{Binding Rows}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SeatRow">
+                          <Grid ColumnDefinitions="18,*,Auto" Height="24">
+                            <Border Classes="chip" HorizontalAlignment="Left"
+                                    Background="{Binding ColorHex, Converter={x:Static v:HexToBrush.Instance}}" />
+                            <c:NameTagText Grid.Column="1" PlayerName="{Binding Name}" PlayerTag="{Binding Tag}"
+                                           Classes.strong="{Binding You}" VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="2" Classes="dim" Text="{Binding Ping}" FontFeatures="tnum"
+                                       FontSize="{StaticResource Size13}" VerticalAlignment="Center" Margin="8,0,0,0" />
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Panel>
+      </DockPanel>
+      <!-- the edge that is dragged: a line shows on it under the pointer and while it is dragged -->
+      <Border Name="Grip" Width="8" HorizontalAlignment="Left" Cursor="SizeWestEast" Margin="-1,0,0,0"
+              AutomationProperties.Name="Chat width">
+        <Border Width="2" HorizontalAlignment="Left" />
+      </Border>
+    </Panel>
+  </Border>
+</UserControl>

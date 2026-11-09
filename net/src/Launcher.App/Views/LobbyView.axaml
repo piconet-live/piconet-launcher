@@ -6,12 +6,11 @@
              x:Class="Launcher.App.Views.LobbyView"
              x:DataType="vm:LobbyViewModel"
              x:Name="Root">
-  <!-- The lobby in direction C (Theme.axaml): 30 racers, the vote and the chat in one window.
+  <!-- The lobby in direction C (Theme.axaml): 30 racers and the vote in one window (the chat is the sidebar's).
        Across the top, in every state, one line: the lobby's steps with the one it is at marked, and at its end the
        one clock, which never moves; once the race is known, the race's line under it (its mode, course and laps).
        Under them the page has two faces. The lobby's own: the state's part (the votes
-       to start, the vote with its draw, the race), and under that, in all but the race, the racers' list
-       with the chat beside it. And the Garage (the machine stage is the Garage), which the
+       to start, the vote with its draw, the race), and under that, in all but the race, the racers' list. And the Garage (the machine stage is the Garage), which the
        line's button opens all through the lobby; in the machine stage the course drawn, who is ready and Ready
        stand on a second line. -->
   <UserControl.Styles>
@@ -482,7 +481,7 @@
           </ItemsControl.ItemTemplate>
         </ItemsControl>
       </Grid>
-      <!-- The race: the map with the player's own numbers under it, the standings beside it, the chat under the map. -->
+      <!-- The race: the map with the player's own numbers under it, the standings beside it. -->
       <Panel IsVisible="{Binding Racing}">
       <Grid Name="RaceLayout" ColumnDefinitions="*,16,Auto" RowDefinitions="Auto,Auto,Auto,*" DataContext="{Binding Race}">
         <Border Name="MapPlace" Classes="well" Height="300" ClipToBounds="True">
@@ -523,17 +522,13 @@
           </StackPanel>
         </Grid>
         <v:RaceModeLines Grid.Row="2" Margin="0,16,0,0" IsVisible="{Binding HasModeFigures}" />
-        <!-- as tall as what is said, up to 190 px: an empty chat's message box stands right under the map -->
-        <Border Grid.Row="3" Classes="row" Padding="0,8,0,0" Margin="0,16,0,0" MaxHeight="192" VerticalAlignment="Top">
-          <v:LobbyChat DataContext="{Binding #Root.DataContext}" />
-        </Border>
         <!-- the standings: every racer; press one to follow them on the map -->
         <v:StandingsTable Grid.Column="2" Grid.RowSpan="4" />
       </Grid>
       </Panel>
     </Panel>
 
-    <!-- The racers, seat by seat down the columns, the watchers beside them, and the chat (LobbyRoster). -->
+    <!-- The racers, seat by seat down the columns, and the watchers beside them (LobbyRoster). -->
     <v:LobbyRoster Grid.Row="5" Name="RosterChat" IsVisible="{Binding RosterShown}" />
 
     <!-- In the racers' place: a custom lobby's every rule (its values that differ in green), or the host's panels

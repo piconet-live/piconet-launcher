@@ -12,7 +12,8 @@ view's own: sizes that answer the window, a key, a file picker.
 | `PlayControlView` | Quick Play's action row: RACE, or the lobby's box and Leave Lobby |
 | `NameMenu` | The menu that changes the player's name; whoever shows it calls `Begin` when it opens and closes it at `Done`. It saves, then closes (closed first, its Save would do nothing) |
 | `DiscView` | The first screen |
-| `HomeView`, `LobbyView`, `LobbyChat`, `LanView` | The Play tab's pages (the lobby's shows the Garage's view under its line in the machine stage); the lobby's chat, whose lines can be selected and copied |
+| `HomeView`, `LobbyView`, `LanView` | The Play tab's pages (the lobby's shows the Garage's view under its line in the machine stage) |
+| `ChatSidebar`, `LobbyChat` | The chat sidebar on every page (beside the bell's button; pinned a column of its own, unpinned over the page; its edge dragged): the Lobby, Global and Players tabs; a chat's lines (the lobby's or the global ones), which can be selected and copied, and its message box |
 | `GarageView`, `ReplaysView`, `StatsView`, `SettingsView`, `ControllerView` | The other tabs' pages (Stats is the Replays tab's second) |
 | `NoticeCard`, `NoticeBanner`, `NoticesList` | A server notice, one look in the chat, the banner and the list (its tier's tint, bar, icon and label); the banner under the title bar; the bell's list |
 | `Converters.cs` | From a view model's plain values to what a view draws (a "#RRGGBB" to a brush) |
