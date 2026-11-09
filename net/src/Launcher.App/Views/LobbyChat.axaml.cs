@@ -1,6 +1,4 @@
-using System.Collections.ObjectModel;
 using System.Collections.Specialized;
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Input;
@@ -15,24 +13,6 @@ namespace Launcher.App.Views;
 
 public sealed partial class LobbyChat : UserControl
 {
-    /// <summary>The global chat's lines and sending, instead of the lobby's.</summary>
-    public static readonly StyledProperty<bool> GlobalProperty = AvaloniaProperty.Register<LobbyChat, bool>(nameof(Global));
-
-    public bool Global
-    {
-        get => GetValue(GlobalProperty);
-        set => SetValue(GlobalProperty, value);
-    }
-
-    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
-    {
-        base.OnPropertyChanged(change);
-        if (change.Property == GlobalProperty)
-        {
-            Watch();
-        }
-    }
-
     private readonly ScrollViewer _lines;
 
     private readonly Button _moreBelow;
@@ -101,41 +81,19 @@ public sealed partial class LobbyChat : UserControl
     /// ContextFlyout), which is why the line keeps its selection while the menu has the keyboard.</summary>
     private SelectableTextBlock? Asked => (Resources["LineMenu"] as FlyoutBase)?.Target as SelectableTextBlock;
 
-    /// <summary>The lines this chat shows: the lobby's or the global ones.</summary>
-    private ObservableCollection<ChatLine>? Shown(LobbyViewModel? lobby) => Global ? lobby?.GlobalChat : lobby?.Chat;
-
     private void Watch()
     {
-        Shown(_lobby)?.CollectionChanged -= OnChat;
+        _lobby?.Chat.CollectionChanged -= OnChat;
         _lobby = DataContext as LobbyViewModel;
-        if (Shown(_lobby) is { } lines)
-        {
-            lines.CollectionChanged += OnChat;
-        }
-        if (this.FindControl<ItemsControl>("List") is { } list && !ReferenceEquals(list.ItemsSource, Shown(_lobby)))
-        {
-            list.ItemsSource = Shown(_lobby);
-            Dispatcher.UIThread.Post(ToFoot, DispatcherPriority.Loaded);
-        }
+        _lobby?.Chat.CollectionChanged += OnChat;
     }
-
-    /// <summary>The message sent to this chat's channel.</summary>
-    private void Send()
-    {
-        if (DataContext is LobbyViewModel lobby)
-        {
-            (Global ? lobby.SendGlobalCommand : lobby.SendCommand).Execute(null);
-        }
-    }
-
-    private void OnSend(object? sender, RoutedEventArgs e) => Send();
 
     /// <summary>Enter sends the message, as the Send button.</summary>
     private void OnMessageKey(object? sender, KeyEventArgs e)
     {
-        if (e.Key is Key.Enter && e.KeyModifiers == KeyModifiers.None && DataContext is LobbyViewModel)
+        if (e.Key is Key.Enter && e.KeyModifiers == KeyModifiers.None && DataContext is LobbyViewModel lobby)
         {
-            Send();
+            lobby.SendCommand.Execute(null);
             e.Handled = true;
         }
     }
@@ -197,7 +155,7 @@ public sealed partial class LobbyChat : UserControl
     /// <summary>Copy all: every line shown, a line each.</summary>
     private async void OnCopyAll(object? sender, RoutedEventArgs e)
     {
-        await CopyAsync(Shown(_lobby) is { Count: > 0 } lines ? string.Join(Environment.NewLine, lines.Select(Whole)) : null).ConfigureAwait(true);
+        await CopyAsync(_lobby is { Chat.Count: > 0 } lobby ? string.Join(Environment.NewLine, lobby.Chat.Select(Whole)) : null).ConfigureAwait(true);
         Close(sender);
     }
 

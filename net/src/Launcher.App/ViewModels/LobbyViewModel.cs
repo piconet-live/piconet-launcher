@@ -213,9 +213,6 @@ public sealed partial class LobbyViewModel : ViewModelBase
     /// <summary>The lobby's chat: its lines, and the server's notices (LobbyViewModel.Chat.cs).</summary>
     public ObservableCollection<ChatLine> Chat { get; } = [];
 
-    /// <summary>The global chat: every connected player's lines sent to everyone, and the server's notices.</summary>
-    public ObservableCollection<ChatLine> GlobalChat { get; } = [];
-
     [ObservableProperty]
     public partial string StartVotes { get; set; } = "";
 
@@ -268,19 +265,13 @@ public sealed partial class LobbyViewModel : ViewModelBase
     private Task VoteCourseAsync(CourseOption option) =>
         _session is { CourseChosen: null, Watching: false } s ? s.VoteCourseAsync(option.Index) : Task.CompletedTask;
 
-    /// <summary>The message to the lobby's chat.</summary>
+    /// <summary>The message to the lobby's chat (nothing is sent on the global channel).</summary>
     [RelayCommand]
-    private Task SendAsync() => SayAsync(lobby: true);
-
-    /// <summary>The message to the global chat.</summary>
-    [RelayCommand]
-    private Task SendGlobalAsync() => SayAsync(lobby: false);
-
-    private async Task SayAsync(bool lobby)
+    private async Task SendAsync()
     {
         if (_session is not null && Message.Trim().Length > 0)
         {
-            await _session.ChatAsync(Message.Trim(), lobby).ConfigureAwait(true);
+            await _session.ChatAsync(Message.Trim()).ConfigureAwait(true);
             Message = "";
         }
     }

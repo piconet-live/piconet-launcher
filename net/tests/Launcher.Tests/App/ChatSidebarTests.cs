@@ -13,10 +13,10 @@ using static Launcher.Tests.Headless;
 
 namespace Launcher.Tests;
 
-/// <summary>The chat sidebar (ChatSidebarViewModel, ChatSidebar) on the stand-in service: the lobby's and the global
-/// chat on tabs of their own, each without the other's lines (the server's notices in both); a player's line not in
-/// view puts a dot on its tab and on the button beside the bell, the player's own puts none, and seeing the tab takes
-/// it away; unpinned it closes on a press elsewhere and Escape, pinned it stays and the page narrows beside it; the
+/// <summary>The chat sidebar (ChatSidebarViewModel, ChatSidebar) on the stand-in service: the lobby's chat only, with
+/// the server's notices and without global lines, no tabs, "Join a lobby to chat" out of one; another player's line
+/// while it is closed puts a dot on the button beside the bell, the player's own and a notice put none, and opening it
+/// takes it away; unpinned it closes on a press elsewhere and Escape, pinned it stays and the page narrows beside it; the
 /// pin, a pinned sidebar's being open and the width are kept for the next start, the width within its least and
 /// most. With CHAT_SHOTS naming a folder, the sidebar's states are kept there as PNGs (1280 x 720).</summary>
 [Collection(HeadlessApp.Name)]
@@ -88,11 +88,11 @@ public sealed class ChatSidebarTests : IDisposable
             "the stand-ins did not come in");
     }
 
-    private static void Say(AppState state, MainViewModel main, string text, bool global)
+    private static void Say(AppState state, MainViewModel main, string text)
     {
         main.Lobby.Message = text;
-        (global ? main.Lobby.SendGlobalCommand : main.Lobby.SendCommand).Execute(null);
-        PumpTelling(state, () => (global ? main.Lobby.GlobalChat : main.Lobby.Chat).Any(c => c.Text == text), $"the line was not shown: {text}");
+        main.Lobby.SendCommand.Execute(null);
+        PumpTelling(state, () => main.Lobby.Chat.Any(c => c.Text == text), $"the line was not shown: {text}");
     }
 
     private static void Shot(Window window, AppState state, string name)
@@ -113,29 +113,38 @@ public sealed class ChatSidebarTests : IDisposable
         new(control.TranslatePoint(default, window)!.Value, control.Bounds.Size);
 
     [Fact]
-    public async Task TheLobbyAndTheGlobalChatKeepTheirLinesApart()
+    public async Task ItShowsTheLobbysChatWithTheServersNoticesAndNoGlobalLines()
     {
         var state = State();
         await InWindow(state, (window, main) =>
         {
-            Assert.Equal((false, ChatSidebarViewModel.NotConnectedText), (main.Chat.Open, main.Chat.Standby));
+            Click(window, Named<Button>(window, "ChatToggle"));
+            Assert.Equal((false, ChatSidebarViewModel.NotInLobbyText), (main.Chat.InLobby, main.Chat.Standby));
+            Assert.True(Named<TextBlock>(window, "Standby").IsEffectivelyVisible);
+            Assert.False(Named<LobbyChat>(window, "LobbyChat").IsEffectivelyVisible);
+            main.Chat.Open = false;
             IntoLobby(state, main);
-            Say(state, main, "hello lobby", global: false);
-            Say(state, main, "hello everyone", global: true);
-            // the stand-in's racer answers each on its own channel
-            PumpTelling(state, () => main.Lobby.GlobalChat.Any(c => !c.You && !c.Server), "nobody answered on the global chat");
-            PumpTelling(state, () => main.Lobby.Chat.Any(c => !c.You && !c.Server), "nobody answered on the lobby's chat");
-            Assert.DoesNotContain(main.Lobby.Chat, c => c.Text == "hello everyone");
-            Assert.DoesNotContain(main.Lobby.GlobalChat, c => c.Text == "hello lobby");
-            // the server's notice (the stand-in's word that it is one) is in both
-            Assert.Contains(main.Lobby.Chat, c => c.Server);
-            Assert.Contains(main.Lobby.GlobalChat, c => c.Server);
+            Click(window, Named<Button>(window, "ChatToggle"));
             Assert.Equal("", main.Chat.Standby);
+            Assert.True(Named<LobbyChat>(window, "LobbyChat").IsEffectivelyVisible);
+            // no tabs: the lobby's chat is all there is
+            Assert.DoesNotContain(window.GetVisualDescendants().OfType<ChatSidebar>().Single().GetVisualDescendants().OfType<Button>(),
+                b => b.Classes.Contains("section"));
+            Say(state, main, "hello lobby");
+            // a player's line on the global channel (another launcher's: this one sends none) is not shown; the stand-in
+            // echoes it and a racer answers there
+            _ = state.Session!.ChatAsync("hello everyone", lobby: false);
+            PumpTelling(state, () => state.Session!.Chat.Count(c => c.Channel == Online.Protocol.ControlProtocol.GlobalChannel
+                && ServerNotice.Of(c) is null) >= 2, "the global lines did not come");
+            PumpFor(200, state);
+            Assert.DoesNotContain(main.Lobby.Chat, c => c.Text == "hello everyone");
+            // the server's notice (the stand-in's word that it is one) comes on the global channel and shows
+            Assert.Contains(main.Lobby.Chat, c => c.Server);
         });
     }
 
     [Fact]
-    public async Task ALineNotInViewPutsADotOnItsTabAndTheButtonAndSeeingItTakesItAway()
+    public async Task AnotherPlayersLineWhileClosedPutsADotOnTheButtonAndOpeningTakesItAway()
     {
         var state = State();
         await InWindow(state, (window, main) =>
@@ -149,35 +158,23 @@ public sealed class ChatSidebarTests : IDisposable
             Assert.False(main.Chat.HasDot);
             main.Lobby.Chat.Add(new ChatLine("me", "ANA", "#E8432E", "my own", you: true));
             main.Lobby.Chat.Add(main.Lobby.Chat.First(c => c.Server));
-            Assert.False(main.Chat.LobbyDot, "the player's own line or a notice put a dot on");
+            Assert.False(main.Chat.HasDot, "the player's own line or a notice put a dot on");
             main.Lobby.Chat.Add(new ChatLine("p9", "BEN", "#4DA3FF", "hello", you: false));
-            Assert.True(main.Chat.LobbyDot, "another player's line with the sidebar closed put no dot on its tab");
+            Assert.True(main.Chat.HasDot, "another player's line with the sidebar closed put no dot on");
             main.Chat.Open = true;
             main.Chat.Open = false;
-            Say(state, main, "anyone here?", global: false);
-            PumpTelling(state, () => main.Chat.LobbyDot, "an answer with the sidebar closed put no dot on its tab");
-            Assert.True(main.Chat.HasDot);
+            Say(state, main, "anyone here?");
+            PumpTelling(state, () => main.Chat.HasDot, "an answer with the sidebar closed put no dot on");
             Assert.True(dot.IsEffectivelyVisible, "the button showed no dot");
-            Assert.False(main.Chat.GlobalDot);
 
             Click(window, Named<Button>(window, "ChatToggle"));
             Assert.True(main.Chat.Open);
-            Assert.Equal(ChatTab.Lobby, main.Chat.Tab);
-            Assert.False(main.Chat.LobbyDot, "the tab in view kept its dot");
+            Assert.False(main.Chat.HasDot, "the open sidebar kept the dot");
             Assert.False(dot.IsEffectivelyVisible);
-
-            // the global tab in view: a lobby line puts the lobby's dot on, the global tab's own lines none
-            Click(window, Named<Button>(window, "GlobalTab"));
-            Assert.Equal(ChatTab.Global, main.Chat.Tab);
-            Say(state, main, "one more", global: false);
-            PumpTelling(state, () => main.Chat.LobbyDot, "a line of the tab not in view put no dot on it");
-            Assert.True(Named<Avalonia.Controls.Shapes.Ellipse>(window, "LobbyDot").IsEffectivelyVisible);
-            Say(state, main, "hi all", global: true);
-            PumpTelling(state, () => main.Lobby.GlobalChat.Any(c => !c.You && !c.Server), "nobody answered on the global chat");
-            Assert.False(main.Chat.GlobalDot, "a line of the tab in view put a dot on it");
-            Click(window, Named<Button>(window, "LobbyTab"));
-            Assert.False(main.Chat.LobbyDot);
-            Assert.False(main.Chat.HasDot);
+            // open: lines in view put none
+            Say(state, main, "one more");
+            PumpTelling(state, () => main.Lobby.Chat.Count(c => !c.You && !c.Server) >= 2, "nobody answered");
+            Assert.False(main.Chat.HasDot, "a line in view put a dot on");
         });
     }
 
@@ -197,7 +194,7 @@ public sealed class ChatSidebarTests : IDisposable
             // over the page: the page keeps its width, the sidebar stands at the window's right end
             Assert.Equal(full, InWindow(window, page).Width);
             Assert.Equal(window.Bounds.Width, InWindow(window, sidebar).Right, 0.5);
-            Click(window, Named<Button>(window, "PlayersTab"));
+            Click(window, Named<TextBlock>(window, "Standby"));
             Assert.True(main.Chat.Open, "a press in the sidebar closed it");
             Click(window, Named<Control>(window, "PageHost"));
             Assert.False(main.Chat.Open, "a press on the page left the unpinned sidebar open");
@@ -325,72 +322,54 @@ public sealed class ChatSidebarTests : IDisposable
                     Assert.True(InWindow(window, page).Right <= box.Left + 0.5, "the pinned sidebar covered the page");
                 }
             }
-            Shot(window, state, "01-closed-home");
             Click(window, Named<Button>(window, "ChatToggle"));
-            Click(window, Named<Button>(window, "GlobalTab"));
             Fits();
-            Shot(window, state, "02-open-home-not-connected");
+            Shot(window, state, "01-open-outside-a-lobby");
             main.Chat.Open = false;
 
             IntoLobby(state, main);
-            Say(state, main, "anyone up for Big Blue?", global: false);
-            PumpTelling(state, () => main.Chat.LobbyDot, "no dot");
-            Shot(window, state, "03-closed-lobby-dot");
+            Say(state, main, "anyone up for Big Blue?");
+            PumpTelling(state, () => main.Chat.HasDot, "no dot");
+            Shot(window, state, "02-closed-dot");
             Click(window, Named<Button>(window, "ChatToggle"));
-            Click(window, Named<Button>(window, "LobbyTab"));
             Fits();
-            Shot(window, state, "04-unpinned-open-lobby-tab");
+            Shot(window, state, "03-unpinned-open-lobby");
             Click(window, Named<Button>(window, "Pin"));
             Fits();
-            Shot(window, state, "05-pinned-lobby-tab");
-            Say(state, main, "good luck out there", global: true);
-            Click(window, Named<Button>(window, "GlobalTab"));
-            PumpTelling(state, () => main.Lobby.GlobalChat.Any(c => !c.You && !c.Server), "nobody answered on the global chat");
-            Fits();
-            Shot(window, state, "06-pinned-global-tab");
-            Click(window, Named<Button>(window, "PlayersTab"));
-            Fits();
-            Shot(window, state, "07-pinned-players-tab");
+            Shot(window, state, "04-pinned-lobby");
             main.Current = main.Garage;
-            Click(window, Named<Button>(window, "GlobalTab"));
             Fits();
-            Shot(window, state, "08-pinned-global-on-garage");
+            Shot(window, state, "05-pinned-garage");
             main.Current = main.Lobby;
 
-            Click(window, Named<Button>(window, "LobbyTab"));
             for (var i = 0; i < 40; i++)
             {
-                Say(state, main, $"line {i + 1}: a longer conversation, to scroll back through", global: false);
+                Say(state, main, $"line {i + 1}: a longer conversation, to scroll back through");
             }
             var chat = Named<LobbyChat>(window, "LobbyChat");
             var lines = Named<ScrollViewer>(chat, "Lines");
             lines.Offset = new Vector(0, 200);
             PumpFor(100, state);
-            Say(state, main, "a line that came while scrolled up", global: false);
+            Say(state, main, "a line that came while scrolled up");
             PumpTelling(state, () => Named<Button>(chat, "MoreBelow").IsVisible, "the way back to the newest line was not offered");
             Assert.Equal(200, lines.Offset.Y);
             Fits();
-            Shot(window, state, "09-scrolled-up-more-below");
+            Shot(window, state, "06-scrolled-up-more-below");
             Click(window, Named<Button>(chat, "MoreBelow"));
 
             main.Chat.Drag(LauncherSettings.LeastChatWidth);
             Fits();
-            Shot(window, state, "10-pinned-narrow");
+            Shot(window, state, "07-pinned-narrow");
             // pinned at the least window, the page keeps its 740 px: no wider than 300
             main.Chat.Drag(LauncherSettings.MostChatWidth);
             Fits();
             Assert.Equal(1280 - 240 - ChatSidebarViewModel.PageLeast, main.Chat.ShownWidth, 0.5);
-            Shot(window, state, "11-pinned-widest-at-1280");
             // unpinned it may be as wide as it goes, over the page
             Click(window, Named<Button>(window, "Pin"));
             main.Chat.Drag(LauncherSettings.MostChatWidth);
             Fits();
             Assert.Equal(LauncherSettings.MostChatWidth, main.Chat.ShownWidth);
-            Shot(window, state, "12-unpinned-wide");
-            main.Current = main.Garage;
-            Click(window, Named<Button>(window, "Pin"));
-            Fits();
-            Shot(window, state, "13-pinned-garage");
+            Shot(window, state, "08-unpinned-wide");
         });
     }
 }
