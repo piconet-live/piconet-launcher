@@ -52,6 +52,10 @@ public enum StartMode
 /// settings' disc), <c>--out FILE</c> (without it, beside the car data file), <c>--overwrite</c> (a file already there
 /// is replaced), <c>--any-disc</c> (the image is not held to the pinned disc) and <c>--report</c> (every difference
 /// is listed with what the game's ranges say of it, and nothing is written).</para>
+/// <para>A replay file's path alone (how Explorer passes a <c>.fzrp</c> file the player double-clicked,
+/// <see cref="Launcher.Core.ReplayFileType"/>): the window, which plays that replay as the Replays page's "Open a
+/// file" does; when a window is open already on the same data folder, the file goes to that one and no second window
+/// opens (<see cref="ReplayOpening"/>). Any other word that is no option is refused, as an option not listed is.</para>
 /// <para>With the window: <c>--dev-service</c>, the launcher's dev mode on the stand-in service in its own process
 /// (<see cref="Launcher.Core.StandInService"/>; never a player's start).</para>
 /// <para>For all of them: <c>--data FOLDER</c>, another data folder than the player's (or than a player copy's
@@ -74,6 +78,9 @@ public sealed record CommandLine
 
     /// <summary>The mode's file: the match file, the replay, the disc image or the changed car data file.</summary>
     public string? File { get; init; }
+
+    /// <summary>A replay file given alone (a double-click on it in Explorer): the window plays it.</summary>
+    public string? ReplayToOpen { get; init; }
 
     /// <summary><c>--dev-service</c>: the window on the stand-in service (dev mode), not on a server.</summary>
     public bool DevService { get; init; }
@@ -181,6 +188,14 @@ public sealed record CommandLine
                 case "--disc" or "--pack-name" or "--pack-author" or "--out" or "--main-module" or "--any-disc" or "--overwrite" or "--report":
                     line = ImportOption(line, name, value);
                     break;
+                case var file when IsReplayFile(file):
+                    if (line.ReplayToOpen is not null)
+                    {
+                        return (null, "One replay file a start.");
+                    }
+                    line = line with { ReplayToOpen = file };
+                    modes.Add("a replay file to open in the window");
+                    break;
                 default:
                     return (null, $"{name} is not an option of the launcher. Test settings are named in a launch file (--config FILE).");
             }
@@ -211,6 +226,11 @@ public sealed record CommandLine
         }
         return Finished(line, modes);
     }
+
+    /// <summary>A word that is a replay file's path, given alone: no option's name, and the replay's extension.</summary>
+    private static bool IsReplayFile(string word) =>
+        !word.StartsWith('-') && word.EndsWith(ReplayFileType.Extension, StringComparison.OrdinalIgnoreCase) &&
+        word.Length > ReplayFileType.Extension.Length;
 
     /// <summary>The line read whole: one mode at most, and the dev mode only with the window.</summary>
     private static (CommandLine? Line, string? Refusal) Finished(CommandLine line, List<string> modes) =>
