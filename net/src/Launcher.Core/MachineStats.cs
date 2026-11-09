@@ -60,16 +60,25 @@ public enum MachineStatKind
 
 /// <summary>A stat as the launcher knows it: its label on the Garage page, how its value reads, where it stands in a
 /// machine's block of the car data file (<see cref="MachineStatFile"/>; -1: not there), and whether the Garage shows
-/// it (the two camera values are a machine's, and no measure of one).</summary>
-public sealed record MachineStatInfo(MachineStat Stat, string Label, MachineStatKind Kind, int At = -1, bool Shown = true, string? Note = null)
+/// it (the two camera values are a machine's, and no measure of one). <paramref name="SmallerIsBetter"/>: the
+/// handbook says the smaller value is the better one (only the body value: it multiplies the damage taken, so the
+/// smaller the tougher; what the other numbers do is the community's reading, with no better end the handbook
+/// confirms), so a list is first shown smallest first and the orders say which end is which.</summary>
+public sealed record MachineStatInfo(MachineStat Stat, string Label, MachineStatKind Kind, int At = -1, bool Shown = true, string? Note = null,
+    bool SmallerIsBetter = false)
 {
     /// <summary>The two orders a list can be put in by this stat, in words: the first is rising values.</summary>
     public (string Rising, string Falling) Orders => Kind switch
     {
         MachineStatKind.Number => ("1 to 41", "41 to 1"),
         MachineStatKind.Rating => ("A to E", "E to A"),
+        _ when Stat == MachineStat.Body => ("toughest first", "weakest first"),
         _ => ("low to high", "high to low"),
     };
+
+    /// <summary>The way round a list is first put in by this stat: the best or largest first (A to E, high to low; the
+    /// toughest body first), the number as the game has it.</summary>
+    public bool FirstDescending => Kind is MachineStatKind.Value or MachineStatKind.Weight && !SmallerIsBetter;
 }
 
 /// <summary>Every stat, in the order the Garage lists them.</summary>
@@ -84,7 +93,7 @@ public static class MachineStats
         new(MachineStat.Weight, "Weight", MachineStatKind.Weight, 0x04),
         new(MachineStat.Acceleration, "Acceleration", MachineStatKind.Value, 0x08),
         new(MachineStat.MaxSpeed, "Max speed", MachineStatKind.Value, 0x0C),
-        new(MachineStat.Body, "Body value", MachineStatKind.Value, 0x44),
+        new(MachineStat.Body, "Body value", MachineStatKind.Value, 0x44, Note: "The smaller, the tougher.", SmallerIsBetter: true),
         new(MachineStat.BoostStrength, "Boost strength", MachineStatKind.Value, 0x34),
         new(MachineStat.BoostDuration, "Boost duration", MachineStatKind.Value, 0x38),
         new(MachineStat.Grip1, "Grip 1", MachineStatKind.Value, 0x10),
@@ -203,8 +212,15 @@ public sealed record MachineSort(MachineStat By = MachineStat.Number, bool Desce
     /// <summary>By number, 1 to 41: the game's own order, and the order without a choice.</summary>
     public static MachineSort ByNumber { get; } = new();
 
-    /// <summary>The machines' ids in this order. Machines whose value is the same, or not known, stand by number,
-    /// and those whose value is not known come last either way; without a table every machine stands by number.</summary>
+    /// <summary>The order a stat is first shown in (<see cref="MachineStatInfo.FirstDescending"/>).</summary>
+    public static MachineSort FirstWay(MachineStat stat) =>
+        new(stat, MachineStats.Has(stat) && MachineStats.Of(stat).FirstDescending);
+
+    /// <summary>The machines' ids in this order. Machines of one body letter stand by their body value, the toughest
+    /// first from A to E and the weakest first from E to A: the letters are the disc's (a stat pack does not change
+    /// them) and their ranges of the value overlap, so the value orders a letter's machines. Machines whose value is
+    /// the same, or not known, stand by number, and those whose value is not known come last either way; without a
+    /// table every machine stands by number.</summary>
     public IReadOnlyList<int> Order(MachineStatTable? table)
     {
         var ids = Enumerable.Range(0, Machines.Names.Count);
@@ -214,6 +230,13 @@ public sealed record MachineSort(MachineStat By = MachineStat.Number, bool Desce
         }
         var known = ids.Where(m => table?.Value(m, By) is not null);
         var ordered = Descending ? known.OrderByDescending(m => table!.Value(m, By)) : known.OrderBy(m => table!.Value(m, By));
+        if (By == MachineStat.BodyRating)
+        {
+            ordered = ordered.ThenBy(m => table!.Value(m, MachineStat.Body) is null);
+            ordered = Descending
+                ? ordered.ThenByDescending(m => table!.Value(m, MachineStat.Body))
+                : ordered.ThenBy(m => table!.Value(m, MachineStat.Body));
+        }
         return [.. ordered.ThenBy(m => m), .. ids.Where(m => table?.Value(m, By) is null)];
     }
 }

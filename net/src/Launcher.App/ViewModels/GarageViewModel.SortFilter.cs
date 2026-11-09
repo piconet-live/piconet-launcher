@@ -63,9 +63,9 @@ public sealed partial class GarageViewModel
         ShowChoices();
     }
 
-    /// <summary>A stat's first way round: best or largest first (A to E, high to low), the number as the game has it.</summary>
-    private static MachineSort FirstWay(MachineStat stat) =>
-        new(stat, MachineStats.Of(stat).Kind is MachineStatKind.Value or MachineStatKind.Weight);
+    /// <summary>A stat's first way round: best or largest first (A to E, high to low, the toughest body value), the
+    /// number as the game has it.</summary>
+    private static MachineSort FirstWay(MachineStat stat) => MachineSort.FirstWay(stat);
 
     /// <summary>The order chosen (here or on the Stats tab), kept in the settings.</summary>
     private void ApplySort(MachineSort sort)
