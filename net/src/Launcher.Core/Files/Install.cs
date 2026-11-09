@@ -29,7 +29,9 @@ namespace Launcher.Core;
 /// own folder.</param>
 /// <param name="Installed">An installed launcher (<see cref="InstalledMarkerName"/>): its data is the player's own
 /// folder (<paramref name="DataFolder"/> is null), its game files the prepared folder's only.</param>
-public sealed record Install(string Folder, string? DataFolder, bool Installed = false)
+/// <param name="VelopackPortable">Velopack's portable zip (<see cref="VelopackPortableName"/>): <paramref name="Folder"/>
+/// is its <c>current</c>, the package's own files.</param>
+public sealed record Install(string Folder, string? DataFolder, bool Installed = false, bool VelopackPortable = false)
 {
     /// <summary>The file that makes a folder a player copy. What it holds is for a person who opens it; the launcher
     /// looks only whether it is there.</summary>
@@ -69,9 +71,10 @@ public sealed record Install(string Folder, string? DataFolder, bool Installed =
     /// <summary><see cref="OlderCopyNotice"/> when this player copy was unzipped over an older one, or files of
     /// one were carried into it; null: nothing of the kind, or this is no player copy. The launcher uses none of
     /// those files (<see cref="RecompLaunch.Resolve(RecompSettings?, string, string, DiscPins?, bool)"/>): the
-    /// notice is so that the player knows the folder is a mix.</summary>
+    /// notice is so that the player knows the folder is a mix. Never in Velopack's portable zip: its folder is
+    /// <c>current</c>, where the package's own <c>Launcher.App.exe</c> is, and an update replaces it whole.</summary>
     public string? OlderCopy() =>
-        Portable && (OfAnOlderCopy.Any(name => File.Exists(Path.Combine(Folder, name))) ||
+        Portable && !VelopackPortable && (OfAnOlderCopy.Any(name => File.Exists(Path.Combine(Folder, name))) ||
                        Directory.Exists(Path.Combine(Folder, "recomp", RecompLaunch.CarriedGame)))
             ? OlderCopyNotice : null;
 
@@ -88,7 +91,7 @@ public sealed record Install(string Folder, string? DataFolder, bool Installed =
         {
             // Velopack's portable zip: the package's files are the installed launcher's, its data beside them
             return Path.GetDirectoryName(here) is { Length: > 0 } top && File.Exists(Path.Combine(top, VelopackPortableName))
-                ? new Install(here, Path.Combine(top, DataName))
+                ? new Install(here, Path.Combine(top, DataName), VelopackPortable: true)
                 : new Install(here, null, Installed: true);
         }
         return File.Exists(Path.Combine(here, MarkerName)) && Path.GetDirectoryName(here) is { Length: > 0 } copy
