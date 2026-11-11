@@ -104,7 +104,7 @@ public sealed class HomeJoinLobbyTests : IDisposable
         Assert.Equal((QuickPlaySession.NextRaceText, false), (main.Lobby.StepNote, main.Lobby.VoteShown));
         Shot(state, "join-mid-vote-lobby");
         server.SendAsync(Mid(LobbyState.Choosing)).GetAwaiter().GetResult();
-        PumpTelling(state, () => state.Session?.Lobby?.Stage == LobbyState.Choosing, "the machine step did not come");
+        PumpTelling(state, () => state.Session?.Lobby?.Stage == LobbyState.Choosing && main.Lobby.ReadyCount.Length > 0, "the machine step did not come");
         Assert.Equal((QuickPlaySession.NextRaceText, "0 of 3"), (main.Lobby.StepNote, main.Lobby.ReadyCount));   // the racers' count
         Shot(state, "join-mid-machines-lobby");
         main.Current = main.Home;
