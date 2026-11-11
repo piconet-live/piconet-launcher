@@ -379,6 +379,10 @@ public sealed partial class QuickPlaySession(LauncherSettings settings, string w
     /// <summary>What players read while their race waits for its race server to start.</summary>
     public const string StartingServerText = "Starting race server…";
 
+    /// <summary>What a member reads through a course vote and machine choice that are not theirs
+    /// (<see cref="PlayerInfo.NextRace"/>: they joined the lobby while its match was starting).</summary>
+    public const string NextRaceText = "You race the next race";
+
     /// <summary>The lobby in a few words: its players, a race starting, the machine choice, the wait for the race
     /// server, or its race (this player in it or watching).</summary>
     public static string LobbyText(LobbyState l, string? playerId, string? build = null) => l.Stage switch

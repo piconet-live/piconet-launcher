@@ -47,8 +47,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         _replays = Replays;
         Disc = new DiscViewModel(state, () => Current = Home);
         Account = new AccountViewModel(state, () => Current = Garage, () => Navigation);
-        Control = new PlayControlViewModel(state, _feed, Lobby, () => Current = Lobby, ShowSettings);
-        Control.ShowFirstScreen = () => Current = Disc;
+        Control = PlayControl(state);
         Notices = new NoticesViewModel(state, noticeTime);
         Graphics = new GraphicsViewModel(state);
         // the message of the day the status shows goes into the bell's list too (Home shows it: HomeViewModel.Motd)
@@ -91,6 +90,15 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         var lobbies = new CustomLobbiesViewModel(state, () => Current = Lobby);
         Lobby.ToBrowser = () => Current = lobbies;
         return lobbies;
+    }
+
+    /// <summary>The left column's play control, and what the pages ask of it: the first screen (a game to prepare
+    /// again), a lobby's row pressed on the Play page.</summary>
+    private PlayControlViewModel PlayControl(AppState state)
+    {
+        var control = new PlayControlViewModel(state, _feed, Lobby, () => Current = Lobby, ShowSettings) { ShowFirstScreen = () => Current = Disc };
+        Home.JoinLobby = control.JoinLobbyAsync;
+        return control;
     }
 
     /// <summary>The launcher's update: the left column's line and button, and the Settings page's (<see cref="Updates"/>).</summary>

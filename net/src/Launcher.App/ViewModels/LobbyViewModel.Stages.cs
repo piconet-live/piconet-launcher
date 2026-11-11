@@ -25,8 +25,8 @@ public sealed partial class LobbyViewModel
     [ObservableProperty]
     public partial double DrawPointer { get; set; } = double.NaN;
 
-    /// <summary>Beside the line, while the lobby's race waits for its race server to be started: that, in a word
-    /// or two.</summary>
+    /// <summary>Beside the line, in a word or two: the lobby's race waits for its race server to be started, or the
+    /// match that is starting is not this player's (<see cref="QuickPlaySession.NextRaceText"/>), or they watch.</summary>
     [ObservableProperty]
     public partial string StepNote { get; set; } = "";
 
@@ -49,6 +49,7 @@ public sealed partial class LobbyViewModel
         // steps a sentence would be cut)
         StepNote = lobby is null ? session.Status
             : lobby.Waiting == LobbyState.WaitingForRelay ? "Starting race server"
+            : lobby.Players.FirstOrDefault(p => p.Id == session.PlayerId)?.NextRace == true ? QuickPlaySession.NextRaceText
             : !session.Racing && lobby.Stage is LobbyState.Choosing or LobbyState.Racing && !ChoiceShown ? "Watching" : "";
         ClockText = step switch
         {

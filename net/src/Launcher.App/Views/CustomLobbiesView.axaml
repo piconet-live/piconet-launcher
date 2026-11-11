@@ -46,11 +46,6 @@
     <Style Selector="TextBlock.racing">
       <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
     </Style>
-    <Style Selector="Button.lobbyrow">
-      <Setter Property="HorizontalAlignment" Value="Stretch" />
-      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-      <Setter Property="Padding" Value="0" />
-    </Style>
   </UserControl.Styles>
 
   <Panel>

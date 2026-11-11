@@ -130,6 +130,13 @@ public sealed partial class QuickPlaySession
             OnCustomWelcome();
             return;
         }
+        if (ToLobby is { } chosen)
+        {
+            Set(JoiningLobbyText);
+            _ = JoinLobbyAsync(chosen);   // (the racer as the queue's: RacerToSend)
+            ServerHasName(settings.Racer.Name.Trim());
+            return;
+        }
         // the racer as it is now, custom machine included: the garage can change after the session was made
         var profile = Racer;
         Machine = QueueMachine(profile.Machine, w.Rules);
