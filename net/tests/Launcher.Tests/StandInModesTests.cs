@@ -208,6 +208,13 @@ public sealed class StandInModesTests : IDisposable
         {
             Assert.False((await Created(d, "cpus on;")).NoCpuVote);
         }
+        var e = await Connected();
+        await using (e.Link)
+        {
+            var always = await Created(e, "cpus always;");
+            Assert.True(always.NoCpuVote);                       // (CPUs with no vote)
+            Assert.Equal((int)CpuFillMode.Always, always.Rules!.Mode!.Terms!["cpu-fill"]);
+        }
     }
 
     [Fact]

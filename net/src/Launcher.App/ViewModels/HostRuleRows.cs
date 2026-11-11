@@ -66,8 +66,9 @@ public static class HostRuleRows
     /// <summary>The host's own pack file's text when a pack's row holds it (<see cref="LobbyRules.PackFile"/>); else null.</summary>
     public static string? PackFile(RuleRow row) => row is PackRule { FileChosen: true, File: { } file } ? file.Text : null;
 
-    /// <summary>The CPU racers' choices, in <see cref="CpuFillMode"/>'s order.</summary>
-    public static IReadOnlyList<string> CpuFillChoices { get; } = ["Vote", "Always", "Never"];
+    /// <summary>The CPU racers' choices, in <see cref="CpuFillMode"/>'s order: the words every place says ("CPU racers
+    /// Off", "CPU racers Vote", "CPU racers Always").</summary>
+    public static IReadOnlyList<string> CpuFillChoices { get; } = ["Vote", "Always", "Off"];
 
     /// <summary>A custom lobby's rule as its host's row, holding the lobby's value (<see cref="CustomRules.Value"/>):
     /// a range its two ends, the CPU racers their choices side by side, the course its choices and its fixed course, a lobby's time its number;

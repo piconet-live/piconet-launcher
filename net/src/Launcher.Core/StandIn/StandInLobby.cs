@@ -564,7 +564,7 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
             StartVotes, _votedCpu ? 1 : 0, _stage, Custom: room is not null, HostId: room?.HostId, Rules: room?.Rules,
             Name: room?.Name, Locked: room?.Password is not null,
             StartsInMs: _startsAt is { } at ? (int)Math.Max(0, Math.Ceiling((at - DateTimeOffset.UtcNow).TotalMilliseconds)) : null,
-            NoCpuVote: room?.Terms is { CpusAllowed: false } || _rotation is { CpusAllowed: false }));
+            NoCpuVote: room?.Terms is { CpuFill: not CpuFillMode.Vote } || _rotation is { CpuVote: false }));
     }
 
     /// <summary>A line from the stand-in at this place among the lobby's others (round the list), when there is one.</summary>
