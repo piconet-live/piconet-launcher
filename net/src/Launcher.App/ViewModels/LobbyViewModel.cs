@@ -468,18 +468,22 @@ public sealed partial class LobbyViewModel : ViewModelBase
     private static IReadOnlyList<NoticeValue> ModeValues(LobbyState lobby) =>
         lobby.Rules?.Mode is { } mode ? [new NoticeValue("mode", mode.Name)] : [];
 
-    /// <summary>How the empty seats are filled: never when the lobby's modes allow no CPUs (no vote then), else a
-    /// custom lobby's rule, else the server's (a vote where it names none).</summary>
     /// <summary>The teams of a lobby's next race; 0: none.</summary>
     private static bool TeamChanges(QuickPlaySession session, LobbyState lobby, PlayerInfo p) =>
         lobby.Stage == LobbyState.Forming && (session.IsHost || p.Id == session.PlayerId);
 
     private static int TeamsOf(LobbyState lobby) => lobby.Rules is { Mode: not null } rules ? rules.Value(LobbyRules.TeamsKey) ?? 0 : 0;
 
-    private static CpuFillMode CpuFill(QuickPlaySession session, LobbyState? lobby) => lobby is { NoCpuVote: true } ? CpuFillMode.Never
-        : lobby is { Custom: true, Rules: { } rules }
-        ? (CpuFillMode)CustomRules.Value(rules, HostRules.CpuFill.Name, session.QuickPlayRules)
-        : session.Rules?.CpuFill ?? CpuFillMode.Vote;
+    /// <summary>How the empty seats are filled: a custom lobby's rule as it is raced (its mode's own word: Always has
+    /// CPUs and no vote), else the server's (a vote where it names none); never where the lobby takes no CPU vote and
+    /// nothing says always.</summary>
+    private static CpuFillMode CpuFill(QuickPlaySession session, LobbyState? lobby)
+    {
+        var fill = lobby is { Custom: true, Rules: { } rules }
+            ? (CpuFillMode)CustomRules.Raced(rules, HostRules.CpuFill.Name, session.QuickPlayRules)
+            : session.Rules?.CpuFill ?? CpuFillMode.Vote;
+        return lobby is { NoCpuVote: true } && !(lobby.Custom && fill == CpuFillMode.Always) ? CpuFillMode.Never : fill;
+    }
 
     /// <summary>The machines a server allows, when not all: "Blue Falcon only", "12 machines"; null: all.</summary>
     private static string? Allowed(ServerRules r) =>

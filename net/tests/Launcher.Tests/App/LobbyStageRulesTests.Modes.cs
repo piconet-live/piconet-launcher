@@ -4,6 +4,7 @@ using Avalonia.Headless;
 using Avalonia.VisualTree;
 using Launcher.App;
 using Launcher.App.ViewModels;
+using Launcher.Core;
 using Online.Protocol;
 using TestSupport;
 using static Launcher.Tests.Headless;
@@ -305,6 +306,37 @@ public sealed partial class LobbyStageRulesTests
             Send(server, LedServer.Lobby(LobbyState.Forming) with { CannotRace = ["p1"] });
             PumpTelling(state, () => lobby.Notice == "Can't race this mode", $"the notice said {lobby.Notice}");
             Shot(window, state, "mode-cannot-race");
+        });
+    }
+
+    /// <summary>A custom lobby whose mode has CPU racers Always: no CPU vote (there is nothing to vote on), and its
+    /// open seats say CPU. At Off: no vote, and the open seats are empty.</summary>
+    [Fact]
+    public async Task CpuRacersAlwaysHasNoVoteAndCpusOnTheOpenSeats()
+    {
+        var compiled = ModeCompiler.Compile(File.ReadAllText(TestSupport.RepositoryFolder.Protocol("protocol", "quickplay", "competitive.fzmode")));
+        LobbyState Hosted(int cpus)
+        {
+            var mode = new RotationMode("competitive", compiled.Mode!, compiled.Hash!, [.. compiled.Mode!.Params.Select(p => p.Name == "cpu_racers" ? cpus : p.Default)]);
+            return LedServer.Lobby(LobbyState.Forming) with
+            {
+                Custom = true, HostId = "p2", Rules = QuickPlayDefaults.Whole() with { Mode = mode.Named() }, NoCpuVote = !mode.CpuVote,
+            };
+        }
+        await using var server = new LedServer();
+        await InALobby(server, LedServer.Welcome(), Hosted(1), (window, main, state) =>
+        {
+            var lobby = main.Lobby;
+            bool OpenCpus() => lobby.SeatColumns.SelectMany(c => c.Seats).Any(s => s.Open && s.Name == "CPU");
+            PumpTelling(state, () => lobby.CpuVoteShown && OpenCpus(), "Vote: the CPU vote was not shown");
+            Send(server, Hosted(2));
+            PumpTelling(state, () => !lobby.CpuVoteShown, "Always: the CPU vote stayed");
+            Assert.True(OpenCpus());
+            Assert.Contains("CPU racers Always", lobby.RulesSummary, StringComparison.Ordinal);
+            Send(server, Hosted(0));
+            PumpTelling(state, () => !OpenCpus(), "Off: the open seats stayed CPUs'");
+            Assert.False(lobby.CpuVoteShown);
+            Assert.Contains("CPU racers Off", lobby.RulesSummary, StringComparison.Ordinal);
         });
     }
 }

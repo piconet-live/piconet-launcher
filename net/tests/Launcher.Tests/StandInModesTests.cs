@@ -168,7 +168,7 @@ public sealed class StandInModesTests : IDisposable
 
     // the overhaul: the stand-in takes a mode's words and a lobby's teams as the service does (the service's GameModeTests)
 
-    private const string Head = "mode \"M\" { api 1; }\n";
+    private const string Head = "mode \"M\" { api 0.6.1; }\n";
 
     private static readonly Rgb Paint = new(1, 2, 3);
 
@@ -207,6 +207,13 @@ public sealed class StandInModesTests : IDisposable
         await using (d.Link)
         {
             Assert.False((await Created(d, "cpus on;")).NoCpuVote);
+        }
+        var e = await Connected();
+        await using (e.Link)
+        {
+            var always = await Created(e, "cpus always;");
+            Assert.True(always.NoCpuVote);                       // (CPUs with no vote)
+            Assert.Equal((int)CpuFillMode.Always, always.Rules!.Mode!.Terms!["cpu-fill"]);
         }
     }
 

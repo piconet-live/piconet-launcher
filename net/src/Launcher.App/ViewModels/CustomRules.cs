@@ -160,13 +160,9 @@ public static class CustomRules
         };
     }
 
-    /// <summary>The CPU racers as a mode's switch says them: On (players vote CPUs in), Off (none); Always.</summary>
-    private static string CpusText(int v) => (CpuFillMode)v switch
-    {
-        CpuFillMode.Never => "Off",
-        CpuFillMode.Always => "Always",
-        _ => "On",
-    };
+    /// <summary>The CPU racers in the words every place says them (<see cref="HostRuleRows.CpuFillChoices"/>): Off
+    /// (none), Vote (players vote CPUs in), Always (CPUs on the empty seats, no vote).</summary>
+    private static string CpusText(int v) => HostRuleRows.CpuFillChoices[Enum.IsDefined((CpuFillMode)v) ? v : (int)CpuFillMode.Vote];
 
     /// <summary>A rule's value by itself, for the whole list: "3", "Vote", "On", "200 ms".</summary>
     public static string ValueText(HostRule rule, LobbyRules? rules, LobbyRules? quickPlay)

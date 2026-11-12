@@ -151,7 +151,7 @@ public sealed class CustomLobbiesTests : IDisposable
             Assert.Contains(lobby.AllRulePanels.SelectMany(p => p.Groups).SelectMany(g => g.Rows).OfType<ValueRule>(),
                 r => r is { Label: "Mines respawn", Value: "200 ms", Marked: false });
             Assert.Single(lobby.AllRulePanels.SelectMany(p => p.Groups).SelectMany(g => g.Rows).OfType<ValueRule>(),
-                r => r is { Label: "CPU racers", Value: "On" });
+                r => r is { Label: "CPU racers", Value: "Vote" });
             Shot(window, state, "lobby-all-rules");
             Click(window, Named<Button>(page, "AllRules"));
             Shot(window, state, "lobby-joiner");
@@ -178,7 +178,7 @@ public sealed class CustomLobbiesTests : IDisposable
             Assert.True(Named<RulesPanel>(view, "LobbyPanel").IsEffectivelyVisible);
             // Quick Play's settings: the mode's parameters, on Quick Play's own values; no preset
             Assert.Equal(QuickPlaysSettings, editor.ParamRows.Select(p => p.Row.Label));
-            Assert.Equal(["By course", "Master", "Off", "200 ms", "90 s", "100", "100", "GX Unleashed", "On", "3"],
+            Assert.Equal(["By course", "Master", "Off", "200 ms", "90 s", "100", "100", "GX Unleashed", "Vote", "3"],
                 editor.ParamRows.Select(p => ModeParamRow.Text(p.Param, p.Value, p.Stats)));
             Assert.Contains(Named<RulesPanel>(view, "CreatePanel").GetVisualDescendants().OfType<TextBlock>(), t => t.Text == "CPU level" && t.IsEffectivelyVisible);
             Assert.DoesNotContain(view.GetVisualDescendants().OfType<TextBlock>(), t => t.IsEffectivelyVisible && t.Text is "Preset" or "Teams");
@@ -556,6 +556,27 @@ public sealed class CustomLobbiesTests : IDisposable
     /// in <see cref="LobbyMode.Terms"/>. Opened to 0-100, the Garage's slider is free and the choice carries the player's
     /// own setting; the lobby's line says the range as one rule. At the mode's defaults, and in Quick Play's queue, 100
     /// is fixed.</summary>
+    /// <summary>Quick Play's "CPU racers" is one row of three, Off, Vote, Always, and every place says it in those
+    /// words: the host's summary and the browser's row name it when it is not Vote, the whole list always.</summary>
+    [Fact]
+    public void TheCpuRacersAreOffVoteOrAlwaysInTheSameWordsEverywhere()
+    {
+        var compiled = ModeCompiler.Compile(File.ReadAllText(TestSupport.RepositoryFolder.Protocol("protocol", "quickplay", "competitive.fzmode")));
+        var package = compiled.Mode!;
+        var row = package.Params.Single(p => p.Label == "CPU racers");
+        Assert.Equal(["Off", "Vote", "Always"], row.Choices);
+        Assert.Equal(1, row.Default);
+        int[] With(int value) => [.. package.Params.Select(p => p.Name == "cpu_racers" ? value : p.Default)];
+        LobbyRules Raced(int value) =>
+            QuickPlayDefaults.Whole() with { Mode = new RotationMode("competitive", package, compiled.Hash!, With(value)).Named() };
+        (string Line, string Summary, string Value) Said(int v) => (CustomRules.ParamsLine(package.Params, With(v)),
+            CustomRules.Summary(Raced(v), QuickPlayDefaults.Whole()), CustomRules.ValueText(HostRules.CpuFill, Raced(v), null));
+        Assert.Equal(("CPU racers Off", "Quick Play · CPU racers Off", "Off"), Said(0));
+        Assert.Equal(("", "Quick Play", "Vote"), Said(1));
+        Assert.Equal(("CPU racers Always", "Quick Play · CPU racers Always", "Always"), Said(2));
+        Assert.Equal(["Vote", "Always", "Off"], HostRuleRows.CpuFillChoices);   // (CpuFillMode's order; no "Never", no "On")
+    }
+
     [Fact]
     public async Task ACustomLobbysModeOpensTheMachineSettingToTheHostsRange()
     {
