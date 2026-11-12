@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.VisualTree;
@@ -48,6 +49,26 @@ public sealed partial class LobbyStageRulesTests
         tipWindow.Close();
         var at = Avalonia.VisualExtensions.TranslatePoint(card, new Avalonia.Point(0, card.Bounds.Height), window)!.Value;
         File.WriteAllText(Path.Combine(folder, name + ".at"), FormattableString.Invariant($"{at.X:0} {at.Y:0}"));
+    }
+
+    /// <summary>On every card that shows its mark (no picture) the spicy badge and the mark never overlap, whatever
+    /// the card's width: the mark keeps to the room right of the badge, cut where it is too long.</summary>
+    private static void BadgesClearOfMarks(Window window, LobbyView view)
+    {
+        var checkedOne = false;
+        foreach (var card in view.GetVisualDescendants().OfType<Button>().Where(b => b.Classes.Contains("votecard")))
+        {
+            var badge = card.GetVisualDescendants().OfType<Border>().SingleOrDefault(b => b.Classes.Contains("modebadge") && b.Parent is Canvas && b.IsEffectivelyVisible);
+            var mark = card.GetVisualDescendants().OfType<TextBlock>().Single(t => t.Name == "Mark");
+            if (badge is null || !mark.IsEffectivelyVisible)
+            {
+                continue;
+            }
+            Rect On(Control c) => new(Avalonia.VisualExtensions.TranslatePoint(c, default, window)!.Value, c.Bounds.Size);
+            Assert.False(On(badge).Intersects(On(mark)), $"the badge {On(badge)} overlaps the mark {On(mark)} ({mark.Text})");
+            checkedOne = true;
+        }
+        Assert.True(checkedOne, "no card showed a badge beside its mark");
     }
 
     /// <summary>The player's game left a race of a mode without CPUs: Watch stands where Rejoin would, the lobby's own
@@ -107,7 +128,7 @@ public sealed partial class LobbyStageRulesTests
             Assert.Equal("Any venue", cards[^1].PlaceLine);                 // Random: no laps before the draw
             Assert.DoesNotContain(cards, c => c.PlaceLine.Contains("normally", StringComparison.OrdinalIgnoreCase));
             var view = window.GetVisualDescendants().OfType<LobbyView>().Single();
-            var badges = view.GetVisualDescendants().OfType<Border>().Where(b => b.Classes.Contains("modebadge")).ToList();
+            var badges = view.GetVisualDescendants().OfType<Border>().Where(b => b.Classes.Contains("modebadge") && b.Parent is Canvas).ToList();
             Assert.Equal(6, badges.Count);
             var shown = Assert.Single(badges, b => b.IsEffectivelyVisible);
             Assert.Equal("OVERDRIVE", ((TextBlock)shown.Child!).Text);
@@ -117,12 +138,87 @@ public sealed partial class LobbyStageRulesTests
             // held or hovered, the spicy card lists only what it changes (design 6): its line, then its rules
             TipShot(window, view, state, spicy, cards[spicy].About, "mode-vote-hover-tip");
 
-            // Random drew the spicy option: its card turns into it, badge and all
+            // the vote's step is Vote, and no race's line stands under the steps while it runs
+            Assert.Equal(["Gathering", "Vote", "Machines", "Starting", "Race"], lobby.Steps.Select(s => s.Name));
+            // (its room is kept, so that nothing moves when it eases in)
+            Assert.Equal((Launcher.Core.LobbyStep.Vote, false), (lobby.Step, lobby.ModeLineShown));
+            Assert.DoesNotContain("on", Named<StackPanel>(view, "ModeLine").Classes);
+
+            // Random drew the spicy option: its card turns into it, badge and all; the draw is still the Vote step,
+            // and the race's line waits for it to land (it would tell the draw's end)
             Send(server, new CourseChosen("m1", options, [0, 0, 0, 0, 0, 2], 5, 8, vote[spicy].Card));
+            PumpTelling(state, () => !double.IsNaN(lobby.DrawPointer), "the draw did not start");
+            Assert.Equal((Launcher.Core.LobbyStep.Vote, null), (lobby.Step, lobby.ModeLine));
+            Shot(window, state, "mode-vote-drawing");
             PumpTelling(state, () => lobby.DrawFinished, "the draw did not run");
             var won = Assert.Single(cards, c => c.IsWon);
             Assert.Equal((8, "OVERDRIVE"), (won.Course, won.Badge));
+            PumpFor(600, state);   // (the drawn card widened, the others narrowed)
+            BadgesClearOfMarks(window, view);
+            // drawn: the mode, the course and (unlimited) no laps, under the steps; pointed at, the card's own tip
+            Assert.Equal("OVERDRIVE · " + Launcher.Core.Courses.Name(8), lobby.ModeLine?.Text);
+            Assert.Equal(cards[spicy].About, lobby.ModeLine!.Tip);
+            Assert.Equal(lobby.ModeLine.Tip, ToolTip.GetTip(Named<StackPanel>(view, "ModeLine")));
+            Assert.True(Named<StackPanel>(view, "ModeLine").IsEffectivelyVisible);
+            Assert.Contains("on", Named<StackPanel>(view, "ModeLine").Classes);
+            Assert.Equal("OVERDRIVE", Named<TextBlock>(view, "ModeTitle").Text);
+            Assert.DoesNotContain("plain", Named<Border>(view, "ModeBadge").Classes);
             Shot(window, state, "mode-vote-drawn");
+
+            // kept through the machines, the start and the race
+            var seat = new SeatSetup(0, "p1", "ANA", 6, new Rgb(1, 2, 3));
+            Send(server, LedServer.Lobby(LobbyState.Choosing), new ChooseMachine("m1", 8, [.. Enumerable.Range(0, 41)], 30_000));
+            PumpTelling(state, () => lobby.Step == Launcher.Core.LobbyStep.Machines && lobby.CourseShown, "the machine stage did not open");
+            Assert.Equal("OVERDRIVE · " + Launcher.Core.Courses.Name(8), lobby.ModeLine?.Text);
+            Shot(window, state, "mode-line-machines");
+            Send(server, LedServer.Lobby(LobbyState.Choosing, waiting: LobbyState.WaitingForRelay));
+            PumpTelling(state, () => lobby.Step == Launcher.Core.LobbyStep.Starting, "the start did not come");
+            Assert.Equal("OVERDRIVE · " + Launcher.Core.Courses.Name(8), lobby.ModeLine?.Text);
+            Shot(window, state, "mode-line-starting");
+            Send(server, LedServer.Lobby(LobbyState.Racing) with { Race = new LobbyRace("m1", 8, 0, [seat], DateTimeOffset.UtcNow) });
+            PumpTelling(state, () => lobby.Racing, "the race did not show");
+            Assert.Equal("OVERDRIVE · " + Launcher.Core.Courses.Name(8), lobby.ModeLine?.Text);
+            Assert.True(Named<StackPanel>(view, "ModeLine").IsEffectivelyVisible);
+            Shot(window, state, "mode-line-race");
+
+            // the next gathering: no line
+            Send(server, LedServer.Lobby(LobbyState.Forming));
+            PumpTelling(state, () => lobby.Gathering, "the lobby did not gather again");
+            Assert.Null(lobby.ModeLine);
+        });
+    }
+
+    /// <summary>A custom lobby on a fixed course has no vote: from the machine stage on, the race's line names its mode
+    /// (by its badge), the course and the mode's laps; pointed at, the mode's line and the lobby's rules that differ
+    /// from Quick Play's. LOBBY_SHOTS keeps it.</summary>
+    [Fact]
+    public async Task AFixedCourseLobbyNamesItsModeUnderTheSteps()
+    {
+        var mode = new LobbyMode(new string('a', 64), "DR-0001", "Death Race", 1, "DEATH RACE", "Three lives each; the last wreck is final.",
+            new Dictionary<string, int> { ["laps"] = 2 });
+        var rules = new LobbyRules(new Dictionary<string, int>
+        {
+            ["racers"] = 10, [HostRules.CourseSelect.Name] = (int)CourseSelectMode.Fixed, [LobbyRules.FixedCourseKey] = 16,
+        }, Mode: mode);
+        LobbyState Custom(string stage, string? waiting = null) =>
+            LedServer.Lobby(stage, waiting: waiting) with { Custom = true, HostId = "p2", Rules = rules, Name = "BEN's lobby" };
+        await using var server = new LedServer();
+        await InALobby(server, LedServer.Welcome(), Custom(LobbyState.Forming), (window, main, state) =>
+        {
+            var lobby = main.Lobby;
+            var view = window.GetVisualDescendants().OfType<LobbyView>().Single();
+            PumpTelling(state, () => lobby.CustomBarShown, "the custom lobby's bar did not show");
+            Assert.Null(lobby.ModeLine);
+            Send(server, Custom(LobbyState.Starting));
+            PumpTelling(state, () => lobby.Starting);
+            Send(server, Custom(LobbyState.Choosing), new ChooseMachine("m1", 16, [.. Enumerable.Range(0, 41)], 30_000));
+            PumpTelling(state, () => lobby.Step == Launcher.Core.LobbyStep.Machines && lobby.CourseShown, "the machine stage did not open");
+            Assert.Equal(["Gathering", "Machines", "Starting", "Race"], lobby.Steps.Select(s => s.Name));
+            Assert.Equal("DEATH RACE · " + Launcher.Core.Courses.Name(16) + " · 2 laps", lobby.ModeLine?.Text);
+            Assert.Equal("Three lives each; the last wreck is final.\n10 racers", lobby.ModeLine!.Tip);
+            Assert.Equal("2 laps", lobby.LapsText);   // (the machine stage's band says the same laps)
+            Assert.True(Named<StackPanel>(view, "ModeLine").IsEffectivelyVisible);
+            Shot(window, state, "mode-line-fixed-course");
         });
     }
 
@@ -168,6 +264,19 @@ public sealed partial class LobbyStageRulesTests
             Shot(window, state, "mode-vote-quickplay");
             var view = window.GetVisualDescendants().OfType<LobbyView>().Single();
             TipShot(window, view, state, spicy[0].Index, spicy[0].About, "mode-vote-quickplay-tip");
+
+            // a normal card drawn: the race's line says QUICK PLAY, its course and laps, and has nothing to list
+            var normal = cards.First(c => !c.HasBadge && c.Course != CourseVote.RandomCourse);
+            var votes = new int[options.Length];
+            votes[normal.Index] = 1;
+            Send(server, new CourseChosen("m1", options, votes, normal.Index, normal.Course, vote[normal.Index].Card));
+            PumpTelling(state, () => lobby.DrawFinished, "the draw did not run");
+            Assert.Equal("QUICK PLAY · " + Launcher.Core.Courses.Name(normal.Course) + " · " + vote[normal.Index].Card.Laps + " laps", lobby.ModeLine?.Text);
+            Assert.Null(lobby.ModeLine!.Tip);
+            Assert.Contains("plain", Named<Border>(view, "ModeBadge").Classes);
+            PumpFor(600, state);   // (the spicy cards narrowed: a long story name beside its badge is cut, never under it)
+            BadgesClearOfMarks(window, view);
+            Shot(window, state, "mode-line-quickplay-drawn");
         });
     }
 

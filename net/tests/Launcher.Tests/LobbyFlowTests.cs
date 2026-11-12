@@ -173,18 +173,17 @@ public sealed class LobbyFlowTests
     [Fact]
     public void TheLineOfStepsSaysWhereTheLobbyIs()
     {
-        Assert.Equal(["Gathering", "Course vote", "Draw", "Machines", "Starting", "Race"], LobbyScreens.Steps(true).Select(LobbyScreens.Name));
+        Assert.Equal(["Gathering", "Vote", "Machines", "Starting", "Race"], LobbyScreens.Steps(true).Select(LobbyScreens.Name));
         Assert.Equal(["Gathering", "Machines", "Starting", "Race"], LobbyScreens.Steps(false).Select(LobbyScreens.Name));
 
-        LobbyStep Step(LobbyState? lobby, bool vote = true, bool drawn = false, bool running = false) =>
-            LobbyScreens.Step(lobby, vote, drawn, running);
+        LobbyStep Step(LobbyState? lobby, bool vote = true, bool running = false) =>
+            LobbyScreens.Step(lobby, vote, running);
         Assert.Equal(LobbyStep.Gathering, Step(null));
         Assert.Equal(LobbyStep.Gathering, Step(Lobby(LobbyState.Forming)));
-        Assert.Equal(LobbyStep.CourseVote, Step(Lobby(LobbyState.Starting)));
-        Assert.Equal(LobbyStep.Draw, Step(Lobby(LobbyState.Starting), drawn: true));
+        Assert.Equal(LobbyStep.Vote, Step(Lobby(LobbyState.Starting)));                     // the vote, its draw too
         Assert.Equal(LobbyStep.Machines, Step(Lobby(LobbyState.Starting), vote: false));   // no vote: the machines are next
-        Assert.Equal(LobbyStep.Machines, Step(Lobby(LobbyState.Choosing), drawn: true));
-        Assert.Equal(LobbyStep.Starting, Step(Lobby(LobbyState.Choosing, LobbyState.WaitingForRelay), drawn: true));
+        Assert.Equal(LobbyStep.Machines, Step(Lobby(LobbyState.Choosing)));
+        Assert.Equal(LobbyStep.Starting, Step(Lobby(LobbyState.Choosing, LobbyState.WaitingForRelay)));
         Assert.Equal(LobbyStep.Starting, Step(Lobby(LobbyState.Racing)));                  // the games are being started
         Assert.Equal(LobbyStep.Race, Step(Lobby(LobbyState.Racing), running: true));
         // every step a lobby can be at is on its server's line

@@ -66,7 +66,7 @@ public sealed partial class QuickPlaySession
                 break;
             case CourseChosen c when CourseVote?.Vote.MatchId == c.MatchId:
                 CourseChosen = c;
-                Set("Draw");
+                Set(LobbyScreens.Name(LobbyStep.Vote));   // (the draw is the vote's end)
                 break;
             case ChooseMachine c:
                 OnChooseMachine(c);
@@ -192,7 +192,7 @@ public sealed partial class QuickPlaySession
         CourseVote = new CourseVoteState(v, DateTimeOffset.UtcNow.AddMilliseconds(v.DurationMs), null);
         CourseChosen = null;
         Choice = null;
-        Set("Course vote");
+        Set(LobbyScreens.Name(LobbyStep.Vote));
     }
 
     /// <summary>A match's machine choice opens, on the machine <see cref="DefaultChoice"/> names.</summary>

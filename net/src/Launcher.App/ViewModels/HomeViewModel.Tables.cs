@@ -46,10 +46,10 @@ public sealed partial class HomeViewModel
             : $"{(status.Lobbies.Count == 1 ? "1 lobby" : $"{status.Lobbies.Count} lobbies")} · {online}";
     }
 
-    /// <summary>The player's own lobby, its phase as its own page says it ("Course vote", "Draw" while starting).</summary>
+    /// <summary>The player's own lobby, its phase as its own page says it ("Vote" while starting, the draw too).</summary>
     private static LobbyRow Mine(string name, LobbyState lobby, QuickPlaySession session) =>
         new(name, StatusText.Count(lobby.Players.Count, lobby.Capacity), "Quick Play",
-            lobby.Stage == LobbyState.Starting && session.CourseVote is not null ? session.CourseChosen is null ? "Course vote" : "Draw"
+            lobby.Stage == LobbyState.Starting && session.CourseVote is not null ? LobbyScreens.Name(LobbyStep.Vote)
             : StatusText.Stage(lobby.Stage), LobbyRow.YourLobby, true);
 
     /// <summary>The player's lobby is not in the server's list yet (it is asked every few seconds): asks now, once per
