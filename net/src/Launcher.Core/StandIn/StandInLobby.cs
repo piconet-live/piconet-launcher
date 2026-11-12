@@ -82,6 +82,10 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
     /// <summary>Quick Play's rotation (the service's mode files, <see cref="StandInService.Rotation"/>); a custom lobby
     /// and a rotation that did not load have none: their vote is of courses alone.</summary>
     private readonly QuickPlayRotation? _rotation = room is null ? StandInService.Rotation : null;
+
+    /// <summary>The lobby's shuffle bags, as the service's lobby keeps them: its votes' cards and Random take from them.</summary>
+    private readonly RotationBags _bags = new();
+
     private IReadOnlyList<int>? _machines;
     private bool _customsOff;
     private ModeMachineRule? _machineRule;   // the drawn mode's machine words (a room's: its terms)
@@ -355,7 +359,7 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
             ChoosingOn(_match, pinned);
             return;
         }
-        _cards = _rotation?.Vote(CoursePool, Random.Shared.Next);
+        _cards = _rotation?.Vote(CoursePool, Random.Shared.Next, _bags);
         _options = _cards is { } cards ? [.. cards.Select(c => c.Course)]
             : [.. CoursePool.OrderBy(_ => Random.Shared.Next()).Take(5), CourseVote.RandomCourse];
         _votes = new int[_options.Count];
@@ -428,7 +432,7 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
                 }
             }
             // (Random course with the rotation draws a mode too: now and then a spicy one)
-            var drawn = _cards?[winner] is { } card && card.Course == CourseVote.RandomCourse ? _rotation!.Random(CoursePool, Random.Shared.Next)
+            var drawn = _cards?[winner] is { } card && card.Course == CourseVote.RandomCourse ? _rotation!.Random(CoursePool, Random.Shared.Next, _bags)
                 : _cards?[winner];
             course = drawn?.Course ?? (_options[winner] == CourseVote.RandomCourse ? CoursePool[Random.Shared.Next(CoursePool.Count)] : _options[winner]);
             send(new CourseChosen(MatchId, _options, [.. _votes], winner, course, drawn?.Card));
