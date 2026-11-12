@@ -79,7 +79,7 @@ public static class ReplayFile
             var (mode, modeProblem, modeFile) = ModeOf(file.RaceVersion, setup);
             return new ReplayInfo(path, recorded, setup.GetProperty("course").GetInt32(), setup.GetProperty("laps").GetInt32(),
                 players, you, TimeSpan.FromSeconds(steps / 60.0), racers.GetValueOrDefault(seat),
-                results is { } block ? Results(block, racers) : null, pack, packProblem,
+                results is { } block ? Results(block, racers, mode is not null) : null, pack, packProblem,
                 h.TryGetProperty(ReplayFormat.Header.Practice, out var practice) && practice.ValueKind == JsonValueKind.True,
                 TeamsOf(setup), [.. racers.Values.OrderBy(racer => racer.Seat)], mode, modeProblem, modeFile);
         }
@@ -369,7 +369,9 @@ public static class ReplayFile
         }
     }
 
-    private static List<RaceResult> Results(byte[] json, Dictionary<int, ReplayRacer> racers)
+    /// <param name="modes">The race ran a game mode: its ranks are the mode's results order (the game holds it in the
+    /// records when the mode ends the race: a knocked-out racer it placed stands where it placed it).</param>
+    private static List<RaceResult> Results(byte[] json, Dictionary<int, ReplayRacer> racers, bool modes)
     {
         var list = new List<(int Rank, RaceResult Result)>();
         foreach (var e in ReplayFormat.ParseResults(json))
@@ -379,8 +381,9 @@ public static class ReplayFile
             var best = e.BestLapMs > 0 ? TimeSpan.FromMilliseconds(e.BestLapMs) : (TimeSpan?)null;
             list.Add((e.Rank, new RaceResult(racer, 0, e.Finished, e.Out, time, best)));
         }
-        // the game's ranks put the knocked-out racers among the rest by distance; the list puts them last
-        return [.. list.OrderBy(x => x.Result.Out).ThenBy(x => x.Rank).Select((x, i) => x.Result with { Place = i + 1 })];
+        // the game's ranks put the knocked-out racers among the rest by distance; the list puts them last, except
+        // under a mode, whose order the ranks are (by points, cuts, distance: what the mode scored by)
+        return [.. list.OrderBy(x => !modes && x.Result.Out).ThenBy(x => x.Rank).Select((x, i) => x.Result with { Place = i + 1 })];
     }
 
     private static Online.Protocol.Rgb? Color(JsonElement seat) =>

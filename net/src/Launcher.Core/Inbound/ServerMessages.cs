@@ -185,7 +185,8 @@ public static class ServerMessages
         {
             if (r is not { Seat: >= 0 and < MaxSeats, State: not null } || (taken & (1u << r.Seat)) != 0 ||
                 !(float.IsFinite(r.X) && float.IsFinite(r.Y) && float.IsFinite(r.Z) && float.IsFinite(r.Speed) && float.IsFinite(r.TopSpeed) &&
-                  float.IsFinite(r.Energy) && float.IsFinite(r.MaxEnergy) && float.IsFinite(r.Distance)))
+                  float.IsFinite(r.Energy) && float.IsFinite(r.MaxEnergy) && float.IsFinite(r.Distance) &&
+                  (r.Score is null || float.IsFinite(r.Score.Value))))
             {
                 return false;
             }

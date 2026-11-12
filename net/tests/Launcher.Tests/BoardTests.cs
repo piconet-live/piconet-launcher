@@ -241,6 +241,47 @@ public sealed unsafe class BoardTests : IDisposable
         Assert.Same(s, board.Latest);
     }
 
+    /// <summary>The mode's places and scores come with the snapshot (board version 6): each racer's place as the game
+    /// wrote it, its score when its flags say it has one, and the snapshot's kind with the points' label; a snapshot of
+    /// no kind carries no label and no scores read.</summary>
+    [Fact]
+    public void TheModesPlacesAndScoresArriveWithTheSnapshot()
+    {
+        using var board = GameBoard.Create(_folder);
+        using var game = new FakeGame(board.Path);
+        var races = new List<RaceSnapshot>();
+        board.Received += races.Add;
+        game.Status(BoardPhase.Racing);
+        var points = Race(1,
+            new BoardRacer { Seat = 0, Rank = 1, Place = 2, Score = 7, Flags = BoardRacerFlags.HasScore },
+            new BoardRacer { Seat = 1, Rank = 0, Place = 1, Score = 12, Flags = BoardRacerFlags.HasScore | BoardRacerFlags.HasBestLap, BestLapMs = 17997 },
+            new BoardRacer { Seat = 2, Rank = 2, Place = 3, Score = 99, State = BoardRacerState.Out });
+        points.ScoreKind = BoardScoreKind.Points;
+        points.ScoreLabelLength = 4;
+        "CUTS"u8.CopyTo(points.ScoreLabel);
+        game.View.WriteSnapshot(points);
+        board.Look(S(0));
+        var s = Assert.Single(races);
+        Assert.Equal((RaceSnapshot.Points, "CUTS"), (s.ScoreKind, s.ScoreLabel));
+        Assert.Equal([2, 1, 3], s.Racers.Select(r => r.Place));
+        Assert.Equal([7f, 12f, null], s.Racers.Select(r => r.Score));
+        Assert.Equal(17997, s.Racers[1].BestLapMs);
+        Assert.Equal([1, 0, 2], RaceStandings.Order(s.Racers).Select(r => r.Seat));
+
+        var metres = Race(2, new BoardRacer { Seat = 0, Score = 1500.5f, Flags = BoardRacerFlags.HasScore });
+        metres.ScoreKind = BoardScoreKind.Metres;
+        metres.ScoreLabelLength = 4;
+        "CUTS"u8.CopyTo(metres.ScoreLabel);
+        game.View.WriteSnapshot(metres);
+        board.Look(S(0.1));
+        Assert.Equal((RaceSnapshot.Metres, null, 1500.5f, 0), (races[1].ScoreKind, races[1].ScoreLabel, races[1].Racers[0].Score, races[1].Racers[0].Place));
+
+        game.View.WriteSnapshot(Race(3, new BoardRacer { Seat = 0, Score = 5, Place = 40 }));
+        board.Look(S(0.2));
+        Assert.Equal((null, null, null, RacerLive.Seats), (races[2].ScoreKind, races[2].ScoreLabel, races[2].Racers[0].Score, races[2].Racers[0].Place));
+        Assert.True(races[2].InRange());
+    }
+
     /// <summary>The local player's pad for the Inputs window: none before the game writes one, the game's numbers as it
     /// read them, none again when it says it holds none (a replay, a watched race), a number out of its reach kept within
     /// it, and none once the board goes with its game.</summary>
