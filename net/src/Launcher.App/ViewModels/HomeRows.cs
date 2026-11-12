@@ -40,13 +40,21 @@ public sealed record VoteRow(string Name, bool Mine, bool Counted, string Odds, 
 
 /// <summary>A lobby in a list (<c>Views/LobbyRowView</c>): its name, its racers as a value ("14/30"), rules, what it
 /// is doing ("Gathering"), its tag ("your lobby"), and whether its row is on (the one shown above or
-/// the player's own).</summary>
-public sealed record LobbyRow(string Name, string Racers, string Rules, string Now, string Tag, bool On)
+/// the player's own). Id: the lobby's, for the server; pressed, the row joins it (not the player's own).</summary>
+public sealed record LobbyRow(string Name, string Racers, string Rules, string Now, string Tag, bool On, string Id = "")
 {
+    /// <summary>Pressing the row joins the lobby.</summary>
+    public bool Joins => !Mine && Id.Length > 0;
+
     /// <summary>The player's own lobby.</summary>
     public bool Mine => Tag == YourLobby;
 
     public const string YourLobby = "your lobby";
+
+    /// <summary>The tag of a lobby with room that takes players now.</summary>
+    public const string Join = "join";
+
+    public const string Full = "full";
 }
 
 /// <summary>One of the player's last races, from its replay; a practice run's place reads "Practice".</summary>

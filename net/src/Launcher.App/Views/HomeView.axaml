@@ -214,7 +214,7 @@
       </StackPanel>
     </Grid>
 
-    <!-- The server's lobbies. Today these are its Quick Play lobbies; lobbies opened by players get the same rows. -->
+    <!-- The server's Quick Play lobbies: a row pressed joins that lobby (RACE lets the server pick one). -->
     <StackPanel>
       <Border Classes="rowhead">
         <Grid ColumnDefinitions="148,Auto,*,Auto">
@@ -227,7 +227,11 @@
       <ItemsControl ItemsSource="{Binding Lobbies}" c:Motion.Stagger="True">
         <ItemsControl.ItemTemplate>
           <DataTemplate x:DataType="vm:LobbyRow">
-            <v:LobbyRowView />
+            <!-- pressed: into that lobby (the player's own: its page) -->
+            <Button Classes="plain lobbyrow" AutomationProperties.Name="{Binding Name}"
+                    Command="{Binding #Root.((vm:HomeViewModel)DataContext).OpenRowCommand}" CommandParameter="{Binding}">
+              <v:LobbyRowView />
+            </Button>
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>

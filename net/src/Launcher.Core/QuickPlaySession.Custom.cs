@@ -20,6 +20,14 @@ public sealed partial class QuickPlaySession
     /// the browser's list; a lobby is made or joined from there.</summary>
     public bool Custom { get; init; }
 
+    /// <summary>A Quick Play visit into the lobby the player chose on the Play page (its id): after the welcome it is
+    /// joined by name, where the queue would pick one. Null: the queue. A refusal (full, its race starting, gone) is
+    /// <see cref="LobbyRefusal"/>, and the player is then in no lobby.</summary>
+    public string? ToLobby { get; init; }
+
+    /// <summary>What the status says while the lobby the player chose is being joined (<see cref="ToLobby"/>).</summary>
+    public const string JoiningLobbyText = "Joining lobby";
+
     /// <summary>The custom lobbies the server lists for this player (while <see cref="Browsing"/>), as last sent.</summary>
     public IReadOnlyList<LobbySummary> Lobbies { get; private set; } = [];
 
@@ -107,7 +115,8 @@ public sealed partial class QuickPlaySession
             machine, color, setting, stock, custom, trail));
     }
 
-    /// <summary>Joins a lobby of the list (its password for a locked one).</summary>
+    /// <summary>Joins a lobby of the list (its password for a locked one), or the Quick Play lobby of that id: from
+    /// another lobby the server takes the player out of it when this one takes them.</summary>
     public Task JoinLobbyAsync(string lobbyId, string? password = null)
     {
         var (machine, color, setting, stock, custom, trail) = RacerToSend();

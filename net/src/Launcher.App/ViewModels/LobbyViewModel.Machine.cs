@@ -275,8 +275,8 @@ public sealed partial class LobbyViewModel
             return;
         }
         // (the racers of this race: a member who joined a race ago and is still out in it chooses nothing)
-        // (a watcher is in no race: they choose nothing)
-        var racers = lobby.Players.Where(p => !p.Racing && !p.Watching).ToList();
+        // (a watcher is in no race: they choose nothing; nor does a member who joined while the match was starting)
+        var racers = lobby.Players.Where(p => !p.Racing && !p.Watching && !p.NextRace).ToList();
         ReadyCount = $"{racers.Count(p => p.Chosen)} of {racers.Count}";
         var marks = racers.Select(p => new ReadyMark(p.Name, Rgb.Hex(p.Color), p.Chosen, p.Id == _session?.PlayerId)).ToList();
         if (!ReadyMarks.SequenceEqual(marks))

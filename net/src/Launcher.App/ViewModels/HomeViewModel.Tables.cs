@@ -1,4 +1,5 @@
 using System.Globalization;
+using CommunityToolkit.Mvvm.Input;
 using Launcher.Core;
 using Online.Protocol;
 
@@ -29,8 +30,9 @@ public sealed partial class HomeViewModel
                 continue;
             }
             // what it is doing and how full, as every lobby list shows it
+            var (tag, joins) = Joining(l);
             rows.Add(new LobbyRow(StatusText.LobbyName(status, l.Id), StatusText.Count(l.Players.Count, l.Capacity), "Quick Play",
-                StatusText.Stage(l.Stage), "", l.Id == shown));
+                StatusText.Stage(l.Stage), tag, l.Id == shown, joins ? l.Id : ""));
         }
         if (mine is not null && rows.All(r => !r.Mine))
         {
@@ -46,11 +48,36 @@ public sealed partial class HomeViewModel
             : $"{(status.Lobbies.Count == 1 ? "1 lobby" : $"{status.Lobbies.Count} lobbies")} · {online}";
     }
 
+    /// <summary>What a lobby's row says of joining it, from the server's list (a hint: the server decides when the
+    /// row is pressed): "join" while it gathers or races with room, "full", nothing while its race starts; a lobby of
+    /// another release line is not this player's to join, and says its version.</summary>
+    private static (string Tag, bool Joins) Joining(LobbyView l) =>
+        l.Line is { } line && line != LauncherLine.Own ? ($"version {line}", false)
+        : l.Players.Count >= l.Capacity ? (LobbyRow.Full, true)
+        : l.Stage is LobbyState.Starting or LobbyState.Choosing ? ("", true)
+        : (LobbyRow.Join, true);
+
+    /// <summary>Joins the lobby of a row (the window gives the way: RACE's, into that lobby).</summary>
+    public Func<string, Task>? JoinLobby { get; set; }
+
+    /// <summary>A row pressed: the player's own lobby's page, or into that lobby.</summary>
+    [RelayCommand]
+    private Task OpenRowAsync(LobbyRow row)
+    {
+        ArgumentNullException.ThrowIfNull(row);
+        if (row.Mine)
+        {
+            _showLobby();
+            return Task.CompletedTask;
+        }
+        return row.Joins && JoinLobby is { } join ? join(row.Id) : Task.CompletedTask;
+    }
+
     /// <summary>The player's own lobby, its phase as its own page says it ("Vote" while starting, the draw too).</summary>
     private static LobbyRow Mine(string name, LobbyState lobby, QuickPlaySession session) =>
         new(name, StatusText.Count(lobby.Players.Count, lobby.Capacity), "Quick Play",
             lobby.Stage == LobbyState.Starting && session.CourseVote is not null ? LobbyScreens.Name(LobbyStep.Vote)
-            : StatusText.Stage(lobby.Stage), LobbyRow.YourLobby, true);
+            : StatusText.Stage(lobby.Stage), LobbyRow.YourLobby, true, lobby.LobbyId);
 
     /// <summary>The player's lobby is not in the server's list yet (it is asked every few seconds): asks now, once per
     /// lobby.</summary>

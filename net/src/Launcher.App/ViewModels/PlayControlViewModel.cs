@@ -145,7 +145,15 @@ public sealed partial class PlayControlViewModel : ViewModelBase
     /// <summary>RACE: Quick Play on the online server (or first, without a disc or without a server, to where it is
     /// chosen).</summary>
     [RelayCommand(CanExecute = nameof(CanGo))]
-    private async Task GoAsync()
+    private Task GoAsync() => RaceAsync(null);
+
+    /// <summary>A lobby of the Play page's list pressed: Quick Play in that lobby, by RACE's rules and with its
+    /// notices; from another Quick Play lobby the player moves over (the server takes them out of the first when the
+    /// second takes them).</summary>
+    public Task JoinLobbyAsync(string lobbyId) => _noGame ? Task.CompletedTask : RaceAsync(lobbyId);
+
+    /// <param name="lobby">The lobby the player chose; null: the queue picks one.</param>
+    private async Task RaceAsync(string? lobby)
     {
         if (_prepare)
         {
@@ -171,8 +179,14 @@ public sealed partial class PlayControlViewModel : ViewModelBase
         try
         {
             _gameProblem = "";
+            if (lobby is not null && _state.Session is { Custom: false, PlayerId: not null, Lobby: not null } session)
+            {
+                await session.JoinLobbyAsync(lobby).ConfigureAwait(true);   // in Quick Play already: the same visit
+                _showLobby();
+                return;
+            }
             var controller = _state.CheckControllerAsync();
-            await _state.JoinAsync(new Uri(server)).ConfigureAwait(true);
+            await _state.JoinAsync(new Uri(server), lobby: lobby).ConfigureAwait(true);
             _showLobby();
             if (await controller.ConfigureAwait(true) is { } notice)
             {
