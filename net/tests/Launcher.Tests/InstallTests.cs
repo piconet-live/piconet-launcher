@@ -92,6 +92,15 @@ public sealed class InstallTests : IDisposable
         Assert.Equal(RecompLaunch.NoProgramInACopy, RecompLaunch.Problem(paths, processorRunsTheGame: true));
         Assert.False(Directory.Exists(Path.Combine(top, "data")));             // asking makes nothing
 
+        // the package's own files are in current: no older copy is said (every portable zip said it in 0.6.0)
+        foreach (var name in new[] { "Launcher.App.exe", "Launcher.App.dll" })
+        {
+            File.WriteAllText(Path.Combine(folder, name), "");
+        }
+        Directory.CreateDirectory(Path.Combine(folder, "recomp", "game"));
+        Assert.True(install.VelopackPortable);
+        Assert.Null(install.OlderCopy());
+
         // Velopack's marker alone (no installed marker): not the release's package, nothing changes
         File.Delete(Path.Combine(folder, Install.InstalledMarkerName));
         Assert.Equal((folder, (string?)null, false), (Install.Of(folder).Folder, Install.Of(folder).DataFolder, Install.Of(folder).Installed));
