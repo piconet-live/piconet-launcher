@@ -210,6 +210,25 @@ public sealed partial class QuickPlaySession(LauncherSettings settings, string w
     /// <summary>The last refusal from the coordinator (e.g. machine_not_allowed), for the views to explain.</summary>
     public ErrorMessage? LastError { get; private set; }
 
+    /// <summary>The lines kept of each channel (the lobby's, the global one).</summary>
+    public const int ChatKept = 200;
+
+    /// <summary>Counts the chat lines taken in: a view rebuilds its lines only when it moved (the race's reports
+    /// change the session many times a second).</summary>
+    public long ChatVersion
+    {
+        get
+        {
+            lock (_chat)
+            {
+                return _chatVersion;
+            }
+        }
+        private set => _chatVersion = value;
+    }
+
+    private long _chatVersion;   // (under _chat's lock)
+
     public IReadOnlyList<ChatMessage> Chat
     {
         get

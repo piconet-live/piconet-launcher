@@ -204,6 +204,24 @@ public sealed record LauncherSettings
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public InputsPlace? InputsWindow { get; init; }
 
+    /// <summary>The chat sidebar is pinned: a column of its own beside the page, on every page (the page narrows beside
+    /// it), and open again at the next start when it was open (<see cref="ChatOpen"/>). Unpinned, it opens over the
+    /// page and closes on a press elsewhere (the default: the owner, 2026-11-08, "you can pin it").</summary>
+    public bool ChatPinned { get; init; }
+
+    /// <summary>The pinned chat sidebar was open when the launcher closed (an unpinned one always starts closed).</summary>
+    public bool ChatOpen { get; init; }
+
+    /// <summary>The chat sidebar's width at 100% scale, in the window's pixels: <see cref="LeastChatWidth"/> to
+    /// <see cref="MostChatWidth"/>, dragged at its edge.</summary>
+    [JsonConverter(typeof(SettingAsWritten.Whole))]
+    public int ChatWidth { get; init; } = DefaultChatWidth;
+
+    public const int DefaultChatWidth = 300, LeastChatWidth = 260, MostChatWidth = 480;
+
+    /// <summary>A width as the sidebar takes it: within its least and most.</summary>
+    public static int ChatWidthKept(int width) => Math.Clamp(width, LeastChatWidth, MostChatWidth);
+
     /// <summary>Aurora's picture size (<c>"auroraSize"</c>): one of <see cref="AuroraSizes"/>; the default, Auto, is the
     /// window's own pixels and follows its size. An older file's <c>"native"</c> is that same thing, so it reads as Auto.</summary>
     public string AuroraSize { get; init; } = AuroraSizes[0].Name;

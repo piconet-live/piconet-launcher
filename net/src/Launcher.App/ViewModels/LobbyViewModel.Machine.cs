@@ -171,6 +171,7 @@ public sealed partial class LobbyViewModel
         PackText = "";
         PackTip = "";
         Chat.Clear();
+        _chatKey = "";
         ShowGarage(null);
     }
 

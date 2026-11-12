@@ -50,15 +50,9 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         Control = new PlayControlViewModel(state, _feed, Lobby, () => Current = Lobby, ShowSettings);
         Control.ShowFirstScreen = () => Current = Disc;
         Notices = new NoticesViewModel(state, noticeTime);
+        Chat = ChatSidebar(state);
         Graphics = new GraphicsViewModel(state);
-        // the message of the day the status shows goes into the bell's list too (Home shows it: HomeViewModel.Motd)
-        _feed.Changed += () => OnUi(() =>
-        {
-            if (!_feed.Failed && _feed.Latest?.Motd is { } motd)
-            {
-                Notices.ReceiveStanding(ServerNotice.Of(motd));
-            }
-        });
+        _feed.Changed += () => OnUi(HearMotd);
         _play = Home;
         Settings.PropertyChanged += (_, e) =>
         {
@@ -84,6 +78,19 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     private PracticeViewModel PracticePage(AppState state) =>
         new(() => _state.Settings.Racer.Raced with { Machine = Garage.ChosenIndex }, () => Current = Garage,
             [.. state.PracticePackList.Select(p => p.Name)], state.PracticeModeFile, state.StartPractice, state.Settings.Practice);
+
+    /// <summary>The message of the day the status shows goes into the bell's list too (Home shows it:
+    /// HomeViewModel.Motd).</summary>
+    private void HearMotd()
+    {
+        if (!_feed.Failed && _feed.Latest?.Motd is { } motd)
+        {
+            Notices.ReceiveStanding(ServerNotice.Of(motd));
+        }
+    }
+
+    /// <summary>The chat sidebar, on the lobby page's lines.</summary>
+    private ChatSidebarViewModel ChatSidebar(AppState state) => new(state, Lobby);
 
     /// <summary>The Custom lobbies page, and the lobby page's way to it (leaving a custom lobby).</summary>
     private CustomLobbiesViewModel CustomLobbies(AppState state)
@@ -145,6 +152,9 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
 
     /// <summary>The server's notices: the banner, the bell and its list.</summary>
     public NoticesViewModel Notices { get; }
+
+    /// <summary>The chat sidebar, on every page: its tabs, the pin, the width, the dots.</summary>
+    public ChatSidebarViewModel Chat { get; }
 
     /// <summary>The interface scale the window is drawn at, 1 for 100% (<see cref="LauncherSettings.InterfaceScale"/>).</summary>
     [ObservableProperty]

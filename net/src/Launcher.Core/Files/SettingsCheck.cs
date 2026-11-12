@@ -51,6 +51,8 @@ public static class SettingsCheck
             OtherSounds = Enum.IsDefined(read.OtherSounds) ? read.OtherSounds : defaults.OtherSounds,
             SettingsTab = Enum.IsDefined(read.SettingsTab) ? read.SettingsTab : defaults.SettingsTab,
             InterfaceScale = read.ShownInterfaceScale,
+            // a width a hand wrote out of range: the nearest the sidebar takes; no number at all: the default
+            ChatWidth = read.ChatWidth == int.MinValue ? defaults.ChatWidth : LauncherSettings.ChatWidthKept(read.ChatWidth),
             // a stat this launcher does not know (a newer one's, a slip of the hand): by number
             GarageSort = read.GarageSort is { } sort && MachineStats.Has(sort.By) ? sort : MachineSort.ByNumber,
             FavouriteMachines = Favourites(read.FavouriteMachines),

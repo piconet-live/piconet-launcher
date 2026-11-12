@@ -3,6 +3,14 @@
 The few tests of what only `Launcher.App`'s own code does, run without a window (Avalonia.Headless).
 
 - `HeadlessApp.cs`: not a test: the application without a window and the collection its tests run in.
+- `ChatSidebarTests.cs`: the chat sidebar on the stand-in service, with the mouse: the lobby's chat only (the
+  server's notices in it, nothing sent on the global channel, no tabs), "Join a lobby to chat" out of one; another
+  player's line while it is closed dots the button beside the bell (never the player's own or a notice), opening it
+  clears the dot; unpinned it closes on a press elsewhere and Escape,
+  pinned it stays, across pages, and the page narrows beside it; the edge dragged sets the width within 260 to 480;
+  the pin, a pinned sidebar's being open and the width kept for the next start, a width a hand wrote held to its
+  ends. With `CHAT_SHOTS` the sidebar's states as PNGs (1280 x 720). `LobbyChatScrollTests.cs`: the Lobby tab
+  follows its newest line, and scrolled up offers More messages below.
 - `GameSkinTests.cs`: the launcher's start with a disc image whose art cannot be read: the application with its
   theme, the settings and `GameSkin.Load`. Put a headless session away with `DisposeAsync`; a `using` waits for
   itself for ever.

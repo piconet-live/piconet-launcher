@@ -7,8 +7,8 @@
              x:DataType="vm:LobbyViewModel"
              x:Name="Root">
   <!-- The lobby's racers (LobbyView, under the state's part in all but the race and the Garage): its title with the
-       rules, the seats down the columns, the watchers beside them where the server takes spectators, and the chat
-       beside it all. The page's classes (LobbyView: gathering, noping) choose what a seat's row shows. -->
+       rules, the seats down the columns, the watchers beside them where the server takes spectators (the chat is the
+       sidebar's: ChatSidebar). The page's classes (LobbyView: gathering, noping) choose what a seat's row shows. -->
   <UserControl.Styles>
     <!-- a seat's row carries the racer's machine while gathering (two columns), in a column of its own: the name and the
          host's plate have a column of at least 128 px, so every machine starts at the same place and has the rest of
@@ -54,7 +54,7 @@
     </Style>
   </UserControl.Styles>
 
-  <Grid ColumnDefinitions="*,16,268">
+  <Grid>
     <StackPanel Name="Roster" VerticalAlignment="Top">
       <Border Classes="row" Padding="0" BorderThickness="0,0,0,1" Margin="0,0,0,8">
         <Grid ColumnDefinitions="Auto,*,Auto" Height="24">
@@ -133,11 +133,5 @@
       </StackPanel>
       </Grid>
     </StackPanel>
-    <!-- as tall as the racers' list beside it, whatever that holds: its message box stands at the list's foot
-         (it stood in the middle of an empty column while the list had 15 rows) -->
-    <Border Grid.Column="2" Classes="row" Padding="0,8,0,0" BorderThickness="0,1,0,0" VerticalAlignment="Top"
-            Height="{Binding #Roster.Bounds.Height}" MinHeight="226">
-      <v:LobbyChat Name="Chat" />
-    </Border>
   </Grid>
 </UserControl>
