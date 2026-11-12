@@ -287,6 +287,21 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         Current = TabPage(tab);
     }
 
+    /// <summary>A replay file opened from outside the window (a double-click on it in Explorer,
+    /// <see cref="ReplayOpening"/>): the Replays page, which plays it as its "Open a file…" does, or says why not
+    /// (a game open, Quick Play, the file). False: the first screen shows (the game's files are not prepared), and
+    /// nothing is played.</summary>
+    public bool OpenReplay(string file)
+    {
+        if (!Navigation)
+        {
+            return false;
+        }
+        Current = Replays;
+        Replays.PlayCommand.Execute(file);
+        return true;
+    }
+
     private ViewModelBase TabPage(string tab) => tab switch
     {
         "play" => _play is LobbyViewModel && !_state.InQuickPlay ? Home : _play,
