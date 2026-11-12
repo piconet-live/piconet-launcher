@@ -759,6 +759,39 @@ public sealed class CustomLobbiesTests : IDisposable
         });
     }
 
+    /// <summary>A machine the mode sets (<see cref="ChooseMachine.ModeSets"/>), offered alone: the launcher races it,
+    /// told unasked so the racer is ready, without the parts, and the racer's own machine and custom one stay saved
+    /// for the next race (the owner, 2026-11-08).</summary>
+    [Fact]
+    public async Task AMachineTheModeSetsIsRacedAndTheRacersOwnPickStays()
+    {
+        var state = State(standIn: false);
+        var parts = new CustomMachine(1, 26, 52, 0);
+        state.Update(s => s with { Racer = (s.Racer with { Custom = parts }).WithMachine(6) });
+        await using var server = new LedServer();
+        await InTheWindow(state, (window, main) =>
+        {
+            var joining = state.JoinAsync(server.Address, custom: true);
+            Pump(() => server.Of<Hello>().Count == 1, "the launcher did not connect");
+            server.SendAsync(LedServer.Welcome()).GetAwaiter().GetResult();
+            PumpTelling(state, () => joining.IsCompleted && state.Session?.PlayerId is not null);
+            var session = state.Session!;
+            session.JoinLobbyAsync("l1", null).GetAwaiter().GetResult();
+            Pump(() => server.Of<JoinLobby>().Count == 1, "the join was not sent");
+
+            server.SendAsync(new ChooseMachine("m1", 1, [29], 40_000, CustomsOff: true, ModeSets: true)).GetAwaiter().GetResult();
+            PumpTelling(state, () => session.Choice is not null, "no choice came");
+            Pump(() => server.Of<MachineChoice>().Count == 1, "the mode's machine was not told");
+            Assert.Equal((29, (CustomMachine?)null), (server.Of<MachineChoice>()[0].Machine, server.Of<MachineChoice>()[0].Custom));
+            Assert.Equal((6, parts), (state.Settings.Racer.Machine, state.Settings.Racer.Custom));
+
+            server.SendAsync(new ChooseMachine("m2", 1, [.. Enumerable.Range(0, GameMachines.Count)], 40_000)).GetAwaiter().GetResult();
+            PumpTelling(state, () => session.Choice?.Choose.MatchId == "m2", "no second choice came");
+            Pump(() => server.Of<MachineChoice>().Count == 2, "the racer's own machine was not told again");
+            Assert.Equal((6, parts), (server.Of<MachineChoice>()[1].Machine, server.Of<MachineChoice>()[1].Custom));
+        });
+    }
+
     [Fact]
     public void RestoreIsNoRowOfALobby()
     {

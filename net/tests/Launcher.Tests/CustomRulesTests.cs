@@ -36,7 +36,7 @@ public sealed class CustomRulesTests
         Assert.Equal("", CustomRules.Summary(Whole([]), QuickPlay));                          // Quick Play's own
         // (the race's rules are the mode's, said with its name: the lobby's summary names none of them)
         Assert.Equal("", CustomRules.Summary(Whole(new() { ["laps"] = 1, ["cpu-fill"] = (int)CpuFillMode.Never }, pack: null), QuickPlay));
-        Assert.Equal("Course vote 20 s · Voting minimum 4", CustomRules.Summary(
+        Assert.Equal("Vote 20 s · Voting minimum 4", CustomRules.Summary(
             Whole(new() { ["vote-seconds"] = 20, ["voting-minimum"] = 4, ["mine-regen"] = 0 }), QuickPlay));
     }
 
@@ -199,7 +199,7 @@ public sealed class CustomRulesTests
 
         // only the lobby's own settings are the host's, in their groups: no CPU racers, teams or stats (the mode's)
         Assert.Equal(["Lobby", "Connection", "Course"], editor.RuleGroups.Select(g => g.Heading));
-        Assert.Equal(["Racers", "Course vote", "Machine choice", "Voting minimum", "Latency limit", "Course"],
+        Assert.Equal(["Racers", "Vote", "Machine choice", "Voting minimum", "Latency limit", "Course"],
             editor.RuleGroups.SelectMany(g => g.Rows).Select(r => r.Label));
         ((StepperRule)editor.Rule("racers")).Value = 12;
         ((StepperRule)editor.Rule("latency-limit")).Value = 150;
