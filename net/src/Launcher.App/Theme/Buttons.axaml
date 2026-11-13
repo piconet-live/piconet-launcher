@@ -240,6 +240,12 @@
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     <Setter Property="VerticalContentAlignment" Value="Stretch" />
   </Style>
+  <!-- A lobby's row in a list, pressed to join it (the custom lobbies' browser, the Play page's Quick Play lobbies). -->
+  <Style Selector="Button.lobbyrow">
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Padding" Value="0" />
+  </Style>
 
   <!-- A heart: a machine marked as a favourite (filled), or to be marked (its outline). On a machine's cell it is a
        mark only, shown when marked. In an outlined button it is the filter that shows the marked ones only. -->

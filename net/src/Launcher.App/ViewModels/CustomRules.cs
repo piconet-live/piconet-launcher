@@ -100,18 +100,28 @@ public static class CustomRules
 
     /// <summary>A mode's settings the host moved from their defaults, as the summary says them: "Cut every 15 s"; "" for
     /// none. With the machine setting's range as raced (<paramref name="setting"/>), the settings of its ends are said
-    /// as that one rule, where the first of them stands: "Machine setting 0-100".</summary>
+    /// as that one rule, where the first of them stands: "Machine setting 0-100". Without it (the host's editor, whose
+    /// mode carries no terms) the range is the values of the two settings that set the machine setting, in their order.</summary>
     public static string ParamsLine(IReadOnlyList<ModeParam>? declared, IReadOnlyList<int>? values, int? stats = null, SettingRange? setting = null)
     {
         if (declared is null || values is null || values.Count != declared.Count)
         {
             return "";
         }
+        setting ??= SettingOf(declared, values);
         var moved = declared.Select((p, i) => (p, v: values[i], i)).Where(x => x.v != x.p.Default).ToList();
         bool End(ModeParam p) => setting is not null && p.Rule == HostRules.MachineSetting.Name;
         var first = moved.FindIndex(x => End(x.p));
         return string.Join(" · ", moved.Select((x, k) => !End(x.p) ? $"{x.p.Label} {ModeParamRow.Text(x.p, x.v, x.i == stats)}"
             : k == first ? LobbyViewModel.SettingText(setting!) : null).OfType<string>());
+    }
+
+    /// <summary>The machine setting's range the two settings that set it give ("from" and "to", in their order); null
+    /// when the mode has not exactly two, or their values are no range.</summary>
+    private static SettingRange? SettingOf(IReadOnlyList<ModeParam> declared, IReadOnlyList<int> values)
+    {
+        var ends = declared.Select((p, i) => (p, v: values[i])).Where(x => x.p.Rule == HostRules.MachineSetting.Name).Select(x => x.v).ToList();
+        return ends.Count == 2 && new SettingRange(ends[0], ends[1]) is { IsSound: true } range ? range : null;
     }
 
     /// <summary>The lobby's teams in the summary: "3 teams"; "" for none.</summary>
@@ -150,13 +160,9 @@ public static class CustomRules
         };
     }
 
-    /// <summary>The CPU racers as a mode's switch says them: On (players vote CPUs in), Off (none); Always.</summary>
-    private static string CpusText(int v) => (CpuFillMode)v switch
-    {
-        CpuFillMode.Never => "Off",
-        CpuFillMode.Always => "Always",
-        _ => "On",
-    };
+    /// <summary>The CPU racers in the words every place says them (<see cref="HostRuleRows.CpuFillChoices"/>): Off
+    /// (none), Vote (players vote CPUs in), Always (CPUs on the empty seats, no vote).</summary>
+    private static string CpusText(int v) => HostRuleRows.CpuFillChoices[Enum.IsDefined((CpuFillMode)v) ? v : (int)CpuFillMode.Vote];
 
     /// <summary>A rule's value by itself, for the whole list: "3", "Vote", "On", "200 ms".</summary>
     public static string ValueText(HostRule rule, LobbyRules? rules, LobbyRules? quickPlay)

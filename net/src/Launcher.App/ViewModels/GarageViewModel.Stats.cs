@@ -58,7 +58,7 @@ public sealed partial class GarageViewModel
     public partial string SortText { get; set; } = "";
 
     /// <summary>A stat's row was pressed: the machines by that stat; pressed again, the other way round. A stat is
-    /// first shown best or largest first (A to E, high to low), the number as the game has it.</summary>
+    /// first shown best or largest first (A to E, high to low, the toughest body value), the number as the game has it.</summary>
     [RelayCommand]
     private void SortBy(MachineStat stat)
     {

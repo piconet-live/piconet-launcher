@@ -23,12 +23,12 @@ public enum LobbyScreen
 }
 
 /// <summary>The steps of the line across the lobby's top, in their order (one line that says
-/// where the lobby is). A server without a course vote has neither the vote nor the draw.</summary>
+/// where the lobby is). The vote ends in its draw (the frame that hops to the card drawn), part of the step. A server
+/// without a course vote has no vote.</summary>
 public enum LobbyStep
 {
     Gathering,
-    CourseVote,
-    Draw,
+    Vote,
     Machines,
     Starting,
     Race,
@@ -60,19 +60,18 @@ public static class LobbyScreens
         _ => LobbyScreen.Gathering,
     };
 
-    /// <summary>The steps this server's lobbies go through: all six with a course vote, four without.</summary>
+    /// <summary>The steps this server's lobbies go through: all five with a course vote, four without.</summary>
     public static IReadOnlyList<LobbyStep> Steps(bool courseVote) => courseVote
-        ? [LobbyStep.Gathering, LobbyStep.CourseVote, LobbyStep.Draw, LobbyStep.Machines, LobbyStep.Starting, LobbyStep.Race]
+        ? [LobbyStep.Gathering, LobbyStep.Vote, LobbyStep.Machines, LobbyStep.Starting, LobbyStep.Race]
         : [LobbyStep.Gathering, LobbyStep.Machines, LobbyStep.Starting, LobbyStep.Race];
 
     /// <summary>Where the lobby is on the line.</summary>
     /// <param name="courseVote">The server's lobbies vote for the course.</param>
-    /// <param name="drawn">The vote's result has come.</param>
     /// <param name="running">The lobby's race is seen running (a game has reported it).</param>
-    public static LobbyStep Step(LobbyState? lobby, bool courseVote, bool drawn, bool running) => lobby?.Stage switch
+    public static LobbyStep Step(LobbyState? lobby, bool courseVote, bool running) => lobby?.Stage switch
     {
-        LobbyState.Starting when drawn => LobbyStep.Draw,
-        LobbyState.Starting when courseVote => LobbyStep.CourseVote,
+        // (the draw is the vote's end: the step until the machines)
+        LobbyState.Starting when courseVote => LobbyStep.Vote,
         // (a match forming without a vote: the relays are measured for a moment, the machines are next)
         LobbyState.Starting => LobbyStep.Machines,
         LobbyState.Choosing when lobby.Waiting is not null => LobbyStep.Starting,
@@ -103,8 +102,7 @@ public static class LobbyScreens
     /// <summary>A step's name on the line.</summary>
     public static string Name(LobbyStep step) => step switch
     {
-        LobbyStep.CourseVote => "Course vote",
-        LobbyStep.Draw => "Draw",
+        LobbyStep.Vote => "Vote",
         LobbyStep.Machines => "Machines",
         LobbyStep.Starting => "Starting",
         LobbyStep.Race => "Race",

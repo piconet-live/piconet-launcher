@@ -82,8 +82,13 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
     /// <summary>Quick Play's rotation (the service's mode files, <see cref="StandInService.Rotation"/>); a custom lobby
     /// and a rotation that did not load have none: their vote is of courses alone.</summary>
     private readonly QuickPlayRotation? _rotation = room is null ? StandInService.Rotation : null;
+
+    /// <summary>The lobby's shuffle bags, as the service's lobby keeps them: its votes' cards and Random take from them.</summary>
+    private readonly RotationBags _bags = new();
+
     private IReadOnlyList<int>? _machines;
     private bool _customsOff;
+    private ModeMachineRule? _machineRule;   // the drawn mode's machine words (a room's: its terms)
     private int[] _votes = [];
     private readonly HashSet<string> _voted = [];
     private readonly HashSet<string> _chosen = [];
@@ -354,7 +359,7 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
             ChoosingOn(_match, pinned);
             return;
         }
-        _cards = _rotation?.Vote(CoursePool, Random.Shared.Next);
+        _cards = _rotation?.Vote(CoursePool, Random.Shared.Next, _bags);
         _options = _cards is { } cards ? [.. cards.Select(c => c.Course)]
             : [.. CoursePool.OrderBy(_ => Random.Shared.Next()).Take(5), CourseVote.RandomCourse];
         _votes = new int[_options.Count];
@@ -427,12 +432,13 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
                 }
             }
             // (Random course with the rotation draws a mode too: now and then a spicy one)
-            var drawn = _cards?[winner] is { } card && card.Course == CourseVote.RandomCourse ? _rotation!.Random(CoursePool, Random.Shared.Next)
+            var drawn = _cards?[winner] is { } card && card.Course == CourseVote.RandomCourse ? _rotation!.Random(CoursePool, Random.Shared.Next, _bags)
                 : _cards?[winner];
             course = drawn?.Course ?? (_options[winner] == CourseVote.RandomCourse ? CoursePool[Random.Shared.Next(CoursePool.Count)] : _options[winner]);
             send(new CourseChosen(MatchId, _options, [.. _votes], winner, course, drawn?.Card));
             _machines = drawn?.Mode.Terms.Machines;
             _customsOff = drawn?.Mode.Terms.CustomsOff == true;
+            _machineRule = drawn?.Mode.Terms.MachineRule;
         }
         Later(DrawMs, () => ChoosingOn(match, course));
     }
@@ -449,8 +455,13 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
                 _stage = LobbyState.Choosing;
                 SendState();
                 var machines = room?.Terms?.Machines ?? _machines;
-                send(new ChooseMachine(MatchId, course, machines is { Count: > 0 } ? machines : QuickPlayDefaults.Rules.AllowedMachines, ChooseMs,
-                    room?.Terms?.CustomsOff ?? _customsOff));
+                var allowed = machines is { Count: > 0 } ? machines : QuickPlayDefaults.Rules.AllowedMachines;
+                // a machine the mode sets (the service's way, ModeMachines; the stand-in's player is seat 0, no teams
+                // and no last race): offered alone
+                var rule = room is not null ? room.Terms?.MachineRule : _machineRule;
+                send(rule is not null && ModeMachines.Of(rule, 1 + _others.Count, null, null, allowed, Random.Shared.Next)[0] is { } set
+                    ? new ChooseMachine(MatchId, course, [set], ChooseMs, CustomsOff: true, ModeSets: true)
+                    : new ChooseMachine(MatchId, course, allowed, ChooseMs, room?.Terms?.CustomsOff ?? _customsOff));
             }
             foreach (var (other, i) in _others.ToList().Select((p, i) => (p, i)))
             {
@@ -564,7 +575,7 @@ internal sealed class StandInLobby(string name, Action<ServerMessage> send, Canc
             StartVotes, _votedCpu ? 1 : 0, _stage, Custom: room is not null, HostId: room?.HostId, Rules: room?.Rules,
             Name: room?.Name, Locked: room?.Password is not null,
             StartsInMs: _startsAt is { } at ? (int)Math.Max(0, Math.Ceiling((at - DateTimeOffset.UtcNow).TotalMilliseconds)) : null,
-            NoCpuVote: room?.Terms is { CpusAllowed: false } || _rotation is { CpusAllowed: false }));
+            NoCpuVote: room?.Terms is { CpuFill: not CpuFillMode.Vote } || _rotation is { CpuVote: false }));
     }
 
     /// <summary>A line from the stand-in at this place among the lobby's others (round the list), when there is one.</summary>

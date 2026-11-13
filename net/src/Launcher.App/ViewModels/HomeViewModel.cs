@@ -302,7 +302,7 @@ public sealed partial class HomeViewModel : ViewModelBase
         var chances = counts is null ? [] : CourseDraw.Chances(counts);
         var left = Math.Max(0, (int)Math.Ceiling((vote.Ends - DateTimeOffset.UtcNow).TotalSeconds));
         VoteClock = drawn is null ? ReplayWords.Seconds(left) : "";
-        Over = $"{name} · Course vote";
+        Over = $"{name} · {LobbyScreens.Name(LobbyStep.Vote)}";
         Under = "";
         var rows = vote.Vote.Options.Select((course, i) =>
         {

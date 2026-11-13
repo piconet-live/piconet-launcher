@@ -20,6 +20,10 @@ public static class Branding
     /// player pinned before.</summary>
     public const string AppId = "Piconet.Launcher";
 
+    /// <summary>What Explorer calls a replay file (<c>.fzrp</c>, Launcher.Core ReplayFileType), shown with the
+    /// launcher's icon.</summary>
+    public const string ReplayTypeName = "Piconet replay";
+
     /// <summary>The launcher's own folder under the user's local application data.</summary>
     public const string DataFolder = "fzgx-launcher";
 

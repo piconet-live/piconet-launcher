@@ -4,7 +4,7 @@
              xmlns:v="using:Launcher.App.Views"
              x:Class="Launcher.App.Views.LobbyChat"
              x:DataType="vm:LobbyViewModel">
-  <!-- The lobby's chat, the same in every state of the lobby: lines of the theme's text (the speaker's paint and name,
+  <!-- The lobby's chat, in the chat sidebar (ChatSidebar), the same in every state of the lobby: lines of the theme's text (the speaker's paint and name,
        then what they said), the newest at the foot, followed while the player is at the foot (scrolled up, the list
        stays and offers More messages below); under them the message and Send. Enter sends.
        A line's text can be selected with the mouse and copied (Ctrl+C; a right click: Copy, the selection or the

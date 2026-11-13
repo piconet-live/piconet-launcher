@@ -35,12 +35,23 @@ public sealed partial class AppState
 
     public const string GameOpenText = "Game running";
 
+    /// <summary>Why the Quick Play lobby the player chose did not take them (a refusal's code), in a few words, as
+    /// the custom lobbies' page says a full or a gone lobby.</summary>
+    public static string ChosenLobbyRefused(string code) => code switch
+    {
+        Online.Protocol.CustomLobby.LobbyFull => "Lobby full",
+        Online.Protocol.CustomLobby.LobbyClosed => "Lobby starting a race · join once it is on",
+        _ => "Lobby gone",
+    };
+
     /// <summary>Joins Quick Play on a coordinator with the player's racer (leaving any earlier session). An
     /// <see cref="IOException"/> when the server gave no answer within <see cref="JoinLimit"/>; an
     /// <see cref="OperationCanceledException"/> when the player left meanwhile (<see cref="LeaveAsync"/>).</summary>
     /// <param name="custom">A visit to the custom lobbies (<see cref="QuickPlaySession.Custom"/>): no queue, the
     /// browser's list.</param>
-    public async Task<QuickPlaySession> JoinAsync(Uri server, bool custom = false)
+    /// <param name="lobby">The Quick Play lobby the player chose (<see cref="QuickPlaySession.ToLobby"/>); null: the
+    /// queue picks one.</param>
+    public async Task<QuickPlaySession> JoinAsync(Uri server, bool custom = false, string? lobby = null)
     {
         using var left = new CancellationTokenSource();
         using var limit = CancellationTokenSource.CreateLinkedTokenSource(left.Token);
@@ -63,7 +74,7 @@ public sealed partial class AppState
             Changed += Watch;
             Changed?.Invoke();   // inside the try: a handler that throws must not leave the launcher joining
             limit.CancelAfter(JoinLimit);
-            return await ConnectAsync(server, custom, limit.Token).ConfigureAwait(false);
+            return await ConnectAsync(server, custom, lobby, limit.Token).ConfigureAwait(false);
         }
         catch (Exception e) when (limit.IsCancellationRequested && e is OperationCanceledException or WebSocketException)
         {

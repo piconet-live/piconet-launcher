@@ -65,7 +65,7 @@ public sealed partial class LobbyStageRulesTests
             Send(server, LedServer.Lobby(LobbyState.Starting), new CourseVote("m1", Options, 60_000));
             PumpTelling(state, () => lobby.VoteShown && main.DecisionShown, "the column does not name the vote");
             Assert.Same(garage, main.Current);                                      // the page stays
-            Assert.Equal("Course vote", main.DecisionText);
+            Assert.Equal("Vote", main.DecisionText);
             var link = Named<Button>(window, "Decision");
             Assert.True(link.IsEffectivelyVisible);
             Click(window, link);

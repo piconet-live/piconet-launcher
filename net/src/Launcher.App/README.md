@@ -17,6 +17,7 @@ and does is here; the logic with no UI type is in `../Launcher.Core`. The names 
 | `Branding.cs`, `BuildInfo.cs`, `NotYet.cs` | The names players see; the version and build in the corner; the parts that are built and hidden |
 | `Attention.cs` | The lobby's three moments made noticed: a tone of the launcher's own at the settings' volume, and the taskbar's button flashing while the window is not in front (Windows) |
 | `Updates.cs`, `Relaunch.cs` | The launcher's own updates (Velopack, from the GitHub releases: looked for at the start and, while the launcher stays open, every 2 hours or so and when a game ends or the player leaves Quick Play (30 minutes after the last look at the soonest), never while a game runs, "Update automatically" on; downloaded in the background, put in at the next start or with "Restart to update", never while a game runs); the close that starts the launcher again |
+| `ReplayOpening.cs` | A replay double-clicked in Explorer: its file type registered (Velopack's install, update and uninstall hooks; a portable copy's start), the file handed to the open window or played in this start's, on the Replays page |
 | `Taskbar.cs` | The launcher's button on the Windows taskbar: the application id it takes, and gives the games it starts |
 | `ViewModels/` | What each page shows and does, without visuals |
 | `Views/`, `Theme/` | The look only: a view a page, and the one theme they all stand on |

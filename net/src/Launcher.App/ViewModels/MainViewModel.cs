@@ -47,18 +47,11 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         _replays = Replays;
         Disc = new DiscViewModel(state, () => Current = Home);
         Account = new AccountViewModel(state, () => Current = Garage, () => Navigation);
-        Control = new PlayControlViewModel(state, _feed, Lobby, () => Current = Lobby, ShowSettings);
-        Control.ShowFirstScreen = () => Current = Disc;
+        Control = PlayControl(state);
         Notices = new NoticesViewModel(state, noticeTime);
+        Chat = ChatSidebar(state);
         Graphics = new GraphicsViewModel(state);
-        // the message of the day the status shows goes into the bell's list too (Home shows it: HomeViewModel.Motd)
-        _feed.Changed += () => OnUi(() =>
-        {
-            if (!_feed.Failed && _feed.Latest?.Motd is { } motd)
-            {
-                Notices.ReceiveStanding(ServerNotice.Of(motd));
-            }
-        });
+        _feed.Changed += () => OnUi(HearMotd);
         _play = Home;
         Settings.PropertyChanged += (_, e) =>
         {
@@ -85,12 +78,34 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         new(() => _state.Settings.Racer.Raced with { Machine = Garage.ChosenIndex }, () => Current = Garage,
             [.. state.PracticePackList.Select(p => p.Name)], state.PracticeModeFile, state.StartPractice, state.Settings.Practice);
 
+    /// <summary>The message of the day the status shows goes into the bell's list too (Home shows it:
+    /// HomeViewModel.Motd).</summary>
+    private void HearMotd()
+    {
+        if (!_feed.Failed && _feed.Latest?.Motd is { } motd)
+        {
+            Notices.ReceiveStanding(ServerNotice.Of(motd));
+        }
+    }
+
+    /// <summary>The chat sidebar, on the lobby page's lines.</summary>
+    private ChatSidebarViewModel ChatSidebar(AppState state) => new(state, Lobby);
+
     /// <summary>The Custom lobbies page, and the lobby page's way to it (leaving a custom lobby).</summary>
     private CustomLobbiesViewModel CustomLobbies(AppState state)
     {
         var lobbies = new CustomLobbiesViewModel(state, () => Current = Lobby);
         Lobby.ToBrowser = () => Current = lobbies;
         return lobbies;
+    }
+
+    /// <summary>The left column's play control, and what the pages ask of it: the first screen (a game to prepare
+    /// again), a lobby's row pressed on the Play page.</summary>
+    private PlayControlViewModel PlayControl(AppState state)
+    {
+        var control = new PlayControlViewModel(state, _feed, Lobby, () => Current = Lobby, ShowSettings) { ShowFirstScreen = () => Current = Disc };
+        Home.JoinLobby = control.JoinLobbyAsync;
+        return control;
     }
 
     /// <summary>The launcher's update: the left column's line and button, and the Settings page's (<see cref="Updates"/>).</summary>
@@ -145,6 +160,9 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
 
     /// <summary>The server's notices: the banner, the bell and its list.</summary>
     public NoticesViewModel Notices { get; }
+
+    /// <summary>The chat sidebar, on every page: its tabs, the pin, the width, the dots.</summary>
+    public ChatSidebarViewModel Chat { get; }
 
     /// <summary>The interface scale the window is drawn at, 1 for 100% (<see cref="LauncherSettings.InterfaceScale"/>).</summary>
     [ObservableProperty]
@@ -275,6 +293,21 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
             LoadTrace.Note($"tab {tab} asked");
         }
         Current = TabPage(tab);
+    }
+
+    /// <summary>A replay file opened from outside the window (a double-click on it in Explorer,
+    /// <see cref="ReplayOpening"/>): the Replays page, which plays it as its "Open a file…" does, or says why not
+    /// (a game open, Quick Play, the file). False: the first screen shows (the game's files are not prepared), and
+    /// nothing is played.</summary>
+    public bool OpenReplay(string file)
+    {
+        if (!Navigation)
+        {
+            return false;
+        }
+        Current = Replays;
+        Replays.PlayCommand.Execute(file);
+        return true;
     }
 
     private ViewModelBase TabPage(string tab) => tab switch

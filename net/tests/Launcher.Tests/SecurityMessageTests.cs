@@ -128,6 +128,54 @@ public sealed class SecurityMessageTests : IDisposable
         Assert.Null(Assert.Single(rtts).RttMs);
     }
 
+    /// <summary>The relays are pinged at once, not one after another (with six running, the answer of a launcher up
+    /// to 0.6.0 came after the server had chosen): two relays here that answer nothing until both have been pinged.
+    /// One after another, the first relay's five pings would all go unanswered.</summary>
+    [Fact]
+    public async Task TheRelaysArePingedAtTheSameTime()
+    {
+        var cancel = TestContext.Current.CancellationToken;
+        using var first = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
+        using var second = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0));
+        var bothPinged = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var pinged = 0;
+        async Task Answer(UdpClient relay)
+        {
+            var counted = false;
+            while (true)
+            {
+                var r = await relay.ReceiveAsync(cancel);
+                if (!counted)
+                {
+                    counted = true;
+                    if (Interlocked.Increment(ref pinged) == 2)
+                    {
+                        bothPinged.SetResult();
+                    }
+                }
+                await bothPinged.Task.WaitAsync(cancel);
+                if (RelayProtocol.Decode(r.Buffer) is Ping ping)
+                {
+                    await relay.SendAsync(RelayProtocol.Encode(new Pong(ping.Nonce, ping.ClientTicks)), r.RemoteEndPoint, cancel);
+                }
+            }
+        }
+        var answering = Task.WhenAll(Answer(first), Answer(second));
+        RelayEndpoint[] relays =
+        [
+            new("r1", "127.0.0.1", ((IPEndPoint)first.Client.LocalEndPoint!).Port),
+            new("r2", "127.0.0.1", ((IPEndPoint)second.Client.LocalEndPoint!).Port),
+        ];
+
+        var rtts = await RelayMeasure.MeasureAsync(relays, r => r.Host, cancel);
+
+        Assert.Equal(["r1", "r2"], rtts.Select(r => r.RelayId));
+        Assert.All(rtts, r => Assert.NotNull(r.RttMs));
+        first.Close();                                                          // (the two answering loops end with their sockets)
+        second.Close();
+        await Assert.ThrowsAnyAsync<Exception>(() => answering);
+    }
+
     /// <summary>A coordinator that leaves parts out (a LAN server is any computer on the network): the session
     /// keeps what can be shown, drops what cannot, and stays connected.</summary>
     [Fact]

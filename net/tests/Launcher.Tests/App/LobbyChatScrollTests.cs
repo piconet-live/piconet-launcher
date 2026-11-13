@@ -9,7 +9,7 @@ using static Launcher.Tests.Headless;
 
 namespace Launcher.Tests;
 
-/// <summary>The lobby's chat follows its newest line while the player is at its foot; scrolled up, it stays where
+/// <summary>The lobby's chat (the sidebar's Lobby tab) follows its newest line while the player is at its foot; scrolled up, it stays where
 /// the player is and offers More messages below, which takes them back to the foot (as a stream's chat does); a
 /// selection holds it too, and the button clears it. With LOBBY_SHOTS naming a folder, the button is kept there as a PNG.</summary>
 [Collection(HeadlessApp.Name)]
@@ -73,6 +73,7 @@ public sealed class LobbyChatScrollTests : IDisposable
                 lobbies.CreateCommand.Execute(null);
                 PumpTelling(state, () => main.Current is LobbyViewModel, "the lobby was not made");
                 var lobby = main.Lobby;
+                main.Chat.Open = true;   // (the lobby's chat is the sidebar's)
                 PumpTelling(state, () => Avalonia.VisualTree.VisualExtensions.GetVisualDescendants(window).OfType<LobbyChat>()
                     .Any(c => c.IsEffectivelyVisible), "the lobby showed no chat");
                 var chat = Page<LobbyChat>(window);

@@ -1,0 +1,62 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:v="using:Launcher.App.Views"
+             x:Class="Launcher.App.Views.ChatSidebar"
+             x:DataType="vm:ChatSidebarViewModel"
+             x:Name="Root">
+  <!-- The chat sidebar (ChatSidebarViewModel), on every page: at its head its name, the pin (lit while pinned) and
+       the close; under them the lobby's chat (LobbyChat: its lines, the latest at the foot, the message box), or out
+       of a lobby one plain line. Only the lobby's chat for now: no tabs (the owner, 2026-11-08). Its left edge is
+       dragged to make it wider or narrower (ChatSidebar.axaml.cs). Unpinned it floats over the page, with the shadow
+       of what floats; pinned it is the window's column. Rows of text never light under the pointer. -->
+  <UserControl.Styles>
+    <Style Selector="Border#Body.floating">
+      <Setter Property="BoxShadow" Value="{StaticResource FloatShadow}" />
+    </Style>
+    <Style Selector="Border#Grip">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Border#Grip:pointerover > Border, Border#Grip.dragging > Border">
+      <Setter Property="Background" Value="{StaticResource OutlineOverBrush}" />
+    </Style>
+  </UserControl.Styles>
+
+  <Border Name="Body" Background="{StaticResource ColumnBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1,0,0,0"
+          Classes.floating="{Binding Overlay}">
+    <Panel>
+      <DockPanel Margin="16,16,12,16">
+        <!-- the head: its name, the pin and the close -->
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto" Height="36">
+          <TextBlock Text="Chat" FontFamily="{StaticResource HeadingFont}" FontWeight="SemiBold" FontSize="18"
+                     VerticalAlignment="Center" />
+          <!-- the pin: a pushpin, lit while the sidebar is pinned -->
+          <Button Name="Pin" Grid.Column="1" Classes="icon" Classes.open="{Binding Pinned}" Command="{Binding TogglePinCommand}"
+                  AutomationProperties.Name="Pin chat">
+            <Viewbox Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center">
+              <Canvas Width="24" Height="24">
+                <Path Classes="glyph" Data="M9 3H15L14 9L18 13H6L10 9Z M12 13V21" />
+              </Canvas>
+            </Viewbox>
+          </Button>
+          <Button Name="CloseChat" Grid.Column="2" Classes="chrome" Width="36" Height="32" Command="{Binding CloseCommand}"
+                  VerticalAlignment="Center" AutomationProperties.Name="Close chat">
+            <Path Data="M0.5 0.5L9.5 9.5M9.5 0.5L0.5 9.5" />
+          </Button>
+        </Grid>
+
+        <Panel Margin="0,12,0,0">
+          <TextBlock Name="Standby" Classes="faint" FontSize="{StaticResource Size14}" Text="{Binding Standby}"
+                     IsVisible="{Binding !InLobby}" VerticalAlignment="Top" />
+          <v:LobbyChat Name="LobbyChat" DataContext="{Binding Lobby}"
+                       IsVisible="{Binding #Root.((vm:ChatSidebarViewModel)DataContext).InLobby}" />
+        </Panel>
+      </DockPanel>
+      <!-- the edge that is dragged: a line shows on it under the pointer and while it is dragged -->
+      <Border Name="Grip" Width="8" HorizontalAlignment="Left" Cursor="SizeWestEast" Margin="-1,0,0,0"
+              AutomationProperties.Name="Chat width">
+        <Border Width="2" HorizontalAlignment="Left" />
+      </Border>
+    </Panel>
+  </Border>
+</UserControl>

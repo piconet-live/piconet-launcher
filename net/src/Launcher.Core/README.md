@@ -19,6 +19,7 @@ no `using` (`scripts/structure_check.py --explain 15`). What arrives from outsid
 | `MachineStats.cs` | The machines' stats as one table, whatever it was read from, and the order a list of machines is shown in |
 | `RecompLaunch.cs` | The game: where it is, its arguments, its start (what its folders hold is read in `Files/RecompLaunch.*.cs`; the match file is `Files/MatchFile.cs`) |
 | `Replays.cs`, `ReplayWords.cs` | A replay as values (`Files/ReplayFile.cs` reads one), shown in the file browser; what the Replays page says of one |
+| `ReplayFileType.cs`, `ReplayHandOver.cs` | A replay opened with a double-click: the `.fzrp` file type in the player's own registry (which launcher owns it: an installed one whenever it is there, else the portable copy started last; behind `IClassesStore`, so no test writes the registry), and the file handed to the window open on the same data folder (a pipe of the player's own) |
 | `ReplayStats.cs` | The Stats page's figures from the player's replays (races, wins, podiums, places, best times per course and machine, courses raced most, recent form), online races and practice apart |
 | `Settings.cs`, `DataFolders.cs` | The settings as values: the racer, each machine's look, the launcher's own choices (`Files/SettingsFile.cs` reads and saves them); the replays' and the fork's folder as the data folder's own: never written as full paths, and another copy's taken as this one's |
 | `StackStamp.cs` | The server stack this build was made for: its official server, and whether it is a test build |

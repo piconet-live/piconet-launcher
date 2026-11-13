@@ -83,10 +83,10 @@ public sealed class StandInModesTests : IDisposable
                 var vote = await Next<CourseVote>(got);
                 var cards = vote.Cards!;
                 var normal = StandInService.Rotation!.Normal;
-                Assert.Equal(["GHOST RACE", "KNOCKOUT", "OVERDRIVE"],
+                Assert.Equal(["CROWN", "DEATH RACE", "GHOST RACE", "KNOCKOUT", "OVERDRIVE"],
                     StandInService.Rotation.Spicy.Select(s => s.Mode.Package.Badge).Order(StringComparer.Ordinal));
-                // two spicy cards, two different ones of the three, each on any course (protocol 9710f66) with its laps:
-                // Knockout and Overdrive unlimited (0), Ghost race Quick Play's laps on its course
+                // two spicy cards, two different ones of the five, each on any course (protocol 9710f66) with its laps:
+                // all but Ghost race unlimited (0), Ghost race Quick Play's laps on its course
                 var spicy = Enumerable.Range(0, 5).Where(i => cards[i].Badge is not null).ToList();
                 Assert.Equal(2, spicy.Count);
                 Assert.Equal(2, spicy.Select(i => cards[i].Badge).Distinct().Count());
@@ -168,7 +168,7 @@ public sealed class StandInModesTests : IDisposable
 
     // the overhaul: the stand-in takes a mode's words and a lobby's teams as the service does (the service's GameModeTests)
 
-    private const string Head = "mode \"M\" { api 1; }\n";
+    private const string Head = "mode \"M\" { api 0.6.5; }\n";
 
     private static readonly Rgb Paint = new(1, 2, 3);
 
@@ -207,6 +207,13 @@ public sealed class StandInModesTests : IDisposable
         await using (d.Link)
         {
             Assert.False((await Created(d, "cpus on;")).NoCpuVote);
+        }
+        var e = await Connected();
+        await using (e.Link)
+        {
+            var always = await Created(e, "cpus always;");
+            Assert.True(always.NoCpuVote);                       // (CPUs with no vote)
+            Assert.Equal((int)CpuFillMode.Always, always.Rules!.Mode!.Terms!["cpu-fill"]);
         }
     }
 

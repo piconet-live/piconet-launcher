@@ -96,6 +96,38 @@ public sealed class CommandLineTests : IDisposable
         Assert.Equal($"{option} is not an option of the launcher. Test settings are named in a launch file (--config FILE).", refusal);
     }
 
+    /// <summary>A replay file's path alone, as Explorer passes the file a player double-clicked: the window, which
+    /// plays it (<see cref="ReplayOpening"/>). Any other word that is no option is still refused, and so is a second
+    /// replay file or a mode beside it.</summary>
+    [Fact]
+    public void AReplayFileGivenAloneOpensTheWindowOnIt()
+    {
+        var file = @"C:\Users\Ana\Downloads\20261108-201500-m1.fzrp";
+        var (line, refusal) = CommandLine.Parse([file]);
+        Assert.Null(refusal);
+        Assert.Equal((StartMode.Window, file, null), (line!.Mode, line.ReplayToOpen, line.File));
+        Assert.Same(DebugSettings.Off, line.Debug);
+
+        Assert.Equal("race.FZRP", CommandLine.Parse(["race.FZRP"]).Line!.ReplayToOpen);                 // (case does not count)
+        var (data, _) = CommandLine.Parse(["--data", "d", "race.fzrp"]);
+        Assert.Equal(("d", "race.fzrp"), (data!.DataFolder, data.ReplayToOpen));
+        Assert.Null(CommandLine.Parse([]).Line!.ReplayToOpen);
+        // --play-replay keeps its own file: the headless playback, not the window
+        var (headless, _) = CommandLine.Parse(["--play-replay", "race.fzrp"]);
+        Assert.Equal((StartMode.PlayReplay, "race.fzrp", null), (headless!.Mode, headless.File, headless.ReplayToOpen));
+
+        Assert.Equal((null, "One replay file a start."), CommandLine.Parse(["a.fzrp", "b.fzrp"]));
+        Assert.Equal((null, "One mode a start: --play-offline and a replay file to open in the window were both asked for."),
+            CommandLine.Parse(["--play-offline", "race.fzrp"]));
+        Assert.Equal((null, "One mode a start: a replay file to open in the window and --list-replays were both asked for."),
+            CommandLine.Parse(["race.fzrp", "--list-replays"]));
+        foreach (var word in new[] { "race.json", ".fzrp", "-x.fzrp", "race.fzrp.txt" })
+        {
+            Assert.Equal((null, $"{word} is not an option of the launcher. Test settings are named in a launch file (--config FILE)."),
+                CommandLine.Parse([word]));
+        }
+    }
+
     [Fact]
     public void WhatCannotBeMeantIsRefused()
     {

@@ -66,7 +66,7 @@ public sealed partial class QuickPlaySession
                 break;
             case CourseChosen c when CourseVote?.Vote.MatchId == c.MatchId:
                 CourseChosen = c;
-                Set("Draw");
+                Set(LobbyScreens.Name(LobbyStep.Vote));   // (the draw is the vote's end)
                 break;
             case ChooseMachine c:
                 OnChooseMachine(c);
@@ -128,6 +128,13 @@ public sealed partial class QuickPlaySession
         if (Custom)
         {
             OnCustomWelcome();
+            return;
+        }
+        if (ToLobby is { } chosen)
+        {
+            Set(JoiningLobbyText);
+            _ = JoinLobbyAsync(chosen);   // (the racer as the queue's: RacerToSend)
+            ServerHasName(settings.Racer.Name.Trim());
             return;
         }
         // the racer as it is now, custom machine included: the garage can change after the session was made
@@ -192,7 +199,7 @@ public sealed partial class QuickPlaySession
         CourseVote = new CourseVoteState(v, DateTimeOffset.UtcNow.AddMilliseconds(v.DurationMs), null);
         CourseChosen = null;
         Choice = null;
-        Set("Course vote");
+        Set(LobbyScreens.Name(LobbyStep.Vote));
     }
 
     /// <summary>A match's machine choice opens, on the machine <see cref="DefaultChoice"/> names.</summary>
@@ -217,7 +224,8 @@ public sealed partial class QuickPlaySession
         }
     }
 
-    /// <summary>A chat line; the last 200 are kept. A server's notice is a chat line too, and is told
+    /// <summary>A chat line; the last <see cref="ChatKept"/> of each channel are kept (a notice is the global
+    /// channel's). A server's notice is a chat line too, and is told
     /// (<see cref="NoticeReceived"/>); one this session has had (the server sends the last hour's again to a player
     /// who joins a lobby) is neither shown twice nor told again.</summary>
     private void OnChat(ChatMessage c)
@@ -234,10 +242,11 @@ public sealed partial class QuickPlaySession
                 OwnLineArrived();
             }
             _chat.Add(c);
-            if (_chat.Count > 200)
+            if (_chat.Count(m => m.Channel == c.Channel) > ChatKept)
             {
-                _chat.RemoveAt(0);
+                _chat.RemoveAt(_chat.FindIndex(m => m.Channel == c.Channel));
             }
+            ChatVersion++;
         }
         if (notice is not null)
         {

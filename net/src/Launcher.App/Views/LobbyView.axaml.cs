@@ -23,7 +23,10 @@ public sealed partial class LobbyView : UserControl
     // The vote's rest is 24 px more than its parts add up to: measured on Windows at the least window (1280 x 720),
     // where the page scrolled by 23 px without it. The racers' list with its title and the chat's box take 244
     // (measured headless at 1280 x 720: the page scrolled by 16 px with 228).
-    private const double VoteRest = 20 + LineRest + 12 + (2 * 72) + 244 + 24;
+    private const double VoteRest = 20 + LineRest + ModeLineRest + 12 + (2 * 72) + 244 + 24;
+
+    // The race's line under the steps, whose room the vote keeps (it eases in at the draw's end): 24 px and 2 over it.
+    private const double ModeLineRest = 26;
     private const double GatheringRest = 20 + LineRest + 65 + 28;
 
     /// <summary>Narrower than this the vote's three columns of seats leave a name and its tag no room beside the

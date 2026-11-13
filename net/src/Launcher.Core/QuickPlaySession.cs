@@ -210,6 +210,25 @@ public sealed partial class QuickPlaySession(LauncherSettings settings, string w
     /// <summary>The last refusal from the coordinator (e.g. machine_not_allowed), for the views to explain.</summary>
     public ErrorMessage? LastError { get; private set; }
 
+    /// <summary>The lines kept of each channel (the lobby's, the global one).</summary>
+    public const int ChatKept = 200;
+
+    /// <summary>Counts the chat lines taken in: a view rebuilds its lines only when it moved (the race's reports
+    /// change the session many times a second).</summary>
+    public long ChatVersion
+    {
+        get
+        {
+            lock (_chat)
+            {
+                return _chatVersion;
+            }
+        }
+        private set => _chatVersion = value;
+    }
+
+    private long _chatVersion;   // (under _chat's lock)
+
     public IReadOnlyList<ChatMessage> Chat
     {
         get
@@ -273,7 +292,8 @@ public sealed partial class QuickPlaySession(LauncherSettings settings, string w
     public bool CustomsOff => Choice is { } c ? c.Choose.CustomsOff : Lobby?.Rules?.Mode?.CustomsOff == true;
 
     /// <summary>Races this machine, in its garage look (it can change until the choice ends), and keeps it as the racer's
-    /// machine. Nothing once the choice is closed (<see cref="ChoiceOpen"/>).</summary>
+    /// machine, but for a machine the mode sets (<see cref="ChooseMachine.ModeSets"/>): that one is raced and the
+    /// racer's own pick stays theirs (the owner, 2026-11-08). Nothing once the choice is closed (<see cref="ChoiceOpen"/>).</summary>
     public Task ChooseMachineAsync(int machine)
     {
         if (Choice is not { } c || !ChoiceOpen || !c.Choose.Machines.Contains(machine))
@@ -283,11 +303,14 @@ public sealed partial class QuickPlaySession(LauncherSettings settings, string w
         var profile = Racer;
         var look = profile.LookOf(machine);
         Choice = c with { Mine = look };
-        Machine = machine;
         var custom = CustomsOff ? null : CustomMachine.Checked(profile.Custom);
         Sent = new RacedMachine(machine, custom);
-        _racer = profile.WithMachine(machine);
-        MachineChosen?.Invoke(machine);
+        if (!c.Choose.ModeSets)
+        {
+            Machine = machine;
+            _racer = profile.WithMachine(machine);
+            MachineChosen?.Invoke(machine);
+        }
         Changed?.Invoke();
         return Client.ChooseMachineAsync(c.Choose.MatchId, machine, look.Color ?? profile.Color,
             MachineSetting?.Clamp(Math.Clamp(look.Setting, 0, 100)), look.StockColor, custom,
@@ -378,6 +401,10 @@ public sealed partial class QuickPlaySession(LauncherSettings settings, string w
 
     /// <summary>What players read while their race waits for its race server to start.</summary>
     public const string StartingServerText = "Starting race server…";
+
+    /// <summary>What a member reads through a course vote and machine choice that are not theirs
+    /// (<see cref="PlayerInfo.NextRace"/>: they joined the lobby while its match was starting).</summary>
+    public const string NextRaceText = "You race the next race";
 
     /// <summary>The lobby in a few words: its players, a race starting, the machine choice, the wait for the race
     /// server, or its race (this player in it or watching).</summary>

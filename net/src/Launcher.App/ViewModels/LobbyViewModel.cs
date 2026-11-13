@@ -200,6 +200,7 @@ public sealed partial class LobbyViewModel : ViewModelBase
     public ObservableCollection<CourseOption> CourseOptions { get; } = [];
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ModeLineRoom))]
     public partial bool VoteShown { get; set; }
 
     /// <summary>The draw has landed on the course (the vote can close).</summary>
@@ -209,6 +210,7 @@ public sealed partial class LobbyViewModel : ViewModelBase
     [ObservableProperty]
     public partial string RulesText { get; set; } = "";
 
+    /// <summary>The lobby's chat: its lines, and the server's notices (LobbyViewModel.Chat.cs).</summary>
     public ObservableCollection<ChatLine> Chat { get; } = [];
 
     [ObservableProperty]
@@ -263,6 +265,7 @@ public sealed partial class LobbyViewModel : ViewModelBase
     private Task VoteCourseAsync(CourseOption option) =>
         _session is { CourseChosen: null, Watching: false } s ? s.VoteCourseAsync(option.Index) : Task.CompletedTask;
 
+    /// <summary>The message to the lobby's chat (nothing is sent on the global channel).</summary>
     [RelayCommand]
     private async Task SendAsync()
     {
@@ -339,19 +342,8 @@ public sealed partial class LobbyViewModel : ViewModelBase
         }
         ShowSeats(_session, lobby);
         ShowSteps(_session, lobby);
-        // rebuilt only when a line came (the race's live reports refresh the lobby many times a second), so the chat
-        // keeps its place while read
-        var paints = new Dictionary<string, string>();
-        foreach (var p in lobby?.Players ?? [])
-        {
-            paints[p.Id] = Rgb.Hex(p.Color);
-        }
-        // a server's notice (known by its id, never its name) is the server's own line, its text without the tier's word
-        var lines = _session.Chat.TakeLast(50).Select(c => ServerNotice.Of(c) is { } notice
-            ? new ChatLine(c.FromId, Notices.SenderName, "#000000", notice.Text, you: false, NoticeItem.Of(notice))
-            : new ChatLine(c.FromId, c.FromName, paints.TryGetValue(c.FromId, out var paint) ? paint : "#8792A2", Shown(c),
-                c.FromId == _session.PlayerId, tag: c.FromTag)).ToList();
-        ShowChat(lines);
+        ShowRaceLine(_session, lobby);
+        ShowChatLines(_session, lobby);
         ShowChatNote(_session);
     }
 
@@ -359,25 +351,25 @@ public sealed partial class LobbyViewModel : ViewModelBase
     /// the page (a line being read or selected stays as it is while others arrive, and takes a changed paint in
     /// place); the oldest go from the top, the new ones come at the foot. Only when nothing of what shows is among
     /// them (another lobby) is the list made anew.</summary>
-    private void ShowChat(List<ChatLine> lines)
+    private static void ShowChat(ObservableCollection<ChatLine> shown, List<ChatLine> lines)
     {
-        bool Stays(int gone) => Chat.Count - gone <= lines.Count && Chat.Skip(gone).Zip(lines).All(pair => pair.First.Same(pair.Second));
+        bool Stays(int gone) => shown.Count - gone <= lines.Count && shown.Skip(gone).Zip(lines).All(pair => pair.First.Same(pair.Second));
         var gone = 0;
-        while (gone < Chat.Count && !Stays(gone))
+        while (gone < shown.Count && !Stays(gone))
         {
             gone++;
         }
         for (var i = 0; i < gone; i++)
         {
-            Chat.RemoveAt(0);
+            shown.RemoveAt(0);
         }
-        for (var i = 0; i < Chat.Count; i++)
+        for (var i = 0; i < shown.Count; i++)
         {
-            Chat[i].ColorHex = lines[i].ColorHex;
+            shown[i].ColorHex = lines[i].ColorHex;
         }
-        foreach (var line in lines.Skip(Chat.Count))
+        foreach (var line in lines.Skip(shown.Count))
         {
-            Chat.Add(line);
+            shown.Add(line);
         }
     }
 
@@ -476,18 +468,22 @@ public sealed partial class LobbyViewModel : ViewModelBase
     private static IReadOnlyList<NoticeValue> ModeValues(LobbyState lobby) =>
         lobby.Rules?.Mode is { } mode ? [new NoticeValue("mode", mode.Name)] : [];
 
-    /// <summary>How the empty seats are filled: never when the lobby's modes allow no CPUs (no vote then), else a
-    /// custom lobby's rule, else the server's (a vote where it names none).</summary>
     /// <summary>The teams of a lobby's next race; 0: none.</summary>
     private static bool TeamChanges(QuickPlaySession session, LobbyState lobby, PlayerInfo p) =>
         lobby.Stage == LobbyState.Forming && (session.IsHost || p.Id == session.PlayerId);
 
     private static int TeamsOf(LobbyState lobby) => lobby.Rules is { Mode: not null } rules ? rules.Value(LobbyRules.TeamsKey) ?? 0 : 0;
 
-    private static CpuFillMode CpuFill(QuickPlaySession session, LobbyState? lobby) => lobby is { NoCpuVote: true } ? CpuFillMode.Never
-        : lobby is { Custom: true, Rules: { } rules }
-        ? (CpuFillMode)CustomRules.Value(rules, HostRules.CpuFill.Name, session.QuickPlayRules)
-        : session.Rules?.CpuFill ?? CpuFillMode.Vote;
+    /// <summary>How the empty seats are filled: a custom lobby's rule as it is raced (its mode's own word: Always has
+    /// CPUs and no vote), else the server's (a vote where it names none); never where the lobby takes no CPU vote and
+    /// nothing says always.</summary>
+    private static CpuFillMode CpuFill(QuickPlaySession session, LobbyState? lobby)
+    {
+        var fill = lobby is { Custom: true, Rules: { } rules }
+            ? (CpuFillMode)CustomRules.Raced(rules, HostRules.CpuFill.Name, session.QuickPlayRules)
+            : session.Rules?.CpuFill ?? CpuFillMode.Vote;
+        return lobby is { NoCpuVote: true } && !(lobby.Custom && fill == CpuFillMode.Always) ? CpuFillMode.Never : fill;
+    }
 
     /// <summary>The machines a server allows, when not all: "Blue Falcon only", "12 machines"; null: all.</summary>
     private static string? Allowed(ServerRules r) =>

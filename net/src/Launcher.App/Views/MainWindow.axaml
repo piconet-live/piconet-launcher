@@ -24,6 +24,14 @@
       <Setter Property="Padding" Value="24,0,24,24" />
     </Style>
     <!-- the place's title and its page's head lean past their boxes (TextBlock.display) -->
+    <!-- beside a pinned chat sidebar the page's names stand closer, so that the lobby's four, the chat's button and
+         the bell keep their room (ChatSidebarViewModel.PageLeast) -->
+    <Style Selector="Grid#Head.tight Button.section">
+      <Setter Property="Padding" Value="10,0" />
+    </Style>
+    <Style Selector="Grid#Head.tight TextBlock.display">
+      <Setter Property="Margin" Value="0,0,16,0" />
+    </Style>
   </husk:AppWindow.Styles>
   <husk:AppWindow.Resources>
     <!-- The title bar is drawn here, in the window's content, so the framework's own drawn one is left empty. -->
@@ -91,7 +99,7 @@
     <!-- A server's notice, across the window under the title bar (NoticeBanner). -->
     <v:NoticeBanner Grid.Row="1" DataContext="{Binding Notices}" />
 
-    <Grid Grid.Row="2" ColumnDefinitions="Auto,*">
+    <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto">
       <!-- The left column, on every page (direction D: "who you are, where you can go, whether you are online"): your
            machine in 3D, the gold bar, your name and machine; the places (Play, Garage, Replays, Mods); the one notice;
            at its foot "Start F-Zero GX" (StartGameView), then Settings, lit while a Settings page shows, above the
@@ -177,7 +185,8 @@
         <!-- The page's head: its place's title in the display face; a place with more than one
              page, their names as a mode bar beside it (the one showing a green plate that leans); on Quick Play the
              server's rules; the bell. The row is its own: the page scrolls under it, never into it. -->
-        <Grid ColumnDefinitions="Auto,Auto,*,Auto" Height="56" Margin="24,16,16,8" IsVisible="{Binding Navigation}">
+        <Grid Name="Head" ColumnDefinitions="Auto,Auto,*,Auto,Auto" Height="56" Margin="24,16,16,8" IsVisible="{Binding Navigation}"
+              Classes.tight="{Binding Chat.Column}">
           <TextBlock Classes="display d40" Text="{Binding TabTitle}" VerticalAlignment="Center" Margin="0,0,24,0" />
           <!-- the mode bar: the pages on the surface tone, the one showing a green plate that leans -->
           <Border Grid.Column="1" Background="{StaticResource WellBrush}" Padding="4" VerticalAlignment="Center" CornerRadius="{DynamicResource StaticMediumCornerRadius}" IsVisible="{Binding HasSections}">
@@ -200,8 +209,21 @@
           </Border>
           <TextBlock Grid.Column="2" Classes="dim" Text="{Binding Home.RulesLine}" IsVisible="{Binding OnQuickPlay}"
                      HorizontalAlignment="Right" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="16,0" />
+          <!-- The chat: opens and closes the sidebar (ChatSidebar); its dot, a player's line not seen yet. -->
+          <Button Name="ChatToggle" Grid.Column="3" Classes="icon" Classes.open="{Binding Chat.Open}" Margin="0,0,4,0"
+                  Command="{Binding Chat.ToggleCommand}" AutomationProperties.Name="Chat">
+            <Panel Width="36" Height="36">
+              <Viewbox Width="17" Height="17" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Canvas Width="24" Height="24">
+                  <Path Classes="glyph" Data="M4 5H20V16H11L7 20V16H4Z" />
+                </Canvas>
+              </Viewbox>
+              <Ellipse Name="ChatDot" Classes="mark" Fill="{StaticResource AccentBrush}" HorizontalAlignment="Right"
+                       VerticalAlignment="Top" Margin="0,6,6,0" IsVisible="{Binding Chat.HasDot}" />
+            </Panel>
+          </Button>
           <!-- The bell: the server's notices this PC received (NoticesList); its dot, a notice not seen there yet. -->
-          <Button Name="NoticeBell" Grid.Column="3" Classes="icon" Classes.open="{Binding Notices.ListOpen}"
+          <Button Name="NoticeBell" Grid.Column="4" Classes="icon" Classes.open="{Binding Notices.ListOpen}"
                   Command="{Binding Notices.ToggleListCommand}" AutomationProperties.Name="Notices">
             <Panel Width="36" Height="36">
               <Viewbox Width="17" Height="17" HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -227,9 +249,17 @@
         </Panel>
       </Grid>
 
+      <!-- The chat sidebar (ChatSidebar), on every page but the first screen: pinned, the window's third column
+           (the room is the spacer's: the page narrows beside it); unpinned, over the page's right end. -->
+      <Border Grid.Column="2" Width="{Binding Chat.ColumnWidth}" IsVisible="{Binding Navigation}" />
+      <Panel Grid.Column="1" Grid.ColumnSpan="2" HorizontalAlignment="Right" IsVisible="{Binding Navigation}">
+        <v:ChatSidebar Name="ChatSidebar" DataContext="{Binding Chat}" Width="{Binding ShownWidth}" IsVisible="{Binding Open}"
+                       c:Motion.Reveal="True" c:PadNav.Scope="True" />
+      </Panel>
+
       <!-- The question before ray tracing is turned on with its graphics not prepared yet (GraphicsViewModel), over the
            page: Build prepares them (no game starts meanwhile), Cancel leaves ray tracing off. -->
-      <Panel Name="RaysQuestion" Grid.ColumnSpan="2" c:Motion.Reveal="True" IsVisible="{Binding Graphics.Asking}" c:PadNav.Scope="True">
+      <Panel Name="RaysQuestion" Grid.ColumnSpan="3" c:Motion.Reveal="True" IsVisible="{Binding Graphics.Asking}" c:PadNav.Scope="True">
         <Border Background="{StaticResource GroundBrush}" Opacity="0.86" />
         <Border Width="440" Background="{StaticResource RaisedBrush}" Padding="24" CornerRadius="{DynamicResource StaticExtraLargeCornerRadius}" HorizontalAlignment="Center" VerticalAlignment="Center"
                 BoxShadow="0 8 24 0 #80000000">
@@ -245,7 +275,7 @@
       </Panel>
 
       <!-- The question before leaving a lobby for the game, over the page. -->
-      <Panel Grid.ColumnSpan="2" c:Motion.Reveal="True" IsVisible="{Binding Control.Asking}" c:PadNav.Scope="True">
+      <Panel Grid.ColumnSpan="3" c:Motion.Reveal="True" IsVisible="{Binding Control.Asking}" c:PadNav.Scope="True">
         <Panel.Styles>
           <Style Selector="Button.leave">
             <Setter Property="Background" Value="{StaticResource HoverBrush}" />

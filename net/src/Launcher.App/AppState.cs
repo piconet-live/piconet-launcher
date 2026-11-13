@@ -142,6 +142,7 @@ public sealed partial class AppState(SettingsStore store, string dataFolder)
     public event Action<string>? Noted;
 
     private Exception? _fault;
+    private Online.Protocol.ErrorMessage? _refusal;
 
     private bool _notSaved;
 
@@ -198,7 +199,7 @@ public sealed partial class AppState(SettingsStore store, string dataFolder)
     }
 
     /// <summary>The join itself (<see cref="JoinAsync"/>): the session made and connected, any earlier one left.</summary>
-    private async Task<QuickPlaySession> ConnectAsync(Uri server, bool custom, CancellationToken stop)
+    private async Task<QuickPlaySession> ConnectAsync(Uri server, bool custom, string? lobby, CancellationToken stop)
     {
         if (Session is not null)
         {
@@ -215,6 +216,7 @@ public sealed partial class AppState(SettingsStore store, string dataFolder)
             Debug.ReachesARace, () => Settings.InputDelay, StandIn ? StandInService.Connect : CoordinatorClient.ConnectionAsync)
         {
             Custom = custom,
+            ToLobby = lobby,
         };
         Session.MachineChosen += machine => Update(s => s with { Racer = s.Racer.WithMachine(machine) });
         Session.SentHome += text =>
@@ -242,6 +244,21 @@ public sealed partial class AppState(SettingsStore store, string dataFolder)
             if (session.LastError is { Code: Online.Protocol.Hello.DebugNotAllowed } && Session == session)
             {
                 _ = LeaveAsync(QuickPlaySession.DebugRefusedText);
+            }
+            // the Quick Play lobby the player chose did not take them (full, its race starting, gone): said once, where
+            // the last problem is. From another lobby they stay in it; from none the visit is over
+            if (!session.Custom && session.LobbyRefusal is { } refusal && Session == session &&
+                !ReferenceEquals(Interlocked.Exchange(ref _refusal, refusal), refusal))   // (this one: the same words can come again)
+            {
+                var text = ChosenLobbyRefused(refusal.Code);
+                if (session.Lobby is null)
+                {
+                    _ = LeaveAsync(text);
+                }
+                else
+                {
+                    Report(text);
+                }
             }
         };
         Changed?.Invoke();

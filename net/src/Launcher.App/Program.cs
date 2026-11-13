@@ -10,7 +10,8 @@ namespace Launcher.App;
 internal static class Program
 {
     /// <summary>
-    /// The launcher's window; or one of the modes without it, as the command line says (<see cref="CommandLine"/>
+    /// The launcher's window (with a replay file given alone, a double-click on it: played in the window, the open
+    /// one when there is one, <see cref="ReplayOpening"/>); or one of the modes without it, as the command line says (<see cref="CommandLine"/>
     /// describes every option): <c>--play-offline</c>, the recompiled game started for offline play (the same start
     /// as the left column's Start F-Zero GX), waiting until the game is closed; <c>--play-match FILE</c>, the game
     /// started on the race of that match file (tests and development), recorded into the replay folder or where
@@ -46,7 +47,8 @@ internal static class Program
         // game runs (another launcher window's), as the update replaces the folder a game runs from. In a launcher
         // that was not installed it does nothing. Its taskbar id is the launcher's own (Taskbar.Claim), so the
         // shortcut Setup makes and the window share one button.
-        VelopackApp.Build().SetAppUserModelId(Branding.AppId).SetAutoApplyOnStartup(false).Run();
+        // Its hooks register the replay's file type (Setup, an update) and take it away (the uninstall): ReplayOpening.
+        ReplayOpening.Hooks(VelopackApp.Build()).SetAppUserModelId(Branding.AppId).SetAutoApplyOnStartup(false).Run();
         var (line, refusal) = CommandLine.Parse(args);
         if (line is null)
         {
@@ -77,6 +79,13 @@ internal static class Program
             case StartMode.QuickPlay:
                 return QuickPlay(line.Debug.QuickPlay!);
             case StartMode.Window:
+                // a replay file double-clicked while a window is open on this data folder: it plays there, and this
+                // start ends (ReplayOpening); else this start opens the window, which plays it
+                if (ReplayOpening.HandOver(line))
+                {
+                    return 0;
+                }
+                ReplayOpening.ClaimAtStart(line, text => Faults?.Note(text));
                 if (ReferenceEquals(line.Debug, Launcher.Core.DebugSettings.Off) && !line.DevService)
                 {
                     Updates.PutInAtStart(args, text => Faults?.Note(text));   // a downloaded update, unless a game runs (never a test's)
