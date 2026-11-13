@@ -373,9 +373,11 @@ public sealed partial class RaceViewModel : ViewModelBase
         Course = CourseNames.Name(course);
         Map = Theme.GameSkin.Course(course);
         Stage = over ? "Results" : watching ? "Watching" : "Racing";
-        // the race's order from distances and finish times (the game's ranking byte is not the position)
+        // the race's order: the mode's places when it gives them (the order the game's HUD shows), else from distances
+        // and finish times (the game's ranking byte by itself is not the position)
         var ordered = RaceStandings.Order(racers);
         var places = RaceStandings.Places(racers);
+        var scored = snapshot.Scored;
         var leader = ordered.FirstOrDefault(r => r.State != RacerLive.Out);
         LapText = leader is null ? "" : $"Lap {Math.Min(leader.Lap + 1, laps)}/{laps}";
         TimeText = Time(racers.Count == 0 ? 0 : racers.Max(r => r.TotalMs));
@@ -394,10 +396,10 @@ public sealed partial class RaceViewModel : ViewModelBase
             YouEnergy = me.MaxEnergy > 0 ? Math.Clamp(me.Energy / me.MaxEnergy, 0, 1) : 0;
         }
 
-        // standings: finished by time, racing by distance, then the knocked out (furthest first)
+        // standings: the mode's places with its score (points, metres) where it gives them; else finished by time,
+        // racing by distance, then the knocked out (furthest first), with times and laps
         // only the lines that changed, not every line rebuilt 10 times a second
         var open = GamesOpen();
-        var place = 0;
         var teams = RaceTeams();
         var mode = ModeBoardRows.Of(_mode, racers.Select(r => r.Seat), teams, seat => RacerName(seat < seats.Count ? seats[seat] : null, seat));
         ShowMode(mode);
@@ -405,13 +407,13 @@ public sealed partial class RaceViewModel : ViewModelBase
         {
             var r = ordered[i];
             var s = r.Seat < seats.Count ? seats[r.Seat] : null;
-            var detail = r.State switch
+            var detail = scored ? RaceStandings.ScoreText(snapshot, r) : r.State switch
             {
                 RacerLive.Finished => Time(r.TotalMs),
                 RacerLive.Out => "KO",
                 _ => $"Lap {Math.Min(r.Lap + 1, laps)}",
             };
-            var row = new StandingRow(r.Seat, r.State == RacerLive.Out ? "-" : (++place).ToString(CultureInfo.InvariantCulture),
+            var row = new StandingRow(r.Seat, places.TryGetValue(r.Seat, out var at) ? at.ToString(CultureInfo.InvariantCulture) : "-",
                 RacerName(s, r.Seat), MachineName(s),
                 Rgb.Hex(SeatColor(s)), detail, r.BestLapMs is { } b ? Time(b) : "", r.Seat == mySeat, r.State == RacerLive.Out,
                 r.Seat == Followed, Phase(r, s, open), ModeTeams.Said(teams, r.Seat), mode.SeatCells.GetValueOrDefault(r.Seat));
