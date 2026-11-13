@@ -168,7 +168,7 @@ public sealed class StandInModesTests : IDisposable
 
     // the overhaul: the stand-in takes a mode's words and a lobby's teams as the service does (the service's GameModeTests)
 
-    private const string Head = "mode \"M\" { api 0.6.1; }\n";
+    private const string Head = "mode \"M\" { api 0.6.5; }\n";
 
     private static readonly Rgb Paint = new(1, 2, 3);
 
