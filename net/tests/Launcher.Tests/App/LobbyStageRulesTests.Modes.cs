@@ -223,15 +223,15 @@ public sealed partial class LobbyStageRulesTests
         });
     }
 
-    /// <summary>Quick Play's own rotation (protocol/quickplay: the competitive lap table; Knockout, Ghost race and
-    /// Overdrive the spicy options, two of them a vote): each normal card says its course's laps; a spicy card its badge,
-    /// Ghost race its course's laps and Knockout and Overdrive none (they race unlimited), whichever two are drawn.
+    /// <summary>Quick Play's own rotation (protocol/quickplay: the competitive lap table; Knockout, Ghost race,
+    /// Overdrive, Death Race and Crown the spicy options, two of them a vote): each normal card says its course's laps; a spicy card its badge,
+    /// Ghost race its course's laps and the others none (they race unlimited), whichever two are drawn.
     /// LOBBY_SHOTS keeps it, to set beside the vote's mockup (design 6).</summary>
     [Fact]
     public async Task QuickPlaysOwnRotationShowsEachCoursesLaps()
     {
         var rotation = QuickPlayRotation.Read(RepositoryFolder.Protocol("protocol", "quickplay"));
-        Assert.Equal(["GHOST RACE", "KNOCKOUT", "OVERDRIVE"], rotation.Spicy.Select(s => s.Mode.Package.Badge).Order(StringComparer.Ordinal));
+        Assert.Equal(["CROWN", "DEATH RACE", "GHOST RACE", "KNOCKOUT", "OVERDRIVE"], rotation.Spicy.Select(s => s.Mode.Package.Badge).Order(StringComparer.Ordinal));
         var vote = rotation.Vote(CoursePool.Default, new Random(4).Next);
         int[] options = [.. vote.Select(o => o.Course)];
         await using var server = new LedServer();
