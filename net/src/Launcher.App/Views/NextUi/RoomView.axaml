@@ -1,0 +1,131 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:c="using:Launcher.App.Controls"
+             xmlns:n="using:Launcher.App.Controls.NextUi"
+             xmlns:nxv="using:Launcher.App.Views.NextUi"
+             x:Class="Launcher.App.Views.NextUi.RoomView"
+             x:DataType="vm:LobbyViewModel">
+  <!-- The redesigned interface's custom lobby while it gathers, its room: on the left its name (a lock where it has a
+       password), its host and its rules in a line, and who is here, a tile a racer (the host presses a racer's tile to
+       remove them, after a question). On the right a card: the rules with "All rules"; for the host Edit rules and the
+       page's main action Start race; for the others the vote to start, with how far it is, and the CPU vote where the
+       lobby leaves that to them; a team to change where the lobby races in teams; and "Practice while you wait". -->
+  <Grid Margin="14,8,0,12" ColumnDefinitions="*,48,400">
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
+      <StackPanel Orientation="Horizontal" Spacing="10">
+        <TextBlock Classes="eyebrow" FontSize="14" Text="CUSTOM LOBBY" />
+        <Path Name="Lock" Fill="{StaticResource NextDimBrush}" Width="11" Height="13" Stretch="Uniform" VerticalAlignment="Center"
+              Data="M2,7 L12,7 L12,15 L2,15 Z M3.6,7 L3.6,5 C3.6,1.6 10.4,1.6 10.4,5 L10.4,7 L8.8,7 L8.8,5 C8.8,3.4 5.2,3.4 5.2,5 L5.2,7 Z"
+              IsVisible="{Binding LobbyLocked}" />
+      </StackPanel>
+      <TextBlock Grid.Row="1" Name="Title" Classes="heading" RenderTransform="skewX(-10deg)" RenderTransformOrigin="0%,100%"
+                 Margin="0,4,0,10" TextTrimming="CharacterEllipsis" MaxWidth="760" HorizontalAlignment="Left"
+                 Text="{Binding LobbyName, Converter={x:Static v:UpperText.Instance}}" />
+      <TextBlock Grid.Row="2" Name="Line" Classes="lead" Margin="0,4,0,0" TextTrimming="CharacterEllipsis">
+        <Run Text="Host " /><Run Text="{Binding HostName}" FontWeight="SemiBold" /><Run Text="  ·  " /><Run Text="{Binding RulesSummary}" />
+      </TextBlock>
+      <TextBlock Grid.Row="3" Name="Count" Classes="eyebrow" FontSize="14" Margin="0,22,0,8"
+                 Text="{Binding RosterTitle, Converter={x:Static v:UpperText.Instance}}" />
+      <ScrollViewer Grid.Row="4" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <ItemsControl Name="People" ItemsSource="{Binding People}" VerticalAlignment="Top" ClipToBounds="False">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <UniformGrid Columns="3" ClipToBounds="False" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:SeatRow">
+              <!-- (a tile the host may remove is pressed; the others are only shown, and the pad passes them by) -->
+              <Button Classes="line racer" Height="48" Margin="0,0,10,10" Padding="0,0,16,0"
+                      IsHitTestVisible="{Binding Kickable}" Focusable="{Binding Kickable}" c:PadNav.Skip="{Binding !Kickable}"
+                      Command="{Binding $parent[nxv:NextShell].((vm:MainViewModel)DataContext).Shell.AskKickCommand}" CommandParameter="{Binding}"
+                      AutomationProperties.Name="{Binding Name}">
+                <Grid ColumnDefinitions="4,16,*,Auto,Auto">
+                  <Border Background="{Binding ColorHex, Converter={x:Static v:HexToBrush.Instance}}" />
+                  <c:NameTagText Grid.Column="2" PlayerName="{Binding Name}" PlayerTag="{Binding Tag}" VerticalAlignment="Center"
+                                 FontSize="17" FontWeight="Medium" TextTrimming="CharacterEllipsis" Classes.you="{Binding You}" />
+                  <Border Grid.Column="3" Classes="hostmark" Margin="8,0" VerticalAlignment="Center" IsVisible="{Binding Host}">
+                    <TextBlock Text="HOST" />
+                  </Border>
+                  <TextBlock Grid.Column="4" Classes="quiet" FontSize="14" VerticalAlignment="Center" FontFeatures="tnum" Text="{Binding Ping}" />
+                </Grid>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Grid>
+
+    <n:Chamfer Grid.Column="2" Classes="plate" VerticalAlignment="Bottom">
+      <StackPanel Margin="26" Spacing="14">
+        <TextBlock Classes="eyebrow" Text="RULES" />
+        <TextBlock Name="Rules" FontSize="16" TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" Text="{Binding RulesSummary}" />
+        <Button Name="AllRules" Classes="soft" Height="42" Padding="18,0" HorizontalAlignment="Left" Content="All rules"
+                Command="{Binding $parent[nxv:NextShell].((vm:MainViewModel)DataContext).Shell.OpenRulesSheetCommand}"
+                AutomationProperties.Name="All rules" />
+        <Border Height="1" Margin="0,4" Background="{StaticResource NextLineBrush}" />
+        <!-- the host: the rules, and the start -->
+        <StackPanel Spacing="12" IsVisible="{Binding HostCanEdit}">
+          <Button Name="EditRules" Classes="soft" Height="46" HorizontalAlignment="Stretch" Content="Edit rules"
+                  Command="{Binding EditRulesCommand}" AutomationProperties.Name="Edit rules" />
+          <Button Name="StartRace" Classes="main" Height="54" Margin="4,0" HorizontalAlignment="Stretch" Content="START RACE"
+                  Command="{Binding StartRaceCommand}" c:PadNav.Main="True" AutomationProperties.Name="Start race" />
+        </StackPanel>
+        <!-- the others: the vote to start, and the CPU vote where they have it -->
+        <StackPanel Spacing="12" IsVisible="{Binding !HostCanEdit}">
+          <TextBlock Name="StartLine" FontSize="17" FontWeight="SemiBold" FontFeatures="tnum" Text="{Binding StartLine}" />
+          <Border Classes="meter">
+            <Border RenderTransform="{Binding StartShare, Converter={x:Static v:ShareToScale.Instance}}" />
+          </Border>
+          <Button Name="VoteStart" Classes="main" Height="54" Margin="4,0" HorizontalAlignment="Stretch" Content="VOTE TO START"
+                  Command="{Binding VoteStartCommand}" IsEnabled="{Binding CanVoteStart}" c:PadNav.Main="True"
+                  AutomationProperties.Name="Vote to start" />
+          <Grid ColumnDefinitions="*,12,*" IsVisible="{Binding CpuVoteShown}">
+            <Button Classes="soft" Height="42" HorizontalAlignment="Stretch" Content="CPUs: yes" Command="{Binding VoteCpuCommand}"
+                    CommandParameter="yes" IsEnabled="{Binding !Watching}" AutomationProperties.Name="CPU racers: yes" />
+            <Button Grid.Column="2" Classes="soft" Height="42" HorizontalAlignment="Stretch" Content="CPUs: no" Command="{Binding VoteCpuCommand}"
+                    CommandParameter="no" IsEnabled="{Binding !Watching}" AutomationProperties.Name="CPU racers: no" />
+          </Grid>
+        </StackPanel>
+        <Button Name="Team" Classes="line" MinHeight="44" Background="{StaticResource NextRaisedBrush}" IsVisible="{Binding TeamShown}"
+                Command="{Binding NextTeamCommand}" CommandParameter="{Binding MyTeam}" AutomationProperties.Name="Change team">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock VerticalAlignment="Center" Text="{Binding MyTeam.TeamText, StringFormat='Team: {0}', FallbackValue=''}" />
+            <TextBlock Grid.Column="1" Classes="quiet" VerticalAlignment="Center" Text="Change" />
+          </Grid>
+        </Button>
+        <Button Name="PracticeWait" Classes="line" MinHeight="44" Background="{StaticResource NextRaisedBrush}"
+                IsVisible="{Binding !Watching}"
+                Command="{Binding $parent[nxv:NextShell].((vm:MainViewModel)DataContext).Shell.PracticeWhileWaitingCommand}"
+                AutomationProperties.Name="Practice while you wait">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock VerticalAlignment="Center" Text="Practice while you wait" />
+            <Viewbox Grid.Column="1" Width="14" Height="14" VerticalAlignment="Center">
+              <Canvas Width="24" Height="24">
+                <Path Classes="stroke" Data="M9 5L16 12L9 19" StrokeThickness="2.4" />
+              </Canvas>
+            </Viewbox>
+          </Grid>
+        </Button>
+      </StackPanel>
+    </n:Chamfer>
+  </Grid>
+  <UserControl.Styles>
+    <!-- (a name's own text is a TextBlock to the styles: NameTagText's style key; the player's own in bold) -->
+    <Style Selector="TextBlock.you">
+      <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+    <Style Selector="Border.hostmark">
+      <Setter Property="Background" Value="{StaticResource NextGoldBrush}" />
+      <Setter Property="Padding" Value="6,1" />
+      <Setter Property="CornerRadius" Value="2" />
+    </Style>
+    <Style Selector="Border.hostmark > TextBlock">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="FontWeight" Value="Bold" />
+      <Setter Property="Foreground" Value="{StaticResource NextOnAccentBrush}" />
+    </Style>
+  </UserControl.Styles>
+</UserControl>

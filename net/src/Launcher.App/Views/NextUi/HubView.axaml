@@ -1,0 +1,80 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Launcher.App.Controls"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:nx="using:Launcher.App.ViewModels.NextUi"
+             x:Class="Launcher.App.Views.NextUi.HubView"
+             x:DataType="nx:HubViewModel">
+  <!-- The redesigned interface's Play page out of a lobby, the hub (theme v3: ../../Theme/NextUi/Theme.axaml). At its
+       foot on the left the four entries, the big one the page's main action, with one line for the entry the focus is
+       on (how many are online, and the way to the lobbies, are the top bar's: NextShell's Online). The room to their right is the
+       showcase's (the shell's background: Pico's Wild Goose, centred there); while a game runs, "End game" at its foot.
+       Every part keeps its place: the line has its room whether it is one line or two. -->
+  <Grid Margin="14,8,0,20">
+    <!-- The server's message of the day, when it has one: in a place of its own at the page's top left (nothing else
+         moves when it comes or goes); pressed, the notices' list, which holds it whole -->
+    <Button Name="Motd" Classes="card c10" Width="520" Height="64" Padding="18,0" HorizontalAlignment="Left" VerticalAlignment="Top"
+            IsVisible="{Binding MotdShown}" Command="{Binding OpenMotdCommand}"
+            AutomationProperties.Name="Message of the day">
+      <Grid ColumnDefinitions="4,14,*,Auto">
+        <Border Margin="-18,0,0,0" Width="4" HorizontalAlignment="Left" Background="{StaticResource NextGoldBrush}" />
+        <StackPanel Grid.Column="2" VerticalAlignment="Center">
+          <TextBlock Classes="eyebrow" FontSize="12" Foreground="{StaticResource NextGoldBrush}" Text="MESSAGE OF THE DAY" />
+          <TextBlock FontSize="16" TextTrimming="CharacterEllipsis" Text="{Binding MotdText}" />
+        </StackPanel>
+        <Viewbox Grid.Column="3" Width="16" Height="16" VerticalAlignment="Center" Margin="12,0,0,0">
+          <Canvas Width="24" Height="24">
+            <Path Data="M9 5L16 12L9 19" Stroke="{StaticResource NextDimBrush}" StrokeThickness="2.4" />
+          </Canvas>
+        </Viewbox>
+      </Grid>
+    </Button>
+    <StackPanel Name="Menu" Width="540" HorizontalAlignment="Left" VerticalAlignment="Bottom" Spacing="10">
+      <ItemsControl Name="Entries" c:PadNav.Home="True" ItemsSource="{Binding Entries}" ClipToBounds="False">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Spacing="10" ClipToBounds="False" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="nx:HubEntry">
+            <Button Classes="entry confirms" Classes.big="{Binding Big}" Classes.off="{Binding !Enabled}"
+                    Command="{Binding $parent[UserControl].((nx:HubViewModel)DataContext).OpenCommand}" CommandParameter="{Binding}"
+                    c:PadNav.Main="{Binding Big}" GotFocus="OnEntryFocus"
+                    AutomationProperties.Name="{Binding Label}">
+              <Grid ColumnDefinitions="30,16,*">
+                <!-- the entry's drawing: two arrows (Quick Play), a chequered flag, a stopwatch, a disc -->
+                <Viewbox Width="30" Height="30" VerticalAlignment="Center">
+                  <Canvas Width="24" Height="24">
+                    <Path Classes="mark" Data="M2 5H7L14 12L7 19H2L9 12Z M10.5 5H15L22 12L15 19H10.5L17.5 12Z"
+                          IsVisible="{Binding Id, Converter={x:Static v:Equal.Instance}, ConverterParameter=quick}" />
+                    <Path Classes="mark" Data="M3.5 3H5.3V21H3.5Z M6 4H9.5V7H6Z M13 4H16.5V7H13Z M9.5 7H13V10H9.5Z M16.5 7H20V10H16.5Z M6 10H9.5V13H6Z M13 10H16.5V13H13Z"
+                          IsVisible="{Binding Id, Converter={x:Static v:Equal.Instance}, ConverterParameter=custom}" />
+                    <Path Classes="mark" Data="M12 3H16V4.6H14.8V6.6A7 7 0 1 1 13.2 6.6V4.6H12Z M14 8.5A5 5 0 1 0 14.01 8.5Z M13.3 13.1L15.9 10.1L17.1 11.1L14.5 14.1Z"
+                          IsVisible="{Binding Id, Converter={x:Static v:Equal.Instance}, ConverterParameter=practice}" />
+                    <Path Classes="mark" Data="M14.5 4.5A7.5 7.5 0 1 1 14.49 4.5Z M14.5 6.5A5.5 5.5 0 1 0 14.51 6.5Z M14.5 10A2 2 0 1 1 14.49 10Z"
+                          IsVisible="{Binding Id, Converter={x:Static v:Equal.Instance}, ConverterParameter=game}" />
+                  </Canvas>
+                </Viewbox>
+                <TextBlock Grid.Column="2" Text="{Binding Label, Converter={x:Static v:UpperText.Instance}}"
+                           VerticalAlignment="Center" LetterSpacing="0.5" />
+              </Grid>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <!-- the entry's line: room for two lines, whether it has one or two -->
+      <TextBlock Name="Line" Classes="lead" Height="48" MaxWidth="480" HorizontalAlignment="Left" Margin="0,8,0,0"
+                 Text="{Binding Line}" />
+    </StackPanel>
+
+    <!-- While a game of the launcher's runs: that it does, and "End game" (it asks first); the machine over the flag
+         rests meanwhile -->
+    <StackPanel Name="GameRunning" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,22,8" Spacing="10"
+                IsVisible="{Binding Shell.GameRunning}">
+      <TextBlock Classes="eyebrow" HorizontalAlignment="Right" Text="GAME RUNNING" />
+      <Button Name="EndGame" Classes="soft danger" Height="40" Padding="18,0" HorizontalAlignment="Right" Content="End game"
+              Command="{Binding Shell.AskEndGameCommand}" AutomationProperties.Name="End game" />
+    </StackPanel>
+  </Grid>
+</UserControl>

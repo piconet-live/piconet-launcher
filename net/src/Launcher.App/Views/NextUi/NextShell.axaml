@@ -1,0 +1,407 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:husk="https://github.com/d3ara1n/Huskui.Avalonia"
+             xmlns:app="using:Launcher.App"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:nx="using:Launcher.App.ViewModels.NextUi"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:c="using:Launcher.App.Controls"
+             xmlns:n="using:Launcher.App.Controls.NextUi"
+             xmlns:nxv="using:Launcher.App.Views.NextUi"
+             x:Class="Launcher.App.Views.NextUi.NextShell"
+             x:DataType="vm:MainViewModel"
+             Classes="nextui" Classes.clear="{Binding Shell.Clear}"
+             FontFamily="{StaticResource BodyFont}" FontSize="{StaticResource NextBody}"
+             Foreground="{StaticResource NextTextBrush}">
+  <!-- The redesigned interface's shell (Settings, Launcher, "Experimental UI"; theme v3: ../../Theme/NextUi/Theme.axaml):
+       what the window shows in place of the classic interface (MainWindow.axaml.cs, ShowShell), on the same view
+       model. No left column: a top bar (Back's place, the areas, the states, the profile, the bell, the chat,
+       Settings, the window's own buttons), the page showing, and under it the hints for it; behind all of it the one
+       background. Every part of the two bars has a place of its own that it keeps in every state: what comes and
+       goes (Back, a pill, a dot) leaves the others where they are. A page is found by a locator of its own, which
+       takes the classic view of a page that has no new one yet (ViewLocator.Next). -->
+  <UserControl.DataTemplates>
+    <app:ViewLocator Next="True" />
+  </UserControl.DataTemplates>
+  <Panel Background="{StaticResource NextGroundBrush}">
+    <!-- The background: the flag, a veil of the ground over it where a page needs it quiet, and the shades at the
+         window's edges (the theme says how much of each a page gets) -->
+    <c:Unscaled>
+      <n:HoloFlag Name="Flag" Resting="{Binding !MachineShown}" />
+    </c:Unscaled>
+    <!-- over the hub's flag Pico's Wild Goose from the player's own disc, filmed as an advertisement is (close in:
+         three quarters from the front, its nose, over its cockpit, its boosters, drawing back, in slow motion; the
+         picture dissolving between two shots: Launcher.Core/ShowcaseShots.cs), its engines burning. It stands in the
+         middle of the room between the hub's menu and the window's right edge (FocusX, set in .axaml.cs), clear of the
+         menu. The pointer turns it and holds it; let go, it goes on with its shots a few seconds later. Only on the hub
+         (the other pages have their own pictures, the Garage its own machine); nothing without the disc, gone while a
+         game runs, the first shot still under Reduced motion. -->
+    <Panel Name="Showcase" IsVisible="{DynamicResource HasDiscArt}">
+      <c:Unscaled IsVisible="{Binding MachineShown}">
+        <c:MachinePreview Name="Goose" Machine="5" Showcase="True" Turns="True" RoomAfter="Menu" IsVisible="{Binding Shell.Clear}"
+                          AutomationProperties.Name="Pico's Wild Goose: drag to turn it" />
+      </c:Unscaled>
+    </Panel>
+    <!-- on a page that stands on a course (the course drawn, the start, the race): the course's picture from the
+         disc over the flag, darkened as a list page's background is (nothing without the disc: the flag shows) -->
+    <Panel Name="Backdrop" IsVisible="{Binding Shell.HasBackdrop}">
+      <c:CourseStill Course="{Binding Shell.Backdrop}" Opacity="0.6" />
+      <Border Background="{StaticResource NextBackdropVeilBrush}" />
+    </Panel>
+    <Border Classes="veil" />
+    <Border Classes="shade left" />
+    <Border Classes="shade foot" />
+    <Border Classes="shade top" />
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
+      <!-- The top bar. Dragging it moves the window, a double click maximises (what is pressed in it says so:
+           ElementRole User). -->
+      <Grid Name="TopBar" Height="{StaticResource NextTopBar}" ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto,Auto"
+            Background="Transparent" WindowDecorationProperties.ElementRole="TitleBar">
+        <!-- The launcher's name, always at the top left: pressed, the main menu (the hub; it asks first where
+             something would be lost: HubViewModel.GoHome). Not before the first start is through. -->
+        <Button Name="Home" Classes="wordmark" Margin="34,0,6,0" VerticalAlignment="Center" IsEnabled="{Binding Navigation}"
+                Command="{Binding Shell.Hub.GoHomeCommand}" WindowDecorationProperties.ElementRole="User"
+                ToolTip.Tip="The main menu" AutomationProperties.Name="Main menu">
+          <StackPanel Name="Wordmark" Orientation="Horizontal" Spacing="10">
+            <Border Width="22" Height="4" VerticalAlignment="Center" Background="{StaticResource NextAccentBrush}"
+                    RenderTransform="skewX(-30deg)" />
+            <TextBlock FontFamily="{StaticResource DisplayFont}" FontWeight="ExtraBold" FontSize="22" LetterSpacing="1.76"
+                       VerticalAlignment="Center" RenderTransform="skewX(-10deg)"
+                       Text="{Binding Brand, Converter={x:Static v:UpperText.Instance}}" />
+          </StackPanel>
+        </Button>
+        <!-- Back's place, kept on every page whether Back shows or not (nothing beside it moves): Back while the page
+             is inside an area, its words on the pointer's rest and in the hint bar; red where it leaves a lobby -->
+        <Panel Grid.Column="1" Name="BackPlace" Width="{StaticResource NextBackPlace}" Height="46" Margin="0,0,10,0">
+          <Button Name="Back" Classes="pill" Classes.danger="{Binding Shell.BackLeaves}" Width="44" Height="40" Padding="0"
+                  HorizontalAlignment="Left" VerticalAlignment="Center" IsVisible="{Binding Shell.BackShown}"
+                  Command="{Binding Shell.GoBackCommand}" WindowDecorationProperties.ElementRole="User"
+                  ToolTip.Tip="{Binding Shell.BackText}" AutomationProperties.Name="{Binding Shell.BackText}">
+            <Viewbox Width="18" Height="18" HorizontalAlignment="Center" VerticalAlignment="Center">
+              <Canvas Width="24" Height="24">
+                <Path Classes="stroke" Data="M15 5L8 12L15 19" StrokeThickness="2.6" />
+              </Canvas>
+            </Viewbox>
+          </Button>
+        </Panel>
+
+        <!-- The areas, between the keys that step through them (L and R, or Q and E) -->
+        <Border Grid.Column="2" Classes="key" Margin="0,0,8,0" IsVisible="{Binding Navigation}">
+          <TextBlock Text="{Binding Shell.LeftKey}" />
+        </Border>
+        <StackPanel Name="Areas" Grid.Column="3" Orientation="Horizontal" Spacing="2" VerticalAlignment="Center"
+                    IsVisible="{Binding Navigation}">
+          <Button Classes="area" Content="PLAY" ToolTip.Tip="Race online, host or join a custom lobby, or practise (Q and E, or L2 and R2, step through the areas)" Command="{Binding Shell.ShowAreaCommand}" CommandParameter="play"
+                  Classes.on="{Binding Shell.Area, Converter={x:Static v:Equal.Instance}, ConverterParameter=play}"
+                  WindowDecorationProperties.ElementRole="User" AutomationProperties.Name="Play" />
+          <Button Classes="area" Content="GARAGE" ToolTip.Tip="Your machines: pick the one you race, its colours, its setting, your own builds" Command="{Binding Shell.ShowAreaCommand}" CommandParameter="garage"
+                  Classes.on="{Binding Shell.Area, Converter={x:Static v:Equal.Instance}, ConverterParameter=garage}"
+                  WindowDecorationProperties.ElementRole="User" AutomationProperties.Name="Garage" />
+          <Button Classes="area" Content="REPLAYS" ToolTip.Tip="Your races, to watch again" Command="{Binding Shell.ShowAreaCommand}" CommandParameter="replays"
+                  Classes.on="{Binding Shell.Area, Converter={x:Static v:Equal.Instance}, ConverterParameter=replays}"
+                  WindowDecorationProperties.ElementRole="User" AutomationProperties.Name="Replays" />
+          <Button Classes="area" Content="MORE" ToolTip.Tip="Mods, your stats, and about the launcher" Command="{Binding Shell.ShowAreaCommand}" CommandParameter="more"
+                  Classes.on="{Binding Shell.Area, Converter={x:Static v:Equal.Instance}, ConverterParameter=more}"
+                  WindowDecorationProperties.ElementRole="User" AutomationProperties.Name="More" />
+        </StackPanel>
+        <Border Grid.Column="4" Classes="key" Margin="8,0,0,0" IsVisible="{Binding Navigation}">
+          <TextBlock Text="{Binding Shell.RightKey}" />
+        </Border>
+
+        <!-- The states, in the room before the profile: the lobby the player is in (back to it), the graphics
+             being prepared, an update that is ready. They grow into the free room; nothing beside them moves. -->
+        <StackPanel Name="Pills" Grid.Column="5" Orientation="Horizontal" Spacing="8" Margin="12,0" HorizontalAlignment="Right"
+                    VerticalAlignment="Center" ClipToBounds="False" IsVisible="{Binding Navigation}">
+          <Button Name="LobbyPill" ToolTip.Tip="Back to the lobby you are in" Classes="pill go" IsVisible="{Binding Shell.LobbyPillShown}" Command="{Binding Shell.ShowLobbyCommand}"
+                  WindowDecorationProperties.ElementRole="User" AutomationProperties.Name="{Binding Shell.LobbyPillText}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <Ellipse Width="7" Height="7" VerticalAlignment="Center" Fill="{StaticResource NextOnAccentBrush}" />
+              <TextBlock Text="{Binding Shell.LobbyPillText}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Border Name="GraphicsPill" Height="36" Padding="14,0" Background="{StaticResource NextPlateBrush}" CornerRadius="3"
+                  RenderTransform="skewX(-12deg)" IsVisible="{Binding Graphics.Building}">
+            <TextBlock Classes="quiet" FontSize="14" VerticalAlignment="Center" RenderTransform="skewX(12deg)"
+                       FontFeatures="tnum" Text="{Binding Graphics.Line}" />
+          </Border>
+          <Button Name="UpdatePill" ToolTip.Tip="An update is ready: Settings, Launcher" Classes="pill gold" Content="Update ready" IsVisible="{Binding Update.Shown}"
+                  Command="{Binding Shell.ShowUpdateCommand}" WindowDecorationProperties.ElementRole="User"
+                  AutomationProperties.Name="Update ready" />
+          <!-- Developer mode: its chip, pressed its Diagnostics -->
+          <Button Name="DevChip" ToolTip.Tip="Diagnostics: the build, the connection, the input and the files" Classes="pill dev" Content="DEV" IsVisible="{Binding DeveloperMode}"
+                  Command="{Binding Shell.OpenDiagnosticsCommand}" WindowDecorationProperties.ElementRole="User"
+                  AutomationProperties.Name="Diagnostics" />
+        </StackPanel>
+
+        <!-- The profile (the player's colour, name and whether they are online; pressed, the profile page), the bell,
+             the chat and Settings -->
+        <StackPanel Grid.Column="6" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" IsVisible="{Binding Navigation}">
+          <!-- How many players are online on the server set, beside the profile (a dash until it answers; a change
+               rolls in lightly: n:OnlineCount), its tip saying how many race now. Only shown, never pressed (the
+               owner, 2026-11-15; a server's lobbies are its panel's "See its lobbies"). It keeps its place whether
+               the count is known or not, and gives its room to the states while the lobby's pill or the graphics'
+               shows (the profile and the icons after it stay where they are: it stands before them). -->
+          <Border Name="Online" Height="44" Padding="8,0" Background="Transparent" ToolTip.Tip="{Binding Shell.Hub.OnlineTip}"
+                  AutomationProperties.Name="Players online">
+            <Border.IsVisible>
+              <MultiBinding Converter="{x:Static BoolConverters.And}">
+                <Binding Path="!Shell.LobbyPillShown" />
+                <Binding Path="!Graphics.Building" />
+              </MultiBinding>
+            </Border.IsVisible>
+            <n:OnlineCount Count="{Binding Shell.Hub.PlayersOnline}" VerticalAlignment="Center" />
+          </Border>
+          <Button Name="Profile" ToolTip.Tip="Your profile: your name, your server and your races" Classes="tool" Width="NaN" Padding="12,0,16,0" DataContext="{Binding Account}" x:DataType="vm:AccountViewModel"
+                  Foreground="{StaticResource NextTextBrush}" WindowDecorationProperties.ElementRole="User"
+                  Classes.on="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Current, Converter={x:Static nxv:IsProfile.Instance}, FallbackValue=False}"
+                  Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Shell.ShowProfileCommand, FallbackValue={x:Null}}"
+                  AutomationProperties.Name="Your profile">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <Border Width="16" Height="16" VerticalAlignment="Center" RenderTransform="skewX(-14deg)"
+                      Background="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).ShownPaint, Converter={x:Static v:HexToBrush.Instance}}" />
+              <TextBlock FontWeight="SemiBold" VerticalAlignment="Center" Text="{Binding Name}" />
+              <Ellipse Name="Net" Classes="net"
+                       Classes.online="{Binding Connection, Converter={x:Static v:Equal.Instance}, ConverterParameter=online}"
+                       Classes.offline="{Binding Connection, Converter={x:Static v:Equal.Instance}, ConverterParameter=offline}"
+                       ToolTip.Tip="{Binding ConnectionDetail}" />
+            </StackPanel>
+          </Button>
+          <Button Name="Bell" ToolTip.Tip="Notices from the launcher and the server" Classes="tool" Classes.on="{Binding Notices.ListOpen}" Command="{Binding Notices.ToggleListCommand}"
+                  WindowDecorationProperties.ElementRole="User" AutomationProperties.Name="Notices">
+            <Panel Width="46" Height="44">
+              <Viewbox Width="22" Height="22">
+                <Canvas Width="24" Height="24">
+                  <Path Classes="stroke" Data="M7 17V10.5A5.5 5.5 0 0 1 17.5 8.6L18 17L20 19H5L7 17Z M10 21H14" StrokeThickness="1.9" />
+                </Canvas>
+              </Viewbox>
+              <Ellipse Name="BellDot" Width="8" Height="8" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,9,10,0"
+                       Fill="{StaticResource NextGoldBrush}" IsVisible="{Binding Notices.HasDot}" />
+            </Panel>
+          </Button>
+          <Button Name="Chat" ToolTip.Tip="The chat: your lobby and the server (X)" Classes="tool" Classes.on="{Binding Chat.Open}" Command="{Binding Chat.ToggleCommand}"
+                  WindowDecorationProperties.ElementRole="User" AutomationProperties.Name="Chat">
+            <Panel Width="46" Height="44">
+              <Viewbox Width="23" Height="23">
+                <Canvas Width="24" Height="24">
+                  <Path Classes="stroke" Data="M6 4.5H21L18.8 15H11L5.5 19.5L6.7 15H3.8Z M9.6 8.4H16.6 M8.9 11.3H13.3" StrokeThickness="1.9" />
+                </Canvas>
+              </Viewbox>
+              <Ellipse Name="ChatDot" Width="8" Height="8" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,9,10,0"
+                       Fill="{StaticResource NextAccentBrush}" IsVisible="{Binding Chat.HasDot}" />
+            </Panel>
+          </Button>
+          <Button Name="Settings" ToolTip.Tip="Settings, in groups: open one with A, back with B" Classes="tool" Classes.on="{Binding Shell.OnSettings}" Command="{Binding Shell.ShowAreaCommand}"
+                  CommandParameter="settings" WindowDecorationProperties.ElementRole="User" AutomationProperties.Name="Settings">
+            <Panel Width="46" Height="44">
+              <Viewbox Width="23" Height="23">
+                <Canvas Width="24" Height="24">
+                  <!-- a gear: eight teeth round a hole -->
+                  <Path Name="Gear" Classes="stroke" StrokeThickness="1.8" StrokeJoin="Round"
+                        Data="M10.46 4.76L10.67 1.89L13.33 1.89L13.54 4.76A7.4 7.4 0 0 1 16.03 5.79L18.21 3.91L20.09 5.79L18.21 7.97A7.4 7.4 0 0 1 19.24 10.46L22.11 10.67L22.11 13.33L19.24 13.54A7.4 7.4 0 0 1 18.21 16.03L20.09 18.21L18.21 20.09L16.03 18.21A7.4 7.4 0 0 1 13.54 19.24L13.33 22.11L10.67 22.11L10.46 19.24A7.4 7.4 0 0 1 7.97 18.21L5.79 20.09L3.91 18.21L5.79 16.03A7.4 7.4 0 0 1 4.76 13.54L1.89 13.33L1.89 10.67L4.76 10.46A7.4 7.4 0 0 1 5.79 7.97L3.91 5.79L5.79 3.91L7.97 5.79A7.4 7.4 0 0 1 10.46 4.76ZM8.9 12A3.1 3.1 0 1 1 15.1 12A3.1 3.1 0 1 1 8.9 12Z" />
+                </Canvas>
+              </Viewbox>
+              <Border Name="SettingsBar" Height="3" Margin="12,0,12,4" VerticalAlignment="Bottom" RenderTransform="skewX(-30deg)"
+                      Background="{StaticResource NextAccentBrush}" IsVisible="{Binding Shell.OnSettings}" />
+            </Panel>
+          </Button>
+        </StackPanel>
+
+        <!-- The window's own buttons, at the bar's top right -->
+        <StackPanel Grid.Column="7" Orientation="Horizontal" Height="32" Margin="16,0,0,0" VerticalAlignment="Top">
+          <Button Classes="chrome" Width="40" WindowDecorationProperties.ElementRole="MinimizeButton" Click="OnMinimize"
+                  AutomationProperties.Name="Minimise">
+            <Path Data="M0 5.5H10" />
+          </Button>
+          <Button Classes="chrome" Width="40" WindowDecorationProperties.ElementRole="MaximizeButton" Click="OnMaximize"
+                  AutomationProperties.Name="Maximise">
+            <Panel>
+              <Path Data="M0.5 0.5H9.5V9.5H0.5Z" IsVisible="{Binding !$parent[husk:AppWindow].IsMaximized}" />
+              <Path Data="M2.5 2.5V0.5H9.5V7.5H7.5M0.5 2.5H7.5V9.5H0.5Z" IsVisible="{Binding $parent[husk:AppWindow].IsMaximized}" />
+            </Panel>
+          </Button>
+          <Button Classes="chrome close" Width="40" WindowDecorationProperties.ElementRole="CloseButton" Click="OnClose"
+                  AutomationProperties.Name="Close">
+            <Path Data="M0.5 0.5L9.5 9.5M9.5 0.5L0.5 9.5" />
+          </Button>
+        </StackPanel>
+      </Grid>
+
+      <!-- Under the top bar: the lobby calling the player back from their practice, and a server's notice (the
+           classic launcher's band) -->
+      <StackPanel Grid.Row="1">
+        <Border Name="RecallBand" Classes="band" Margin="40,0,40,6" IsVisible="{Binding Shell.RecallShown}">
+          <Grid ColumnDefinitions="Auto,*,Auto">
+            <TextBlock Classes="eyebrow" VerticalAlignment="Center" Foreground="{StaticResource NextAccentBrush}" Text="LOBBY" />
+            <TextBlock Grid.Column="1" Name="RecallText" FontSize="16" VerticalAlignment="Center" Margin="16,0" FontFeatures="tnum"
+                       TextTrimming="CharacterEllipsis" Text="{Binding Shell.RecallText}" />
+            <Button Grid.Column="2" Name="RecallNow" Classes="soft go" Height="40" Padding="16,0" Content="Back now"
+                    Command="{Binding Shell.RecallNowCommand}" AutomationProperties.Name="Back to the lobby now" />
+          </Grid>
+        </Border>
+        <v:NoticeBanner Margin="40,0,40,6" DataContext="{Binding Notices}" />
+      </StackPanel>
+
+      <!-- The page. A page longer than its room scrolls under the bars; a page made for the room (the hub) has all of
+           it. Beside a pinned chat the page narrows by the chat's width. The pages shown before stay in their deck,
+           hidden, so that showing one again is at once (Controls/NextUi/PageDeck). -->
+      <Grid Grid.Row="2" ColumnDefinitions="*,Auto">
+        <ScrollViewer Name="NextPageScroll" ClipToBounds="True" AllowAutoHide="False" HorizontalScrollBarVisibility="Disabled"
+                      VerticalScrollBarVisibility="{Binding Shell.PageFits, Converter={x:Static nxv:FitsToScroll.Instance}}">
+          <ContentControl Name="NextPageHost" Padding="40,0,40,0"
+                          HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                          MinHeight="{Binding #NextPageScroll.Viewport.Height}">
+            <n:PageDeck Name="Pages" Page="{Binding Current}" />
+          </ContentControl>
+        </ScrollViewer>
+        <Border Grid.Column="1" Width="{Binding Chat.ColumnWidth}" IsVisible="{Binding Navigation}" />
+
+        <!-- The bell's list, over the page under the bell -->
+        <Panel Grid.ColumnSpan="2" c:Motion.Reveal="True" IsVisible="{Binding Notices.ListOpen}" c:PadNav.Scope="True"
+               HorizontalAlignment="Right" VerticalAlignment="Top" Width="380" MaxHeight="440" Margin="0,0,40,0">
+          <v:NoticesList Name="NextNotices" DataContext="{Binding Notices}" />
+        </Panel>
+        <!-- The chat (the classic launcher's sidebar): pinned beside the page, unpinned over its right end -->
+        <Panel Grid.ColumnSpan="2" HorizontalAlignment="Right" IsVisible="{Binding Navigation}">
+          <v:ChatSidebar Name="NextChat" DataContext="{Binding Chat}" Width="{Binding ShownWidth}" IsVisible="{Binding Open}"
+                         c:Motion.Reveal="True" c:PadNav.Scope="True" />
+        </Panel>
+      </Grid>
+
+      <!-- The hint bar: what the controller's buttons, or the keys, do on the page showing. It keeps its height
+           whether it has hints or none. -->
+      <Border Name="HintBar" Grid.Row="3" Height="{StaticResource NextHintBar}" Padding="40,0">
+        <Panel>
+        <!-- Developer mode: the place, and the input and focus, in two lines at the left -->
+        <StackPanel Name="DevLines" VerticalAlignment="Center" HorizontalAlignment="Left" MaxWidth="640" IsVisible="{Binding DeveloperMode}">
+          <TextBlock Classes="devmono" TextTrimming="CharacterEllipsis" Text="{Binding Shell.DevPlace}" />
+          <TextBlock Classes="devmono" TextTrimming="CharacterEllipsis" Text="{Binding Shell.DevInput}" />
+        </StackPanel>
+        <ItemsControl Name="Hints" ItemsSource="{Binding Shell.Hints}" HorizontalAlignment="Right" VerticalAlignment="Center">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Orientation="Horizontal" Spacing="28" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="nx:Hint">
+              <StackPanel Orientation="Horizontal" Spacing="10">
+                <Border Classes="glyph" Classes.round="{Binding Round}" Classes.cubea="{Binding CubeA}" Classes.cubeb="{Binding CubeB}"
+                        Classes.cubexy="{Binding CubeXY}" Classes.cubez="{Binding CubeZ}" Classes.cubegrey="{Binding CubeGrey}">
+                  <TextBlock Text="{Binding Glyph}" />
+                </Border>
+                <TextBlock Classes="quiet" FontSize="16" VerticalAlignment="Center" Text="{Binding Label}" />
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        </Panel>
+      </Border>
+    </Grid>
+
+    <!-- A panel from the window's right edge, over the page and the bars (the lobby's, the race's racers): the page
+         darkens behind it, and a press there closes it -->
+    <Panel Name="SheetLayer" IsVisible="{Binding Shell.SheetOpen}" c:PadNav.Scope="True">
+      <Border Name="SheetDim" Classes="dim" PointerPressed="OnSheetDimPressed" />
+      <n:Chamfer Name="SheetPlate" Classes="sheet">
+        <ContentControl Name="SheetHost" Content="{Binding Shell.Sheet}" HorizontalContentAlignment="Stretch"
+                        VerticalContentAlignment="Stretch" />
+      </n:Chamfer>
+    </Panel>
+
+    <!-- The questions, over everything: keeping things as they are is the green answer, and the first the focus is
+         on. Before a lobby or a race is left, a racer removed, a machine, a replay or a mod deleted, the game ended: -->
+    <Panel Name="ConfirmQuestion" c:Motion.Reveal="True" IsVisible="{Binding Shell.AskingConfirm}" c:PadNav.Scope="True">
+      <Border Classes="dim" />
+      <n:Chamfer Classes="dialog">
+        <StackPanel Margin="36" Spacing="12">
+          <Border Height="3" Margin="-36,-36,-36,21" Background="{StaticResource NextAccentBrush}" />
+          <TextBlock Classes="asks" Text="{Binding Shell.ConfirmTitle, Converter={x:Static v:UpperText.Instance}}" />
+          <TextBlock Classes="lead" Text="{Binding Shell.ConfirmLine}" />
+          <StackPanel Orientation="Horizontal" Spacing="14" Margin="4,20,0,0">
+            <Button Classes="main" Content="{Binding Shell.KeepWord, Converter={x:Static v:UpperText.Instance}}" Command="{Binding Shell.KeepItCommand}"
+                    AutomationProperties.Name="{Binding Shell.KeepWord}" />
+            <Button Name="ConfirmDo" Classes="soft danger" Height="56" Content="{Binding Shell.ConfirmWord}" Command="{Binding Shell.ConfirmCommand}"
+                    IsVisible="{Binding Shell.ConfirmWord, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                    AutomationProperties.Name="{Binding Shell.ConfirmWord}" />
+          </StackPanel>
+        </StackPanel>
+      </n:Chamfer>
+    </Panel>
+    <!-- before leaving a lobby for the game on its own -->
+    <Panel Name="GameQuestion" c:Motion.Reveal="True" IsVisible="{Binding Control.Asking}" c:PadNav.Scope="True">
+      <Border Classes="dim" />
+      <n:Chamfer Classes="dialog">
+        <StackPanel Margin="36" Spacing="12">
+          <Border Height="3" Margin="-36,-36,-36,21" Background="{StaticResource NextAccentBrush}" />
+          <TextBlock Classes="asks" Text="{Binding Control.AskTitle, Converter={x:Static v:UpperText.Instance}}" />
+          <TextBlock Classes="lead" Text="{Binding Control.AskLine}" />
+          <StackPanel Orientation="Horizontal" Spacing="14" Margin="4,20,0,0">
+            <Button Classes="main" Content="{Binding Control.StayText, Converter={x:Static v:UpperText.Instance}}"
+                    Command="{Binding Control.StayCommand}" AutomationProperties.Name="{Binding Control.StayText}" />
+            <Button Classes="soft danger" Height="56" Content="Leave and play" Command="{Binding Control.LeaveAndPlayCommand}"
+                    AutomationProperties.Name="Leave and play" />
+          </StackPanel>
+        </StackPanel>
+      </n:Chamfer>
+    </Panel>
+    <!-- the keyboard on the screen: what is typed (a real keyboard types into it too), the keys, Shift, Space, Delete,
+         Cancel and Done (Start) -->
+    <Panel Name="KeyboardLayer" IsVisible="{Binding Shell.KeyboardOpen}" c:PadNav.Scope="True">
+      <Border Classes="dim" />
+      <n:Chamfer Classes="dialog" Width="820" DataContext="{Binding Shell.Keyboard}" x:DataType="nx:KeyboardViewModel">
+        <StackPanel Margin="32,28" Spacing="14">
+          <TextBlock Classes="asks" Text="{Binding Title, Converter={x:Static v:UpperText.Instance}, FallbackValue=''}" />
+          <TextBox Name="KeyboardText" FontSize="22" c:PadNav.Skip="True" Text="{Binding Text, FallbackValue=''}"
+                   PasswordChar="{Binding Mask, FallbackValue=' '}" MaxLength="{Binding Most, FallbackValue=64}"
+                   AutomationProperties.Name="What is typed" />
+          <ItemsControl Name="KeyRows" ItemsSource="{Binding Rows, FallbackValue={x:Null}}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="nx:KeyRow">
+                <ItemsControl ItemsSource="{Binding Keys}" HorizontalAlignment="Center" Margin="0,0,0,8">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <StackPanel Orientation="Horizontal" Spacing="8" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="nx:KeyCap">
+                      <Button Classes="soft key" Width="62" Height="50" Padding="0" FontSize="20" Content="{Binding Label}"
+                              Command="{Binding $parent[n:Chamfer].((nx:KeyboardViewModel)DataContext).TypeCommand}" CommandParameter="{Binding}"
+                              AutomationProperties.Name="{Binding Label}" />
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+            <Button Classes="soft" Width="120" Height="50" Content="Cancel" Command="{Binding CancelCommand}" AutomationProperties.Name="Cancel typing" />
+            <Button Classes="soft" Classes.go="{Binding Shift, FallbackValue=False}" Width="110" Height="50" Content="Shift"
+                    Command="{Binding ToggleShiftCommand}" AutomationProperties.Name="Shift" />
+            <Button Classes="soft" Width="230" Height="50" Content="Space" Command="{Binding SpaceCommand}" AutomationProperties.Name="Space" />
+            <Button Classes="soft" Width="120" Height="50" Content="Delete" Command="{Binding DeleteCommand}" AutomationProperties.Name="Delete a character" />
+            <Button Name="KeyboardDone" Classes="main" Width="140" Height="50" Content="DONE" Command="{Binding DoneCommand}" c:PadNav.Main="True"
+                    AutomationProperties.Name="Done typing" />
+          </StackPanel>
+          <TextBlock Classes="quiet" FontSize="14" HorizontalAlignment="Center" Text="A real keyboard works here too. B or Cancel closes it without a change." />
+        </StackPanel>
+      </n:Chamfer>
+    </Panel>
+    <!-- before ray tracing is turned on with its graphics not prepared yet -->
+    <Panel Name="RaysAsk" c:Motion.Reveal="True" IsVisible="{Binding Graphics.Asking}" c:PadNav.Scope="True">
+      <Border Classes="dim" />
+      <n:Chamfer Classes="dialog">
+        <StackPanel Margin="36" Spacing="12">
+          <Border Height="3" Margin="-36,-36,-36,21" Background="{StaticResource NextAccentBrush}" />
+          <TextBlock Classes="asks" Text="{Binding Source={x:Static vm:GraphicsViewModel.AskTitle}, Converter={x:Static v:UpperText.Instance}}" />
+          <TextBlock Classes="lead" Text="{x:Static vm:GraphicsViewModel.AskLine}" />
+          <StackPanel Orientation="Horizontal" Spacing="14" Margin="4,20,0,0">
+            <Button Classes="main" Content="BUILD" Command="{Binding Graphics.BuildCommand}" AutomationProperties.Name="Build" />
+            <Button Classes="soft" Height="56" Content="Cancel" Command="{Binding Graphics.CancelCommand}" AutomationProperties.Name="Cancel" />
+          </StackPanel>
+        </StackPanel>
+      </n:Chamfer>
+    </Panel>
+  </Panel>
+</UserControl>

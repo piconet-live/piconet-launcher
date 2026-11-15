@@ -180,6 +180,16 @@ public sealed partial class ReplaysViewModel : ViewModelBase
     /// <summary>The replays of the tab showing, in the list's order.</summary>
     public IReadOnlyList<ReplayItem> Items => [.. Rows.OfType<ReplayItem>()];
 
+    /// <summary>The newest races (not practice runs), whatever the tab showing: the redesigned profile's recent races.
+    /// A row shown already is the same item.</summary>
+    public IReadOnlyList<ReplayItem> LatestRaces(int count)
+    {
+        var shown = Rows.OfType<ReplayItem>().ToDictionary(i => i.Path, StringComparer.Ordinal);
+        var now = _now();
+        return [.. _all.Where(r => !r.Practice).Take(count)
+            .Select(r => shown.TryGetValue(r.Path, out var item) && item.Listing == r ? item : new ReplayItem(r, now))];
+    }
+
     /// <summary>The tabs: every replay, the races, the practice runs.</summary>
     public IReadOnlyList<ReplayTab> Tabs { get; } =
         [new(ReplayKind.All, "All") { On = true }, new(ReplayKind.Races, "Races"), new(ReplayKind.Practice, "Practice")];

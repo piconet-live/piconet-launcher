@@ -33,6 +33,12 @@ public sealed partial class AppState
         {
             return GameOpenText;
         }
+        // in a lobby, only while it gathers: the lobby calls the player back when it moves on (LobbyRecall)
+        var inLobby = InQuickPlay || Joining;
+        if (!LobbyRecall.MayPractise(inLobby, Session?.Lobby))
+        {
+            return LobbyRecall.MovedOnText;
+        }
         if (PipelinesBlock is { } preparing)
         {
             return preparing;
@@ -57,6 +63,11 @@ public sealed partial class AppState
             Update(s => s with { Practice = kept });
         }
         PracticeMatch.Write(file, setup, racer.Name, racer.LookOf(setup.Machine), DateTimeOffset.Now, pack, mode, racer.Trail);
-        return PlayMatch(file, run: GameRun.Practice, course: setup.Kept().Course, record: Settings.RecordPractice);
+        var problem = PlayMatch(file, run: GameRun.Practice, course: setup.Kept().Course, record: Settings.RecordPractice);
+        if (problem is null && inLobby && Fork is { } game)
+        {
+            PractiseInLobby(game);
+        }
+        return problem;
     }
 }

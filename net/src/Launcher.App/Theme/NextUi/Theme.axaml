@@ -1,0 +1,1437 @@
+<!--
+  The redesigned interface's look, theme v3 (Settings, Launcher, "Experimental UI"; off by default). It stands beside
+  the classic look (../Theme.axaml), which it leaves as it is: its resources have names of their own (Next…), and
+  every selector here starts at the class "nextui", which only the redesigned interface's root has
+  (Views/NextUi/NextShell.axaml). A page of the redesigned interface uses these resources and classes; it sets no
+  colour, size or duration of its own.
+
+  GROUND    One background for every page, drawn live: a dark chequered flag (Controls/NextUi). Everything stands on
+            it as a plate.
+  COLOUR    Ground #070808. Plates let the background through: Plate (10, 12, 11 at 76%), lit PlateHi (36, 42, 38 at
+            92%). Solid tones where nothing shows through: Solid, Raised, Hover. Text has two steps only: Text and
+            Dim. Accent (green) is the main colour, what is yours or active; text on it is OnAccent. The focus is
+            the Wild Goose's yellow (Focus), which stands out against all the green.
+            Gold is the mark only. Danger for leaving and deleting. Dev (amber) is the developer mode's.
+  SHAPE     Plates and cards have two parallel corners cut off, top left and bottom right (Chamfer: 6, 8, 10, 14 or
+            18). Buttons are small rectangles (3) that lean 12 degrees, their word standing upright in them.
+  TYPE      Display, Saira Condensed ExtraBold: a page's title, a course's name, a place, the main button's word and
+            the areas' names, nothing else. Everything read or worked: Saira Semi Condensed at 17; eyebrows 13 in
+            spaced capitals.
+  FOCUS     4 px of the focus's yellow round what the pad, the keyboard or the pointer is on (the pointer gives the
+            focus where it moves: one place, never two); round a card a yellow outline in the card's shape, and the
+            card lifts 3 px. As the focus comes, a sweep fills the control from the left in 200 ms (140 ms the main
+            button's white; Border#Sweep): the
+            faint yellow on a plate, white on the main button, the yellow itself on the hub's entries and as a bar
+            along a card's foot.
+  MOTION    Move 200 ms on the classic look's ease (cubic-bezier .2, .8, .2, 1), colours 180 ms. Only transforms,
+            opacity and colours move, never layout. Under the window's class "still" (Reduced motion) nothing moves.
+  CONTROLS  Button.main (the one main action) · Button.soft (any other; .danger) · Button.pill (the top bar's
+            states and Back; .go, .gold, .danger) · Button.area (the top bar's areas; .on) · Button.tool (an icon
+            in the top bar; .on) · Button.entry (the hub's entries; .big, .off) · Button.card (a card to press;
+            .c10, .c18) · Button.line (a list's row) · Border.key and Border.glyph (a key or a button named in a
+            bar; .round) · Ellipse.net (online or not) · n:OnlineCount (the players online; Path.wash) · n:Chamfer.dialog over Border.dim (a question) ·
+            n:HoloFlag, Border.veil and Border.shade (the background; the root's class "clear" shows it as it is) ·
+            n:Chamfer.plate and .tile (a card's ground; a racer) · n:Chamfer.sheet (a panel from the right edge) ·
+            Border.meter (a share as a bar; .running: a wait) · Border.part (a grade's five parts; .lit) ·
+            Border.votemark (a vote; .mine, .lit) · Border.flag (a word on a small plate; .mode, .live, .quietflag) ·
+            Button.card.vote (.lit, .won, .lost) · Button.card.machine (.off, .picked: the one raced) · Border.seek (a search's marks) ·
+            Border.fact (a row of a panel) · Border.band (a band that asks for attention) · Button.option, Border.optionrow,
+            Path.arrow, TextBlock.optionvalue, .optionnote, .marked (an option row) · Button.swatch (a colour to pick; .on,
+            .more) · Button.star and Path.star (the star; .on), Path.starmark (a tile's star) · Border.search with
+            TextBox.bare (a search box) · TextBlock.count (a chip's count) · TextBlock.placetext (a place; .won, .out) ·
+            TextBlock.figure (a large figure; .won, .podium) · Border.formmark (a last race's place; .won, .out) ·
+            Border.switch with Border.knob (a switch that only shows; .on) · TextBlock.rank (a place in an order) ·
+            Border.stepmark (a step of the first start; .lit) · TextBlock.devmono and SelectableTextBlock.devmono (Developer
+            mode's data, amber and monospace) · Button.pill.dev (its chip). What runs by itself runs only under the root's class "moving". ·
+            TextBlock.eyebrow · TextBlock.heading · TextBlock.lead · TextBlock.quiet · TextBlock.devline.
+-->
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:n="using:Launcher.App.Controls.NextUi"
+        xmlns:v="using:Launcher.App.Views">
+  <Styles.Resources>
+    <!-- Colour: the ground, the plates over the background, the solid tones -->
+    <Color x:Key="NextGroundColor">#070808</Color>
+    <Color x:Key="NextPlateColor">#C20A0C0B</Color>
+    <Color x:Key="NextPlateHiColor">#EB242A26</Color>
+    <Color x:Key="NextSolidColor">#101311</Color>
+    <Color x:Key="NextRaisedColor">#1B1F1D</Color>
+    <Color x:Key="NextHoverColor">#262C29</Color>
+    <SolidColorBrush x:Key="NextGroundBrush" Color="{StaticResource NextGroundColor}" />
+    <SolidColorBrush x:Key="NextPlateBrush" Color="{StaticResource NextPlateColor}" />
+    <SolidColorBrush x:Key="NextPlateHiBrush" Color="{StaticResource NextPlateHiColor}" />
+    <SolidColorBrush x:Key="NextSolidBrush" Color="{StaticResource NextSolidColor}" />
+    <SolidColorBrush x:Key="NextRaisedBrush" Color="{StaticResource NextRaisedColor}" />
+    <SolidColorBrush x:Key="NextHoverBrush" Color="{StaticResource NextHoverColor}" />
+    <!-- Colour: lines (over the background, and solid), and the faintest fill (a value's box in a row) -->
+    <SolidColorBrush x:Key="NextLineBrush" Color="#21FFFFFF" />
+    <SolidColorBrush x:Key="NextLineSolidBrush" Color="#262B28" />
+    <SolidColorBrush x:Key="NextFaintFillBrush" Color="#0FFFFFFF" />
+    <!-- Colour: text, two steps -->
+    <Color x:Key="NextTextColor">#F4F7F5</Color>
+    <Color x:Key="NextDimColor">#BAC2BD</Color>
+    <SolidColorBrush x:Key="NextTextBrush" Color="{StaticResource NextTextColor}" />
+    <SolidColorBrush x:Key="NextDimBrush" Color="{StaticResource NextDimColor}" />
+    <!-- Colour: the accent (lit: 30% towards white), gold, danger, the developer mode's amber -->
+    <Color x:Key="NextAccentColor">#3DFF6A</Color>
+    <Color x:Key="NextAccentHiColor">#77FF97</Color>
+    <Color x:Key="NextOnAccentColor">#04140A</Color>
+    <Color x:Key="NextGoldColor">#FFD500</Color>
+    <Color x:Key="NextDangerColor">#FF6B5E</Color>
+    <Color x:Key="NextDevColor">#FF9F1A</Color>
+    <SolidColorBrush x:Key="NextAccentBrush" Color="{StaticResource NextAccentColor}" />
+    <SolidColorBrush x:Key="NextAccentHiBrush" Color="{StaticResource NextAccentHiColor}" />
+    <SolidColorBrush x:Key="NextOnAccentBrush" Color="{StaticResource NextOnAccentColor}" />
+    <SolidColorBrush x:Key="NextGoldBrush" Color="{StaticResource NextGoldColor}" />
+    <SolidColorBrush x:Key="NextDangerBrush" Color="{StaticResource NextDangerColor}" />
+    <SolidColorBrush x:Key="NextDevBrush" Color="{StaticResource NextDevColor}" />
+    <SolidColorBrush x:Key="NextDevTintBrush" Color="{StaticResource NextDevColor}" Opacity="0.14" />
+    <!-- Colour: a bar's track; the race that runs now (LIVE) -->
+    <SolidColorBrush x:Key="NextTrackBrush" Color="#29FFFFFF" />
+    <SolidColorBrush x:Key="NextLiveBrush" Color="#C93C37" />
+    <!-- over a course's picture behind a page (the lobby's course): as dark as a list page's veil -->
+    <SolidColorBrush x:Key="NextBackdropVeilBrush" Color="#B3050606" />
+
+    <!-- Focus: 2 px of the ground, then 2 px of the focus's yellow (the two colours as below: a shadow takes no
+         resource). The focus is the Wild Goose's yellow, not the accent: against the green of the main actions, the
+         flag and the machine it stands out (the owner, 2026-11-15). Green says what is yours or active; yellow where
+         the pad or the pointer is. -->
+    <BoxShadows x:Key="NextFocusRing">0 0 0 2 #070808, 0 0 0 4 #FFD500</BoxShadows>
+    <BoxShadows x:Key="NextNoRing">0 0 0 0 #00070808, 0 0 0 0 #00FFD500</BoxShadows>
+    <Color x:Key="NextFocusColor">#FFD500</Color>
+    <SolidColorBrush x:Key="NextFocusBrush" Color="{StaticResource NextFocusColor}" />
+    <!-- the sweep that fills a control from the left as the focus comes on it: the yellow, faint (on the green main
+         button a white one); a card's is a bar along its foot, in the yellow itself -->
+    <SolidColorBrush x:Key="NextSweepBrush" Color="#FFD500" Opacity="0.16" />
+    <SolidColorBrush x:Key="NextSweepOnAccentBrush" Color="#FFFFFF" Opacity="0.3" />
+
+    <!-- Type: the sizes (the faces are the classic look's: Saira, ../Theme.axaml) -->
+    <x:Double x:Key="NextBody">17</x:Double>
+    <x:Double x:Key="NextSmall">15</x:Double>
+    <x:Double x:Key="NextEyebrow">13</x:Double>
+    <x:Double x:Key="NextMainWord">21</x:Double>
+    <x:Double x:Key="NextAreaWord">22</x:Double>
+    <x:Double x:Key="NextHeading">56</x:Double>
+
+    <!-- Grid: the top bar, the hint bar under the page, the page's side room, the place kept for Back -->
+    <x:Double x:Key="NextTopBar">76</x:Double>
+    <x:Double x:Key="NextHintBar">60</x:Double>
+    <x:Double x:Key="NextBackPlace">46</x:Double>
+    <Thickness x:Key="NextSideRoom">40,0</Thickness>
+
+    <!-- Motion -->
+    <x:TimeSpan x:Key="NextMove">0:0:0.2</x:TimeSpan>
+    <x:TimeSpan x:Key="NextTint">0:0:0.18</x:TimeSpan>
+    <x:TimeSpan x:Key="NextSweep">0:0:0.14</x:TimeSpan>
+    <!-- (the yellow sweeps a little slower: the owner, 2026-11-15) -->
+    <x:TimeSpan x:Key="NextSweepYellow">0:0:0.2</x:TimeSpan>
+  </Styles.Resources>
+
+  <!-- Type -->
+  <Style Selector=".nextui TextBlock.eyebrow">
+    <Setter Property="FontSize" Value="{StaticResource NextEyebrow}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="LetterSpacing" Value="1.56" />
+    <Setter Property="Foreground" Value="{StaticResource NextDimBrush}" />
+  </Style>
+  <Style Selector=".nextui TextBlock.heading">
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontWeight" Value="ExtraBold" />
+    <Setter Property="FontSize" Value="{StaticResource NextHeading}" />
+    <Setter Property="LineHeight" Value="56" />
+    <Setter Property="ClipToBounds" Value="False" />
+  </Style>
+  <Style Selector=".nextui TextBlock.lead">
+    <Setter Property="FontSize" Value="18" />
+    <Setter Property="Foreground" Value="{StaticResource NextDimBrush}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
+  <Style Selector=".nextui TextBlock.quiet">
+    <Setter Property="Foreground" Value="{StaticResource NextDimBrush}" />
+  </Style>
+  <!-- the developer mode's lines: amber, in one width -->
+  <Style Selector=".nextui TextBlock.devline">
+    <Setter Property="FontFamily" Value="Cascadia Mono, Consolas, monospace" />
+    <Setter Property="FontSize" Value="11.5" />
+    <Setter Property="Foreground" Value="{StaticResource NextDevBrush}" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+
+  <!-- A list never cuts off what reaches past its items: the focus ring, a card's lift, a button's lean (the Replays'
+       tabs and More's cards were cut at the list's edge; a scrolling list's ScrollViewer still clips, with room kept
+       round the focus: Views/NextUi/NextFocus.cs) -->
+  <Style Selector=".nextui ItemsControl, .nextui ItemsPresenter, .nextui ItemsPresenter > StackPanel, .nextui ItemsPresenter > WrapPanel, .nextui ItemsPresenter > UniformGrid">
+    <Setter Property="ClipToBounds" Value="False" />
+  </Style>
+
+  <!-- Everything that is pressed: flat, its colours easing; no outline of the toolkit's own (the ring is the look's) -->
+  <Style Selector=".nextui Button.main, .nextui Button.soft, .nextui Button.pill, .nextui Button.area, .nextui Button.tool, .nextui Button.card, .nextui Button.line">
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="3" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{StaticResource NextTextBrush}" />
+    <Setter Property="FontFamily" Value="{StaticResource BodyFont}" />
+    <Setter Property="FontSize" Value="{StaticResource NextBody}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="RenderTransform" Value="none" />
+    <Setter Property="FocusAdorner" Value="{x:Null}" />
+    <!-- (a lean, a lift and the focus ring reach past a button's box) -->
+    <Setter Property="ClipToBounds" Value="False" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="{StaticResource NextTint}" Easing="{StaticResource EaseOut}" />
+        <BrushTransition Property="Foreground" Duration="{StaticResource NextTint}" Easing="{StaticResource EaseOut}" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector=".still .nextui Button">
+    <Setter Property="Transitions" Value="{x:Null}" />
+  </Style>
+
+  <!-- The sweep: as the focus (the pad's or the pointer's: one and the same) comes on a control, a fill runs across
+       it from the left in a moment, and goes as it leaves (the owner, 2026-11-15). The faint yellow on a plate, white
+       on the green main button, the yellow itself on the hub's entries (their whole fill) and as a bar along a card's
+       foot. Under Reduced motion it is there at once. -->
+  <Style Selector=".nextui Button /template/ Border#Sweep">
+    <Setter Property="Background" Value="{StaticResource NextSweepBrush}" />
+    <Setter Property="IsHitTestVisible" Value="False" />
+    <Setter Property="RenderTransformOrigin" Value="0%,50%" />
+    <Setter Property="RenderTransform" Value="scaleX(0)" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <!-- (the yellow ones a little slower than the main button's white) -->
+        <TransformOperationsTransition Property="RenderTransform" Duration="{StaticResource NextSweepYellow}" Easing="{StaticResource EaseOut}" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <!-- (the focus alone: the pointer gives it where it moves, so pointer and pad show one place, never two) -->
+  <Style Selector=".nextui Button:focus /template/ Border#Sweep">
+    <Setter Property="RenderTransform" Value="scaleX(1)" />
+  </Style>
+  <Style Selector=".nextui Button:disabled /template/ Border#Sweep">
+    <Setter Property="RenderTransform" Value="scaleX(0)" />
+  </Style>
+  <Style Selector=".nextui Button.main /template/ Border#Sweep">
+    <Setter Property="Background" Value="{StaticResource NextSweepOnAccentBrush}" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <TransformOperationsTransition Property="RenderTransform" Duration="{StaticResource NextSweep}" Easing="{StaticResource EaseOut}" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector=".nextui Button.entry /template/ Border#Sweep, .nextui Button.card /template/ Border#Sweep">
+    <Setter Property="Background" Value="{StaticResource NextFocusBrush}" />
+  </Style>
+  <Style Selector=".still .nextui Button /template/ Border#Sweep">
+    <Setter Property="Transitions" Value="{x:Null}" />
+  </Style>
+
+  <!-- A button that leans: a small rectangle 12 degrees forward, its content upright in it; the ring is the face's.
+       (Lean holds the lean, so that a press settles the face inside it: ../Motion.axaml) -->
+  <Style Selector=".nextui Button.main, .nextui Button.soft, .nextui Button.pill">
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Panel Name="Root" Background="Transparent">
+          <Border Name="Lean" RenderTransform="skewX(-12deg)" RenderTransformOrigin="50%,50%">
+            <Border Name="Face" Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}"
+                    BoxShadow="{StaticResource NextNoRing}">
+              <Panel ClipToBounds="True">
+                <Border Name="Sweep" CornerRadius="{TemplateBinding CornerRadius}" />
+                <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}"
+                                  ContentTemplate="{TemplateBinding ContentTemplate}" Padding="{TemplateBinding Padding}"
+                                  Foreground="{TemplateBinding Foreground}" RenderTransform="skewX(12deg)"
+                                  RenderTransformOrigin="50%,50%"
+                                  HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                  VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+              </Panel>
+            </Border>
+          </Border>
+        </Panel>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector=".nextui Button.main:focus /template/ Border#Face, .nextui Button.soft:focus /template/ Border#Face, .nextui Button.pill:focus /template/ Border#Face">
+    <Setter Property="BoxShadow" Value="{StaticResource NextFocusRing}" />
+  </Style>
+
+  <!-- The one main action of a page: green, its word in the display face, in capitals -->
+  <Style Selector=".nextui Button.main">
+    <Setter Property="Height" Value="56" />
+    <Setter Property="Padding" Value="28,0" />
+    <Setter Property="Background" Value="{StaticResource NextAccentBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource NextOnAccentBrush}" />
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontWeight" Value="ExtraBold" />
+    <Setter Property="FontSize" Value="{StaticResource NextMainWord}" />
+  </Style>
+  <!-- (spaced .04em at 21 px; the areas' names .03em at 22 px) -->
+  <Style Selector=".nextui Button.main TextBlock, .nextui Button.main /template/ ContentPresenter > TextBlock">
+    <Setter Property="LetterSpacing" Value="0.84" />
+  </Style>
+  <Style Selector=".nextui Button.area TextBlock, .nextui Button.area /template/ ContentPresenter > TextBlock">
+    <Setter Property="LetterSpacing" Value="0.66" />
+  </Style>
+  <Style Selector=".nextui Button.main:pointerover, .nextui Button.main:focus">
+    <Setter Property="Background" Value="{StaticResource NextAccentHiBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource NextOnAccentBrush}" />
+  </Style>
+  <Style Selector=".nextui Button.main:pressed">
+    <Setter Property="Background" Value="{StaticResource NextAccentBrush}" />
+  </Style>
+  <Style Selector=".nextui Button.main:disabled">
+    <Setter Property="Background" Value="{StaticResource NextRaisedBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource NextDimBrush}" />
+    <Setter Property="Opacity" Value="0.55" />
+  </Style>
+
+  <!-- Any other action: a solid tone, one step up when lit; .danger: its word red (leaving, deleting) -->
+  <Style Selector=".nextui Button.soft">
+    <Setter Property="Height" Value="44" />
+    <Setter Property="Padding" Value="18,0" />
+    <Setter Property="Background" Value="{StaticResource NextRaisedBrush}" />
+  </Style>
+  <Style Selector=".nextui Button.soft:pointerover, .nextui Button.soft:focus">
+    <Setter Property="Background" Value="{StaticResource NextHoverBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource NextTextBrush}" />
+  </Style>
+  <Style Selector=".nextui Button.soft:pressed">
+    <Setter Property="Background" Value="{StaticResource NextRaisedBrush}" />
+  </Style>
+  <Style Selector=".nextui Button.soft.danger, .nextui Button.soft.danger:pointerover, .nextui Button.soft.danger:focus">
+    <Setter Property="Foreground" Value="{StaticResource NextDangerBrush}" />
+  </Style>
+  <Style Selector=".nextui Button.soft:disabled">
+    <Setter Property="Background" Value="{StaticResource NextRaisedBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource NextDimBrush}" />
+    <Setter Property="Opacity" Value="0.55" />
+  </Style>
+
+  <!-- A state in the top bar that can be pressed (back to the lobby, an update): a plate; .go green (your lobby),
+       .gold its word gold (an update is ready) -->
+  <Style Selector=".nextui Button.pill">
+    <Setter Property="Height" Value="36" />
+    <Setter Property="Padding" Value="14,0" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="Background" Value="{StaticResource NextPlateBrush}" />
+  </Style>
+  <Style Selector=".nextui Button.pill:pointerover, .nextui Button.pill:focus">
+    <Setter Property="Background" Value="{StaticResource NextPlateHiBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource NextTextBrush}" />
+  </Style>
+  <Style Selector=".nextui Button.pill.gold, .nextui Button.pill.gold:pointerover, .nextui Button.pill.gold:focus">
+    <Setter Property="Foreground" Value="{StaticResource NextGoldBrush}" />
+  </Style>
+  <Style Selector=".nextui Button.pill.go, .nextui Button.pill.go:pressed">
+    <Setter Property="Background" Value="{StaticResource NextAccentBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource NextOnAccentBrush}" />
+  </Style>
+  <Style Selector=".nextui Button.pill.go:pointerover, .nextui Button.pill.go:focus">
+    <Setter Property="Background" Value="{StaticResource NextAccentHiBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource NextOnAccentBrush}" />
+  </Style>
+
+  <!-- An area in the top bar (Play, Garage, Replays, More): its name in the display face, leaning; the one showing
+       white over a green bar, the others dim. Its width never changes: only colours do. -->
+  <!-- the launcher's name at the top left, a button to the main menu: plain, its accent a little brighter under the
+       pointer or the focus -->
+  <Style Selector=".nextui Button.wordmark">
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Padding" Value="6,8" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Foreground" Value="{StaticResource NextTextBrush}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" CornerRadius="3">
+          <ContentPresenter Content="{TemplateBinding Content}" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector=".nextui Button.wordmark:pointerover, .nextui Button.wordmark:focus">
+    <Setter Property="Background" Value="{StaticResource NextFaintFillBrush}" />
+  </Style>
+  <Style Selector=".nextui Button.wordmark:disabled">
+    <Setter Property="Opacity" Value="1" />
+    <Setter Property="Cursor" Value="Arrow" />
+  </Style>
+
+  <Style Selector=".nextui Button.area">
+    <Setter Property="Height" Value="46" />
+    <Setter Property="Padding" Value="15,0" />
+    <Setter Property="Foreground" Value="{StaticResource NextDimBrush}" />
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontWeight" Value="ExtraBold" />
+    <Setter Property="FontSize" Value="{StaticResource NextAreaWord}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Panel Name="Root" Background="Transparent">
+          <Border Name="Face" Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}"
+                  BoxShadow="{StaticResource NextNoRing}">
+            <Panel>
+              <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}" Padding="{TemplateBinding Padding}"
+                                Foreground="{TemplateBinding Foreground}" RenderTransform="skewX(-10deg)"
+                                RenderTransformOrigin="50%,50%" HorizontalContentAlignment="Center"
+                                VerticalContentAlignment="Center" />
+              <Border Name="Bar" Height="3" Margin="15,0,15,5" VerticalAlignment="Bottom" Background="Transparent"
+                      RenderTransform="skewX(-30deg)" RenderTransformOrigin="50%,50%" />
+            </Panel>
+          </Border>
+        </Panel>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector=".nextui Button.area /template/ Border#Bar">
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="{StaticResource NextTint}" Easing="{StaticResource EaseOut}" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector=".nextui Button.area:pointerover, .nextui Button.area:focus">
+    <Setter Property="Background" Value="{StaticResource NextPlateHiBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource NextTextBrush}" />
+  </Style>
+  <Style Selector=".nextui Button.area:pressed">
+    <Setter Property="Background" Value="{StaticResource NextPlateHiBrush}" />
+  </Style>
+  <Style Selector=".nextui Button.area.on, .nextui Button.area.on:pointerover, .nextui Button.area.on:focus">
+    <Setter Property="Foreground" Value="{StaticResource NextTextBrush}" />
+  </Style>
+  <Style Selector=".nextui Button.area.on /template/ Border#Bar">
+    <Setter Property="Background" Value="{StaticResource NextAccentBrush}" />
+  </Style>
+
+  <!-- An icon in the top bar (the bell, the chat, Settings): dim, lit under the pointer and the focus; .on: the
+       place it opens is showing -->
+  <Style Selector=".nextui Button.tool">
+    <Setter Property="Width" Value="46" />
+    <Setter Property="Height" Value="44" />
+    <Setter Property="Foreground" Value="{StaticResource NextDimBrush}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Panel Name="Root" Background="Transparent">
+          <Border Name="Face" Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}"
+                  BoxShadow="{StaticResource NextNoRing}">
+            <Panel ClipToBounds="True">
+              <Border Name="Sweep" CornerRadius="{TemplateBinding CornerRadius}" />
+              <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}" Padding="{TemplateBinding Padding}"
+                                Foreground="{TemplateBinding Foreground}"
+                                HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+            </Panel>
+          </Border>
+        </Panel>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector=".nextui Button.tool:pointerover, .nextui Button.tool:focus, .nextui Button.tool:pressed">
+    <Setter Property="Background" Value="{StaticResource NextPlateHiBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource NextTextBrush}" />
+  </Style>
+  <Style Selector=".nextui Button.tool.on, .nextui Button.tool.on:pointerover, .nextui Button.tool.on:focus">
+    <Setter Property="Foreground" Value="{StaticResource NextTextBrush}" />
+  </Style>
+  <Style Selector=".nextui Button.area:focus /template/ Border#Face, .nextui Button.tool:focus /template/ Border#Face">
+    <Setter Property="BoxShadow" Value="{StaticResource NextFocusRing}" />
+  </Style>
+  <!-- a line drawing in a button takes the button's colour -->
+  <Style Selector=".nextui Button Path.stroke">
+    <Setter Property="Stroke" Value="{Binding $parent[Button].Foreground}" />
+    <Setter Property="StrokeLineCap" Value="Round" />
+    <Setter Property="StrokeJoin" Value="Round" />
+  </Style>
+  <Style Selector=".nextui Button Path.fill">
+    <Setter Property="Fill" Value="{Binding $parent[Button].Foreground}" />
+  </Style>
+
+  <!-- A card to press: a chamfered plate, its content its own. Lit, it is one tone up; under the focus it lifts 3 px
+       and has the green outline in its shape. Cut 14, or .c10, .c18. -->
+  <Style Selector=".nextui Button.card">
+    <Setter Property="Background" Value="{StaticResource NextPlateBrush}" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Stretch" />
+    <Setter Property="FontWeight" Value="Regular" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Panel Name="Root" Background="Transparent">
+          <n:Chamfer Name="Face" Cut="14" Background="{TemplateBinding Background}">
+            <Panel>
+              <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}" Padding="{TemplateBinding Padding}"
+                                Foreground="{TemplateBinding Foreground}"
+                                HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+              <Border Name="Sweep" Height="4" VerticalAlignment="Bottom" />
+            </Panel>
+          </n:Chamfer>
+        </Panel>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector=".nextui Button.card.c10 /template/ n|Chamfer#Face">
+    <Setter Property="Cut" Value="10" />
+  </Style>
+  <Style Selector=".nextui Button.card.c18 /template/ n|Chamfer#Face">
+    <Setter Property="Cut" Value="18" />
+  </Style>
+  <Style Selector=".nextui Button.card /template/ n|Chamfer#Face">
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="{StaticResource NextTint}" Easing="{StaticResource EaseOut}" />
+        <TransformOperationsTransition Property="RenderTransform" Duration="{StaticResource NextMove}" Easing="{StaticResource EaseOut}" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector=".nextui Button.card:pointerover, .nextui Button.card:focus, .nextui Button.card:pressed">
+    <Setter Property="Background" Value="{StaticResource NextPlateHiBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource NextTextBrush}" />
+  </Style>
+  <!-- A machine's card of the one raced (.picked: the Garage's, the lobby's machine choice): a green outline in its
+       shape and its name green, over its green bar (the owner, 2026-11-15: more than the bar); the focus's yellow
+       outline over the green while the focus is on it -->
+  <Style Selector=".nextui Button.card.machine.picked /template/ n|Chamfer#Face">
+    <Setter Property="Ring" Value="{StaticResource NextAccentBrush}" />
+  </Style>
+  <Style Selector=".nextui Button.card.machine.picked TextBlock.machinename">
+    <Setter Property="Foreground" Value="{StaticResource NextAccentBrush}" />
+  </Style>
+  <Style Selector=".nextui Button.card:focus /template/ n|Chamfer#Face">
+    <Setter Property="Ring" Value="{StaticResource NextFocusBrush}" />
+    <Setter Property="RenderTransform" Value="translateY(-3px)" />
+  </Style>
+  <Style Selector=".still .nextui Button.card /template/ n|Chamfer#Face, .still .nextui Button.card:focus /template/ n|Chamfer#Face">
+    <Setter Property="RenderTransform" Value="none" />
+    <Setter Property="Transitions" Value="{x:Null}" />
+  </Style>
+
+  <Style Selector=".nextui Button.pill.danger, .nextui Button.pill.danger:pointerover, .nextui Button.pill.danger:focus">
+    <Setter Property="Foreground" Value="{StaticResource NextDangerBrush}" />
+  </Style>
+
+  <!-- The background (Controls/NextUi/HoloFlag): turned down and soft behind a page of rows and forms, as it is on
+       a page that is made for it (the root's class "clear": the hub); it eases between the two. Over it a veil of
+       the ground, and the shades at the window's edges that keep the bars and the hub's entries on a dark ground. -->
+  <Style Selector=".nextui n|HoloFlag">
+    <Setter Property="Fade" Value="0.45" />
+    <Setter Property="Soft" Value="0.8" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Fade" Duration="0:0:0.4" />
+        <DoubleTransition Property="Soft" Duration="0:0:0.4" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector=".nextui.clear n|HoloFlag">
+    <Setter Property="Fade" Value="0" />
+    <Setter Property="Soft" Value="0" />
+  </Style>
+  <Style Selector=".still .nextui n|HoloFlag">
+    <Setter Property="Transitions" Value="{x:Null}" />
+  </Style>
+  <Style Selector=".nextui Border.veil, .nextui Border.shade">
+    <Setter Property="IsHitTestVisible" Value="False" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.4" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector=".still .nextui Border.veil, .still .nextui Border.shade">
+    <Setter Property="Transitions" Value="{x:Null}" />
+  </Style>
+  <Style Selector=".nextui Border.veil">
+    <Setter Property="Background" Value="#050606" />
+    <Setter Property="Opacity" Value="0.6" />
+  </Style>
+  <Style Selector=".nextui.clear Border.veil">
+    <Setter Property="Opacity" Value="0" />
+  </Style>
+  <Style Selector=".nextui Border.shade.top">
+    <Setter Property="Height" Value="130" />
+    <Setter Property="VerticalAlignment" Value="Top" />
+    <Setter Property="Background">
+      <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Offset="0" Color="#CC050606" />
+        <GradientStop Offset="1" Color="#00050606" />
+      </LinearGradientBrush>
+    </Setter>
+  </Style>
+  <!-- (the hub's own: under its entries on the left, under its foot) -->
+  <Style Selector=".nextui Border.shade.left, .nextui Border.shade.foot">
+    <Setter Property="Opacity" Value="0" />
+  </Style>
+  <Style Selector=".nextui.clear Border.shade.left, .nextui.clear Border.shade.foot">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <Style Selector=".nextui Border.shade.left">
+    <Setter Property="Width" Value="780" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="Background">
+      <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,0%">
+        <GradientStop Offset="0" Color="#E6050606" />
+        <GradientStop Offset="0.564" Color="#8C050606" />
+        <GradientStop Offset="1" Color="#00050606" />
+      </LinearGradientBrush>
+    </Setter>
+  </Style>
+  <Style Selector=".nextui Border.shade.foot">
+    <Setter Property="Height" Value="210" />
+    <Setter Property="VerticalAlignment" Value="Bottom" />
+    <Setter Property="Background">
+      <LinearGradientBrush StartPoint="0%,100%" EndPoint="0%,0%">
+        <GradientStop Offset="0" Color="#E0050606" />
+        <GradientStop Offset="1" Color="#00050606" />
+      </LinearGradientBrush>
+    </Setter>
+  </Style>
+
+  <!-- Whether the player is online, as a dot (the hub, the profile): green online, red offline, dim while it is
+       being asked -->
+  <Style Selector=".nextui Ellipse.net">
+    <Setter Property="Width" Value="8" />
+    <Setter Property="Height" Value="8" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Fill" Value="{StaticResource NextDimBrush}" />
+  </Style>
+  <Style Selector=".nextui Ellipse.net.online">
+    <Setter Property="Fill" Value="{StaticResource NextAccentBrush}" />
+  </Style>
+  <Style Selector=".nextui Ellipse.net.offline">
+    <Setter Property="Fill" Value="{StaticResource NextDangerBrush}" />
+  </Style>
+
+  <!-- How many players are online, beside the profile (only shown, not pressed): the figure and the count dim as the
+       top bar's icons are, the figure washed with the accent while the count went up; the count in the body's
+       figures -->
+  <Style Selector=".nextui n|OnlineCount Path.stroke">
+    <Setter Property="Stroke" Value="{StaticResource NextDimBrush}" />
+  </Style>
+  <Style Selector=".nextui n|OnlineCount TextBlock.count">
+    <Setter Property="Foreground" Value="{StaticResource NextDimBrush}" />
+  </Style>
+  <Style Selector=".nextui n|OnlineCount Path.wash">
+    <Setter Property="Stroke" Value="{StaticResource NextAccentBrush}" />
+  </Style>
+  <Style Selector=".nextui n|OnlineCount TextBlock.count">
+    <Setter Property="MinWidth" Value="28" />
+    <Setter Property="FontSize" Value="15" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontFeatures" Value="tnum" />
+  </Style>
+
+  <!-- The top bar's key beside the areas (L and R, or Q and E): a small plate that leans -->
+  <Style Selector=".nextui Border.key">
+    <Setter Property="Height" Value="24" />
+    <Setter Property="MinWidth" Value="28" />
+    <Setter Property="Padding" Value="7,0" />
+    <Setter Property="CornerRadius" Value="3" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Background" Value="{StaticResource NextPlateHiBrush}" />
+    <Setter Property="RenderTransform" Value="skewX(-12deg)" />
+  </Style>
+  <Style Selector=".nextui Border.key > TextBlock">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Foreground" Value="{StaticResource NextDimBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- A hint's button in the hint bar: a key as a small plate, a controller's face button round -->
+  <Style Selector=".nextui Border.glyph">
+    <Setter Property="Height" Value="26" />
+    <Setter Property="MinWidth" Value="26" />
+    <Setter Property="Padding" Value="8,0" />
+    <Setter Property="CornerRadius" Value="4" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="Background" Value="{StaticResource NextRaisedBrush}" />
+  </Style>
+  <Style Selector=".nextui Border.glyph.round">
+    <Setter Property="Height" Value="28" />
+    <Setter Property="MinWidth" Value="28" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="14" />
+  </Style>
+  <Style Selector=".nextui Border.glyph > TextBlock">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="Foreground" Value="{StaticResource NextTextBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <!-- a GameCube controller's buttons in its own look: the big green A, the small red B, the grey kidney-shaped X and
+       Y, the violet Z, the grey Start and shoulders -->
+  <Style Selector=".nextui Border.glyph.cubea">
+    <Setter Property="Height" Value="30" />
+    <Setter Property="MinWidth" Value="30" />
+    <Setter Property="CornerRadius" Value="15" />
+    <Setter Property="Background" Value="#1FAE6B" />
+  </Style>
+  <Style Selector=".nextui Border.glyph.cubeb">
+    <Setter Property="Height" Value="22" />
+    <Setter Property="MinWidth" Value="22" />
+    <Setter Property="CornerRadius" Value="11" />
+    <Setter Property="Background" Value="#D8343F" />
+  </Style>
+  <Style Selector=".nextui Border.glyph.cubexy">
+    <Setter Property="Height" Value="24" />
+    <Setter Property="MinWidth" Value="34" />
+    <Setter Property="CornerRadius" Value="12,12,6,12" />
+    <Setter Property="Background" Value="#C9CDD2" />
+  </Style>
+  <Style Selector=".nextui Border.glyph.cubez">
+    <Setter Property="Height" Value="22" />
+    <Setter Property="Padding" Value="12,0" />
+    <Setter Property="CornerRadius" Value="11" />
+    <Setter Property="Background" Value="#6B5BD6" />
+  </Style>
+  <Style Selector=".nextui Border.glyph.cubegrey">
+    <Setter Property="Background" Value="#8E959C" />
+  </Style>
+  <Style Selector=".nextui Border.glyph.cubea > TextBlock, .nextui Border.glyph.cubeb > TextBlock, .nextui Border.glyph.cubez > TextBlock">
+    <Setter Property="Foreground" Value="White" />
+  </Style>
+  <Style Selector=".nextui Border.glyph.cubexy > TextBlock, .nextui Border.glyph.cubegrey > TextBlock">
+    <Setter Property="Foreground" Value="#1E2226" />
+  </Style>
+
+  <!-- A question over the page: the page darkens, and a solid chamfered plate under a green line asks, its title
+       in the display face; the answer that changes nothing is the main button, and the first the focus is on -->
+  <Style Selector=".nextui Border.dim">
+    <Setter Property="Background" Value="#B8050606" />
+  </Style>
+  <Style Selector=".nextui n|Chamfer.dialog">
+    <Setter Property="Width" Value="520" />
+    <Setter Property="Cut" Value="18" />
+    <Setter Property="Background" Value="{StaticResource NextSolidBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector=".nextui n|Chamfer.dialog TextBlock.asks">
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontWeight" Value="ExtraBold" />
+    <Setter Property="FontSize" Value="40" />
+    <Setter Property="LineHeight" Value="42" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="RenderTransform" Value="skewX(-10deg)" />
+    <Setter Property="RenderTransformOrigin" Value="0%,100%" />
+  </Style>
+
+  <!-- One of the hub's entries (Quick Play, Custom lobby, Practice, Start F-Zero GX): a plate that leans, its name in
+       the display face leaning with it; .big the page's main one, taller, a green bar at its left. The one the focus
+       is on (the pointer moves the focus there too) is green and steps 10 px forward; the ring is the keyboard's and
+       the pad's. Its place and size never change: only its colours and its transform do. -->
+  <Style Selector=".nextui Button.entry">
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="Height" Value="62" />
+    <Setter Property="Padding" Value="24,0,20,0" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CornerRadius" Value="3" />
+    <Setter Property="Background" Value="{StaticResource NextPlateBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource NextTextBrush}" />
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontWeight" Value="ExtraBold" />
+    <Setter Property="FontSize" Value="27" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="RenderTransform" Value="none" />
+    <Setter Property="FocusAdorner" Value="{x:Null}" />
+    <Setter Property="ClipToBounds" Value="False" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="{StaticResource NextTint}" Easing="{StaticResource EaseOut}" />
+        <BrushTransition Property="Foreground" Duration="{StaticResource NextTint}" Easing="{StaticResource EaseOut}" />
+      </Transitions>
+    </Setter>
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Panel Name="Root" Background="Transparent">
+          <Border Name="Lean" RenderTransform="skewX(-12deg)" RenderTransformOrigin="50%,50%">
+            <Border Name="Face" Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}"
+                    BoxShadow="{StaticResource NextNoRing}">
+              <Panel ClipToBounds="True">
+                <Border Name="Sweep" CornerRadius="{TemplateBinding CornerRadius}" />
+                <Border Name="Bar" Width="5" HorizontalAlignment="Left" Background="{StaticResource NextAccentBrush}"
+                        CornerRadius="3,0,0,3" Opacity="0" />
+                <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}"
+                                  ContentTemplate="{TemplateBinding ContentTemplate}" Padding="{TemplateBinding Padding}"
+                                  Foreground="{TemplateBinding Foreground}"
+                                  HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                  VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+              </Panel>
+            </Border>
+          </Border>
+        </Panel>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector=".nextui Button.entry /template/ Border#Lean">
+    <Setter Property="Transitions">
+      <Transitions>
+        <TransformOperationsTransition Property="RenderTransform" Duration="{StaticResource NextMove}" Easing="{StaticResource EaseOut}" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector=".nextui Button.entry.big">
+    <Setter Property="Height" Value="80" />
+    <Setter Property="FontSize" Value="42" />
+  </Style>
+  <Style Selector=".nextui Button.entry.big /template/ Border#Bar">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <Style Selector=".nextui Button.entry:pointerover, .nextui Button.entry:pressed">
+    <Setter Property="Background" Value="{StaticResource NextPlateHiBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource NextTextBrush}" />
+  </Style>
+  <Style Selector=".nextui Button.entry:focus, .nextui Button.entry:focus:pointerover, .nextui Button.entry:focus:pressed">
+    <Setter Property="Background" Value="{StaticResource NextPlateHiBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource NextOnAccentBrush}" />
+  </Style>
+  <Style Selector=".nextui Button.entry:focus /template/ Border#Lean">
+    <Setter Property="RenderTransform" Value="translateX(10px) skewX(-12deg)" />
+  </Style>
+  <Style Selector=".nextui Button.entry:focus /template/ Border#Bar">
+    <Setter Property="Opacity" Value="0" />
+  </Style>
+  <Style Selector=".nextui Button.entry:focus /template/ Border#Face">
+    <Setter Property="BoxShadow" Value="{StaticResource NextFocusRing}" />
+  </Style>
+  <Style Selector=".nextui Button.entry.off">
+    <Setter Property="Opacity" Value="0.6" />
+  </Style>
+  <Style Selector=".still .nextui Button.entry /template/ Border#Lean">
+    <Setter Property="Transitions" Value="{x:Null}" />
+  </Style>
+  <!-- an entry's drawing: green on the big one, dim on the others, the word's colour on the one the focus is on -->
+  <Style Selector=".nextui Button.entry Path.mark">
+    <Setter Property="Fill" Value="{StaticResource NextDimBrush}" />
+  </Style>
+  <Style Selector=".nextui Button.entry.big Path.mark">
+    <Setter Property="Fill" Value="{StaticResource NextAccentBrush}" />
+  </Style>
+  <Style Selector=".nextui Button.entry:focus Path.mark">
+    <Setter Property="Fill" Value="{StaticResource NextOnAccentBrush}" />
+  </Style>
+
+  <!-- A list's row: a plate across the list, its content its own (a title, a line, a value, an arrow); lit one tone
+       up, under the focus a green bar at its left and the ring -->
+  <Style Selector=".nextui Button.line">
+    <Setter Property="MinHeight" Value="56" />
+    <Setter Property="Padding" Value="20,0,16,0" />
+    <Setter Property="Background" Value="{StaticResource NextPlateBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="FontWeight" Value="Regular" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Panel Name="Root" Background="Transparent">
+          <Border Name="Face" Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}"
+                  BoxShadow="{StaticResource NextNoRing}" ClipToBounds="False">
+            <Panel ClipToBounds="True">
+              <Border Name="Sweep" CornerRadius="{TemplateBinding CornerRadius}" />
+              <Border Name="Mark" Width="4" HorizontalAlignment="Left" Background="{StaticResource NextFocusBrush}"
+                      Opacity="0" CornerRadius="3,0,0,3" />
+              <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}" Padding="{TemplateBinding Padding}"
+                                Foreground="{TemplateBinding Foreground}"
+                                HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+            </Panel>
+          </Border>
+        </Panel>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector=".nextui Button.line:pointerover, .nextui Button.line:focus, .nextui Button.line:pressed">
+    <Setter Property="Background" Value="{StaticResource NextPlateHiBrush}" />
+    <Setter Property="Foreground" Value="{StaticResource NextTextBrush}" />
+  </Style>
+  <Style Selector=".nextui Button.line:focus /template/ Border#Face">
+    <Setter Property="BoxShadow" Value="{StaticResource NextFocusRing}" />
+  </Style>
+  <Style Selector=".nextui Button.line:focus /template/ Border#Mark">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <!-- a row's press does not shrink it (a list's rows stay in line) -->
+  <Style Selector=".nextui Button.line:pressed /template/ Border#Face, .nextui Button.area:pressed /template/ Border#Face">
+    <Setter Property="RenderTransform" Value="none" />
+  </Style>
+
+  <!-- A plate that is not pressed: a card's ground over the background (a panel beside a page's main part) -->
+  <Style Selector=".nextui n|Chamfer.plate">
+    <Setter Property="Background" Value="{StaticResource NextPlateBrush}" />
+    <Setter Property="Cut" Value="18" />
+  </Style>
+  <!-- A racer as a tile (the lobby gathering): a small plate, the racer's paint down its left edge -->
+  <Style Selector=".nextui n|Chamfer.tile">
+    <Setter Property="Background" Value="{StaticResource NextPlateBrush}" />
+    <Setter Property="Cut" Value="8" />
+    <Setter Property="Height" Value="48" />
+  </Style>
+
+  <!-- A share as a bar that leans: a faint track, the share of it in green; it grows by its transform, never by
+       its width -->
+  <Style Selector=".nextui Border.meter">
+    <Setter Property="Height" Value="8" />
+    <Setter Property="Background" Value="{StaticResource NextTrackBrush}" />
+    <Setter Property="RenderTransform" Value="skewX(-24deg)" />
+    <Setter Property="ClipToBounds" Value="True" />
+  </Style>
+  <Style Selector=".nextui Border.meter > Border">
+    <Setter Property="Background" Value="{StaticResource NextAccentBrush}" />
+    <Setter Property="RenderTransformOrigin" Value="0%,50%" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.4" Easing="{StaticResource EaseOut}" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector=".still .nextui Border.meter > Border">
+    <Setter Property="Transitions" Value="{x:Null}" />
+  </Style>
+  <!-- (a wait with no share to show: a part of the bar runs along it) -->
+  <Style Selector=".nextui Border.meter.running > Border">
+    <Setter Property="Opacity" Value="0.4" />
+  </Style>
+  <Style Selector=".nextui.moving Border.meter.running > Border">
+    <Setter Property="Opacity" Value="1" />
+    <Setter Property="Width" Value="120" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Style.Animations>
+      <Animation Duration="0:0:1.6" IterationCount="INFINITE">
+        <KeyFrame Cue="0%">
+          <Setter Property="TranslateTransform.X" Value="-120" />
+        </KeyFrame>
+        <KeyFrame Cue="100%">
+          <Setter Property="TranslateTransform.X" Value="440" />
+        </KeyFrame>
+      </Animation>
+    </Style.Animations>
+  </Style>
+
+  <!-- A grade (A to E) as five parts that lean: as many lit as the grade is worth -->
+  <Style Selector=".nextui Border.part">
+    <Setter Property="Height" Value="10" />
+    <Setter Property="Margin" Value="0,0,5,0" />
+    <Setter Property="Background" Value="{StaticResource NextLineBrush}" />
+    <Setter Property="RenderTransform" Value="skewX(-24deg)" />
+  </Style>
+  <Style Selector=".nextui Border.part.lit">
+    <Setter Property="Background" Value="{StaticResource NextTextBrush}" />
+  </Style>
+  <!-- A vote, or a racer, as a small mark that leans -->
+  <Style Selector=".nextui Border.votemark">
+    <Setter Property="Width" Value="16" />
+    <Setter Property="Height" Value="8" />
+    <Setter Property="Margin" Value="0,0,5,0" />
+    <Setter Property="Background" Value="{StaticResource NextDimBrush}" />
+    <Setter Property="RenderTransform" Value="skewX(-20deg)" />
+  </Style>
+  <Style Selector=".nextui Border.votemark.mine">
+    <Setter Property="Background" Value="{StaticResource NextAccentBrush}" />
+  </Style>
+  <Style Selector=".nextui Border.votemark.lit">
+    <Setter Property="Background" Value="{StaticResource NextTextBrush}" />
+  </Style>
+  <!-- A word on a small plate that leans: "Your vote" (green), a mode's badge (amber), LIVE (red), WATCHING -->
+  <Style Selector=".nextui Border.flag">
+    <Setter Property="Height" Value="24" />
+    <Setter Property="Padding" Value="10,0" />
+    <Setter Property="Background" Value="{StaticResource NextAccentBrush}" />
+    <Setter Property="RenderTransform" Value="skewX(-12deg)" />
+  </Style>
+  <Style Selector=".nextui Border.flag > TextBlock">
+    <Setter Property="FontSize" Value="13" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="LetterSpacing" Value="0.8" />
+    <Setter Property="Foreground" Value="{StaticResource NextOnAccentBrush}" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector=".nextui Border.flag.mode">
+    <Setter Property="Background" Value="{StaticResource NextDevBrush}" />
+  </Style>
+  <Style Selector=".nextui Border.flag.live">
+    <Setter Property="Background" Value="{StaticResource NextLiveBrush}" />
+  </Style>
+  <Style Selector=".nextui Border.flag.live > TextBlock, .nextui Border.flag.quietflag > TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource NextTextBrush}" />
+  </Style>
+  <Style Selector=".nextui Border.flag.quietflag">
+    <Setter Property="Background" Value="{StaticResource NextRaisedBrush}" />
+  </Style>
+
+  <!-- A course of the vote as a card: the player's own under a green line; the draw's frame white on the card it
+       stands on; the course drawn green-edged and lifted, the others stepping back -->
+  <Style Selector=".nextui Button.card.vote">
+    <Setter Property="Height" Value="196" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.32" Easing="{StaticResource EaseOut}" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector=".nextui Button.card.vote.lit, .nextui Button.card.vote.won">
+    <Setter Property="Background" Value="{StaticResource NextPlateHiBrush}" />
+  </Style>
+  <Style Selector=".nextui Button.card.vote.lit /template/ n|Chamfer#Face">
+    <Setter Property="Ring" Value="{StaticResource NextTextBrush}" />
+  </Style>
+  <Style Selector=".nextui Button.card.vote.won /template/ n|Chamfer#Face">
+    <Setter Property="Ring" Value="{StaticResource NextAccentBrush}" />
+    <Setter Property="RenderTransform" Value="translateY(-10px)" />
+  </Style>
+  <Style Selector=".nextui Button.card.vote.lost">
+    <Setter Property="Opacity" Value="0.35" />
+  </Style>
+  <Style Selector=".still .nextui Button.card.vote, .still .nextui Button.card.vote.won /template/ n|Chamfer#Face">
+    <Setter Property="Transitions" Value="{x:Null}" />
+    <Setter Property="RenderTransform" Value="none" />
+  </Style>
+  <!-- A machine of the machine stage's strip: a small card; the one raced over a green line -->
+  <Style Selector=".nextui Button.card.machine">
+    <Setter Property="Width" Value="146" />
+    <Setter Property="Height" Value="92" />
+    <Setter Property="Padding" Value="12,8" />
+  </Style>
+  <Style Selector=".nextui Button.card.machine.off">
+    <Setter Property="Opacity" Value="0.35" />
+  </Style>
+  <!-- A machine of a grid (the Garage's, the machine stage's): as wide as its column, a little lower -->
+  <Style Selector=".nextui Button.card.machine.grid">
+    <Setter Property="Width" Value="NaN" />
+    <Setter Property="Height" Value="86" />
+    <Setter Property="Margin" Value="0,0,8,8" />
+    <Setter Property="Padding" Value="10,6" />
+  </Style>
+
+  <!-- The three marks of a search under way: lit one after another while the interface moves (the root's class
+       "moving": not under Reduced motion), all lit otherwise -->
+  <Style Selector=".nextui Border.seek">
+    <Setter Property="Width" Value="22" />
+    <Setter Property="Height" Value="8" />
+    <Setter Property="Background" Value="{StaticResource NextAccentBrush}" />
+    <Setter Property="RenderTransform" Value="skewX(-24deg)" />
+  </Style>
+  <Style Selector=".nextui.moving Border.seek">
+    <Setter Property="Opacity" Value="0.25" />
+    <Style.Animations>
+      <Animation Duration="0:0:1.2" IterationCount="INFINITE">
+        <KeyFrame Cue="0%">
+          <Setter Property="Opacity" Value="1" />
+        </KeyFrame>
+        <KeyFrame Cue="34%">
+          <Setter Property="Opacity" Value="0.25" />
+        </KeyFrame>
+        <KeyFrame Cue="100%">
+          <Setter Property="Opacity" Value="0.25" />
+        </KeyFrame>
+      </Animation>
+    </Style.Animations>
+  </Style>
+  <Style Selector=".nextui.moving Border.seek.second">
+    <Style.Animations>
+      <Animation Duration="0:0:1.2" Delay="0:0:0.4" IterationCount="INFINITE">
+        <KeyFrame Cue="0%">
+          <Setter Property="Opacity" Value="1" />
+        </KeyFrame>
+        <KeyFrame Cue="34%">
+          <Setter Property="Opacity" Value="0.25" />
+        </KeyFrame>
+        <KeyFrame Cue="100%">
+          <Setter Property="Opacity" Value="0.25" />
+        </KeyFrame>
+      </Animation>
+    </Style.Animations>
+  </Style>
+  <Style Selector=".nextui.moving Border.seek.third">
+    <Style.Animations>
+      <Animation Duration="0:0:1.2" Delay="0:0:0.8" IterationCount="INFINITE">
+        <KeyFrame Cue="0%">
+          <Setter Property="Opacity" Value="1" />
+        </KeyFrame>
+        <KeyFrame Cue="34%">
+          <Setter Property="Opacity" Value="0.25" />
+        </KeyFrame>
+        <KeyFrame Cue="100%">
+          <Setter Property="Opacity" Value="0.25" />
+        </KeyFrame>
+      </Animation>
+    </Style.Animations>
+  </Style>
+
+  <!-- A panel from the window's right edge over the page (the lobby, the racers): a solid plate, its top left corner
+       cut; the page darkens behind it -->
+  <Style Selector=".nextui n|Chamfer.sheet">
+    <Setter Property="Width" Value="440" />
+    <Setter Property="Cut" Value="26" />
+    <Setter Property="OneCut" Value="True" />
+    <Setter Property="Background" Value="{StaticResource NextSolidBrush}" />
+    <Setter Property="HorizontalAlignment" Value="Right" />
+  </Style>
+  <!-- A row of a panel: a name and a value side by side, a hairline under it -->
+  <Style Selector=".nextui Border.fact">
+    <Setter Property="MinHeight" Value="38" />
+    <Setter Property="BorderBrush" Value="{StaticResource NextLineSolidBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+  </Style>
+  <!-- An option row (Views/NextUi/OptionList): a row button whose value sits between two arrows, the arrows lit with
+       the focus; a row that holds a box or only says a value is the same plate without a press -->
+  <Style Selector=".nextui Button.option">
+    <Setter Property="MinHeight" Value="58" />
+  </Style>
+  <Style Selector=".nextui Border.optionrow">
+    <Setter Property="MinHeight" Value="58" />
+    <Setter Property="Padding" Value="20,0,16,0" />
+    <Setter Property="Background" Value="{StaticResource NextPlateBrush}" />
+    <Setter Property="CornerRadius" Value="3" />
+  </Style>
+  <!-- where the player is on a page gone through in steps (Controls/NextUi/StepTrail): each step numbered, the one
+       they are on lit in the accent, those behind them done (their number outlined), those ahead quiet -->
+  <Style Selector=".nextui n|StepTrail StackPanel.step">
+    <Setter Property="Opacity" Value="0.55" />
+  </Style>
+  <Style Selector=".nextui n|StepTrail StackPanel.step TextBlock">
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="FontSize" Value="15" />
+    <Setter Property="Foreground" Value="{StaticResource NextDimBrush}" />
+  </Style>
+  <Style Selector=".nextui n|StepTrail StackPanel.step.on, .nextui n|StepTrail StackPanel.step.done">
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <Style Selector=".nextui n|StepTrail StackPanel.step.on TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource NextTextBrush}" />
+  </Style>
+  <Style Selector=".nextui n|StepTrail Border.number">
+    <Setter Property="Width" Value="26" />
+    <Setter Property="Height" Value="26" />
+    <Setter Property="BorderThickness" Value="1.5" />
+    <Setter Property="BorderBrush" Value="{StaticResource NextLineBrush}" />
+    <Setter Property="RenderTransform" Value="skewX(-10deg)" />
+  </Style>
+  <Style Selector=".nextui n|StepTrail Border.number TextBlock">
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+    <Setter Property="FontSize" Value="14" />
+  </Style>
+  <Style Selector=".nextui n|StepTrail StackPanel.step.done Border.number">
+    <Setter Property="BorderBrush" Value="{StaticResource NextAccentBrush}" />
+  </Style>
+  <Style Selector=".nextui n|StepTrail StackPanel.step.on Border.number">
+    <Setter Property="Background" Value="{StaticResource NextAccentBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource NextAccentBrush}" />
+  </Style>
+  <Style Selector=".nextui n|StepTrail StackPanel.step.on Border.number TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource NextOnAccentBrush}" />
+  </Style>
+  <Style Selector=".nextui n|StepTrail Border.link">
+    <Setter Property="Width" Value="30" />
+    <Setter Property="Height" Value="2" />
+    <Setter Property="Background" Value="{StaticResource NextLineBrush}" />
+  </Style>
+  <Style Selector=".nextui n|StepTrail Border.link.done">
+    <Setter Property="Background" Value="{StaticResource NextAccentBrush}" />
+  </Style>
+
+  <!-- an option row's arrow at its value's end: faint, the way goes no further -->
+  <Style Selector=".nextui Border.end Path.arrow">
+    <Setter Property="Opacity" Value="0.2" />
+  </Style>
+  <Style Selector=".nextui Path.arrow">
+    <Setter Property="Stroke" Value="{StaticResource NextDimBrush}" />
+    <Setter Property="Opacity" Value="0.5" />
+  </Style>
+  <Style Selector=".nextui Button.option:focus Path.arrow, .nextui Button.option:pointerover Path.arrow">
+    <Setter Property="Stroke" Value="{StaticResource NextAccentBrush}" />
+    <Setter Property="Opacity" Value="1" />
+  </Style>
+  <Style Selector=".nextui TextBlock.optionvalue">
+    <Setter Property="FontSize" Value="17" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector=".nextui TextBlock.optionnote">
+    <Setter Property="Foreground" Value="{StaticResource NextDimBrush}" />
+    <Setter Property="FontSize" Value="14" />
+  </Style>
+  <Style Selector=".nextui TextBlock.marked">
+    <Setter Property="Foreground" Value="{StaticResource NextAccentBrush}" />
+  </Style>
+  <!-- A colour to pick (the Garage's card, its colours panel): a small square in the colour, leaning as a button; the one
+       chosen ringed inside in the ground's tone; .more: "+" on a raised tone -->
+  <Style Selector=".nextui Button.swatch">
+    <Setter Property="Width" Value="34" />
+    <Setter Property="Height" Value="34" />
+    <Setter Property="MinWidth" Value="0" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="FocusAdorner" Value="{x:Null}" />
+    <Setter Property="ClipToBounds" Value="False" />
+    <Setter Property="Foreground" Value="{StaticResource NextTextBrush}" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="Face" Background="{TemplateBinding Background}" CornerRadius="3" RenderTransform="skewX(-12deg)"
+                BoxShadow="{StaticResource NextNoRing}">
+          <Border Name="Chosen" CornerRadius="3" BorderBrush="{StaticResource NextGroundBrush}" BorderThickness="0">
+            <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}"
+                              HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransform="skewX(12deg)" />
+          </Border>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector=".nextui Button.swatch.on /template/ Border#Chosen">
+    <Setter Property="BorderThickness" Value="4" />
+  </Style>
+  <Style Selector=".nextui Button.swatch:focus /template/ Border#Face">
+    <Setter Property="BoxShadow" Value="{StaticResource NextFocusRing}" />
+  </Style>
+  <Style Selector=".nextui Button.swatch:disabled">
+    <Setter Property="Opacity" Value="0.35" />
+  </Style>
+  <Style Selector=".nextui Button.swatch.more">
+    <Setter Property="Background" Value="{StaticResource NextRaisedBrush}" />
+  </Style>
+  <Style Selector=".nextui Button.swatch.more:pointerover, .nextui Button.swatch.more:focus">
+    <Setter Property="Background" Value="{StaticResource NextHoverBrush}" />
+  </Style>
+  <!-- The star (a favourite): its outline dim, gold and filled when marked; a tile's small star gold -->
+  <Style Selector=".nextui Path.star">
+    <Setter Property="Stroke" Value="{StaticResource NextDimBrush}" />
+    <Setter Property="StrokeThickness" Value="1.8" />
+    <Setter Property="Fill" Value="Transparent" />
+  </Style>
+  <Style Selector=".nextui Button.star:pointerover Path.star, .nextui Button.star:focus Path.star">
+    <Setter Property="Stroke" Value="{StaticResource NextTextBrush}" />
+  </Style>
+  <Style Selector=".nextui Button.star.on Path.star">
+    <Setter Property="Stroke" Value="{StaticResource NextGoldBrush}" />
+    <Setter Property="Fill" Value="{StaticResource NextGoldBrush}" />
+  </Style>
+  <Style Selector=".nextui Path.starmark">
+    <Setter Property="Fill" Value="{StaticResource NextGoldBrush}" />
+  </Style>
+  <!-- A search box: a plate leaning as a button, the box in it bare; the focus ring round the plate -->
+  <Style Selector=".nextui Border.search">
+    <Setter Property="Background" Value="{StaticResource NextPlateBrush}" />
+    <Setter Property="CornerRadius" Value="3" />
+  </Style>
+  <Style Selector=".nextui Border.search:focus-within">
+    <Setter Property="Background" Value="{StaticResource NextPlateHiBrush}" />
+    <Setter Property="BoxShadow" Value="{StaticResource NextFocusRing}" />
+  </Style>
+  <Style Selector=".nextui TextBox.bare">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Foreground" Value="{StaticResource NextTextBrush}" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Padding" Value="8,0" />
+  </Style>
+  <Style Selector=".nextui TextBox.bare:pointerover /template/ Border#PART_BorderElement, .nextui TextBox.bare:focus /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+  <Style Selector=".nextui TextBlock.count">
+    <Setter Property="Opacity" Value="0.7" />
+    <Setter Property="FontFeatures" Value="tnum" />
+  </Style>
+  <!-- A place in a race ("3rd"): the display face; a win gold, a knock-out red -->
+  <Style Selector=".nextui TextBlock.placetext">
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontWeight" Value="ExtraBold" />
+    <Setter Property="FontSize" Value="22" />
+  </Style>
+  <Style Selector=".nextui TextBlock.placetext.won">
+    <Setter Property="Foreground" Value="{StaticResource NextGoldBrush}" />
+  </Style>
+  <Style Selector=".nextui TextBlock.placetext.out">
+    <Setter Property="Foreground" Value="{StaticResource NextDangerBrush}" />
+  </Style>
+  <!-- A large figure (Stats, the profile): the display face; wins gold, podiums green -->
+  <Style Selector=".nextui TextBlock.figure">
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontWeight" Value="ExtraBold" />
+    <Setter Property="FontSize" Value="44" />
+    <Setter Property="LineHeight" Value="48" />
+    <Setter Property="FontFeatures" Value="tnum" />
+  </Style>
+  <Style Selector=".nextui TextBlock.figure.won">
+    <Setter Property="Foreground" Value="{StaticResource NextGoldBrush}" />
+  </Style>
+  <Style Selector=".nextui TextBlock.figure.podium">
+    <Setter Property="Foreground" Value="{StaticResource NextAccentBrush}" />
+  </Style>
+  <!-- A last race's place: a small plate that leans; a win gold, a knock-out red -->
+  <Style Selector=".nextui Border.formmark">
+    <Setter Property="MinWidth" Value="52" />
+    <Setter Property="Height" Value="34" />
+    <Setter Property="Margin" Value="0,0,8,8" />
+    <Setter Property="Padding" Value="8,0" />
+    <Setter Property="CornerRadius" Value="3" />
+    <Setter Property="Background" Value="{StaticResource NextRaisedBrush}" />
+    <Setter Property="RenderTransform" Value="skewX(-12deg)" />
+  </Style>
+  <Style Selector=".nextui Border.formmark > TextBlock">
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="HorizontalAlignment" Value="Center" />
+    <Setter Property="VerticalAlignment" Value="Center" />
+  </Style>
+  <Style Selector=".nextui Border.formmark.won">
+    <Setter Property="Background" Value="{StaticResource NextGoldBrush}" />
+  </Style>
+  <Style Selector=".nextui Border.formmark.won > TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource NextOnAccentBrush}" />
+  </Style>
+  <Style Selector=".nextui Border.formmark.out > TextBlock">
+    <Setter Property="Foreground" Value="{StaticResource NextDangerBrush}" />
+  </Style>
+  <!-- A switch that only shows its state (its row is what is pressed): a track, its knob right and green when on -->
+  <Style Selector=".nextui Border.switch">
+    <Setter Property="Width" Value="44" />
+    <Setter Property="Height" Value="24" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Padding" Value="3" />
+    <Setter Property="Background" Value="{StaticResource NextRaisedBrush}" />
+  </Style>
+  <Style Selector=".nextui Border.switch > Border.knob">
+    <Setter Property="Width" Value="18" />
+    <Setter Property="Height" Value="18" />
+    <Setter Property="CornerRadius" Value="9" />
+    <Setter Property="HorizontalAlignment" Value="Left" />
+    <Setter Property="Background" Value="{StaticResource NextDimBrush}" />
+  </Style>
+  <Style Selector=".nextui Border.switch.on">
+    <Setter Property="Background" Value="{StaticResource NextAccentBrush}" />
+  </Style>
+  <Style Selector=".nextui Border.switch.on > Border.knob">
+    <Setter Property="HorizontalAlignment" Value="Right" />
+    <Setter Property="Background" Value="{StaticResource NextOnAccentBrush}" />
+  </Style>
+  <!-- Developer mode's data: amber, monospace, small -->
+  <Style Selector=".nextui TextBlock.devmono, .nextui SelectableTextBlock.devmono">
+    <Setter Property="Foreground" Value="{StaticResource NextDevBrush}" />
+    <Setter Property="FontFamily" Value="Cascadia Mono, Consolas, monospace" />
+    <Setter Property="FontSize" Value="12" />
+  </Style>
+  <Style Selector=".nextui Button.pill.dev, .nextui Button.pill.dev:pointerover, .nextui Button.pill.dev:focus">
+    <Setter Property="Foreground" Value="{StaticResource NextDevBrush}" />
+    <Setter Property="FontFamily" Value="Cascadia Mono, Consolas, monospace" />
+    <Setter Property="FontWeight" Value="Bold" />
+  </Style>
+  <!-- A step of the first start: a short bar that leans, green when done or showing -->
+  <Style Selector=".nextui Border.stepmark">
+    <Setter Property="Width" Value="64" />
+    <Setter Property="Height" Value="6" />
+    <Setter Property="Background" Value="#33FFFFFF" />
+    <Setter Property="RenderTransform" Value="skewX(-24deg)" />
+  </Style>
+  <Style Selector=".nextui Border.stepmark.lit">
+    <Setter Property="Background" Value="{StaticResource NextAccentBrush}" />
+  </Style>
+  <Style Selector=".nextui TextBlock.rank">
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontWeight" Value="ExtraBold" />
+    <Setter Property="FontSize" Value="20" />
+    <Setter Property="Foreground" Value="{StaticResource NextDimBrush}" />
+  </Style>
+  <!-- A band under the top bar that asks for the player's attention (the lobby calling them back): a solid ground, a
+       green edge on its left -->
+  <Style Selector=".nextui Border.band">
+    <Setter Property="Background" Value="{StaticResource NextSolidBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource NextAccentBrush}" />
+    <Setter Property="BorderThickness" Value="3,0,0,0" />
+    <Setter Property="CornerRadius" Value="3" />
+    <Setter Property="Padding" Value="18,8,10,8" />
+  </Style>
+
+  <!-- The chat (Views/ChatSidebar and Views/LobbyChat, the classic launcher's, shared) in this look (the owner,
+       2026-11-15: a nicer chat box): the panel on the solid ground with a line at its left, its name large in the
+       display face, each message on a plate of its own with the speaker's paint as a leaning bar (the player's own
+       tinted green, a green edge at its right), the box to type in a raised plate that takes the focus's yellow, Send
+       as a plain button of this look. The classic launcher's chat is as it was. -->
+  <Style Selector=".nextui v|ChatSidebar Border#Body">
+    <Setter Property="Background" Value="{StaticResource NextSolidBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource NextLineBrush}" />
+  </Style>
+  <Style Selector=".nextui v|ChatSidebar TextBlock#ChatTitle">
+    <Setter Property="FontFamily" Value="{StaticResource DisplayFont}" />
+    <Setter Property="FontWeight" Value="ExtraBold" />
+    <Setter Property="FontSize" Value="28" />
+    <Setter Property="Foreground" Value="{StaticResource NextTextBrush}" />
+    <Setter Property="RenderTransform" Value="skewX(-10deg)" />
+    <Setter Property="RenderTransformOrigin" Value="0%,100%" />
+  </Style>
+  <Style Selector=".nextui v|ChatSidebar Panel#ChatBody">
+    <Setter Property="Margin" Value="0,16,0,0" />
+  </Style>
+  <Style Selector=".nextui v|ChatSidebar TextBlock#Standby">
+    <Setter Property="FontSize" Value="16" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="Foreground" Value="{StaticResource NextDimBrush}" />
+  </Style>
+  <Style Selector=".nextui v|LobbyChat Border.chatline">
+    <Setter Property="Background" Value="{StaticResource NextFaintFillBrush}" />
+    <Setter Property="CornerRadius" Value="3" />
+    <Setter Property="Padding" Value="10,7,10,8" />
+    <Setter Property="Margin" Value="0,0,0,6" />
+  </Style>
+  <Style Selector=".nextui v|LobbyChat Border.chatline.you">
+    <Setter Property="Background">
+      <SolidColorBrush Color="{StaticResource NextAccentColor}" Opacity="0.1" />
+    </Setter>
+    <Setter Property="BorderBrush" Value="{StaticResource NextAccentBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,2,0" />
+  </Style>
+  <Style Selector=".nextui v|LobbyChat Border.chatline Border.chip">
+    <Setter Property="Width" Value="4" />
+    <Setter Property="Height" Value="16" />
+    <Setter Property="CornerRadius" Value="0" />
+    <Setter Property="RenderTransform" Value="skewX(-12deg)" />
+  </Style>
+  <Style Selector=".nextui v|LobbyChat SelectableTextBlock">
+    <Setter Property="FontSize" Value="15" />
+    <Setter Property="LineHeight" Value="21" />
+  </Style>
+  <Style Selector=".nextui v|LobbyChat Run.chatname">
+    <Setter Property="Foreground" Value="{StaticResource NextTextBrush}" />
+  </Style>
+  <Style Selector=".nextui v|LobbyChat TextBox#MessageBox">
+    <Setter Property="Background" Value="{StaticResource NextRaisedBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource NextLineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="3" />
+    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="Padding" Value="12,0" />
+    <Setter Property="FontSize" Value="16" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="Foreground" Value="{StaticResource NextTextBrush}" />
+    <Setter Property="PlaceholderText" Value="Message your lobby" />
+    <Setter Property="PlaceholderForeground" Value="{StaticResource NextDimBrush}" />
+  </Style>
+  <Style Selector=".nextui v|LobbyChat TextBox#MessageBox:pointerover /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="{StaticResource NextHoverBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource NextLineBrush}" />
+  </Style>
+  <Style Selector=".nextui v|LobbyChat TextBox#MessageBox:focus /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="{StaticResource NextRaisedBrush}" />
+    <Setter Property="BorderBrush" Value="{StaticResource NextFocusBrush}" />
+    <Setter Property="BorderThickness" Value="2" />
+  </Style>
+  <Style Selector=".nextui v|LobbyChat Button#Send">
+    <Setter Property="Height" Value="44" />
+    <Setter Property="Padding" Value="18,0" />
+  </Style>
+</Styles>

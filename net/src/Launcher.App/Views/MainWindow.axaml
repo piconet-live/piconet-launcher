@@ -57,11 +57,14 @@
     </ControlTheme>
   </husk:AppWindow.Resources>
 
-  <!-- The player's interface scale over the whole window (ScaledRoot); a window too small for it scrolls. -->
+  <!-- The player's interface scale over the whole window (ScaledRoot); a window too small for it scrolls. Under it
+       one of the launcher's two interfaces: the classic one, written here (ClassicShell), or, with Settings'
+       "Experimental UI" on, the redesigned one (Views/NextUi/NextShell), which the window puts in its place
+       (MainWindow.axaml.cs, ShowShell). -->
   <Panel>
   <ScrollViewer Name="ScaleScroll" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
   <c:ScaledRoot Name="ScaleRoot" Scale="{Binding Scale}">
-  <Grid RowDefinitions="32,Auto,*">
+  <Grid Name="ClassicShell" RowDefinitions="32,Auto,*">
     <!-- The title bar: no name; the left column's tone runs up through it,
          a test build's mark there; the window's buttons as line drawings. Dragging it moves the window; a double
          click maximises. -->
@@ -291,6 +294,24 @@
             <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,18,0,0">
               <Button Classes="secondary leave" Height="32" Content="Leave and play" Command="{Binding Control.LeaveAndPlayCommand}" />
               <Button Classes="primary" Height="32" Content="{Binding Control.StayText}" Command="{Binding Control.StayCommand}" />
+            </StackPanel>
+          </StackPanel>
+        </Border>
+      </Panel>
+
+      <!-- The question before the experimental UI is turned on (Settings, Launcher, "Try something new":
+           SettingsViewModel), over the page: "Turn it on" shows the new interface (Views/NextUi), "Not now" leaves the
+           classic one and unticks the box. -->
+      <Panel Name="ExperimentalQuestion" Grid.ColumnSpan="3" c:Motion.Reveal="True" IsVisible="{Binding Settings.AskingExperimental}" c:PadNav.Scope="True">
+        <Border Background="{StaticResource GroundBrush}" Opacity="0.86" />
+        <Border Width="480" Background="{StaticResource RaisedBrush}" Padding="24" CornerRadius="{DynamicResource StaticExtraLargeCornerRadius}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                BoxShadow="0 8 24 0 #80000000">
+          <StackPanel>
+            <TextBlock Classes="head" FontWeight="SemiBold" Text="{x:Static vm:SettingsViewModel.AskExperimentalTitle}" TextWrapping="Wrap" />
+            <TextBlock Classes="dim" Text="{x:Static vm:SettingsViewModel.AskExperimentalLine}" TextWrapping="Wrap" Margin="0,8,0,0" />
+            <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,18,0,0">
+              <Button Classes="primary" Height="32" Content="Turn it on" Command="{Binding Settings.TurnOnExperimentalCommand}" AutomationProperties.Name="Turn it on" />
+              <Button Classes="secondary" Height="32" Content="Not now" Command="{Binding Settings.KeepClassicCommand}" AutomationProperties.Name="Not now" />
             </StackPanel>
           </StackPanel>
         </Border>

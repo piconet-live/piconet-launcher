@@ -57,7 +57,14 @@ public sealed partial class SettingsViewModel : ViewModelBase
         GameVolume = s.GameVolume;
         SoundVolume = s.SoundVolume;
         SoundMuted = s.SoundMuted;
+        MenuSoundVolume = s.MenuSoundVolume;
+        NoticeSoundVolume = s.NoticeSoundVolume;
+        OtherSoundVolume = s.OtherSoundVolume;
         PadNavigation = s.PadNavigation;
+        ButtonIconsIndex = Math.Clamp((int)s.ButtonIcons, 0, ButtonIconsChoices.Count - 1);
+        ConfirmButtonIndex = Math.Clamp((int)s.ConfirmButton, 0, ConfirmButtonChoices.Count - 1);
+        ExperimentalUi = s.ExperimentalUi;
+        DeveloperMode = s.DeveloperMode;
         PendingScale = _scale = s.ShownInterfaceScale;
         _loading = false;
         _ = HearTheCardAsync();
@@ -82,8 +89,77 @@ public sealed partial class SettingsViewModel : ViewModelBase
                 PendingScale = _scale = _state.Settings.ShownInterfaceScale;
                 OnPropertyChanged(nameof(CanApplyScale));
             }
+            if (_state.Settings.ExperimentalUi != ExperimentalUi && !AskingExperimental)
+            {
+                // switched elsewhere (the new interface's own way back): the box follows, nothing saved again
+                _following = true;
+                ExperimentalUi = _state.Settings.ExperimentalUi;
+                _following = false;
+            }
         });
     }
+
+    /// <summary>"Experimental UI" (<see cref="LauncherSettings.ExperimentalUi"/>): the launcher's redesigned interface.
+    /// Ticked, the question is asked first (<see cref="AskingExperimental"/>) and nothing changes until its answer;
+    /// unticked, the classic interface is back at once.</summary>
+    [ObservableProperty]
+    public partial bool ExperimentalUi { get; set; }
+
+    /// <summary>The question before the new interface shows, over the page: <see cref="AskExperimentalTitle"/>.</summary>
+    [ObservableProperty]
+    public partial bool AskingExperimental { get; set; }
+
+    public const string AskExperimentalTitle = "Turn on the experimental UI?";
+
+    public const string AskExperimentalLine =
+        "The launcher gets a new look, made for controllers. Everything you can do now is still there, some of it in new places. "
+        + "It may still change. Switch back in Settings, Launcher at any time.";
+
+    /// <summary>"Developer mode" (<see cref="LauncherSettings.DeveloperMode"/>): a developer's data at the places it
+    /// belongs to, in both interfaces.</summary>
+    [ObservableProperty]
+    public partial bool DeveloperMode { get; set; }
+
+    partial void OnExperimentalUiChanged(bool value)
+    {
+        if (_loading || _following)
+        {
+            return;
+        }
+        if (value && !_state.Settings.ExperimentalUi)
+        {
+            AskingExperimental = true;   // nothing is set until the answer
+            return;
+        }
+        AskingExperimental = false;
+        if (value != _state.Settings.ExperimentalUi)
+        {
+            _state.Update(s => s with { ExperimentalUi = value });
+        }
+    }
+
+    /// <summary>"Turn it on": the new interface, at once and kept.</summary>
+    [RelayCommand]
+    private void TurnOnExperimental()
+    {
+        AskingExperimental = false;
+        // the new interface is made for the controller: its navigation comes on with it (and can be turned off
+        // again); the classic interface keeps it off until the player turns it on
+        _state.Update(s => s with { ExperimentalUi = true, PadNavigation = true });
+        PadNavigation = true;
+    }
+
+    /// <summary>"Not now" (and Escape, B): the box is unticked again and nothing changed.</summary>
+    [RelayCommand]
+    private void KeepClassic()
+    {
+        AskingExperimental = false;
+        _following = true;
+        ExperimentalUi = _state.Settings.ExperimentalUi;
+        _following = false;
+    }
+
+    partial void OnDeveloperModeChanged(bool value) => Save();
 
     /// <summary>The interface scale in use, in percent.</summary>
     private int _scale;
@@ -323,15 +399,45 @@ public sealed partial class SettingsViewModel : ViewModelBase
     [ObservableProperty]
     public partial bool SoundMuted { get; set; }
 
+    /// <summary>The launcher's sounds by kind, each 0 to 100 of <see cref="SoundVolume"/>: the menu's, the
+    /// notifications, the others (<see cref="SoundKind"/>).</summary>
+    [ObservableProperty]
+    public partial int MenuSoundVolume { get; set; }
+
+    [ObservableProperty]
+    public partial int NoticeSoundVolume { get; set; }
+
+    [ObservableProperty]
+    public partial int OtherSoundVolume { get; set; }
+
     /// <summary>The pad works the launcher's pages, with the game's cursor and cancel as it moves (<see cref="LauncherSettings.PadNavigation"/>).</summary>
     [ObservableProperty]
     public partial bool PadNavigation { get; set; }
+
+    /// <summary>The redesigned interface's button icons (<see cref="Launcher.Core.Pads.ButtonIcons"/>, in its order).</summary>
+    public static IReadOnlyList<string> ButtonIconsChoices { get; } = ["Auto", "Xbox", "PlayStation", "Nintendo", "GameCube", "Other"];
+
+    /// <summary>The redesigned interface's confirm button (<see cref="Launcher.Core.Pads.ConfirmButton"/>, in its order).</summary>
+    public static IReadOnlyList<string> ConfirmButtonChoices { get; } = ["Auto", "Bottom", "Right"];
+
+    [ObservableProperty]
+    public partial int ButtonIconsIndex { get; set; }
+
+    [ObservableProperty]
+    public partial int ConfirmButtonIndex { get; set; }
+
+    partial void OnButtonIconsIndexChanged(int value) => Save();
+
+    partial void OnConfirmButtonIndexChanged(int value) => Save();
 
     /// <summary>The settings as they are, for the launcher's own sounds.</summary>
     public LauncherSettings Sounds => _state.Settings;
 
     /// <summary>The launcher's volume was set: the page lets it be heard (a moment after the last change).</summary>
     public event Action? SoundSet;
+
+    /// <summary>A kind's volume was set: the page lets a sound of that kind be heard (a moment after the last change).</summary>
+    public event Action<SoundKind>? KindSet;
 
     private int _soundChanges;
 
@@ -467,16 +573,42 @@ public sealed partial class SettingsViewModel : ViewModelBase
         _ = HearSoonAsync(++_soundChanges);
     }
 
+    partial void OnMenuSoundVolumeChanged(int value)
+    {
+        Save();
+        _ = HearSoonAsync(++_soundChanges, SoundKind.Menu);
+    }
+
+    partial void OnNoticeSoundVolumeChanged(int value)
+    {
+        Save();
+        _ = HearSoonAsync(++_soundChanges, SoundKind.Notice);
+    }
+
+    partial void OnOtherSoundVolumeChanged(int value)
+    {
+        Save();
+        _ = HearSoonAsync(++_soundChanges, SoundKind.Other);
+    }
+
     partial void OnPadNavigationChanged(bool value) => Save();
 
-    private async Task HearSoonAsync(int change)
+    private async Task HearSoonAsync(int change, SoundKind? kind = null)
     {
         if (_loading)
         {
             return;
         }
         await Task.Delay(250).ConfigureAwait(true);
-        if (change == _soundChanges)
+        if (change != _soundChanges)
+        {
+            return;
+        }
+        if (kind is { } set)
+        {
+            KindSet?.Invoke(set);
+        }
+        else
         {
             SoundSet?.Invoke();
         }
@@ -539,7 +671,14 @@ public sealed partial class SettingsViewModel : ViewModelBase
             GameVolume = Math.Clamp(GameVolume, 0, 100),
             SoundVolume = Math.Clamp(SoundVolume, 0, 100),
             SoundMuted = SoundMuted,
+            MenuSoundVolume = Math.Clamp(MenuSoundVolume, 0, 100),
+            NoticeSoundVolume = Math.Clamp(NoticeSoundVolume, 0, 100),
+            OtherSoundVolume = Math.Clamp(OtherSoundVolume, 0, 100),
             PadNavigation = PadNavigation,
+            ButtonIcons = (Launcher.Core.Pads.ButtonIcons)Math.Clamp(ButtonIconsIndex, 0, ButtonIconsChoices.Count - 1),
+            ConfirmButton = (Launcher.Core.Pads.ConfirmButton)Math.Clamp(ConfirmButtonIndex, 0, ConfirmButtonChoices.Count - 1),
+            // (the experimental UI is not saved here: it is set by its question's answer)
+            DeveloperMode = DeveloperMode,
         });
     }
 

@@ -309,6 +309,23 @@ public static partial class GameSkin
     public static Task<IReadOnlyList<Online.Protocol.Rgb>?> TrailSwatchesAsync(int machine) =>
         TrailsOf(machine, art => art.TrailColours(machine));
 
+    /// <summary>A stock machine's burners (<see cref="Launcher.Core.BurnerColours.Burners"/>: where its flames come
+    /// out), read off the window's thread; null without the disc.</summary>
+    public static Task<IReadOnlyList<Burner>?> BurnersAsync(int machine)
+    {
+        var art = _art;
+        return art is null ? Task.FromResult<IReadOnlyList<Burner>?>(null) : Task.Run(() => Quietly(() => art.Burners(machine)));
+    }
+
+    /// <summary>A custom machine's burners: its booster's where its body puts them; null without the disc.</summary>
+    public static Task<IReadOnlyList<Burner>?> CustomBurnersAsync(CustomBuild custom)
+    {
+        ArgumentNullException.ThrowIfNull(custom);
+        var art = _art;
+        return art is null ? Task.FromResult<IReadOnlyList<Burner>?>(null)
+            : Task.Run(() => Quietly(() => art.CustomBurners(custom.Body, custom.Booster)));
+    }
+
     /// <summary>A custom machine's own trail colours: its booster's (a part id, 50-74); null without the disc.</summary>
     public static Task<IReadOnlyList<Online.Protocol.Rgb>?> CustomTrailSwatchesAsync(int booster) =>
         TrailsOf(1000 + booster, art => art.PartTrailColours(booster));

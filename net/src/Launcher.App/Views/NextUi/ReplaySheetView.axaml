@@ -1,0 +1,82 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:nx="using:Launcher.App.ViewModels.NextUi"
+             xmlns:core="using:Launcher.Core"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:nxv="using:Launcher.App.Views.NextUi"
+             x:Class="Launcher.App.Views.NextUi.ReplaySheetView"
+             x:DataType="nx:ReplaySheetViewModel">
+  <!-- A replay's panel: when, the course, its facts; Play, Results (every racer's), the mode file, Show in folder,
+       Delete (asked first); Close at its foot. -->
+  <DockPanel Margin="32,28,28,24">
+    <StackPanel DockPanel.Dock="Top" Spacing="2">
+      <TextBlock Classes="eyebrow" Text="{Binding When, Converter={x:Static v:UpperText.Instance}}" />
+      <TextBlock Name="Title" Classes="heading" FontSize="38" LineHeight="42" TextWrapping="Wrap" RenderTransform="skewX(-10deg)"
+                 RenderTransformOrigin="0%,100%" Text="{Binding Item.Track, Converter={x:Static v:UpperText.Instance}}" />
+    </StackPanel>
+    <Button DockPanel.Dock="Bottom" Name="Close" Classes="soft" Margin="4,16,8,0" HorizontalAlignment="Stretch" Content="Close"
+            Command="{Binding $parent[nxv:NextShell].((vm:MainViewModel)DataContext).Shell.CloseSheetCommand}" AutomationProperties.Name="Close" />
+    <ScrollViewer Margin="0,16,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Spacing="8" Margin="2,2,12,2">
+        <ItemsControl Name="Facts" ItemsSource="{Binding Facts}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="nx:SheetFact">
+              <Border Classes="fact">
+                <Grid ColumnDefinitions="Auto,*">
+                  <TextBlock Classes="quiet" VerticalAlignment="Center" Text="{Binding Name}" />
+                  <TextBlock Grid.Column="1" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" TextAlignment="Right"
+                             TextWrapping="Wrap" Margin="16,6,0,6" Text="{Binding Value}" />
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Name="Notice" TextWrapping="Wrap" Foreground="{StaticResource NextDevBrush}" Text="{Binding Notice}"
+                   IsVisible="{Binding Notice, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        <Button Name="Play" Classes="main" Margin="4,8,4,4" HorizontalAlignment="Stretch" Content="PLAY" Command="{Binding PlayCommand}"
+                AutomationProperties.Name="Play" />
+        <Button Name="Results" Classes="line" Command="{Binding ToggleResultsCommand}" IsVisible="{Binding Item.IsRace}"
+                IsEnabled="{Binding Item.HasStats}" AutomationProperties.Name="Results">
+          <TextBlock VerticalAlignment="Center" Text="Results" />
+        </Button>
+        <!-- every racer's result -->
+        <ItemsControl Name="ResultLines" ItemsSource="{Binding Results}" IsVisible="{Binding ShowingResults}" Margin="4,0">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="core:ReplayResultLine">
+              <Grid ColumnDefinitions="40,*,Auto" Height="30">
+                <TextBlock FontWeight="Bold" VerticalAlignment="Center" Text="{Binding Place}" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                  <Border Width="10" Height="10" Background="{Binding ColorHex, Converter={x:Static v:HexToBrush.Instance}}" />
+                  <TextBlock FontWeight="SemiBold" Classes.you="{Binding Focused}" TextTrimming="CharacterEllipsis" Text="{Binding Name}" />
+                  <TextBlock Classes="quiet" FontSize="13" TextTrimming="CharacterEllipsis" Text="{Binding Machine}" />
+                </StackPanel>
+                <TextBlock Grid.Column="2" FontFeatures="tnum" VerticalAlignment="Center" Text="{Binding Time}" />
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <Button Name="ModeFile" Classes="line" Command="{Binding ToggleModeCommand}" IsVisible="{Binding Item.HasModeFile}"
+                AutomationProperties.Name="Show the mode file">
+          <TextBlock VerticalAlignment="Center" Text="Show the mode file" />
+        </Button>
+        <!-- the mode as it was raced: its name and code, its settings, its text -->
+        <StackPanel Name="Mode" Spacing="6" Margin="4,0" IsVisible="{Binding ShowingMode}">
+          <TextBlock FontWeight="Bold" TextWrapping="Wrap" Text="{Binding Item.ModeHeading}" />
+          <TextBlock Classes="quiet" FontSize="14" TextWrapping="Wrap" Text="{Binding Item.ModeSettings}" IsVisible="{Binding Item.HasModeSettings}" />
+          <Border Background="{StaticResource NextRaisedBrush}" CornerRadius="3" Padding="10" MaxHeight="220">
+            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+              <SelectableTextBlock FontFamily="Consolas,monospace" FontSize="12" Text="{Binding Item.ModeSource}" />
+            </ScrollViewer>
+          </Border>
+        </StackPanel>
+        <Button Name="Reveal" Classes="line" Command="{Binding RevealCommand}" AutomationProperties.Name="Show in folder">
+          <TextBlock VerticalAlignment="Center" Text="Show in folder" />
+        </Button>
+        <Button Name="Delete" Classes="line" Command="{Binding AskDeleteCommand}" AutomationProperties.Name="Delete">
+          <TextBlock VerticalAlignment="Center" Foreground="{StaticResource NextDangerBrush}" Text="Delete" />
+        </Button>
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

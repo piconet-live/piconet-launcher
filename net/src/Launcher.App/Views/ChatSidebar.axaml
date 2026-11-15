@@ -9,7 +9,8 @@
        the close; under them the lobby's chat (LobbyChat: its lines, the latest at the foot, the message box), or out
        of a lobby one plain line. Only the lobby's chat for now: no tabs (the owner, 2026-11-08). Its left edge is
        dragged to make it wider or narrower (ChatSidebar.axaml.cs). Unpinned it floats over the page, with the shadow
-       of what floats; pinned it is the window's column. Rows of text never light under the pointer. -->
+       of what floats; pinned it is the window's column. Rows of text never light under the pointer. The redesigned
+       interface gives it its own look by these names and classes (Theme/NextUi/Chat.axaml). -->
   <UserControl.Styles>
     <Style Selector="Border#Body.floating">
       <Setter Property="BoxShadow" Value="{StaticResource FloatShadow}" />
@@ -28,8 +29,8 @@
       <DockPanel Margin="16,16,12,16">
         <!-- the head: its name, the pin and the close -->
         <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto" Height="36">
-          <TextBlock Text="Chat" FontFamily="{StaticResource HeadingFont}" FontWeight="SemiBold" FontSize="18"
-                     VerticalAlignment="Center" />
+          <!-- (its face and size are the theme's: TextBlock#ChatTitle, the redesign's its own) -->
+          <TextBlock Name="ChatTitle" Text="Chat" VerticalAlignment="Center" />
           <!-- the pin: a pushpin, lit while the sidebar is pinned -->
           <Button Name="Pin" Grid.Column="1" Classes="icon" Classes.open="{Binding Pinned}" Command="{Binding TogglePinCommand}"
                   AutomationProperties.Name="Pin chat">
@@ -45,7 +46,7 @@
           </Button>
         </Grid>
 
-        <Panel Margin="0,12,0,0">
+        <Panel Name="ChatBody" Margin="0,12,0,0">
           <TextBlock Name="Standby" Classes="faint" FontSize="{StaticResource Size14}" Text="{Binding Standby}"
                      IsVisible="{Binding !InLobby}" VerticalAlignment="Top" />
           <v:LobbyChat Name="LobbyChat" DataContext="{Binding Lobby}"

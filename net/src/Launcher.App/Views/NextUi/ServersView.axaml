@@ -1,0 +1,113 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:nx="using:Launcher.App.ViewModels.NextUi"
+             xmlns:c="using:Launcher.App.Controls"
+             xmlns:v="using:Launcher.App.Views"
+             x:Class="Launcher.App.Views.NextUi.ServersView"
+             x:DataType="nx:ServersViewModel">
+  <!-- The redesigned interface's "Choose a server", Quick Play's first page: a row a server (this build's official
+       one, then the player's own), with its racers and lobbies, a mark and a figure for its ping, and "Best
+       connection" or "Last used" beside its name. A row pressed joins Quick Play on that server. "Add a server…" opens
+       a box for an address under it; the rows and the buttons stay where they are. The pad lands on the server last
+       used. -->
+  <Grid Margin="14,8,0,8" ColumnDefinitions="*,24,Auto" RowDefinitions="Auto,*">
+    <StackPanel Spacing="4">
+      <TextBlock Classes="eyebrow" FontSize="14" Text="QUICK PLAY" />
+      <TextBlock Name="Title" Classes="heading" FontSize="52" LineHeight="56" Margin="0,0,0,8" RenderTransform="skewX(-10deg)"
+                 RenderTransformOrigin="0%,100%" Text="CHOOSE A SERVER" />
+      <TextBlock Classes="lead" Text="Pick the server you race on. A low ping means a smoother race." />
+    </StackPanel>
+
+    <!-- a server of the player's own; under it, while it is open, the address box -->
+    <StackPanel Grid.Column="2" Grid.RowSpan="2" Width="320" VerticalAlignment="Top" Spacing="12" Margin="0,6,0,0">
+      <Button Name="Add" Classes="soft" ToolTip.Tip="Add a server of your own by its address" c:PadNav.Next="Address" Height="48" Margin="6,0" HorizontalAlignment="Stretch" Content="Add a server…"
+              Command="{Binding AddCommand}" IsVisible="{Binding !Adding}" AutomationProperties.Name="Add a server" />
+      <StackPanel Name="AddBox" Spacing="10" Margin="6,0" IsVisible="{Binding Adding}" c:PadNav.Scope="True">
+        <TextBlock Classes="eyebrow" Text="SERVER ADDRESS" />
+        <TextBox Name="Address" Text="{Binding Draft}" PlaceholderText="wss://example.org/ws" FontSize="16"
+                 AutomationProperties.Name="Server address" />
+        <TextBlock Name="AddProblem" FontSize="14" TextWrapping="Wrap" Foreground="{StaticResource NextDangerBrush}"
+                   Text="{Binding AddProblem}" IsVisible="{Binding AddProblem, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        <Grid ColumnDefinitions="*,12,*">
+          <Button Name="ConfirmAdd" Classes="soft go" Height="46" HorizontalAlignment="Stretch" Content="Add"
+                  Command="{Binding ConfirmAddCommand}" AutomationProperties.Name="Add this server" />
+          <Button Grid.Column="2" Name="CancelAdd" Classes="soft" Height="46" HorizontalAlignment="Stretch" Content="Cancel"
+                  Command="{Binding CancelAddCommand}" AutomationProperties.Name="Cancel" />
+        </Grid>
+      </StackPanel>
+    </StackPanel>
+
+    <ScrollViewer Grid.Row="1" Margin="0,8,0,0" MaxWidth="900" HorizontalAlignment="Left" VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled">
+      <ItemsControl Name="Rows" c:PadNav.Home="True" ItemsSource="{Binding Rows}" Margin="6,6,12,6" ClipToBounds="False">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Spacing="8" ClipToBounds="False" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="nx:ServerRow">
+            <Grid ColumnDefinitions="Auto,10,Auto">
+              <Button Classes="line" Height="72" Width="720" HorizontalAlignment="Left"
+                      Command="{Binding $parent[UserControl].((nx:ServersViewModel)DataContext).JoinCommand}" CommandParameter="{Binding}"
+                      AutomationProperties.Name="{Binding Name}">
+                <Grid ColumnDefinitions="14,18,*,Auto,96,24">
+                  <!-- the ping's mark: green, gold or red; faint before an answer -->
+                  <Border Classes="ping" Classes.good="{Binding Quality, Converter={x:Static v:Equal.Instance}, ConverterParameter=good}"
+                          Classes.fair="{Binding Quality, Converter={x:Static v:Equal.Instance}, ConverterParameter=fair}"
+                          Classes.poor="{Binding Quality, Converter={x:Static v:Equal.Instance}, ConverterParameter=poor}"
+                          Width="12" Height="12" VerticalAlignment="Center" RenderTransform="skewX(-14deg)" />
+                  <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
+                    <TextBlock FontSize="19" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Text="{Binding Name}" />
+                    <TextBlock Classes="quiet" FontSize="15" TextTrimming="CharacterEllipsis" Text="{Binding Line}" />
+                  </StackPanel>
+                  <Border Grid.Column="3" Classes="flag" VerticalAlignment="Center" Margin="12,0" IsVisible="{Binding HasTag}">
+                    <TextBlock Text="{Binding Tag, Converter={x:Static v:UpperText.Instance}}" />
+                  </Border>
+                  <TextBlock Grid.Column="4" Classes="pingtext" FontSize="17" FontWeight="SemiBold" FontFeatures="tnum" TextAlignment="Right"
+                             VerticalAlignment="Center" Text="{Binding Ping}"
+                             Classes.good="{Binding Quality, Converter={x:Static v:Equal.Instance}, ConverterParameter=good}"
+                             Classes.fair="{Binding Quality, Converter={x:Static v:Equal.Instance}, ConverterParameter=fair}"
+                             Classes.poor="{Binding Quality, Converter={x:Static v:Equal.Instance}, ConverterParameter=poor}" />
+                  <Viewbox Grid.Column="5" Width="16" Height="16" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <Canvas Width="24" Height="24">
+                      <Path Classes="stroke" Data="M9 5L16 12L9 19" StrokeThickness="2.4" />
+                    </Canvas>
+                  </Viewbox>
+                </Grid>
+              </Button>
+              <!-- one of the player's own: off the list -->
+              <Button Grid.Column="2" Classes="soft danger" Height="48" Padding="16,0" VerticalAlignment="Center" Content="Remove"
+                      IsVisible="{Binding Own}"
+                      Command="{Binding $parent[UserControl].((nx:ServersViewModel)DataContext).RemoveCommand}" CommandParameter="{Binding}"
+                      AutomationProperties.Name="Remove this server" />
+            </Grid>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+  </Grid>
+  <UserControl.Styles>
+    <Style Selector="Border.ping">
+      <Setter Property="Background" Value="{StaticResource NextTrackBrush}" />
+    </Style>
+    <Style Selector="Border.ping.good">
+      <Setter Property="Background" Value="{StaticResource NextAccentBrush}" />
+    </Style>
+    <Style Selector="Border.ping.fair">
+      <Setter Property="Background" Value="{StaticResource NextGoldBrush}" />
+    </Style>
+    <Style Selector="Border.ping.poor">
+      <Setter Property="Background" Value="{StaticResource NextDangerBrush}" />
+    </Style>
+    <Style Selector="TextBlock.pingtext.good">
+      <Setter Property="Foreground" Value="{StaticResource NextAccentBrush}" />
+    </Style>
+    <Style Selector="TextBlock.pingtext.fair">
+      <Setter Property="Foreground" Value="{StaticResource NextGoldBrush}" />
+    </Style>
+    <Style Selector="TextBlock.pingtext.poor">
+      <Setter Property="Foreground" Value="{StaticResource NextDangerBrush}" />
+    </Style>
+  </UserControl.Styles>
+</UserControl>

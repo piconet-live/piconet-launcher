@@ -1,0 +1,47 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:nx="using:Launcher.App.ViewModels.NextUi"
+             xmlns:v="using:Launcher.App.Views"
+             x:Class="Launcher.App.Views.NextUi.RacersSheetView"
+             x:DataType="nx:RacersSheetViewModel">
+  <!-- The race's panel (the pad's Y on the race's page): the player's own times; then every racer as the race runs,
+       or every result once it is over, as the classic launcher's standings show them (a press on a racer follows
+       them on the map; a mode's lines for each racer beside them), and a mode's lines for the race and its teams. -->
+  <DockPanel Margin="32,28,28,24">
+    <StackPanel DockPanel.Dock="Top" Spacing="2">
+      <TextBlock Classes="eyebrow" TextTrimming="CharacterEllipsis" Text="{Binding Race.Course, Converter={x:Static v:UpperText.Instance}}" />
+      <TextBlock Name="Title" Classes="heading" FontSize="40" LineHeight="44" RenderTransform="skewX(-10deg)" RenderTransformOrigin="0%,100%"
+                 Text="{Binding Title, Converter={x:Static v:UpperText.Instance}}" />
+    </StackPanel>
+    <Button DockPanel.Dock="Bottom" Name="Close" Classes="soft" Margin="4,16,8,0" HorizontalAlignment="Stretch" Content="Close"
+            Command="{Binding Shell.CloseSheetCommand}" AutomationProperties.Name="Close" />
+    <ScrollViewer Margin="0,14,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+      <StackPanel Margin="0,0,12,0">
+        <StackPanel IsVisible="{Binding Race.HasYou}" Margin="0,0,0,14">
+          <Border Classes="fact">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Classes="quiet" VerticalAlignment="Center" Text="Your lap" />
+              <TextBlock Grid.Column="1" FontWeight="SemiBold" FontFeatures="tnum" VerticalAlignment="Center" Text="{Binding Race.YouLapTime}" />
+            </Grid>
+          </Border>
+          <Border Classes="fact">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Classes="quiet" VerticalAlignment="Center" Text="Your best lap" />
+              <TextBlock Grid.Column="1" FontWeight="SemiBold" FontFeatures="tnum" VerticalAlignment="Center" Text="{Binding Race.YouBestLap}" />
+            </Grid>
+          </Border>
+          <Border Classes="fact">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Classes="quiet" VerticalAlignment="Center" Text="Speed" />
+              <TextBlock Grid.Column="1" FontWeight="SemiBold" FontFeatures="tnum" VerticalAlignment="Center" Text="{Binding Race.YouSpeed}" />
+            </Grid>
+          </Border>
+        </StackPanel>
+        <v:StandingsTable Name="Standings" DataContext="{Binding Race}" HorizontalAlignment="Left" />
+        <Panel Margin="0,16,0,0" IsVisible="{Binding Race.HasModeFigures}">
+          <v:RaceModeLines DataContext="{Binding Race}" />
+        </Panel>
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

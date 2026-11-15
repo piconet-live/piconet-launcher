@@ -31,6 +31,7 @@ public sealed partial class ModCard : ObservableObject
     {
         Mod = mod;
         (IsFirst, IsLast) = (at == 0, at == count - 1);
+        Rank = at + 1;
         if (_on != mod.On)
         {
             _on = mod.On;
@@ -82,6 +83,10 @@ public sealed partial class ModCard : ObservableObject
             }
         }
     }
+
+    /// <summary>Its place in the order, 1 the first (the one whose files win).</summary>
+    [ObservableProperty]
+    public partial int Rank { get; private set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanMoveUp))]

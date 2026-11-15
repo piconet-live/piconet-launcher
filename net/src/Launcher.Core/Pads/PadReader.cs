@@ -155,6 +155,18 @@ public sealed class PadReader : IDisposable
         }
     }
 
+    /// <summary>The port the pad is read from as the last ports line said it (its kind and device); null: none.</summary>
+    public HelperPort? NavPortInfo
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return NavPortOf(_ports) is { } at ? _ports[at] : null;
+            }
+        }
+    }
+
     /// <summary>Whether a port, as the last ports line said it, is a pad's (<see cref="IsPad"/>).</summary>
     public bool IsPadPort(int port)
     {

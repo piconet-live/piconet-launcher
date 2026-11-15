@@ -99,6 +99,34 @@ public sealed partial class PracticeViewModel : ViewModelBase
     [ObservableProperty]
     public partial string Notice { get; set; } = "";
 
+    /// <summary>The redesigned page's second step: the course chosen, its set-up and START PRACTICE on a page of their
+    /// own; false: the courses to choose from (the classic page shows both at once).</summary>
+    [ObservableProperty]
+    public partial bool SettingUp { get; set; }
+
+    /// <summary>A course chosen on the redesigned page: picked, and on to its set-up.</summary>
+    [RelayCommand]
+    private void Choose(CourseCard? card)
+    {
+        if (card is null)
+        {
+            return;
+        }
+        Courses.PickCommand.Execute(card);
+        SettingUp = true;
+    }
+
+    /// <summary>B on the redesigned page: from the set-up back to the courses. False: the courses show already.</summary>
+    public bool StepBack()
+    {
+        if (!SettingUp)
+        {
+            return false;
+        }
+        SettingUp = false;
+        return true;
+    }
+
     /// <summary>The set-up as the page shows it now.</summary>
     public PracticeSetup Setup
     {

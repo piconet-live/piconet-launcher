@@ -1,0 +1,136 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:nxv="using:Launcher.App.Views.NextUi"
+             xmlns:c="using:Launcher.App.Controls"
+             xmlns:n="using:Launcher.App.Controls.NextUi"
+             x:Class="Launcher.App.Views.NextUi.MachineView"
+             x:DataType="vm:LobbyViewModel">
+  <!-- The redesigned interface's machine stage: the course that is next, the machine selected in 3D, and beside it
+       a card with its name, the stage's clock, its grades (the lobby's stats: its pack's, where it has one), the way
+       into the whole Garage (every machine's colours, its setting, the custom machines) and the one thing to do:
+       Ready. At their left the machines this lobby offers, as a grid that scrolls up and down: a press makes one
+       the machine raced. What is
+       selected here is the Garage's selection, and what races is the classic launcher's doing
+       (LobbyViewModel.Machine.cs). -->
+  <Grid Margin="14,8,0,6" ColumnDefinitions="388,24,*">
+    <!-- the machines the lobby offers: the one raced over a green line; one it does not offer, faint and not picked -->
+    <ScrollViewer Name="Strip" Margin="-10,-10,0,0" Padding="10,10,14,10" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <ItemsControl Name="Machines" c:PadNav.Home="True" ItemsSource="{Binding Garage.Choices}" VerticalAlignment="Top" ClipToBounds="False">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <UniformGrid Columns="3" VerticalAlignment="Top" ClipToBounds="False" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:GarageCard">
+            <Button Classes="card c10 machine grid" Classes.off="{Binding !Offered}" Classes.picked="{Binding Selected}" c:PadNav.Next="Ready"
+                    Command="{Binding $parent[UserControl].((vm:LobbyViewModel)DataContext).Garage.PickMachineCommand}" CommandParameter="{Binding Id}"
+                    AutomationProperties.Name="{Binding Id, Converter={x:Static v:MachineNameText.Instance}}">
+              <Grid RowDefinitions="*,Auto">
+                <c:MachineStill Machine="{Binding Id}" StockColor="{Binding StockColor}" PaintColor="{Binding PaintColor}" />
+                <TextBlock Grid.Row="1" Classes="machinename" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                           Text="{Binding Id, Converter={x:Static v:MachineNameText.Instance}}" />
+                <Border Grid.RowSpan="2" Height="3" Margin="-10,0,-10,-6" VerticalAlignment="Bottom"
+                        Background="{StaticResource NextAccentBrush}" IsVisible="{Binding Selected}" />
+              </Grid>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+
+    <Grid Grid.Column="2" ColumnDefinitions="*,20,380" RowDefinitions="Auto,Auto,*">
+        <TextBlock Grid.ColumnSpan="3" Name="Eyebrow" Classes="eyebrow" FontSize="14" TextTrimming="CharacterEllipsis">
+          <Run Text="NEXT RACE" /><Run Text="  ·  " /><Run Text="{Binding ChoiceCourseName, Converter={x:Static v:UpperText.Instance}}" />
+        </TextBlock>
+        <TextBlock Grid.Row="1" Grid.ColumnSpan="3" Name="Title" Classes="heading" FontSize="46" LineHeight="52" Margin="0,4,0,0" RenderTransform="skewX(-10deg)"
+                   RenderTransformOrigin="0%,100%" Text="PICK YOUR MACHINE" />
+        <Panel Grid.Row="2">
+          <Panel IsVisible="{DynamicResource HasDiscArt}">
+            <c:Unscaled>
+              <c:MachinePreview Machine="{Binding Garage.MachineIndex}" StockColor="{Binding Garage.StockColor}"
+                                PaintColor="{Binding Garage.ColorHex}" AutomationProperties.Name="The machine in 3D: drag to turn it" />
+            </c:Unscaled>
+          </Panel>
+          <TextBlock Classes="quiet" HorizontalAlignment="Center" VerticalAlignment="Center" Text="No disc image"
+                     IsVisible="{DynamicResource NoDiscArt}" />
+        </Panel>
+
+      <n:Chamfer Grid.Row="2" Grid.Column="2" Classes="plate" VerticalAlignment="Center">
+        <StackPanel Margin="24" Spacing="14">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Name="MachineName" Classes="heading" FontSize="32" LineHeight="34" RenderTransform="skewX(-10deg)"
+                       RenderTransformOrigin="0%,100%" TextTrimming="CharacterEllipsis"
+                       Text="{Binding Garage.MachineName, Converter={x:Static v:UpperText.Instance}}" />
+            <!-- the stage's clock: green, red in its last seconds -->
+            <TextBlock Grid.Column="1" Name="Clock" FontFamily="{StaticResource DisplayFont}" FontWeight="ExtraBold" FontSize="30"
+                       FontFeatures="tnum" Foreground="{StaticResource NextAccentBrush}" Classes.ending="{Binding ClockEnding}"
+                       Text="{Binding ClockText}" AutomationProperties.Name="Time left to pick" />
+          </Grid>
+          <!-- body, boost and grip, as the game's machine select grades them -->
+          <ItemsControl Name="Grades" ItemsSource="{Binding Garage.Summary}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:StatFigure">
+                <Grid ColumnDefinitions="64,*,26" Height="26"
+                      IsVisible="{Binding Label, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                  <TextBlock Classes="quiet" FontSize="16" VerticalAlignment="Center" Text="{Binding Label}" />
+                  <ItemsControl Grid.Column="1" VerticalAlignment="Center" ItemsSource="{Binding Value, Converter={x:Static nxv:GradeParts.Instance}}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <UniformGrid Rows="1" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="x:Boolean">
+                        <Border Classes="part" Classes.lit="{Binding}" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <TextBlock Grid.Column="2" FontFamily="{StaticResource DisplayFont}" FontWeight="ExtraBold" FontSize="20"
+                             HorizontalAlignment="Right" VerticalAlignment="Center" Text="{Binding Value}" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <Border Classes="fact">
+            <Grid ColumnDefinitions="Auto,*">
+              <TextBlock Classes="quiet" VerticalAlignment="Center" Text="Stats" />
+              <TextBlock Grid.Column="1" FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center"
+                         TextTrimming="CharacterEllipsis" Margin="12,0,0,0" Text="{Binding BandPackText}" ToolTip.Tip="{Binding BandPackTip}" />
+            </Grid>
+          </Border>
+          <Button Name="OpenGarage" Classes="line" ToolTip.Tip="Every machine, its colours and its setting" MinHeight="44" Background="{StaticResource NextRaisedBrush}"
+                  Command="{Binding OpenFullGarageCommand}" AutomationProperties.Name="Open the Garage">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock VerticalAlignment="Center" Text="Open the Garage" />
+              <Viewbox Grid.Column="1" Width="16" Height="16" VerticalAlignment="Center">
+                <Canvas Width="24" Height="24">
+                  <Path Classes="stroke" Data="M9 5L16 12L9 19" StrokeThickness="2.4" />
+                </Canvas>
+              </Viewbox>
+            </Grid>
+          </Button>
+          <Panel Margin="4,6,4,0">
+            <Button Name="Ready" Classes="main" ToolTip.Tip="Race the machine selected (Start)" HorizontalAlignment="Stretch" Content="READY" Command="{Binding ReadyCommand}"
+                    IsVisible="{Binding !IsReady}" IsEnabled="{Binding CanReady}" c:PadNav.Main="True" AutomationProperties.Name="Ready" />
+            <!-- ready: said in its place; another machine picked from here on is sent at once -->
+            <Border Name="IsReady" Height="56" Background="{StaticResource NextRaisedBrush}" CornerRadius="3" RenderTransform="skewX(-12deg)"
+                    IsVisible="{Binding IsReady}">
+              <TextBlock FontFamily="{StaticResource DisplayFont}" FontWeight="ExtraBold" FontSize="21" LetterSpacing="0.84"
+                         Foreground="{StaticResource NextAccentBrush}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                         Text="READY ✓" />
+            </Border>
+          </Panel>
+        </StackPanel>
+      </n:Chamfer>
+    </Grid>
+
+  </Grid>
+  <UserControl.Styles>
+    <Style Selector="TextBlock#Clock.ending">
+      <Setter Property="Foreground" Value="{StaticResource NextDangerBrush}" />
+    </Style>
+  </UserControl.Styles>
+</UserControl>

@@ -6,13 +6,15 @@ namespace Launcher.Tests;
 /// <summary>
 /// The pad turned into the window's intents (<see cref="PadIntents"/>), on a clock the test sets: a direction moves
 /// once when pressed and repeats while held, slowly first and then faster on an eased curve, down to a floor; a button
-/// acts on its press only; the main stick has a gap between engaging and letting go; the C-stick scrolls by the time
-/// it is held; a controller unplugged holds nothing.
+/// acts on its press only; L and R also by their analog press (a pad's triggers), with a gap too; the main stick has a
+/// gap between engaging and letting go; the C-stick scrolls by the time it is held, up and down and to the side; a
+/// controller unplugged holds nothing.
 /// </summary>
 public sealed class PadIntentsTests
 {
-    private static HelperPad Pad(string[]? buttons = null, int x = 128, int y = 128, int cy = 128, bool connected = true) =>
-        new(0, 6, connected, new HashSet<string>(buttons ?? []), x, y, 128, cy, 0, 0);
+    private static HelperPad Pad(string[]? buttons = null, int x = 128, int y = 128, int cy = 128, bool connected = true,
+        int cx = 128, int l = 0, int r = 0) =>
+        new(0, 6, connected, new HashSet<string>(buttons ?? []), x, y, cx, cy, l, r);
 
     private static TimeSpan Ms(double ms) => TimeSpan.FromMilliseconds(ms);
 
@@ -27,7 +29,8 @@ public sealed class PadIntentsTests
         Assert.Equal([new PadPressed(PadButton.B), new PadPressed(PadButton.Start)], pad.Read(Pad(["B", "Start"]), Ms(2200)));
         Assert.Equal([new PadPressed(PadButton.L), new PadPressed(PadButton.R), new PadPressed(PadButton.Z)],
             pad.Read(Pad(["L", "R", "Z"]), Ms(2300)));
-        Assert.Empty(pad.Read(Pad(["X", "Y"]), Ms(2400)));            // not the launcher's
+        // (X and Y are the redesigned interface's: the chat and a page's second action; the classic one does nothing with them)
+        Assert.Equal([new PadPressed(PadButton.X), new PadPressed(PadButton.Y)], pad.Read(Pad(["X", "Y"]), Ms(2400)));
     }
 
     [Fact]
@@ -97,6 +100,28 @@ public sealed class PadIntentsTests
         pad.Read(Pad(cy: 140), Ms(150));                               // within its dead zone
         Assert.False(pad.Holding);
         Assert.Empty(pad.Tick(Ms(400)));
+    }
+
+    [Fact]
+    public void ATriggerPressedDeepIsLOrROnce()
+    {
+        var pad = new PadIntents();
+        Assert.Equal([new PadPressed(PadButton.R)], pad.Read(Pad(r: 200), Ms(0)));
+        Assert.Empty(pad.Read(Pad(r: 140), Ms(10)));                  // within the gap: still held
+        Assert.Empty(pad.Read(Pad(r: 60), Ms(20)));                   // let go
+        Assert.Empty(pad.Read(Pad(r: 150), Ms(30)));                  // not deep enough for a new press
+        Assert.Equal([new PadPressed(PadButton.L)], pad.Read(Pad(["L"], l: 255), Ms(40)));   // the click and the press: one
+    }
+
+    [Fact]
+    public void TheCStickScrollsToTheSide()
+    {
+        var pad = new PadIntents();
+        pad.Read(Pad(cx: 228), Ms(0));                                 // right, at its gate
+        Assert.True(pad.Holding);
+        var scrolled = Assert.IsType<PadScrolled>(Assert.Single(pad.Tick(Ms(100))));
+        Assert.Equal(0, scrolled.By);
+        Assert.Equal(PadIntents.ScrollSpeed * 0.1, scrolled.Across, 3);
     }
 
     [Fact]

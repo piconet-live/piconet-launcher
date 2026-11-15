@@ -467,6 +467,14 @@
     <Setter Property="Background" Value="{StaticResource TextBrush}" />
   </Style>
 
+  <!-- The chat sidebar's name (Views/ChatSidebar): here, not on the control, so that the redesigned interface's own
+       look can take its place (Theme/NextUi/Theme.axaml, included after this) -->
+  <Style Selector="TextBlock#ChatTitle">
+    <Setter Property="FontFamily" Value="{StaticResource HeadingFont}" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="FontSize" Value="18" />
+  </Style>
+
   <!-- The rest of the look, in this order (a later style wins over an earlier one). -->
   <StyleInclude Source="avares://Launcher.App/Theme/Buttons.axaml" />
   <StyleInclude Source="avares://Launcher.App/Theme/Forms.axaml" />

@@ -1,0 +1,65 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:nx="using:Launcher.App.ViewModels.NextUi"
+             xmlns:nxv="using:Launcher.App.Views.NextUi"
+             xmlns:v="using:Launcher.App.Views"
+             x:Class="Launcher.App.Views.NextUi.StatsSheetView"
+             x:DataType="nx:StatsSheetViewModel">
+  <!-- Every value of the machine on the stage ("All stats"): a stock machine's rows sort the machines by their stat (the
+       order beside the one sorted by); seen through a stat pack, a value it changes is marked with the stock one beside
+       it. Close at its foot. -->
+  <DockPanel Margin="32,28,28,24">
+    <StackPanel DockPanel.Dock="Top" Spacing="2">
+      <TextBlock Classes="eyebrow" Text="{Binding MachineName, Converter={x:Static v:UpperText.Instance}}" />
+      <TextBlock Name="Title" Classes="heading" FontSize="40" LineHeight="44" RenderTransform="skewX(-10deg)" RenderTransformOrigin="0%,100%"
+                 Text="ALL STATS" />
+      <TextBlock Classes="quiet" FontSize="14" TextWrapping="Wrap" Text="{Binding Garage.PackText, StringFormat='As the stat pack {0} has them'}"
+                 IsVisible="{Binding Garage.PackText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+    </StackPanel>
+    <Button DockPanel.Dock="Bottom" Name="Close" Classes="soft" Margin="4,16,8,0" HorizontalAlignment="Stretch" Content="Close"
+            Command="{Binding $parent[nxv:NextShell].((vm:MainViewModel)DataContext).Shell.CloseSheetCommand}" AutomationProperties.Name="Close" />
+    <ScrollViewer Margin="0,16,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Margin="2,2,12,2" Spacing="4">
+        <TextBlock Classes="quiet" Text="No disc image: the stats come from your disc." IsVisible="{Binding NoStats}" />
+        <!-- a stock machine's: pressed, the machines sorted by it -->
+        <ItemsControl Name="StockRows" ItemsSource="{Binding Garage.Stats}" IsVisible="{Binding Stock}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:StatRow">
+              <Button Classes="line" Height="40" Margin="0,0,0,4" HorizontalContentAlignment="Stretch"
+                      Command="{Binding $parent[UserControl].((nx:StatsSheetViewModel)DataContext).SortByCommand}" CommandParameter="{Binding}"
+                      AutomationProperties.Name="{Binding Hint}">
+                <Grid ColumnDefinitions="*,Auto,Auto,Auto">
+                  <TextBlock FontSize="15" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{Binding Label}" />
+                  <TextBlock Grid.Column="1" Classes="quiet" FontSize="13" Margin="8,0" VerticalAlignment="Center" Text="{Binding Order}" />
+                  <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <Ellipse Width="6" Height="6" Fill="{StaticResource NextAccentBrush}" IsVisible="{Binding Changed}" />
+                    <TextBlock FontSize="15" FontWeight="SemiBold" FontFeatures="tnum" Text="{Binding Value}" />
+                  </StackPanel>
+                  <TextBlock Grid.Column="3" Classes="quiet" FontSize="13" Width="70" TextAlignment="Right" VerticalAlignment="Center"
+                             Text="{Binding Stock}" IsVisible="{Binding Changed}" />
+                </Grid>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <!-- a custom machine's: summed from its parts -->
+        <ItemsControl Name="BuildRows" ItemsSource="{Binding Garage.Builder.Stats}" IsVisible="{Binding Custom}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:StatFigure">
+              <Grid ColumnDefinitions="*,Auto,Auto" Height="34" Margin="14,0">
+                <TextBlock Classes="quiet" FontSize="15" VerticalAlignment="Center" Text="{Binding Label}" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                  <Ellipse Width="6" Height="6" Fill="{StaticResource NextAccentBrush}" IsVisible="{Binding Changed}" />
+                  <TextBlock FontSize="15" FontWeight="SemiBold" FontFeatures="tnum" Text="{Binding Value}" />
+                </StackPanel>
+                <TextBlock Grid.Column="2" Classes="quiet" FontSize="13" Width="70" TextAlignment="Right" VerticalAlignment="Center"
+                           Text="{Binding Stock}" IsVisible="{Binding Changed}" />
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

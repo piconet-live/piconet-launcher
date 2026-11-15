@@ -6,8 +6,9 @@ using Online.Protocol;
 namespace Launcher.App.ViewModels;
 
 /// <summary>A custom lobby as the browser lists it: its name, host, players of its room, a lock when it has a
-/// password, its stage in a word, and the rules that differ from Quick Play's in one line.</summary>
-public sealed record CustomLobbyRow(string Id, string Name, string Host, string Count, bool Locked, string Stage, bool Racing, string Rules)
+/// password, its stage in a word, and the rules that differ from Quick Play's in one line; <see cref="Mine"/>: the
+/// lobby the player is in.</summary>
+public sealed record CustomLobbyRow(string Id, string Name, string Host, string Count, bool Locked, string Stage, bool Racing, string Rules, bool Mine = false)
 {
     public bool HasRules => Rules.Length > 0;
 }
@@ -187,7 +188,8 @@ public sealed partial class CustomLobbiesViewModel : ViewModelBase
             return;
         }
         Status = session.PlayerId is null ? "Connecting" : "";
-        var rows = session.Lobbies.Select(l => Row(l, session.QuickPlayRules)).ToList();
+        var mine = session.Lobby is { Custom: true } current ? current.LobbyId : null;
+        var rows = session.Lobbies.Select(l => Row(l, session.QuickPlayRules, l.Id == mine)).ToList();
         if (!rows.SequenceEqual(Rows))
         {
             Rows = rows;
@@ -206,13 +208,13 @@ public sealed partial class CustomLobbiesViewModel : ViewModelBase
         }
     }
 
-    /// <summary>A lobby of the list as its row.</summary>
-    public static CustomLobbyRow Row(LobbySummary lobby, LobbyRules? quickPlay)
+    /// <summary>A lobby of the list as its row (<paramref name="mine"/>: the one the player is in).</summary>
+    public static CustomLobbyRow Row(LobbySummary lobby, LobbyRules? quickPlay, bool mine = false)
     {
         ArgumentNullException.ThrowIfNull(lobby);
         return new CustomLobbyRow(lobby.Id, lobby.Name, lobby.HostName,
             string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{lobby.Players}/{lobby.Capacity}"), lobby.Locked,
-            StageText(lobby.Stage), lobby.Stage == LobbyState.Racing, CustomRules.Summary(lobby.Rules, quickPlay));
+            StageText(lobby.Stage), lobby.Stage == LobbyState.Racing, CustomRules.Summary(lobby.Rules, quickPlay), mine);
     }
 
     /// <summary>A lobby's stage in a word.</summary>
@@ -256,11 +258,43 @@ public sealed partial class CustomLobbiesViewModel : ViewModelBase
         _ => "Left the lobby",
     };
 
-    /// <summary>A row pressed: joined, or its password asked for first.</summary>
+    /// <summary>The redesigned interface's check before a lobby is joined or made (<see cref="PlayControlViewModel.MayJoin"/>):
+    /// false when it may not, once the player was shown why and the way; null: none.</summary>
+    public Func<Action, bool>? MayJoin { get; set; }
+
+    /// <summary>The redesigned interface's question before the custom lobby the player is in is left for another (a
+    /// row of the list, Create), given that lobby's name and the move: false when it asks (the move is made on its
+    /// yes); null: none, the move is made at once. Either way the visit stays: the server takes the player out of
+    /// their lobby when the next one takes them (a racing lobby too), so the list is still there after it.</summary>
+    public Func<string, Action, bool>? MayMove { get; set; }
+
+    /// <summary>The custom lobby the player is in, if any.</summary>
+    private LobbyState? Current => _session?.Lobby is { Custom: true } lobby ? lobby : null;
+
+    /// <summary>Whether the player may go on from the list: in no lobby, the join's check (<see cref="MayJoin"/>); in a
+    /// custom lobby, the question before it is left (<see cref="MayMove"/>), <paramref name="move"/> following its yes.</summary>
+    private bool May(Action move) => Current is { } current
+        ? MayMove is not { } leave || leave(current.Name ?? "your lobby", move)
+        : MayJoin is not { } may || may(() => { });
+
+    /// <summary>A row pressed: joined, or its password asked for first. The lobby the player is in: its page, nothing
+    /// asked or left (a lobby joined while it races is the player's from then on: pressed again, it is their lobby).
+    /// Another while they are in one: asked first, then joined (<see cref="May"/>).</summary>
     [RelayCommand]
     private Task OpenAsync(CustomLobbyRow row)
     {
         ArgumentNullException.ThrowIfNull(row);
+        if (Current is { } current && current.LobbyId == row.Id)
+        {
+            (AskingFor, Password) = (null, "");
+            _showLobby();
+            return Task.CompletedTask;
+        }
+        return May(() => _ = Open(row)) ? Open(row) : Task.CompletedTask;
+    }
+
+    private Task Open(CustomLobbyRow row)
+    {
         if (row.Locked)
         {
             (AskingFor, Password) = (row, "");
@@ -293,9 +327,17 @@ public sealed partial class CustomLobbiesViewModel : ViewModelBase
     }
 
     /// <summary>Create: the create face, on the server's first official mode (Quick Play's rules) and the player's
-    /// lobby's name.</summary>
+    /// lobby's name (from a lobby the player is in, asked first: the create takes them out of it).</summary>
     [RelayCommand]
     private void ShowCreate()
+    {
+        if (May(Create))
+        {
+            Create();
+        }
+    }
+
+    private void Create()
     {
         var editor = new LobbyRulesEditor(null, _session?.QuickPlayRules, _session?.OfficialModes ?? [], DefaultName(_state.Settings.Racer.Name));
         editor.PropertyChanged += (_, e) =>

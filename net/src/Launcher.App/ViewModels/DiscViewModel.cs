@@ -19,6 +19,7 @@ public sealed partial class DiscViewModel : ViewModelBase, IDisposable
 {
     private readonly AppState _state;
     private readonly Action _done;
+    private readonly Action _heard;
     private CancellationTokenSource? _stop;
     private Task? _work;
     private bool _looking;
@@ -35,7 +36,8 @@ public sealed partial class DiscViewModel : ViewModelBase, IDisposable
         Move = new DataMoveViewModel(state);
         Path = state.Settings.DiscPath ?? "";
         Notice = state.Problem ?? "";
-        state.Changed += () => OnUi(() => Notice = _state.Problem ?? "");
+        _heard = () => OnUi(() => Notice = _state.Problem ?? "");
+        state.Changed += _heard;
         // the stored disc still passes the first look: only the game's files keep the launcher from opening, and
         // files that were there and are damaged or another version's are said (none yet is the first start: no
         // fault). The one look the start made (AppState.Game) answers this and the play buttons.
@@ -49,6 +51,19 @@ public sealed partial class DiscViewModel : ViewModelBase, IDisposable
     /// <summary>The launcher opens without this screen: the stored disc image is verified and a game start has the
     /// game's files, as the launcher's start found them.</summary>
     public bool Passed { get; }
+
+    /// <summary>CONTINUE opens the launcher once the game is ready (the classic first screen). The redesigned
+    /// interface's first start has two steps more: it turns this off, and opens the launcher itself (<see cref="Open"/>)
+    /// once its last step is done.</summary>
+    public bool OpensAtOnce { get; set; } = true;
+
+    /// <summary>The disc image is taken and the game is ready (or could not be made ready for a reason that is not the
+    /// image's, which the launcher says): what the redesigned first start waits for before its next step.</summary>
+    [ObservableProperty]
+    public partial bool Ready { get; set; }
+
+    /// <summary>The launcher opens (the redesigned first start's last step).</summary>
+    public void Open() => _done();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Status), nameof(Verified), nameof(Wrong))]
@@ -103,7 +118,11 @@ public sealed partial class DiscViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     public partial string SaidLabel { get; set; } = "";
 
-    partial void OnPathChanged(string value) => (Said, SaidLabel) = ("", "");   // another file: what was said of the last one is over
+    partial void OnPathChanged(string value)
+    {
+        (Said, SaidLabel) = ("", "");   // another file: what was said of the last one is over
+        Ready = false;
+    }
 
     /// <summary>CONTINUE: with a verified disc image, the game's files are prepared when a game start has none, and
     /// the launcher opens when they are ready. What a start has is looked at now, not as the launcher's start found
@@ -150,7 +169,14 @@ public sealed partial class DiscViewModel : ViewModelBase, IDisposable
         {
             _state.Report(notice);
         }
-        _done();
+        if (OpensAtOnce)
+        {
+            _done();
+        }
+        else
+        {
+            Ready = true;
+        }
     }
 
     /// <summary>Cancel: the preparation stops at its next file and keeps nothing.</summary>
@@ -243,6 +269,7 @@ public sealed partial class DiscViewModel : ViewModelBase, IDisposable
     /// written (what it leaves never looks ready, and the next preparation clears it).</summary>
     public void Dispose()
     {
+        _state.Changed -= _heard;
         var (stop, work) = (_stop, _work);
         try
         {

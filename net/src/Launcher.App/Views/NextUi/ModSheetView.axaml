@@ -1,0 +1,60 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:nx="using:Launcher.App.ViewModels.NextUi"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:nxv="using:Launcher.App.Views.NextUi"
+             x:Class="Launcher.App.Views.NextUi.ModSheetView"
+             x:DataType="nx:ModSheetViewModel">
+  <!-- A mod's panel: its place, what of it is not used online and why; On, Move up, Move down, its stat pack, its
+       parts as a tree, Remove (asked first); Close at its foot. -->
+  <DockPanel Margin="32,28,28,24">
+    <StackPanel DockPanel.Dock="Top" Spacing="2">
+      <TextBlock Classes="eyebrow" Text="{Binding Place, Converter={x:Static v:UpperText.Instance}}" />
+      <TextBlock Name="Title" Classes="heading" FontSize="38" LineHeight="42" TextWrapping="Wrap" RenderTransform="skewX(-10deg)"
+                 RenderTransformOrigin="0%,100%" Text="{Binding Card.Name, Converter={x:Static v:UpperText.Instance}}" />
+    </StackPanel>
+    <Button DockPanel.Dock="Bottom" Name="Close" Classes="soft" Margin="4,16,8,0" HorizontalAlignment="Stretch" Content="Close"
+            Command="{Binding $parent[nxv:NextShell].((vm:MainViewModel)DataContext).Shell.CloseSheetCommand}" AutomationProperties.Name="Close" />
+    <ScrollViewer Margin="0,16,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Spacing="8" Margin="2,2,12,2">
+        <TextBlock Classes="quiet" FontSize="14" TextWrapping="Wrap" Text="{Binding Card.SinglePlayerWhy, StringFormat='Single player: {0}'}"
+                   IsVisible="{Binding Card.SinglePlayer}" />
+        <TextBlock Classes="quiet" FontSize="14" TextWrapping="Wrap" Text="{Binding Card.CodeWhy}" IsVisible="{Binding Card.CodeNotUsed}" />
+        <Button Name="On" Classes="line" Command="{Binding ToggleCommand}" AutomationProperties.Name="On">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock VerticalAlignment="Center" Text="On" />
+            <Border Grid.Column="1" Classes="switch" Classes.on="{Binding Card.On}" VerticalAlignment="Center">
+              <Border Classes="knob" />
+            </Border>
+          </Grid>
+        </Button>
+        <Button Name="MoveUp" Classes="line" Command="{Binding Card.MoveUpCommand}" IsEnabled="{Binding Card.CanMoveUp}" AutomationProperties.Name="Move up">
+          <TextBlock VerticalAlignment="Center" Text="Move up" />
+        </Button>
+        <Button Name="MoveDown" Classes="line" Command="{Binding Card.MoveDownCommand}" IsEnabled="{Binding Card.CanMoveDown}" AutomationProperties.Name="Move down">
+          <TextBlock VerticalAlignment="Center" Text="Move down" />
+        </Button>
+        <!-- its machine stats as a stat pack: made, then shown -->
+        <Button Name="MakePack" Classes="line" Command="{Binding Card.MakePackCommand}" AutomationProperties.Name="Make a stat pack of its machine stats"
+                IsVisible="{Binding Card.CanMakePack}">
+          <TextBlock VerticalAlignment="Center" Text="Make a stat pack of its machine stats" />
+        </Button>
+        <Button Name="ShowPack" Classes="line" Command="{Binding Card.ShowPackCommand}" AutomationProperties.Name="Show the pack"
+                IsVisible="{Binding Card.PackFile, Converter={x:Static ObjectConverters.IsNotNull}}">
+          <TextBlock VerticalAlignment="Center" Text="Show the pack" />
+        </Button>
+        <TextBlock Classes="quiet" FontSize="14" TextWrapping="Wrap" Text="{Binding Card.PackWhy}"
+                   IsVisible="{Binding Card.PackWhy, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        <!-- its parts, to tick (and its own text files, to read) -->
+        <StackPanel Spacing="6" Margin="0,6,0,0" IsVisible="{Binding Card.HasTree}">
+          <TextBlock Classes="eyebrow" Text="PARTS" />
+          <nxv:ModTreeList DataContext="{Binding Card.Tree}" />
+        </StackPanel>
+        <Button Name="Remove" Classes="line" Margin="0,6,0,0" Command="{Binding AskRemoveCommand}" AutomationProperties.Name="Remove">
+          <TextBlock VerticalAlignment="Center" Foreground="{StaticResource NextDangerBrush}" Text="Remove" />
+        </Button>
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

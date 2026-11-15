@@ -39,6 +39,9 @@ public static class Branding
     /// <summary>The page a player gets the launcher from by hand (the installer, Setup.exe).</summary>
     public const string ReleasesPage = "https://github.com/piconet-live/piconet-launcher/releases/latest";
 
+    /// <summary>A version's release notes (the redesigned interface's "What's new"): its release, tagged "v0.6.5".</summary>
+    public static string ReleaseNotes(string version) => $"https://github.com/piconet-live/piconet-launcher/releases/tag/v{version}";
+
     public const string DiscordApplicationId = "1561510653779255416";
 
     /// <summary>The status's large picture (the key of the application's art, uploaded in the Discord developer portal:

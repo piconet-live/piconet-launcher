@@ -1,0 +1,121 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:nxv="using:Launcher.App.Views.NextUi"
+             xmlns:c="using:Launcher.App.Controls"
+             xmlns:n="using:Launcher.App.Controls.NextUi"
+             x:Class="Launcher.App.Views.NextUi.ReplaysListView"
+             x:DataType="vm:ReplaysViewModel">
+  <!-- The redesigned Replays (the classic page's view model: ReplaysViewModel): "Your races" with "Open a file…" and
+       "Folder"; All, Races and Practice with their counts; the replays in their groups by date, a row each with the
+       course's picture, the course, the race and the racer, and the place (gold: a win; red: knocked out) or the time;
+       pressed, its panel (Play, Results, the mode file, Show in folder, Delete). While the game plays a replay whose
+       mode has lines, the race's lines and standings over the list. -->
+  <Grid Margin="14,8,0,8" RowDefinitions="Auto,Auto,Auto,*">
+    <Grid ColumnDefinitions="*,Auto">
+      <StackPanel Spacing="4">
+        <TextBlock Classes="eyebrow" FontSize="14" Text="REPLAYS" />
+        <TextBlock Name="Title" Classes="heading" FontSize="52" LineHeight="56" RenderTransform="skewX(-10deg)" RenderTransformOrigin="0%,100%"
+                   Text="YOUR RACES" />
+        <TextBlock Classes="lead" Text="Every race you drove, kept on this PC." />
+      </StackPanel>
+      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Bottom" Margin="0,0,0,4">
+        <Button Name="OpenFile" ToolTip.Tip="Watch a replay file from anywhere on this PC" Classes="soft" Content="Open a file…" Click="OnOpenFile" AutomationProperties.Name="Open a replay file" />
+        <Button Name="Folder" ToolTip.Tip="Open the folder your replays are kept in" Classes="soft" Content="Folder" Command="{Binding OpenFolderCommand}" AutomationProperties.Name="Open the replay folder" />
+      </StackPanel>
+    </Grid>
+    <ItemsControl Grid.Row="1" Name="Tabs" c:PadNav.Tabs="True" Margin="4,16,0,8" ItemsSource="{Binding Tabs}">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <StackPanel Orientation="Horizontal" Spacing="10" />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:ReplayTab">
+          <Button Classes="pill" Classes.go="{Binding On}" Height="36" Padding="16,0" c:PadNav.Next="ReplayList"
+                  Command="{Binding $parent[UserControl].((vm:ReplaysViewModel)DataContext).ShowTabCommand}" CommandParameter="{Binding}"
+                  AutomationProperties.Name="{Binding Label}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock VerticalAlignment="Center" Text="{Binding Label}" />
+              <TextBlock Classes="count" VerticalAlignment="Center" Text="{Binding Count}" />
+            </StackPanel>
+          </Button>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+    <StackPanel Grid.Row="2" Spacing="8">
+      <TextBlock Name="Notice" Margin="4,0" TextWrapping="Wrap" Foreground="{StaticResource NextDevBrush}" Text="{Binding Notice}"
+                 IsVisible="{Binding Notice, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+      <!-- the race of the replay the game plays, when its mode has lines -->
+      <n:Chamfer Name="PlaybackRace" Classes="plate" DataContext="{Binding Race}" IsVisible="{Binding HasMode}" Margin="0,0,16,8">
+        <Grid Margin="20,16" ColumnDefinitions="*,16,Auto">
+          <StackPanel Spacing="10">
+            <TextBlock Classes="eyebrow" Text="PLAYING" />
+            <TextBlock FontSize="20" FontWeight="Bold" Text="{Binding Course}" />
+            <v:RaceModeLines IsVisible="{Binding HasModeFigures}" />
+          </StackPanel>
+          <v:StandingsTable Grid.Column="2" />
+        </Grid>
+      </n:Chamfer>
+    </StackPanel>
+    <Panel Grid.Row="3">
+      <ScrollViewer Name="ListScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <ItemsControl Name="ReplayList" c:PadNav.Home="True" ItemsSource="{Binding Rows}" Margin="4,4,16,16">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <VirtualizingStackPanel />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.DataTemplates>
+            <!-- a group's heading: "TODAY · 3" -->
+            <DataTemplate x:DataType="vm:ReplayGroup">
+              <StackPanel Orientation="Horizontal" Spacing="8" Margin="4,14,0,8">
+                <TextBlock Classes="eyebrow" Text="{Binding Title, Converter={x:Static v:UpperText.Instance}}" />
+                <TextBlock Classes="eyebrow" Text="{Binding Count}" />
+              </StackPanel>
+            </DataTemplate>
+            <!-- a replay: pressed, its panel -->
+            <DataTemplate x:DataType="vm:ReplayItem">
+              <Button Classes="line" Height="68" Margin="0,0,0,8" Padding="12,0,16,0"
+                      Command="{Binding $parent[nxv:NextShell].((vm:MainViewModel)DataContext).Shell.OpenReplayCommand, FallbackValue={x:Null}}"
+                      CommandParameter="{Binding}" AutomationProperties.Name="{Binding Track, StringFormat='{}{0}: open'}">
+                <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                  <Border Width="92" Height="50" CornerRadius="3" ClipToBounds="True" Margin="0,0,14,0" Background="{StaticResource NextRaisedBrush}">
+                    <c:CourseStill Course="{Binding Course}" />
+                  </Border>
+                  <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                    <TextBlock FontSize="17" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Text="{Binding Track}" />
+                    <TextBlock Classes="quiet" FontSize="14" TextTrimming="CharacterEllipsis">
+                      <Run Text="{Binding Under}" /><Run Text="  ·  " /><Run Text="{Binding RacerName}" /><Run Text="  ·  " /><Run Text="{Binding When}" />
+                    </TextBlock>
+                    <!-- Developer mode: the replay's file -->
+                    <TextBlock Classes="devmono" TextTrimming="CharacterEllipsis" Text="{Binding FileName}"
+                               IsVisible="{Binding $parent[nxv:NextShell].((vm:MainViewModel)DataContext).DeveloperMode, FallbackValue=False}" />
+                  </StackPanel>
+                  <!-- the place (of how many), or a practice's time -->
+                  <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="16,0" MinWidth="80">
+                    <TextBlock Classes="placetext" Classes.won="{Binding Place, Converter={x:Static nxv:IsFirst.Instance}}" Classes.out="{Binding PlaceOut}"
+                               HorizontalAlignment="Right" Text="{Binding Place}" IsVisible="{Binding IsRace}" />
+                    <TextBlock Classes="quiet" FontSize="13" HorizontalAlignment="Right" Text="{Binding Of}" IsVisible="{Binding IsRace}" />
+                    <TextBlock FontSize="17" FontWeight="SemiBold" FontFeatures="tnum" HorizontalAlignment="Right" Text="{Binding Time}"
+                               IsVisible="{Binding IsPractice}" />
+                  </StackPanel>
+                  <Viewbox Grid.Column="3" Width="14" Height="14" VerticalAlignment="Center">
+                    <Canvas Width="24" Height="24">
+                      <Path Classes="stroke" Data="M9 5L16 12L9 19" StrokeThickness="2.6" />
+                    </Canvas>
+                  </Viewbox>
+                </Grid>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.DataTemplates>
+        </ItemsControl>
+      </ScrollViewer>
+      <TextBlock Name="Empty" Classes="quiet" FontSize="17" Margin="6,12,0,0" VerticalAlignment="Top" Text="No replays yet. Your races are kept here."
+                 IsVisible="{Binding Empty}" />
+      <TextBlock Name="Reading" Classes="quiet" FontSize="17" Margin="6,12,0,0" VerticalAlignment="Top" Text="Reading replays…"
+                 IsVisible="{Binding FirstLoad}" />
+    </Panel>
+  </Grid>
+</UserControl>

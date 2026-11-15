@@ -1,0 +1,23 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:nx="using:Launcher.App.ViewModels.NextUi"
+             x:Class="Launcher.App.Views.NextUi.MotdSheetView"
+             x:DataType="nx:MotdSheetViewModel">
+  <!-- The server's message of the day as a panel (the hub's strip pressed): the whole message and when it was set;
+       at its foot Close, and "Hide for today" (it shows again tomorrow, or when the server has another). -->
+  <DockPanel Margin="32,28,28,24">
+    <StackPanel DockPanel.Dock="Top" Spacing="2">
+      <TextBlock Classes="eyebrow" Foreground="{StaticResource NextGoldBrush}" Text="MESSAGE OF THE DAY" />
+      <TextBlock Name="When" Classes="quiet" FontSize="15" Text="{Binding Hub.MotdWhen}" />
+    </StackPanel>
+    <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,12,*" Margin="4,16,8,0">
+      <Button Name="Close" Classes="soft" HorizontalAlignment="Stretch" Content="Close"
+              Command="{Binding Hub.Shell.CloseSheetCommand}" AutomationProperties.Name="Close" />
+      <Button Grid.Column="2" Name="HideToday" Classes="soft" HorizontalAlignment="Stretch" Content="Hide for today"
+              Command="{Binding Hub.HideMotdCommand}" AutomationProperties.Name="Hide for today" />
+    </Grid>
+    <ScrollViewer Margin="0,18,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <TextBlock Name="Text" Classes="lead" FontSize="19" TextWrapping="Wrap" Margin="0,0,12,0" Text="{Binding Hub.MotdText}" />
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

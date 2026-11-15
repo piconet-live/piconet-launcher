@@ -1,0 +1,83 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:nx="using:Launcher.App.ViewModels.NextUi"
+             xmlns:nxv="using:Launcher.App.Views.NextUi"
+             xmlns:v="using:Launcher.App.Views"
+             x:Class="Launcher.App.Views.NextUi.SortSheetView"
+             x:DataType="nx:SortSheetViewModel">
+  <!-- The Garage's Sort & filter panel: the stats to sort by, the way round, the letters that leave the machines that
+       have them, the lobby's "All 41", "Clear the filter"; Done at its foot. -->
+  <DockPanel Margin="32,28,28,24">
+    <StackPanel DockPanel.Dock="Top" Spacing="2">
+      <TextBlock Classes="eyebrow" Text="GARAGE" />
+      <TextBlock Name="Title" Classes="heading" FontSize="40" LineHeight="44" RenderTransform="skewX(-10deg)" RenderTransformOrigin="0%,100%"
+                 Text="SORT &amp; FILTER" />
+    </StackPanel>
+    <Button DockPanel.Dock="Bottom" Name="Done" Classes="main" Margin="4,16,8,0" HorizontalAlignment="Stretch" Content="DONE"
+            Command="{Binding $parent[nxv:NextShell].((vm:MainViewModel)DataContext).Shell.CloseSheetCommand}" AutomationProperties.Name="Done" />
+    <ScrollViewer Margin="0,16,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Spacing="10" Margin="2,2,12,2">
+        <TextBlock Classes="eyebrow" Text="SORT BY" />
+        <ItemsControl Name="SortBy" ItemsSource="{Binding Garage.SortChoices}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:SortChoice">
+              <Button Classes="pill" Classes.go="{Binding On}" Height="34" Padding="14,0" Margin="0,0,8,8" Content="{Binding Label}"
+                      Command="{Binding $parent[UserControl].((nx:SortSheetViewModel)DataContext).ChooseCommand}" CommandParameter="{Binding}"
+                      AutomationProperties.Name="{Binding Label}" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <ItemsControl Name="Ways" ItemsSource="{Binding Ways}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="nx:WayChoice">
+              <Button Classes="pill" Classes.go="{Binding On}" Height="34" Padding="14,0" Margin="0,0,8,8" Content="{Binding Label}"
+                      Command="{Binding $parent[UserControl].((nx:SortSheetViewModel)DataContext).WayCommand}" CommandParameter="{Binding}"
+                      AutomationProperties.Name="{Binding Label}" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <ItemsControl Name="Letters" ItemsSource="{Binding Garage.Grades}" Margin="0,8,0,0">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:GradeRow">
+              <StackPanel Spacing="8" Margin="0,0,0,8">
+                <TextBlock Classes="eyebrow" Text="{Binding Label, Converter={x:Static v:UpperText.Instance}, StringFormat='FILTER · {0}'}" />
+                <ItemsControl ItemsSource="{Binding Letters}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <StackPanel Orientation="Horizontal" Spacing="8" />
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:LetterChip">
+                      <Button Classes="pill" Classes.go="{Binding On}" Width="48" Height="34" HorizontalContentAlignment="Center" Content="{Binding Letter}"
+                              Command="{Binding $parent[UserControl].((nx:SortSheetViewModel)DataContext).LetterCommand}" CommandParameter="{Binding}"
+                              AutomationProperties.Name="{Binding Name}" />
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <!-- a lobby that offers fewer machines: the others too, greyed -->
+        <Button Name="ShowAll" Classes="pill" Classes.go="{Binding Garage.ShowAll}" Height="34" Padding="14,0" HorizontalAlignment="Left"
+                Content="Show all 41" Command="{Binding Garage.ToggleShowAllCommand}" IsVisible="{Binding Garage.OfferLimited}"
+                AutomationProperties.Name="Show all 41" />
+        <Button Name="Clear" Classes="line" Height="48" Margin="0,4,0,0" Command="{Binding ClearCommand}" AutomationProperties.Name="Clear the filter">
+          <TextBlock VerticalAlignment="Center" Text="Clear the filter" />
+        </Button>
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

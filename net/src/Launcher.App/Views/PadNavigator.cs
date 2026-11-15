@@ -17,25 +17,28 @@ namespace Launcher.App.Views;
 /// D-pad and the main stick move the focus by position on the screen (<see cref="FocusMap"/>); A presses; B closes
 /// what is open over the page (the Garage's Sort &amp; filter panel; its PREVIEW: back to SELECT), else goes one step up; L and R go through the
 /// tabs (on the Garage roster's tiles: its shelves), Z through a tab's pages; Start
-/// presses the page's main action (<c>PadNav.Main</c>); left and right change a value; the C-stick scrolls. The
-/// focus shows as a soft mark (<see cref="PadMark"/>) from the pad's first press until the mouse moves. The pad is
+/// presses the page's main action (<c>PadNav.Main</c>); left and right change a value; the C-stick scrolls (up and down,
+/// and to the side). The focus shows as a soft mark (<see cref="PadMark"/>) from the pad's first press until the mouse
+/// moves; the redesigned interface draws the focus itself, and there a press acts at once on what has the focus. Its
+/// arrow keys move the focus as the D-pad does (<see cref="Arrow"/>), and its keys scroll a page (<see cref="ScrollPage"/>). The pad is
 /// read from the launcher's helper (<see cref="PadReader"/>, which holds the devices while no game runs) and acts only
 /// while the window is in front (this tells it when the window is in front), and works the pages only with "Controller navigation" on (Settings, Launcher; off by default). Then a
 /// move of the pad between controls sounds the game's cursor, and its B the game's cancel when it closed or left
-/// something; the keyboard and the mouse never sound (<see cref="LauncherSound"/>).
+/// something; the keyboard never sounds, and the mouse only in the redesigned interface, where moving onto a control
+/// gives it the focus as the pad's move does (the cursor's sound, <see cref="OnPointerMoved"/>; <see cref="LauncherSound"/>).
 /// </summary>
 public sealed partial class PadNavigator
 {
     private readonly Window _window;
     private readonly MainViewModel _main;
     private readonly PadMark _mark;
-    private readonly Control? _page;
     private readonly PadIntents _intents = new();
     private readonly Stopwatch _clock = Stopwatch.StartNew();
     private readonly DispatcherTimer _tick;
     private Control? _on;
     private Control? _focusedAtLanding;
     private Point? _pointer;
+    private bool _keys;
 
     /// <param name="page">The page's place in the window (the page's own controls come before the left column's).</param>
     public PadNavigator(Window window, MainViewModel main, PadMark mark, Control? page)
@@ -45,11 +48,13 @@ public sealed partial class PadNavigator
         _window = window;
         _main = main;
         _mark = mark;
-        _page = page;
+        Page = page;
         _tick = new DispatcherTimer(TimeSpan.FromMilliseconds(16), DispatcherPriority.Input, (_, _) => Tick());
+        NextUi.NextFocus.Install();   // (a list scrolled to the focus keeps room for its ring)
         window.AddHandler(InputElement.PointerMovedEvent, OnPointerMoved, RoutingStrategies.Tunnel, handledEventsToo: true);
         window.AddHandler(InputElement.PointerPressedEvent, (_, _) => Leave(), RoutingStrategies.Tunnel, handledEventsToo: true);
         window.AddHandler(InputElement.PointerWheelChangedEvent, (_, _) => Leave(), RoutingStrategies.Tunnel, handledEventsToo: true);
+        window.AddHandler(Button.ClickEvent, OnPressed, RoutingStrategies.Bubble, handledEventsToo: true);
         window.LayoutUpdated += (_, _) => Follow();
         window.AddHandler(ScrollViewer.ScrollChangedEvent, (_, _) => Follow(), RoutingStrategies.Bubble, handledEventsToo: true);
         window.Activated += (_, _) => main.WindowFocus(true);
@@ -60,6 +65,23 @@ public sealed partial class PadNavigator
         };
         main.PadReader.Pad += pad => Dispatcher.UIThread.Post(() => Read(pad));
         main.PadReader.Released += () => Dispatcher.UIThread.Post(_intents.Reset);
+    }
+
+    /// <summary>The page's place in the interface that shows (the window sets it when the interface changes: the
+    /// classic one's, or the redesigned one's).</summary>
+    public Control? Page { get; set; }
+
+    /// <summary>The page's main action pressed, as Start presses it (the redesigned interface's S key). False: the
+    /// page has none.</summary>
+    public bool PressMain()
+    {
+        var scope = Scope();
+        if (MainAction(scope, Current(scope)) is not { } main)
+        {
+            return false;
+        }
+        PadActions.Press(main);
+        return true;
     }
 
     /// <summary>The pad's mark shows (the pad was used since the mouse last moved).</summary>
@@ -96,13 +118,28 @@ public sealed partial class PadNavigator
     public void Act(PadIntent intent)
     {
         ArgumentNullException.ThrowIfNull(intent);
+        if (_main.ExperimentalUi && intent is PadPressed { Button: PadButton.A or PadButton.B } face)
+        {
+            // the redesigned interface's "Confirm button": the right face button confirms (the classic one: as ever)
+            var (family, confirmRight) = _main.Shell.PadLook();
+            intent = new PadPressed(PadIcons.Swap(face.Button, confirmRight, family));
+        }
         var scope = Scope();
         var on = Current(scope);
+        if (_main.ExperimentalUi)
+        {
+            _main.Shell.PadInUse = true;   // the hints show the pad's buttons
+        }
         if (!Showing && intent is PadMoved or PadPressed { Button: PadButton.A })
         {
-            // the first press shows where the pad is; it does not act
-            Land(on ?? First(scope), glide: false);
-            return;
+            // the first press shows where the pad is; it does not act. The redesigned interface draws the focus
+            // itself: there it acts at once on what has the focus, and only lands when nothing has it.
+            if (!_main.ExperimentalUi || on is null)
+            {
+                Land(on ?? (scope == _window ? Landing() : null) ?? First(scope), glide: false);
+                return;
+            }
+            Land(on, glide: false);
         }
         switch (intent)
         {
@@ -135,30 +172,212 @@ public sealed partial class PadNavigator
                     Dispatcher.UIThread.Post(() => Land(garage.CurrentCard() ?? First(Scope()), glide: true), DispatcherPriority.Loaded);
                 }
                 break;
-            case PadPressed { Button: PadButton.L or PadButton.R } shoulder when scope == _window:
-                Paged(_main.StepTab(shoulder.Button == PadButton.L ? -1 : 1));
-                break;
-            case PadPressed { Button: PadButton.Z } when scope == _window:
-                Paged(_main.NextSection());
+            case PadPressed { Button: PadButton.L or PadButton.R or PadButton.Z or PadButton.X or PadButton.Y } paging:
+                Shoulder(scope, paging.Button);
                 break;
             case PadScrolled scrolled:
-                Scroll(on, scrolled.By);
+                Scroll(on, scrolled.By, vertical: true);
+                Scroll(on, scrolled.Across, vertical: false);
                 break;
             default:
                 break;
         }
     }
 
-    private void Move(Visual scope, Control? on, PadMoved moved)
+    /// <summary>The shoulders and X and Y. In the redesigned interface X and Y are the chat and the main menu from
+    /// anywhere (<see cref="ChatOrHome"/>); Z (R1 in the standard layout) steps through the sub-tabs where the pad is, a
+    /// sheet's too, and where there are none it is the page's second action (the lobby's panel, the room's rules, the
+    /// race's racers: <c>ShellViewModel.Context</c>, which closes the panel it opened when pressed again); the
+    /// others go to another place with nothing open over the page.</summary>
+    private void Shoulder(Visual scope, PadButton button)
+    {
+        if (_main.ExperimentalUi && button is PadButton.X or PadButton.Y)
+        {
+            ChatOrHome(button);
+        }
+        else if (button == PadButton.Z && _main.ExperimentalUi)
+        {
+            if (!StepTab(1) && _main.Shell.Context())
+            {
+                AfterPage();
+            }
+        }
+        else if (scope == _window)
+        {
+            Places(button);
+        }
+    }
+
+    /// <summary>The redesigned interface's X and Y (the owner, 2026-11-15): X opens and closes the chat, Y goes to the
+    /// main menu (asked first where something would be lost or missed: <c>HubViewModel.GoHome</c>), the pad then on the
+    /// hub's first entry. Not while a question or the keyboard on the screen is open, nor before the first start is
+    /// through.</summary>
+    private void ChatOrHome(PadButton button)
+    {
+        var shell = _main.Shell;
+        if (button == PadButton.X)
+        {
+            shell.ToggleChat();
+            return;
+        }
+        if (!_main.Navigation || shell.AskingConfirm || shell.KeyboardOpen)
+        {
+            return;
+        }
+        var before = _main.Current;
+        if (before is ViewModels.NextUi.HubViewModel && !shell.OverPage)
+        {
+            return;   // (the main menu already)
+        }
+        shell.Hub.GoHomeCommand.Execute(null);
+        if (!ReferenceEquals(before, _main.Current))
+        {
+            Hear(LauncherSound.Back);
+            Paged(true);
+        }
+    }
+
+    /// <summary>The buttons that go to another place, with nothing open over the page. The classic interface: L and
+    /// R through the tabs, Z through a tab's pages. The redesigned one: L and R through the areas (its X, Y and Z are
+    /// <see cref="Shoulder"/>'s).</summary>
+    private void Places(PadButton button)
+    {
+        var by = button == PadButton.L ? -1 : 1;
+        if (!_main.ExperimentalUi)
+        {
+            if (button is PadButton.L or PadButton.R)
+            {
+                Paged(_main.StepTab(by));
+            }
+            else if (button == PadButton.Z)
+            {
+                Paged(_main.NextSection());
+            }
+            return;
+        }
+        switch (button)
+        {
+            case PadButton.L or PadButton.R:
+                Paged(_main.Shell.StepArea(by));
+                break;
+            default:
+                break;
+        }
+    }
+
+    /// <summary>An arrow key of the redesigned interface: the focus moves as the D-pad moves it, a row's value steps
+    /// left and right; with nothing focused, the page's first control takes it. Quiet (the keyboard never sounds).
+    /// False: nothing moved (the key goes on: a list scrolls).</summary>
+    public bool Arrow(PadMove move)
+    {
+        var scope = Scope();
+        _keys = true;
+        try
+        {
+            return Move(scope, Current(scope), new PadMoved(move, Repeat: false));
+        }
+        finally
+        {
+            _keys = false;
+        }
+    }
+
+    /// <summary>B, Escape and Backspace in the redesigned interface, before they leave the page: the focus back on the
+    /// page's own list (<c>PadNav.Home</c>: the Garage's machines, the lobbies, the servers, the replays, the courses)
+    /// when it is elsewhere on the page (a card's button, the actions beside the list), on the item the page says (the
+    /// machine on the stage, the course picked) or the list's first. False: the focus is in the list already, on no
+    /// control, over a panel, or the page has no list; the page is left then.</summary>
+    public bool FocusHome(bool heard = false)
+    {
+        var scope = Scope();
+        if (scope != _window || Page is not Visual page || Current(scope) is not { } on || !page.IsVisualAncestorOf(on))
+        {
+            return false;
+        }
+        var home = page.GetVisualDescendants().OfType<Control>().FirstOrDefault(c => PadNav.GetHome(c) && c.IsEffectivelyVisible);
+        if (home is null || home.IsVisualAncestorOf(on))
+        {
+            return false;
+        }
+        var targets = TargetsIn(home);
+        // (the page's own word, not the cursor it kept: B goes back to the list's item, the machine on the stage)
+        var said = page.GetVisualDescendants().OfType<IPadLanding>()
+            .FirstOrDefault(l => l is not Controls.NextUi.PageDeck && l is Visual { IsEffectivelyVisible: true })?.Landing();
+        var to = said is { } landing && home.IsVisualAncestorOf(landing) ? landing
+            : targets.FirstOrDefault(t => t.Classes.Contains("picked") || t.Classes.Contains("on"))
+              ?? (FocusMap.First([.. targets.Select(t => BoxOf(t, _window))]) is { } first ? targets[first] : null);
+        if (to is null)
+        {
+            return false;
+        }
+        if (heard)
+        {
+            Hear(LauncherSound.Back);   // (the pad's B; the keyboard never sounds)
+        }
+        Land(to, glide: true);
+        return true;
+    }
+
+    /// <summary>The next (1) or the previous (-1) of the sub-tabs where the pad is (<c>PadNav.Tabs</c>: Practice's
+    /// cups, the Garage's shelves, the Replays' filter, Stats' best times, the colours' targets), round at the ends,
+    /// pressed as A presses it (the focus then on to its list). R1 on the pad (the GameCube's Z: the standard layout
+    /// leaves L1 free, so R1 goes round), Ctrl+arrows on the keyboard. False: there are none here.</summary>
+    public bool StepTab(int by, bool heard = true)
+    {
+        var scope = Scope();
+        var within = scope == _window ? Page : scope;
+        if (within?.GetVisualDescendants().OfType<Control>().FirstOrDefault(c => PadNav.GetTabs(c) && c.IsEffectivelyVisible) is not { } tabs)
+        {
+            return false;
+        }
+        var chips = TargetsIn(tabs).Where(c => c.IsEffectivelyEnabled).OrderBy(c => BoxOf(c, _window).Y).ThenBy(c => BoxOf(c, _window).X).ToList();
+        if (chips.Count < 2)
+        {
+            return false;
+        }
+        var at = chips.FindIndex(c => c.Classes.Contains("go") || c.Classes.Contains("on"));
+        var to = chips[at < 0 ? (by > 0 ? 0 : chips.Count - 1) : (at + by + chips.Count) % chips.Count];
+        if (heard)
+        {
+            Hear(LauncherSound.Cursor);
+        }
+        PadActions.Press(to);
+        return true;
+    }
+
+    /// <summary>Page Up (-1) and Page Down (1): the list or page round the focus scrolls by most of its height. False:
+    /// nothing scrolls there.</summary>
+    public bool ScrollPage(int by)
+    {
+        var from = (Visual?)Current(Scope()) ?? Page;
+        for (var at = from; at is not null; at = at.GetVisualParent())
+        {
+            if (at is ScrollViewer scroll && scroll.Extent.Height > scroll.Viewport.Height + 1)
+            {
+                return Scroll(scroll, by * scroll.Viewport.Height * 0.85, vertical: true);
+            }
+        }
+        return false;
+    }
+
+    private bool Move(Visual scope, Control? on, PadMoved moved)
     {
         if (on is null)
         {
-            Land(First(scope), glide: false);
-            return;
+            Land((scope == _window ? Landing() : null) ?? First(scope), glide: false);   // (where the page says, its cursor)
+            return _on is not null;
         }
-        if (PadActions.Step(on, moved.Move, moved.Repeat))
+        if (PadActions.Step(on, moved.Move, moved.Repeat, out var changed))
         {
-            return;
+            if (changed)
+            {
+                Hear(LauncherSound.Cursor);   // (a value changed sounds as a move does)
+            }
+            return true;
+        }
+        if (_main.ExperimentalUi && moved.Move is PadMove.Left or PadMove.Right && PadNav.IsValue(on) && on.IsEffectivelyEnabled)
+        {
+            return true;   // (the redesigned interface: left and right on a value step it, and at its end stay on it)
         }
         if (moved.Move is PadMove.Left or PadMove.Right && GarageView.IsCard(on)
             && !(moved.Move == PadMove.Left && on.FindAncestorOfType<GarageView>()!.AtRowStart(on)))
@@ -169,8 +388,9 @@ public sealed partial class PadNavigator
             {
                 Hear(LauncherSound.Cursor);
                 Land(tile, glide: true);
+                return true;
             }
-            return;
+            return false;
         }
         var targets = TargetsIn(scope);
         var boxes = targets.Select(t => BoxOf(t, _window)).ToList();
@@ -178,14 +398,29 @@ public sealed partial class PadNavigator
         {
             Hear(LauncherSound.Cursor);
             Land(targets[next], glide: true);
+            return true;
         }
+        return false;
     }
 
     /// <summary>B: what is open over the page closes (the question before ray tracing: cancel; the question before
     /// leaving a lobby: stay; the notices' list; a replay's file actions or results), else the page goes one step up.</summary>
     private void Back(Control? on)
     {
-        if (_main.Graphics.Asking)
+        if (_main.ExperimentalUi)
+        {
+            // the redesigned interface: what is open over the page is the shell's to close
+            if (!_main.Shell.CloseOverPage())
+            {
+                BackInPage(on);
+                return;
+            }
+        }
+        else if (_main.Settings.AskingExperimental)
+        {
+            _main.Settings.KeepClassicCommand.Execute(null);   // the question before the experimental UI: not now
+        }
+        else if (_main.Graphics.Asking)
         {
             _main.Graphics.CancelCommand.Execute(null);
         }
@@ -197,7 +432,20 @@ public sealed partial class PadNavigator
         {
             _main.Notices.ToggleListCommand.Execute(null);
         }
-        else if (on?.DataContext is ReplayItem { Acting: false } offered)
+        else
+        {
+            BackInPage(on);
+            return;
+        }
+        Hear(LauncherSound.Back);
+        AfterPage();
+    }
+
+    /// <summary>B with nothing open over the page: what is open in the page closes (a replay's file actions or
+    /// results; the Garage's Sort &amp; filter panel; its PREVIEW: back to SELECT), else the page goes one step up.</summary>
+    private void BackInPage(Control? on)
+    {
+        if (on?.DataContext is ReplayItem { Acting: false } offered)
         {
             offered.Offer = "actions";
         }
@@ -223,7 +471,11 @@ public sealed partial class PadNavigator
         }
         else
         {
-            if (_main.Back())
+            if (_main.ExperimentalUi && FocusHome(heard: true))
+            {
+                return;   // (the page's own list first; B again leaves the page)
+            }
+            if (_main.ExperimentalUi ? _main.Shell.Back() : _main.Back())
             {
                 Hear(LauncherSound.Back);
                 Paged(true);
@@ -236,19 +488,30 @@ public sealed partial class PadNavigator
 
     /// <summary>The Garage the pad is in: round its control, else the page's (the lobby's, or the Garage page).</summary>
     private GarageView? GarageIn(Control? on) =>
-        on?.FindAncestorOfType<GarageView>() ?? (_page as Visual)?.GetVisualDescendants().OfType<GarageView>().FirstOrDefault(g => g.IsEffectivelyVisible);
+        on?.FindAncestorOfType<GarageView>() ?? (Page as Visual)?.GetVisualDescendants().OfType<GarageView>().FirstOrDefault(g => g.IsEffectivelyVisible);
 
     /// <summary>A navigation sound, when the settings have them on (<see cref="LauncherSounds.Heard"/>).</summary>
-    private void Hear(LauncherSound sound) => Attention.Sound(sound, _main.SoundSettings);
+    private void Hear(LauncherSound sound)
+    {
+        if (!_keys)
+        {
+            Attention.Sound(sound, _main.SoundSettings);
+        }
+    }
 
     /// <summary>The page changed under the pad: once it is laid out, the pad is on its first control.</summary>
     private void Paged(bool changed)
     {
         if (changed)
         {
-            Dispatcher.UIThread.Post(() => Land(First(Scope()), glide: true), DispatcherPriority.Loaded);
+            Dispatcher.UIThread.Post(() => Land(Landing() ?? First(Scope()), glide: true), DispatcherPriority.Loaded);
         }
     }
+
+    /// <summary>Where a page says the pad lands on it (<see cref="IPadLanding"/>); null: the page says nothing.</summary>
+    private Control? Landing() =>
+        (Page as Visual)?.GetVisualDescendants().OfType<IPadLanding>().FirstOrDefault(l => l is Visual { IsEffectivelyVisible: true })?.Landing() is { } on
+        && Usable(on, Scope()) ? on : null;
 
     /// <summary>A press may have changed what shows (a row's actions, a question, a page): once laid out, the pad
     /// stays on its control, or lands on the first of what shows now.</summary>
@@ -308,18 +571,38 @@ public sealed partial class PadNavigator
     private Rect MarkBox(Control control) =>
         BoxOf(control, _mark) is var b ? new Rect(b.X, b.Y, b.Width, b.Height) : default;
 
-    /// <summary>The C-stick: the list or page round the pad's control scrolls.</summary>
-    private void Scroll(Control? on, double by)
+    /// <summary>The C-stick: the list or page round the pad's control scrolls, up and down or to the side (the first
+    /// round it that scrolls that way).</summary>
+    private void Scroll(Control? on, double by, bool vertical)
     {
-        var from = (Visual?)on ?? _page;
+        if (by == 0)
+        {
+            return;
+        }
+        var from = (Visual?)on ?? Page;
         for (var at = from; at is not null; at = at.GetVisualParent())
         {
-            if (at is ScrollViewer scroll && scroll.Extent.Height > scroll.Viewport.Height + 1)
+            if (at is ScrollViewer scroll && Scroll(scroll, by, vertical))
             {
-                scroll.Offset = scroll.Offset.WithY(Math.Clamp(scroll.Offset.Y + by, 0, scroll.Extent.Height - scroll.Viewport.Height));
                 return;
             }
         }
+    }
+
+    /// <summary>A scroll viewer scrolled that way, within its ends. False: it does not scroll that way.</summary>
+    private static bool Scroll(ScrollViewer scroll, double by, bool vertical)
+    {
+        if (vertical && scroll.Extent.Height > scroll.Viewport.Height + 1)
+        {
+            scroll.Offset = scroll.Offset.WithY(Math.Clamp(scroll.Offset.Y + by, 0, scroll.Extent.Height - scroll.Viewport.Height));
+            return true;
+        }
+        if (!vertical && scroll.Extent.Width > scroll.Viewport.Width + 1)
+        {
+            scroll.Offset = scroll.Offset.WithX(Math.Clamp(scroll.Offset.X + by, 0, scroll.Extent.Width - scroll.Viewport.Width));
+            return true;
+        }
+        return false;
     }
 
     private void Tick()
@@ -338,16 +621,43 @@ public sealed partial class PadNavigator
         }
     }
 
-    /// <summary>The mouse moved (more than a jitter) or was used: the pad's mark goes.</summary>
+    /// <summary>The mouse moved (more than a jitter) or was used: the pad's mark goes. In the redesigned interface the
+    /// control the mouse moved onto takes the focus, as the pad's move gives it (<see cref="NextUi.NextFocus"/>), with
+    /// the same sound: the game's cursor, when the settings have the navigation's sounds on.</summary>
     private void OnPointerMoved(object? sender, PointerEventArgs e)
     {
         var at = e.GetPosition(_window);
         if (_pointer is { } before && Math.Abs(at.X - before.X) + Math.Abs(at.Y - before.Y) > 3)
         {
             Leave();
+            if (_main.ExperimentalUi && NextUi.NextFocus.Hover(_window, e))
+            {
+                Attention.Sound(LauncherSound.Cursor, _main.SoundSettings);
+            }
         }
         _pointer = at;
     }
 
     private void Leave() => _mark.Hide();
+
+    /// <summary>In the redesigned interface a large button pressed, the way into a place (its class "confirms": the
+    /// hub's four entries, More's cards, Settings' groups), by the pointer, the keys or the pad alike: the game's
+    /// confirm, the sound of "Use this machine" (the owner, 2026-11-15), heard as the menu's sounds are. The top
+    /// bar's way to a place pressed (the launcher's name, an area): the focus goes on to the page, as the pad's L and R
+    /// take it, and the button keeps no focus (its look stayed lit after a click, as if the pointer were still on it).</summary>
+    private void OnPressed(object? sender, RoutedEventArgs e)
+    {
+        if (!_main.ExperimentalUi || e.Source is not Button button)
+        {
+            return;
+        }
+        if (button.Classes.Contains("confirms"))
+        {
+            Attention.Sound(LauncherSound.Confirm, _main.SoundSettings);
+        }
+        if (button.Classes.Contains("wordmark") || button.Classes.Contains("area"))
+        {
+            Paged(true);
+        }
+    }
 }

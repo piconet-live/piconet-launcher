@@ -20,6 +20,9 @@ public sealed partial class GarageViewModel : ViewModelBase
 {
     private const int SaveDelayMs = 400;
     private readonly AppState _state;
+
+    /// <summary>The settings a sound of the Garage's plays by (the boost's in the preview).</summary>
+    public LauncherSettings SoundSettings => _state.Settings;
     private int _changes;     // counts changes, so a save waits for the last
     private bool _changed;    // a change not kept yet
     private bool _loading;
@@ -66,6 +69,7 @@ public sealed partial class GarageViewModel : ViewModelBase
                 }
             }
         };
+        HearStage();
         LoadLenses();
         Shelf = FirstShelf();
         foreach (var tab in ShelfTabs)
@@ -204,6 +208,7 @@ public sealed partial class GarageViewModel : ViewModelBase
         {
             card.Selected = card.Id == lit;
         }
+        OnPropertyChanged(nameof(StagedInUse));   // (the redesigned page's stage: GarageViewModel.Stage.cs)
     }
 
     /// <summary>A swatch: stock colour 0-3, or -1 the player's paint.</summary>

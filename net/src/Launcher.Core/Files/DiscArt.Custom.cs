@@ -61,6 +61,31 @@ public sealed partial class DiscArt
     public IReadOnlyList<Online.Protocol.Rgb>? PartTrailColours(int booster) =>
         CustomPartTables.KindOf(booster) == PartKind.Booster && Read(PartFile(booster, "fmi")) is { } fmi ? BurnerColours.Read(fmi) : null;
 
+    /// <summary>A custom machine's burners (<see cref="BurnerColours.Burners"/>): its booster's, moved to where the body
+    /// puts the booster; null for ids of another kind, or when a file is missing or cannot be read.</summary>
+    public IReadOnlyList<Burner>? CustomBurners(int body, int booster)
+    {
+        if (CustomPartTables.KindOf(body) != PartKind.Body || CustomPartTables.KindOf(booster) != PartKind.Booster)
+        {
+            return null;
+        }
+        try
+        {
+            var fmi = Read(PartFile(body, "fmi"));
+            if (fmi is null || fmi.Length < BoosterPoint + 12 || Read(PartFile(booster, "fmi")) is not { } parts)
+            {
+                return null;
+            }
+            var to = new Vector3(BinaryPrimitives.ReadSingleBigEndian(fmi.AsSpan(BoosterPoint)),
+                BinaryPrimitives.ReadSingleBigEndian(fmi.AsSpan(BoosterPoint + 4)), BinaryPrimitives.ReadSingleBigEndian(fmi.AsSpan(BoosterPoint + 8)));
+            return Finite(to) ? [.. BurnerColours.Burners(parts).Select(b => b with { At = b.At + to })] : null;
+        }
+        catch (Exception e) when (Unreadable(e))
+        {
+            return null;
+        }
+    }
+
     /// <summary>A part's file: <c>vehicle_parts/parts_bdy01.gma</c> for body 0.</summary>
     private static string PartFile(int part, string extension)
     {

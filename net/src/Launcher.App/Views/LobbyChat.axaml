@@ -26,9 +26,9 @@
       <TextBlock Grid.Column="1" Name="ChatNote" Text="{Binding ChatNote}" />
     </Grid>
     <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,8,Auto" Margin="0,8,0,0">
-      <TextBox Classes="field" Text="{Binding Message}" MaxLength="200"
+      <TextBox Name="MessageBox" Classes="field" Text="{Binding Message}" MaxLength="200"
                KeyDown="OnMessageKey" AutomationProperties.Name="Message" />
-      <Button Grid.Column="2" Classes="secondary" Content="Send" Command="{Binding SendCommand}" />
+      <Button Name="Send" Grid.Column="2" Classes="secondary soft" Content="Send" Command="{Binding SendCommand}" />
     </Grid>
     <Panel>
       <ScrollViewer Name="Lines" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
@@ -41,18 +41,20 @@
               <Panel IsVisible="{Binding Server}" Margin="0,4">
                 <v:NoticeCard DataContext="{Binding Notice}" />
               </Panel>
-              <Grid ColumnDefinitions="18,*" MinHeight="20" IsVisible="{Binding !Server}">
+              <Border Classes="chatline" Classes.you="{Binding You}" IsVisible="{Binding !Server}">
+              <Grid ColumnDefinitions="18,*" MinHeight="20">
                 <Border Classes="chip" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="0,5,0,0"
                         Background="{Binding ColorHex, Converter={x:Static v:HexToBrush.Instance}}" />
                 <SelectableTextBlock Grid.Column="1" TextWrapping="Wrap" SelectionBrush="{StaticResource SelectBrush}"
                                      Background="Transparent" ContextFlyout="{StaticResource LineMenu}">
-                  <Run Text="{Binding Name}" FontWeight="SemiBold" /><Run FontSize="{StaticResource Size12}"
+                  <Run Classes="chatname" Text="{Binding Name}" FontWeight="SemiBold" /><Run FontSize="{StaticResource Size12}"
                        Foreground="{StaticResource DimBrush}"><Run.Text><MultiBinding Converter="{x:Static v:TagWhilePointed.Instance}"><Binding
                        Path="TagText" /><Binding Path="$parent[SelectableTextBlock].IsPointerOver" /><Binding
                        Path="$parent[SelectableTextBlock].SelectedText" /></MultiBinding></Run.Text></Run><Run
-                       Text="  " /><Run Text="{Binding Text}" Foreground="{StaticResource DimBrush}" />
+                       Text="  " /><Run Classes="chattext" Text="{Binding Text}" Foreground="{StaticResource DimBrush}" />
                 </SelectableTextBlock>
               </Grid>
+              </Border>
               </Panel>
             </DataTemplate>
           </ItemsControl.ItemTemplate>

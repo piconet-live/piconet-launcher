@@ -49,10 +49,14 @@ public sealed class GameSounds
     /// (<see cref="LobbyTones.Peak"/>); null when the game has no sound for it.</summary>
     public byte[]? Wave(LauncherSound sound, int volume)
     {
-        if (Of(sound) is not { } game)
-        {
-            return null;
-        }
+        return Of(sound) is { } game ? Wave(game, volume) : null;
+    }
+
+    /// <summary>A sound of the game as a wave file at a volume of 0 to 100, its loudest sample at the launcher's tones'
+    /// level (<see cref="LobbyTones.Peak"/>).</summary>
+    public static byte[] Wave(GameSound game, int volume)
+    {
+        ArgumentNullException.ThrowIfNull(game);
         var top = game.Samples.Length == 0 ? 0 : game.Samples.Max(s => Math.Abs((int)s));
         var scale = top > 0 ? short.MaxValue * LobbyTones.Peak * (Math.Clamp(volume, 0, 100) / 100.0) / top : 0;
         var samples = game.Samples.Select(s => (short)Math.Round(s * scale)).ToArray();

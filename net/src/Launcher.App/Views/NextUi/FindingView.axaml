@@ -1,0 +1,20 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             x:Class="Launcher.App.Views.NextUi.FindingView"
+             x:DataType="vm:LobbyViewModel">
+  <!-- The redesigned interface's lobby while there is none yet (the queue, or the connection being made): that a
+       race is being found, what the server said last, and the way out. -->
+  <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="18">
+    <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+      <Border Classes="seek" />
+      <Border Classes="seek second" />
+      <Border Classes="seek third" />
+    </StackPanel>
+    <TextBlock Name="Title" Classes="heading" FontSize="64" LineHeight="68" HorizontalAlignment="Center" RenderTransform="skewX(-10deg)"
+               Text="FINDING A RACE" />
+    <TextBlock Name="Line" Classes="lead" FontSize="19" HorizontalAlignment="Center" Text="{Binding StepNote}" />
+    <Button Name="LeaveQueue" Classes="soft" Height="50" Padding="30,0" Margin="0,16,0,0" HorizontalAlignment="Center"
+            Content="Leave the queue" Command="{Binding LeaveCommand}" AutomationProperties.Name="Leave the queue" />
+  </StackPanel>
+</UserControl>

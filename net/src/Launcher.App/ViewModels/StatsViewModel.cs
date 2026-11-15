@@ -47,6 +47,12 @@ public sealed partial class StatsViewModel : ViewModelBase
 
     public ObservableCollection<StatTile> Tiles { get; } = [];
 
+    /// <summary>The first three figures (Races, Wins, Podiums): the redesigned page's large ones.</summary>
+    public IReadOnlyList<StatTile> Highlights => [.. Tiles.Take(3)];
+
+    /// <summary>The others (the average place, the knock-outs): the redesigned page's "More numbers".</summary>
+    public IReadOnlyList<StatTile> OtherTiles => [.. Tiles.Skip(3)];
+
     public ObservableCollection<FormMark> Form { get; } = [];
 
     public ObservableCollection<CourseLine> MostRaced { get; } = [];
@@ -111,6 +117,8 @@ public sealed partial class StatsViewModel : ViewModelBase
         {
             Tiles.Add(tile);
         }
+        OnPropertyChanged(nameof(Highlights));
+        OnPropertyChanged(nameof(OtherTiles));
         Form.Clear();
         foreach (var row in part.Recent)
         {

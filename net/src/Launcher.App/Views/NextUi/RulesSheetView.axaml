@@ -1,0 +1,23 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:nx="using:Launcher.App.ViewModels.NextUi"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:nxv="using:Launcher.App.Views.NextUi"
+             xmlns:v="using:Launcher.App.Views"
+             x:Class="Launcher.App.Views.NextUi.RulesSheetView"
+             x:DataType="nx:RulesSheetViewModel">
+  <!-- Every rule of a custom lobby (the room's All rules, the pad's Y): rows that say their value, those that differ
+       from Quick Play's in the accent; Close at its foot. -->
+  <DockPanel Margin="32,28,28,24">
+    <StackPanel DockPanel.Dock="Top" Spacing="2">
+      <TextBlock Classes="eyebrow" Text="{Binding Name, Converter={x:Static v:UpperText.Instance}}" />
+      <TextBlock Name="Title" Classes="heading" FontSize="40" LineHeight="44" RenderTransform="skewX(-10deg)" RenderTransformOrigin="0%,100%"
+                 Text="ALL RULES" />
+    </StackPanel>
+    <Button DockPanel.Dock="Bottom" Name="Close" Classes="soft" Margin="4,16,8,0" HorizontalAlignment="Stretch" Content="Close"
+            Command="{Binding $parent[nxv:NextShell].((vm:MainViewModel)DataContext).Shell.CloseSheetCommand}" AutomationProperties.Name="Close" />
+    <ScrollViewer Margin="0,16,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <nxv:OptionList Name="Rows" Margin="0,0,12,0" Groups="{Binding Groups}" />
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

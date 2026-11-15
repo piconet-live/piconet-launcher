@@ -1,0 +1,114 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:c="using:Launcher.App.Controls"
+             xmlns:n="using:Launcher.App.Controls.NextUi"
+             xmlns:nxv="using:Launcher.App.Views.NextUi"
+             x:Class="Launcher.App.Views.NextUi.GatherView"
+             x:DataType="vm:LobbyViewModel">
+  <!-- The redesigned interface's lobby while it gathers: on the left who is here, a tile a racer (their paint down
+       its edge); on the right the one thing to do, the vote to start, with how far it is, and under it the vote on
+       CPUs in the empty seats where the server leaves that to the players, and "Practice while you wait" (the seat
+       is kept; the lobby calls the player back when it moves on). The card keeps its place and its size: the CPU
+       vote has its room whether it shows or not. The player's own tile says when they want to start (the server names
+       nobody's vote, so the others' are not known). -->
+  <Grid Margin="14,8,0,12" ColumnDefinitions="*,48,400">
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
+      <TextBlock Classes="eyebrow" FontSize="14" Text="QUICK PLAY" />
+      <TextBlock Grid.Row="1" Name="Title" Classes="heading" RenderTransform="skewX(-10deg)" RenderTransformOrigin="0%,100%"
+                 Margin="0,4,0,10" Text="WAITING FOR RACERS" />
+      <TextBlock Grid.Row="2" Name="Line" Classes="lead" Margin="0,4,0,0" Text="{Binding GatherLine}" />
+      <TextBlock Grid.Row="3" Name="Count" Classes="eyebrow" FontSize="14" Margin="0,22,0,8"
+                 Text="{Binding RosterTitle, Converter={x:Static v:UpperText.Instance}}" />
+      <ScrollViewer Grid.Row="4" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <ItemsControl Name="People" ItemsSource="{Binding People}" VerticalAlignment="Top">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <UniformGrid Columns="3" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:SeatRow">
+              <n:Chamfer Classes="tile" Margin="0,0,10,10" Bar="{Binding ColorHex, Converter={x:Static v:HexToBrush.Instance}}">
+                <Grid ColumnDefinitions="*,Auto,Auto" Margin="16,0">
+                  <c:NameTagText PlayerName="{Binding Name}" PlayerTag="{Binding Tag}" VerticalAlignment="Center"
+                                 Classes.you="{Binding You}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Grid.Column="1" Name="Wants" Classes="wants" FontSize="13" VerticalAlignment="Center" Margin="8,0"
+                             Text="Wants to start">
+                    <TextBlock.IsVisible>
+                      <MultiBinding Converter="{x:Static BoolConverters.And}">
+                        <Binding Path="You" />
+                        <Binding Path="$parent[UserControl].((vm:LobbyViewModel)DataContext).YouWantToStart" />
+                      </MultiBinding>
+                    </TextBlock.IsVisible>
+                  </TextBlock>
+                  <TextBlock Grid.Column="2" Classes="quiet" FontSize="14" VerticalAlignment="Center" FontFeatures="tnum"
+                             Text="{Binding Ping}" />
+                </Grid>
+              </n:Chamfer>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Grid>
+
+    <n:Chamfer Grid.Column="2" Classes="plate" VerticalAlignment="Bottom">
+      <StackPanel Margin="26" Spacing="14">
+        <TextBlock Classes="eyebrow" Text="START THE RACE" />
+        <TextBlock Name="StartLine" FontSize="18" FontWeight="SemiBold" FontFeatures="tnum" Text="{Binding StartLine}" />
+        <Border Classes="meter">
+          <Border RenderTransform="{Binding StartShare, Converter={x:Static v:ShareToScale.Instance}}" />
+        </Border>
+        <Button Name="VoteStart" Classes="main" Height="54" Margin="4,6,4,0" HorizontalAlignment="Stretch" Content="VOTE TO START"
+                Command="{Binding VoteStartCommand}" IsEnabled="{Binding CanVoteStart}" c:PadNav.Main="True"
+                AutomationProperties.Name="Vote to start" />
+        <!-- CPUs in the empty seats, where the players vote on it: its room is kept where they do not -->
+        <StackPanel Name="CpuVote" Spacing="14" Margin="0,8,0,0" Classes.off="{Binding !CpuVoteShown}">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="eyebrow" Text="CPU RACERS IN EMPTY SEATS?" />
+            <TextBlock Grid.Column="1" Classes="quiet" FontSize="14" FontFeatures="tnum" Text="{Binding CpuVotes}" />
+          </Grid>
+          <Grid ColumnDefinitions="*,12,*" Margin="4,0">
+            <Button Name="CpuYes" Classes="soft" Height="46" HorizontalAlignment="Stretch" Content="Yes" Command="{Binding VoteCpuCommand}"
+                    CommandParameter="yes" IsEnabled="{Binding CpuVoteShown}" AutomationProperties.Name="CPU racers: yes" />
+            <Button Grid.Column="2" Name="CpuNo" Classes="soft" Height="46" HorizontalAlignment="Stretch" Content="No"
+                    Command="{Binding VoteCpuCommand}" CommandParameter="no" IsEnabled="{Binding CpuVoteShown}"
+                    AutomationProperties.Name="CPU racers: no" />
+          </Grid>
+        </StackPanel>
+        <!-- a practice while the lobby gathers (a watcher has no seat to keep: its room stays) -->
+        <Button Name="PracticeWait" Classes="line" MinHeight="46" Margin="0,4,0,0" Background="{StaticResource NextRaisedBrush}"
+                Classes.off="{Binding Watching}" IsEnabled="{Binding !Watching}"
+                Command="{Binding $parent[nxv:NextShell].((vm:MainViewModel)DataContext).Shell.PracticeWhileWaitingCommand}"
+                AutomationProperties.Name="Practice while you wait">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock VerticalAlignment="Center" Text="Practice while you wait" />
+            <Viewbox Grid.Column="1" Width="14" Height="14" VerticalAlignment="Center">
+              <Canvas Width="24" Height="24">
+                <Path Classes="stroke" Data="M9 5L16 12L9 19" StrokeThickness="2.4" />
+              </Canvas>
+            </Viewbox>
+          </Grid>
+        </Button>
+      </StackPanel>
+    </n:Chamfer>
+  </Grid>
+  <UserControl.Styles>
+    <Style Selector="StackPanel#CpuVote.off, Button#PracticeWait.off">
+      <Setter Property="Opacity" Value="0" />
+      <Setter Property="IsHitTestVisible" Value="False" />
+    </Style>
+    <Style Selector="TextBlock.wants">
+      <Setter Property="Foreground" Value="{StaticResource NextAccentBrush}" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="c|NameTagText">
+      <Setter Property="FontSize" Value="17" />
+      <Setter Property="FontWeight" Value="Medium" />
+    </Style>
+    <Style Selector="c|NameTagText.you">
+      <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+  </UserControl.Styles>
+</UserControl>

@@ -1,0 +1,49 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:nx="using:Launcher.App.ViewModels.NextUi"
+             xmlns:nxv="using:Launcher.App.Views.NextUi"
+             xmlns:c="using:Launcher.App.Controls"
+             x:Class="Launcher.App.Views.NextUi.AboutView"
+             x:DataType="nx:AboutViewModel">
+  <!-- More › About: the version (a test build's mark), the update and its one action, the two switches as option
+       rows (Update automatically, Developer mode; Experimental UI is Settings' alone, Launcher), What's new (the release notes in the browser),
+       Licences (a panel). -->
+  <ScrollViewer Name="AboutScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+  <StackPanel Margin="14,8,16,16" Spacing="10" MaxWidth="820" HorizontalAlignment="Left">
+    <StackPanel Spacing="4" Margin="0,0,0,8">
+      <TextBlock Classes="eyebrow" FontSize="14" Text="MORE" />
+      <TextBlock Name="Title" Classes="heading" FontSize="52" LineHeight="56" RenderTransform="skewX(-10deg)" RenderTransformOrigin="0%,100%"
+                 Text="ABOUT" />
+      <TextBlock Name="Version" Classes="lead" Text="{x:Static nx:AboutViewModel.VersionLine}" />
+      <TextBlock Classes="devline" Text="{Binding BuildMark}" IsVisible="{Binding HasBuildMark}" />
+    </StackPanel>
+    <!-- the update: where it stands, and the action that fits (Restart to update, Download, Check now) -->
+    <Button Name="Updates" Classes="line" Height="64" Command="{Binding Update.ActCommand}" AutomationProperties.Name="Updates">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel VerticalAlignment="Center" Spacing="2">
+          <TextBlock FontSize="17" Text="Updates" />
+          <TextBlock Name="UpdateLine" Classes="quiet" FontSize="14" TextTrimming="CharacterEllipsis" Text="{Binding Update.SettingsLine}" />
+        </StackPanel>
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="16,0,0,0">
+          <TextBlock Name="UpdateAction" FontWeight="SemiBold" HorizontalAlignment="Right" Foreground="{StaticResource NextAccentBrush}" Text="{Binding Update.ActionText}" />
+          <TextBlock Classes="quiet" FontSize="13" HorizontalAlignment="Right" Text="{Binding Update.Reason}"
+                     IsVisible="{Binding Update.Reason, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        </StackPanel>
+      </Grid>
+    </Button>
+    <nxv:OptionList Name="Switches" Groups="{Binding Switches}" />
+    <Button Name="WhatsNew" Classes="line" Height="64" Click="OnWhatsNew" AutomationProperties.Name="What's new">
+      <StackPanel VerticalAlignment="Center" Spacing="2">
+        <TextBlock FontSize="17" Text="What's new" />
+        <TextBlock Classes="quiet" FontSize="14" Text="The changes in this version, on the releases page" />
+      </StackPanel>
+    </Button>
+    <Button Name="Licences" Classes="line" Height="64" Command="{Binding OpenLicencesCommand}" AutomationProperties.Name="Licences">
+      <StackPanel VerticalAlignment="Center" Spacing="2">
+        <TextBlock FontSize="17" Text="Licences" />
+        <TextBlock Classes="quiet" FontSize="14" Text="The launcher's, and those of the parts inside it" />
+      </StackPanel>
+    </Button>
+  </StackPanel>
+  </ScrollViewer>
+</UserControl>

@@ -17,6 +17,12 @@
       <Setter Property="BorderBrush" Value="{StaticResource EdgeBrush}" />
       <Setter Property="BorderThickness" Value="0,0,0,1" />
     </Style>
+    <!-- a check box with a sentence beside it: as tall as the sentence -->
+    <Style Selector="CheckBox.box.says">
+      <Setter Property="Height" Value="NaN" />
+      <Setter Property="MinHeight" Value="28" />
+      <Setter Property="HorizontalAlignment" Value="Left" />
+    </Style>
   </UserControl.Styles>
   <!-- Settings in direction C (Theme.axaml): three of the Settings tab's pages (Game, Online, Launcher; Controller is
        its own view), each one form of labelled rows in groups under headings, the one showing by the headings above
@@ -174,9 +180,11 @@
     </Grid>
 
     <!-- Launcher: General (the disc, updates, an older copy), Interface (the launcher's own sounds: the lobby's moments;
-         the pad on the pages; the animations; its size), Replays. One setting a row, an on/off one a switch (as Rumble) -->
+         the pad on the pages; the animations; its size), Replays, Try something new (the experimental UI and the
+         developer mode). One setting a row, an on/off one a switch (as Rumble); the two of Try something new are
+         check boxes with their sentence beside them -->
     <Grid Name="LauncherPage" Classes="form" ColumnDefinitions="196,*" MaxWidth="668" HorizontalAlignment="Left"
-          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" IsVisible="{Binding OnLauncher}">
+          RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" IsVisible="{Binding OnLauncher}">
       <Border Grid.ColumnSpan="2" Classes="group">
         <TextBlock Classes="section" FontSize="18" Text="General" />
       </Border>
@@ -286,6 +294,30 @@
         <Path Classes="warnmark" />
         <TextBlock Grid.Column="1" Text="{Binding FolderNotice}" />
       </Grid>
+
+      <!-- Try something new: the launcher's redesigned interface, behind its box (off by default; ticking it asks
+           first, over the page: MainWindow's ExperimentalQuestion; unticking it is at once), and the developer's
+           data. A check box each, its sentence beside it -->
+      <Border Grid.Row="17" Grid.ColumnSpan="2" Classes="group">
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <TextBlock Classes="section" FontSize="18" Text="Try something new" />
+          <Border Background="{StaticResource AccentBrush}" Padding="6,0,6,1" VerticalAlignment="Center">
+            <TextBlock Classes="caps" Foreground="{StaticResource OnAccentBrush}" Text="NEW" />
+          </Border>
+        </StackPanel>
+      </Border>
+      <TextBlock Grid.Row="18" Classes="label top" Foreground="{StaticResource TextBrush}" FontWeight="SemiBold" Text="Experimental UI" />
+      <CheckBox Grid.Row="18" Grid.Column="1" Name="ExperimentalUi" Classes="box says" IsChecked="{Binding ExperimentalUi}"
+                AutomationProperties.Name="Experimental UI">
+        <TextBlock Classes="dim" TextWrapping="Wrap" MaxWidth="430"
+                   Text="A new look made for controllers, with every setting still there. Switch back here at any time." />
+      </CheckBox>
+      <TextBlock Grid.Row="19" Classes="label top" Foreground="{StaticResource TextBrush}" FontWeight="SemiBold" Text="Developer mode" />
+      <CheckBox Grid.Row="19" Grid.Column="1" Name="DeveloperMode" Classes="box says" IsChecked="{Binding DeveloperMode}"
+                AutomationProperties.Name="Developer mode">
+        <TextBlock Classes="dim" TextWrapping="Wrap" MaxWidth="430"
+                   Text="Shows build, connection, input and file details across the launcher." />
+      </CheckBox>
     </Grid>
   </Panel>
 </UserControl>

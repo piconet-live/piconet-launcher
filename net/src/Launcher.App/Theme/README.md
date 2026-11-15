@@ -9,5 +9,6 @@ on these classes; none sets a colour of its own.
 | `Buttons.axaml` | Everything that is pressed: the big action, buttons, links, tabs, the window's own buttons |
 | `Forms.axaml` | Tables, the set-in view, inputs, segments, check boxes, colour swatches, picture cells, forms |
 | `GameSkin.cs` | The art from the player's disc (pictures, machines in 3D, stock colours), loaded once and put into the application's resources; never raises |
+| `NextUi/` | The redesigned interface's look, theme v3 ("Experimental UI"; off by default): resources of its own names and styles under its root's class, beside this one, which it leaves as it is |
 
 A later style wins over an earlier one: keep the order of the files and of the styles in them.

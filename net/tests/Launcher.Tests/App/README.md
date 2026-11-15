@@ -50,6 +50,8 @@ The few tests of what only `Launcher.App`'s own code does, run without a window 
 - `RaceModeBoardTests.cs`: a mode's `board` lines on the race page (the race's, a racer's as columns, a team's), none for a mode without, none for a player with no game; a replay the game plays, from a status board, until its game ends. With `LOBBY_SHOTS` the pages as PNGs.
 - `Headless.cs`: what the newer tests share: a press with the headless window's mouse, a key, waiting for the page, a
   window with the toolkit's layer for menus.
+- `NextHeadless.cs`: what the `Next*Tests` share: the launcher's window on a state, its shell, the page showing, a
+  button by what it says, an option row, the hints' words, the focus as the pad puts it, and with `NEXT_SHOTS` a PNG.
 - `CustomLobbiesTests.cs`: custom lobbies pressed in the launcher's window: on the stand-in the browser, a locked
   row's password (wrong, then right), the lobby as a joiner (the host's mark, the rules that differ, All rules), back
   to the browser, Create with Edit rules, the lobby as host (Edit rules, START RACE, Kick); on a led server the racer
@@ -74,8 +76,89 @@ The few tests of what only `Launcher.App`'s own code does, run without a window 
 - `VolumeSettingsTests.cs`: the Settings page's game volume moved with the mouse and the keys, then in the game's own
   settings at a start of the game (a script); the launcher's volume heard when set, and Mute. In the Controller
   page's collection: a start of the game ends every controller helper of the process.
+- `ExperimentalUiTests.cs`: the redesigned interface behind its box (Settings, Launcher, "Try something new"), pressed:
+  off by default and left out of the file, a value that is no yes or no read as off; ticking "Experimental UI" asks
+  first, "Not now" and Escape untick it, "Turn it on" puts the new shell in the classic interface's place, kept for
+  the next start, with the controller's navigation on; unticking the box there is at once; "Developer mode" a setting of its own; the new interface's
+  locator gives the classic view of a page it has none for. With `NEXT_SHOTS` set to a folder, the pages there as
+  PNGs (1280 x 720, and at 125%).
+- `NextShellTests.cs`: the redesigned interface's shell on the stand-in service, with the mouse, its keys and the
+  pad's intents: it opens on the hub (the four entries, the big one with the focus); the top bar's areas and Settings
+  lead to their pages, Back at its own place leads out of a page inside one, as Escape and B do, and an area keeps the
+  page last shown in it, as Escape, Backspace, B and the mouse's back button do, and its forward button shows the
+  page Back left again; Ctrl+Tab steps through the areas; nothing in the two bars moves from page to page, with Back showing, or at 125%; a lobby is
+  left only after its question (Stay first, Escape is Stay) and its pill leads back to it; L and R go through the
+  areas, Y the page's second action, X and Z nothing (the chat and the lobbies have their own buttons); the hints name the keys, or the pad's buttons once
+  the pad is used; the pointer moving onto a control sounds the menu's cursor once (none muted), the hub's entries
+  too; a large button pressed (a hub entry, More's cards) sounds the confirm; X on the keyboard opens and closes the
+  chat; the count of the players online is not pressed; the launcher's name pressed keeps no focus; More's cards are
+  not cut at their list's edge; the Garage's machine raced is marked on its tile; unticking the box
+  brings the classic launcher back at once. The plate's shape and the pill's
+  words by themselves. With `NEXT_SHOTS` set to a folder, the pages there as PNGs.
+- `NextPolishTests.cs`: the redesigned interface's finish: Developer mode (the DEV chip and its Diagnostics, its
+  lines in the hint bar, the keys at the rows, Turn off); every text colour of the theme holding 4.5:1 on every
+  ground (measured from the theme's resources); the main actions reachable at 150 %; Reduced motion stilling what
+  runs by itself. With `NEXT_SHOTS` set to a folder, the pages there as PNGs.
+- `NextFirstStartTests.cs`: the redesigned first start on a made-up disc image: Next only with the game's image (one
+  that is not says so), Next prepares the game and the name's step follows with the launcher still shut, the name on
+  the keyboard on the screen, the controller's step, Escape a step back, Let's race opening the launcher on the hub;
+  past the first start, files that are not ready making the hub's last entry Prepare the game, whose panel prepares
+  them. With `NEXT_SHOTS` set to a folder, the steps there as PNGs.
+- `NextSettingsTests.cs`: the redesigned Settings and Controller on the stand-in: Settings in steps (the groups with
+  their lines, a group's rows and the help line, Escape back onto the group it came from), Graphics setting three settings at once and saying Custom, a switch, the Controller page's rows and
+  Back; the keyboard on the screen for the name (Done, Escape) and for a text box the pad presses (the Garage's
+  search); the hints in the chosen family's icons and with the confirm button on the right; and by themselves the
+  families' icons and the confirm button's swap. With `NEXT_SHOTS` set to a folder, the pages there as PNGs.
+- `NextMoreTests.cs`: the redesigned Replays, More and profile with replays written in the test: the tabs and the
+  groups, a replay's panel (its facts, its results, Delete after a question that Escape answers "keep"); More with
+  Stats (the large figures, More numbers), Mods (none yet; then two made up: a mod's panel switches it, moves it up
+  and removes it after a question) and About (a switch as an option row, the licences, no Experimental UI: that is
+  Settings' alone); the profile from the top bar's chip (the name, the figures, the recent races, Change
+  name in a panel, Back to where it was opened). With `NEXT_SHOTS` set to a folder, the pages there as PNGs.
+- `NextGarageTests.cs`: the redesigned Garage on the stand-in: the machine raced on the stage, the grid's focus,
+  its arrow keys and a click showing another without racing it, A taking the focus to Use this machine, Escape (as
+  B) back to the machine on the stage, and A there racing it, the page left putting SELECT back, Use this machine, the setting
+  stepped by five, the star and the Favourites shelf; Sort & filter (Y) leaving out the machines without a letter, the
+  empty shelf's words, Clear the filter, the way round; the colours painting the machine, back to the original, the
+  trail; the builder as an option page (New machine, a part stepped, Save racing it, Edit parts and Back, Remove after
+  a question); and by itself a colour row. With `NEXT_SHOTS` set to a folder, the pages there as PNGs.
+- `NextCustomTests.cs`: the redesigned interface's custom lobbies and Practice on the stand-in: the list and Create
+  lobby (S); Create as an option page (the basic rows, the help line of the row the focus is on, left and right
+  change it, More rules unfolded, a fixed course in a panel that Escape closes first); the room as its host (all the
+  rules with Y, a racer removed after a question that Escape answers "keep", Edit rules and Back without a change,
+  Start race); from a custom lobby Quick Play shows the servers, and a server asks before the lobby is left, then
+  joins; a lobby joined while it races is the player's (its row says so, pressed it is their lobby, nothing asked),
+  another lobby and Create ask first and then join on the same visit, the list kept; Practice (a card picks the course, a cup's chip its courses, a row steps, Escape the course picked first);
+  and by themselves what left,
+  right and A do to each kind of row. With `NEXT_SHOTS` set to a folder, the pages there as PNGs.
+- `NextTipsTests.cs`: every option row of every option page (Settings, Controller, About, Practice, a custom lobby's
+  rules with each of the stand-in's modes) has its own help line, which is also its tip: no placeholder, a whole sentence;
+  and the Settings window says when every setting takes effect, what it applies to, and something good to know.
+- `NextPlayTests.cs`: the redesigned interface's Play out of a lobby, the servers' status answered by the test: Quick
+  Play asks which server (the official one, the one last used, the player's own; the pings, "Best connection" on the
+  quickest, "Last used", the pad's landing; a server added, a wrong address said, a server removed; no button
+  beside the rows, a row sets its server and joins it; the server set's lobbies from the top bar's players online, Back the way it came); "Join a race" and RACE where
+  no Quick Play lobby is open say "No race found" (OK alone) and join nothing; Host a lobby (the panel's, the lobbies
+  page's) is a Quick Play lobby; the top bar's count of the
+  players online (its tip with who races now; no row over the hub's entries), the message of the day's panel and "Hide for today" (another message shows again); "End game" only while a game runs,
+  and its question. By themselves: the lobby's call back from a practice (`LobbyRecall`: once it moves on, the
+  practice ended after the warning; not when the player left; "Back now"), and the settings that keep the player's
+  servers and the hidden message. With `NEXT_SHOTS` set to a folder, the pages there as PNGs.
+- `NextQuickPlayTests.cs`: the redesigned interface's Quick Play against a led server: a page a phase, from the queue
+  through the gathering (a tile a racer; Vote to start sent, its share shown), the course vote (six cards in one
+  row, a press votes, the clock's share) and its draw (the title is the course drawn, the others step back), the
+  machine stage (a tile picks, nothing sent until Ready; the whole Garage opens and Back closes it without leaving;
+  S is Ready), the start, the race watched from the lobby (who leads, the first three, the whole course) and its
+  result on the same page with its parts where they were; Y opens the lobby's panel and the race's racers, and
+  Escape, Y again or a press beside it closes them; "Leave lobby" asks; the race stands on its course's picture. On
+  the stand-in: Quick Play asks which server (the stand-in alone), the top bar's players online lists its lobbies and RACE joins;
+  the launcher's name asks before the main menu from the lobby, and the main menu keeps the seat; "Vote to
+  start" marks the player's own tile; "Practice while you wait" opens Practice with the seat kept, and Back returns
+  to the lobby. A lap's words and share, a grade's parts, the ring's sweep by themselves. With `NEXT_SHOTS`
+  set to a folder, the pages there as PNGs.
 - `SettingsTabsTests.cs`: the Settings tab's four pages pressed by their headings, each with its own rows in groups
-  under headings (Display, Graphics, Sound, Controller; Connection, Social; General, Interface, Replays), each
+  under headings (Display, Graphics, Sound, Controller; Connection, Social; General, Interface, Replays, Try
+  something new), each
   scrolled to its last group in the least window (1280 by 720; with `INPUTS_SHOTS` the pages as PNGs, top and foot); the
   page last chosen kept for this run and the next, a page the file names that is none of them read as Game; RACE
   without a disc and Home's "Choose your disc" open Launcher, RACE without a server Online.

@@ -1,0 +1,65 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:nx="using:Launcher.App.ViewModels.NextUi"
+             xmlns:nxv="using:Launcher.App.Views.NextUi"
+             xmlns:c="using:Launcher.App.Controls"
+             x:Class="Launcher.App.Views.NextUi.PrepareSheetView"
+             x:DataType="nx:PrepareSheetViewModel">
+  <!-- The game's files prepared from the disc image (PrepareSheetViewModel): the image, another one, the one button,
+       and while it works the stage, how far, the bar and Cancel; what went wrong, for another try; Close at the
+       bottom. "Prepare game files" comes first in the tree, as the panel's focus lands on the first button; its row
+       places it under the disc. -->
+  <Grid Margin="32,28,28,24" RowDefinitions="Auto,Auto,Auto,Auto,*,Auto">
+    <Button Grid.Row="2" Name="Prepare" Classes="main" Margin="4,20,8,0" HorizontalAlignment="Stretch" Content="PREPARE GAME FILES"
+            Command="{Binding Disc.ContinueCommand}" IsEnabled="{Binding Disc.Verified}" IsVisible="{Binding Disc.Idle}"
+            c:PadNav.Main="True" AutomationProperties.Name="Prepare game files" />
+
+    <StackPanel Spacing="2">
+      <TextBlock Classes="eyebrow" Text="GAME FILES" />
+      <TextBlock Name="Title" Classes="heading" FontSize="40" LineHeight="44" RenderTransform="skewX(-10deg)" RenderTransformOrigin="0%,100%"
+                 Text="PREPARE THE GAME" />
+      <TextBlock Classes="lead" FontSize="16" TextWrapping="Wrap" Margin="0,10,0,0"
+                 Text="The launcher reads your disc image once and makes the game's files from it. It takes a minute or two." />
+    </StackPanel>
+
+    <!-- the disc image (another one: the system's picker), and whether it is the game's -->
+    <StackPanel Grid.Row="1" Spacing="12" Margin="0,24,0,0">
+      <Button Name="ChooseDisc" Classes="soft" Height="52" Padding="18,0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left"
+              Click="OnChooseDisc" IsEnabled="{Binding Disc.Idle}" AutomationProperties.Name="Choose the disc image">
+        <StackPanel Orientation="Horizontal" Spacing="10">
+          <Viewbox Width="20" Height="20">
+            <Canvas Width="24" Height="24">
+              <Path Classes="stroke" Data="M12 3.5A8.5 8.5 0 1 1 12 20.5A8.5 8.5 0 1 1 12 3.5ZM12 10A2 2 0 1 1 12 14A2 2 0 1 1 12 10Z" StrokeThickness="2" />
+            </Canvas>
+          </Viewbox>
+          <TextBlock VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{Binding Disc.Path, Converter={x:Static nxv:DiscWordsOf.Instance}}" />
+        </StackPanel>
+      </Button>
+      <TextBlock Name="DiscStatus" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" Foreground="{StaticResource NextAccentBrush}"
+                 Text="{Binding Disc.Status}" IsVisible="{Binding Disc.Verified}" />
+      <TextBlock Name="DiscWrong" FontSize="15" TextWrapping="Wrap" Foreground="{StaticResource NextDangerBrush}" Text="{Binding Disc.Status}"
+                 IsVisible="{Binding Disc.Wrong}" />
+    </StackPanel>
+
+    <!-- the preparation: its stage, how far, the bar, Cancel; what went wrong -->
+    <StackPanel Grid.Row="3" Spacing="12" Margin="0,20,0,0">
+      <StackPanel Name="Preparing" Spacing="8" IsVisible="{Binding Disc.Preparing}">
+        <Grid ColumnDefinitions="*,Auto,Auto">
+          <TextBlock Name="Stage" FontWeight="Bold" LetterSpacing="1.1" Text="{Binding Disc.Stage}" />
+          <TextBlock Grid.Column="1" Classes="quiet" FontFeatures="tnum" Margin="0,0,14,0" Text="{Binding Disc.Size}" />
+          <TextBlock Grid.Column="2" FontWeight="Bold" FontFeatures="tnum" Text="{Binding Disc.Percent}" />
+        </Grid>
+        <ProgressBar Name="Bar" Minimum="0" Maximum="1" Value="{Binding Disc.Fraction}" AutomationProperties.Name="Preparing the game's files" />
+        <Button Name="Cancel" Classes="soft" HorizontalAlignment="Left" Content="Cancel" Command="{Binding Disc.CancelCommand}"
+                IsEnabled="{Binding Disc.CanStop}" AutomationProperties.Name="Cancel the preparation" />
+      </StackPanel>
+      <TextBlock Name="Said" FontSize="15" TextWrapping="Wrap" Foreground="{StaticResource NextDangerBrush}"
+                 Text="{Binding Disc.SaidLabel}" ToolTip.Tip="{Binding Disc.Said}"
+                 IsVisible="{Binding Disc.Said, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+    </StackPanel>
+
+    <Button Grid.Row="5" Name="Close" Classes="soft" Margin="4,16,8,0" HorizontalAlignment="Stretch" Content="Close"
+            Command="{Binding $parent[nxv:NextShell].((vm:MainViewModel)DataContext).Shell.CloseSheetCommand}" AutomationProperties.Name="Close" />
+  </Grid>
+</UserControl>

@@ -1,0 +1,61 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:nx="using:Launcher.App.ViewModels.NextUi"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:nxv="using:Launcher.App.Views.NextUi"
+             xmlns:c="using:Launcher.App.Controls"
+             xmlns:n="using:Launcher.App.Controls.NextUi"
+             x:Class="Launcher.App.Views.NextUi.ControllerPageView"
+             x:DataType="vm:ControllerViewModel">
+  <!-- The redesigned Controller page (ControllerPageViewModel): the port's rows and its buttons as option rows; on the
+       right the GameCube controller as the game reads it (its buttons lit), the adapter's state, what the row does,
+       and while a button is being set, what to press. -->
+  <Grid Name="PagePanel" Margin="14,8,0,8" ColumnDefinitions="*,32,400" RowDefinitions="Auto,*"
+        x:DataType="nx:ControllerPageViewModel" DataContext="{Binding $parent[nxv:ControllerPageView].Page}">
+    <StackPanel Spacing="4">
+      <TextBlock Classes="eyebrow" FontSize="14" Text="SETTINGS" />
+      <TextBlock Name="Title" Classes="heading" FontSize="52" LineHeight="56" Margin="0,0,0,10" RenderTransform="skewX(-10deg)"
+                 RenderTransformOrigin="0%,100%" Text="CONTROLLER" />
+    </StackPanel>
+    <ScrollViewer Grid.Row="1" Name="ControllerScroll" Margin="0,4,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <nxv:OptionList Name="PadRows" Margin="6,6,16,16" Groups="{Binding Groups}" Focused="{Binding Focused}" />
+    </ScrollViewer>
+
+    <StackPanel Grid.Column="2" Grid.RowSpan="2" Spacing="12" VerticalAlignment="Bottom" Margin="0,0,0,8">
+      <!-- the controller as the game reads it -->
+      <n:Chamfer Classes="plate">
+        <StackPanel Margin="20,18" Spacing="10">
+          <TextBlock Classes="eyebrow" Text="{Binding Pad.PortTitle, Converter={x:Static v:UpperText.Instance}, FallbackValue=''}" />
+          <Panel Height="190" Opacity="{Binding Pad.PadDim, Converter={x:Static nxv:DimOpacity.Instance}, FallbackValue=1}">
+            <c:PadOverlay Name="PadPicture" Pad="{Binding Pad.PadShown}" />
+          </Panel>
+          <TextBlock Classes="quiet" FontSize="14" TextWrapping="Wrap" Text="{Binding Pad.PadNote}"
+                     IsVisible="{Binding Pad.PadNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}, FallbackValue=False}" />
+          <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding Pad.IsAdapter, FallbackValue=False}">
+            <TextBlock Classes="quiet" Text="{Binding Pad.AdapterText}" />
+            <TextBlock Grid.Column="1" FontWeight="SemiBold" Text="{Binding Pad.AdapterValue}" />
+          </Grid>
+          <TextBlock TextWrapping="Wrap" Foreground="{StaticResource NextDevBrush}" Text="{Binding Pad.Notice}"
+                     IsVisible="{Binding Pad.Notice, Converter={x:Static StringConverters.IsNotNullOrEmpty}, FallbackValue=False}" />
+        </StackPanel>
+      </n:Chamfer>
+      <!-- a button being set: what to press, and Cancel -->
+      <Border Name="Capture" Classes="band" IsVisible="{Binding Pad.Capturing, FallbackValue=False}">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock TextWrapping="Wrap" VerticalAlignment="Center">
+            <Run Text="Press what you want for " /><Run FontWeight="Bold" Text="{Binding Pad.CaptureText}" /><Run Text=" on " /><Run Text="{Binding Pad.CaptureDevice}" />
+          </TextBlock>
+          <Button Grid.Column="1" Classes="soft" Content="Cancel" Command="{Binding Pad.CancelCaptureCommand}" AutomationProperties.Name="Cancel setting the button" />
+        </Grid>
+      </Border>
+      <!-- what the row does -->
+      <n:Chamfer Classes="plate">
+        <StackPanel Margin="20,16" Spacing="6">
+          <TextBlock Classes="eyebrow" Text="{Binding Focused.Label, Converter={x:Static v:UpperText.Instance}, FallbackValue=''}" />
+          <TextBlock Name="HelpText" Classes="lead" FontSize="15" TextWrapping="Wrap" Text="{Binding Focused.Help, FallbackValue=''}" />
+        </StackPanel>
+      </n:Chamfer>
+    </StackPanel>
+  </Grid>
+</UserControl>

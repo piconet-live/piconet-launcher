@@ -292,6 +292,54 @@ public sealed record LauncherSettings
     /// Launcher; off by default).</summary>
     public bool ReducedMotion { get; init; }
 
+    /// <summary>The launcher shows its redesigned interface (the Settings page's "Experimental UI", Launcher; off by
+    /// default: the classic interface stays every player's until they choose the other, and switching back takes
+    /// effect at once). The look only: the settings, the replays and the machines are the same in both. Left out of
+    /// the file while off, so a file of before the setting stays as it was; anything but true reads as off.</summary>
+    [JsonConverter(typeof(SettingAsWritten.Flag))]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool ExperimentalUi { get; init; }
+
+    /// <summary>The launcher shows a developer's data at the places it belongs to (the Settings page's "Developer
+    /// mode", Launcher; off by default): the build, the connection, the input, the launch file's and the rules' keys.
+    /// In both interfaces. Left out of the file while off; anything but true reads as off.</summary>
+    [JsonConverter(typeof(SettingAsWritten.Flag))]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public bool DeveloperMode { get; init; }
+
+    /// <summary>Whose button icons the redesigned interface shows (its Settings page's "Button icons"): the pad's own
+    /// family by default (<see cref="Pads.ButtonIcons.Auto"/>). Left out of the file while Auto.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public Pads.ButtonIcons ButtonIcons { get; init; }
+
+    /// <summary>Which face button confirms in the redesigned interface (its Settings page's "Confirm button"): as the
+    /// pad's family has it by default (<see cref="Pads.ConfirmButton.Auto"/>). Left out of the file while Auto.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public Pads.ConfirmButton ConfirmButton { get; init; }
+
+    /// <summary>The servers the player added to Quick Play's list (the redesigned interface's "Choose a server", "Add a
+    /// server…"), by address, in the order added; null: none. This build's official server is on the list without
+    /// being here, and so is the server set (<see cref="Server"/>). Only these and the server set are ever asked of
+    /// their state: each was chosen by the player. Left out of the file while there are none.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<string>? Servers { get; init; }
+
+    /// <summary>The most servers the list keeps of the player's own.</summary>
+    public const int MostServers = 12;
+
+    /// <summary>The server's message of the day the player hid for the day ("Hide for today"): its id and the day it
+    /// was hidden on, "id@2026-11-14" (<see cref="MotdHiddenFor"/>); null: none. A message with another id, or the
+    /// next day, shows again. Left out of the file while none is hidden.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? MotdHidden { get; init; }
+
+    /// <summary><see cref="MotdHidden"/>'s value for the message <paramref name="id"/> hidden on <paramref name="day"/>.</summary>
+    public static string MotdHiddenFor(string id, DateOnly day) =>
+        id + "@" + day.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>The message of the day <paramref name="id"/> is hidden on <paramref name="today"/>.</summary>
+    public bool MotdHiddenOn(string id, DateOnly today) => MotdHidden == MotdHiddenFor(id, today);
+
     /// <summary>The chase camera view (1 to 3, 4 first person) the player last raced in: the game says each view chosen with the
     /// camera button on its status board (<see cref="Board.BoardEventKind.Camera"/>), and the next race starts in it
     /// (the launch file's <c>match.camera</c>). 0: none yet, and the game starts in its own. The player's picture
@@ -367,6 +415,18 @@ public sealed record LauncherSettings
 
     /// <summary>The launcher's own sounds are off; the volume is kept for when they are on again.</summary>
     public bool SoundMuted { get; init; }
+
+    /// <summary>The launcher's menu sounds (<see cref="SoundKind.Menu"/>: the cursor, back, confirm), 0 to 100 of
+    /// <see cref="SoundVolume"/> (the owner, 2026-11-15: sounds set by kind). 100: as loud as the launcher's sounds.</summary>
+    public int MenuSoundVolume { get; init; } = 100;
+
+    /// <summary>The launcher's notifications (<see cref="SoundKind.Notice"/>: the lobby's moments, an urgent notice),
+    /// 0 to 100 of <see cref="SoundVolume"/>.</summary>
+    public int NoticeSoundVolume { get; init; } = 100;
+
+    /// <summary>The launcher's other sounds (<see cref="SoundKind.Other"/>: the course draw's), 0 to 100 of
+    /// <see cref="SoundVolume"/>.</summary>
+    public int OtherSoundVolume { get; init; } = 100;
 
     /// <summary>The pad works the launcher's pages (the Settings page's "Controller navigation", Launcher; off by default: a
     /// controller left in the window does nothing to it). Setting a control on the Controller page reads the pad either way.

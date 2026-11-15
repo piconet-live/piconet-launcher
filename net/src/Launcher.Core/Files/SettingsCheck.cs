@@ -56,9 +56,14 @@ public static class SettingsCheck
             // a stat this launcher does not know (a newer one's, a slip of the hand): by number
             GarageSort = read.GarageSort is { } sort && MachineStats.Has(sort.By) ? sort : MachineSort.ByNumber,
             FavouriteMachines = Favourites(read.FavouriteMachines),
+            Servers = Servers(read.Servers),
+            MotdHidden = Text(read.MotdHidden, MostServer),
             Practice = read.Practice?.Kept(),
             GarageStats = Online.Protocol.StatPack.IsName(read.GarageStats) ? read.GarageStats : null,
             SoundVolume = read.SoundVolume is >= 0 and <= 100 ? read.SoundVolume : defaults.SoundVolume,
+            MenuSoundVolume = read.MenuSoundVolume is >= 0 and <= 100 ? read.MenuSoundVolume : defaults.MenuSoundVolume,
+            NoticeSoundVolume = read.NoticeSoundVolume is >= 0 and <= 100 ? read.NoticeSoundVolume : defaults.NoticeSoundVolume,
+            OtherSoundVolume = read.OtherSoundVolume is >= 0 and <= 100 ? read.OtherSoundVolume : defaults.OtherSoundVolume,
             GameVolume = read.GameVolume is >= 0 and <= 100 ? read.GameVolume : defaults.GameVolume,
             // the input delay is the player's 0, 1 or 2 and never more; anything else is 2
             InputDelay = read.RaceInputDelay,
@@ -147,6 +152,18 @@ public static class SettingsCheck
             return null;
         }
         var kept = read.Where(IsMachine).Distinct().ToList();
+        return kept.SequenceEqual(read) ? read : kept;
+    }
+
+    /// <summary>The player's own servers: each an address Quick Play can connect to, once, at most
+    /// <see cref="LauncherSettings.MostServers"/>. The same list when nothing in it was wrong.</summary>
+    private static IReadOnlyList<string>? Servers(IReadOnlyList<string>? read)
+    {
+        if (read is null)
+        {
+            return null;
+        }
+        var kept = read.Where(IsServer).Select(s => s.Trim()).Distinct(StringComparer.Ordinal).Take(LauncherSettings.MostServers).ToList();
         return kept.SequenceEqual(read) ? read : kept;
     }
 

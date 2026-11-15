@@ -1,0 +1,36 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:n="using:Launcher.App.Controls.NextUi"
+             x:Class="Launcher.App.Views.NextUi.QuickPlayView"
+             x:DataType="vm:LobbyViewModel">
+  <!-- The redesigned interface's lobby page: one page a phase (LobbyViewModel.Phases.cs: the queue, the gathering,
+       the course vote, the machine stage, the start, the race and its result), shown one at a time in the same
+       place (QuickPlayView.axaml.cs); a custom lobby gathers in its room, where its host edits the rules. Over it, in a
+       place of its own, the lobby's notice when it has one (a machine the server refused, a stat pack not taken,
+       players on another version, a refusal of the host's). -->
+  <Grid RowDefinitions="Auto,*">
+    <n:Chamfer Name="Notice" Cut="8" Margin="14,0,0,8" HorizontalAlignment="Left" Background="{StaticResource NextPlateHiBrush}"
+               Bar="{StaticResource NextDevBrush}" ToolTip.Tip="{Binding NoticeWhole}"
+               IsVisible="{Binding Notice, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+      <StackPanel Orientation="Horizontal" Spacing="12" Margin="18,8,16,8">
+        <TextBlock FontWeight="SemiBold" VerticalAlignment="Center" Text="{Binding Notice}" />
+        <ItemsControl ItemsSource="{Binding NoticeValues}" VerticalAlignment="Center">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Orientation="Horizontal" Spacing="12" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:NoticeValue">
+              <TextBlock FontSize="15">
+                <Run Text="{Binding Key}" Foreground="{StaticResource NextDimBrush}" /><Run Text=" " /><Run Text="{Binding Value}" />
+              </TextBlock>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </n:Chamfer>
+    <ContentControl Grid.Row="1" Name="PhaseHost" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+  </Grid>
+</UserControl>

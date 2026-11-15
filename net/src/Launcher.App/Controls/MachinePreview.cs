@@ -2,6 +2,7 @@ using System.Numerics;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.VisualTree;
 using Launcher.App.Gpu;
 using Launcher.App.Theme;
 using Launcher.Core;
@@ -17,7 +18,9 @@ namespace Launcher.App.Controls;
 /// its look: stock colour k is the game's own texture file for it, a painted colour its paint repainted as the race will
 /// (<see cref="MachinePaint"/>); only the painted textures change, worked out off the window's thread and put on the
 /// card on the next frame. It stands on a turntable drawn in the same scene (<see cref="TurntableFloor"/>), so the
-/// ring stays under it as it turns and tilts.
+/// ring stays under it as it turns and tilts. As a showcase (<see cref="Showcase"/>: the redesigned hub's background)
+/// it stands on no turntable and the camera films it as an advertisement is filmed: shot after shot
+/// (<see cref="ShowcaseShots"/>), the picture dissolving between two.
 /// </summary>
 public sealed partial class MachinePreview : GpuView
 {
@@ -36,6 +39,77 @@ public sealed partial class MachinePreview : GpuView
     /// false: it stands still until it is dragged round (the left column's).</summary>
     public static readonly StyledProperty<bool> TurnsProperty =
         AvaloniaProperty.Register<MachinePreview, bool>(nameof(Turns));
+
+    public static readonly StyledProperty<bool> ShowcaseProperty =
+        AvaloniaProperty.Register<MachinePreview, bool>(nameof(Showcase));
+
+    /// <summary>The machine as a showcase: no turntable, the camera's shots (<see cref="ShowcaseShots"/>; the first
+    /// one's still under Reduced motion).</summary>
+    public bool Showcase
+    {
+        get => GetValue(ShowcaseProperty);
+        set => SetValue(ShowcaseProperty, value);
+    }
+
+    /// <summary>Where across the view the showcase's machine stands (0 the left edge, 1 the right; 0.5 the middle): its
+    /// shots aim there, so that the machine stands in the room a page leaves it (the hub's, right of its menu).</summary>
+    public static readonly StyledProperty<double> FocusXProperty =
+        AvaloniaProperty.Register<MachinePreview, double>(nameof(FocusX), 0.5);
+
+    public double FocusX
+    {
+        get => GetValue(FocusXProperty);
+        set => SetValue(FocusXProperty, value);
+    }
+
+    /// <summary>The name of the control whose right edge begins the room the showcase stands in (the hub's menu):
+    /// <see cref="FocusX"/> follows the middle between that edge and the view's right one as the window lays out.</summary>
+    public static readonly StyledProperty<string?> RoomAfterProperty =
+        AvaloniaProperty.Register<MachinePreview, string?>(nameof(RoomAfter));
+
+    public string? RoomAfter
+    {
+        get => GetValue(RoomAfterProperty);
+        set => SetValue(RoomAfterProperty, value);
+    }
+
+    private Control? _roomAfter;   // the control found by that name, while it is in the window
+
+    /// <summary>The window laid out: the showcase's machine in the middle of its room again.</summary>
+    private void OnWindowLaidOut(object? sender, EventArgs e)
+    {
+        if (RoomAfter is not { Length: > 0 } name || !IsEffectivelyVisible || Bounds.Width <= 0 || _window is not { } window)
+        {
+            return;
+        }
+        if (_roomAfter is not { IsEffectivelyVisible: true } edge || edge.Name != name || TopLevel.GetTopLevel(edge) != window)
+        {
+            _roomAfter = edge = window.GetVisualDescendants().OfType<Control>().FirstOrDefault(c => c.Name == name && c.IsEffectivelyVisible);
+            if (edge is null)
+            {
+                return;
+            }
+        }
+        if (edge.TranslatePoint(new Point(edge.Bounds.Width, 0), this) is { } right)
+        {
+            var middle = Math.Clamp((Math.Max(0, right.X) + Bounds.Width) / 2 / Bounds.Width, 0, 1);
+            if (Math.Abs(middle - FocusX) > 0.002)
+            {
+                FocusX = middle;
+                Redraw();
+            }
+        }
+    }
+
+    /// <summary>A showcase held by the pointer stays this long after it is let go, then goes on with its shots.</summary>
+    private const long HeldOn = 3000;
+
+    private float _shown;   // the showcase's seconds so far: where its camera is
+    private (MachineModel Model, Vector3 Center, Vector3 Half)? _box;   // the showcase's machine's box, its shots' frame
+    private IReadOnlyList<Burner> _burners = [];   // the machine's burners: the showcase's engine flames
+    private float _burnt;                          // the flames' own seconds (their flicker goes on while all else stands)
+    private float _handYaw, _handPitch;            // the showcase turned by the pointer, away from its shot
+    private long _heldUntil;                       // the showcase stands until then, let go by the pointer
 
     /// <summary>A custom machine to show in place of <see cref="Machine"/> (the builder's); null: the stock machine.</summary>
     public static readonly StyledProperty<CustomBuild?> CustomProperty =
@@ -180,6 +254,7 @@ public sealed partial class MachinePreview : GpuView
             return;   // another machine was chosen meanwhile, or there is no disc
         }
         _machine = (r.Loaded, r.Packed, r.Floor);
+        _burners = (custom is not null ? await GameSkin.CustomBurnersAsync(custom) : machine >= 0 ? await GameSkin.BurnersAsync(machine) : null) ?? [];
         if (r.Look is { } pictures && (stock, color) == (StockColor, Rgb.Parse(PaintColor)))
         {
             _paint = (r.Loaded, pictures);
@@ -242,6 +317,7 @@ public sealed partial class MachinePreview : GpuView
         if (_window is not null)
         {
             _window.PropertyChanged += OnWindowChanged;
+            _window.LayoutUpdated += OnWindowLaidOut;
         }
     }
 
@@ -250,8 +326,10 @@ public sealed partial class MachinePreview : GpuView
         if (_window is not null)
         {
             _window.PropertyChanged -= OnWindowChanged;
+            _window.LayoutUpdated -= OnWindowLaidOut;
         }
         _window = null;
+        _roomAfter = null;
         base.OnDetachedFromVisualTree(e);
     }
 
@@ -287,8 +365,18 @@ public sealed partial class MachinePreview : GpuView
         // whatever the interface scale (the view is laid out in the screen's own units: Unscaled)
         var factor = (float)ScaledRoot.GetFactor(this);
         var turned = (float)(at.X - from.X) * 0.012f / factor;
-        _yaw += turned;
-        _pitch = Math.Clamp(_pitch + ((float)(at.Y - from.Y) * 0.006f / factor), 0.02f, 0.8f);
+        var tilted = (float)(at.Y - from.Y) * 0.006f / factor;
+        if (Showcase)
+        {
+            // the showcase held: the pointer turns it away from its shot, which stands meanwhile
+            _handYaw += turned;
+            _handPitch = Math.Clamp(_handPitch + tilted, -0.5f, 0.6f);
+        }
+        else
+        {
+            _yaw += turned;
+            _pitch = Math.Clamp(_pitch + tilted, 0.02f, 0.8f);
+        }
         _drag = at;
         // how fast it is being turned, smoothed over the last moves: what it is let go with
         var now = Environment.TickCount64;
@@ -322,11 +410,13 @@ public sealed partial class MachinePreview : GpuView
         var now = Environment.TickCount64;
         _spin = now - _moved > 80 ? 0 : Math.Clamp(_spin, -Fastest, Fastest);
         _last = now;
+        _heldUntil = now + HeldOn;   // (a showcase stands a while, then goes on)
         Redraw();
     }
 
     // moving by itself while it turns (the Garage's) or eases to rest (or is turned for a measurement, GpuDebug.Turning)
-    protected override bool Animating => TurningNow || (_drag is null && MathF.Abs(_spin) > Still) || GpuDebug.Turning || _uploading;
+    protected override bool Animating => (TurningNow && !(Showcase && Motion.Reduced)) || (_drag is null && MathF.Abs(_spin) > Still)
+        || GpuDebug.Turning || _uploading;
 
     protected override void Init(Gl gl) => _studio = new Studio(gl);
 
@@ -346,6 +436,61 @@ public sealed partial class MachinePreview : GpuView
         var now = Environment.TickCount64;
         var seconds = Math.Clamp(now - _last, 0, 100) / 1000f;
         _last = now;
+        var zoom = Zoom;
+        ShowcaseCamera? shot = null;
+        _burnt += Motion.Reduced ? 0 : seconds;
+        if (Showcase)
+        {
+            shot = ShowcaseStep(now, seconds);
+            zoom = shot.Value.Zoom;
+        }
+        else
+        {
+            Turn(seconds);
+        }
+        if (_studio is not { } studio || _machine is not { } machine || Show(gl, machine) is not { } shown)
+        {
+            return;
+        }
+        var model = machine.Machine.Model;
+        var view = StudioCamera.View(shot is { } s ? Aim(model, s.Focus) : model.Center, model.Radius, _yaw, _pitch, zoom);
+        var distance = StudioCamera.Distance(model.Radius, zoom);
+        // the floor's square reaches past the machine: room for it in front and behind
+        var reach = Math.Max(model.Radius, machine.Floor.Ring * TurntableFloor.Reach * 1.45f);
+        var projection = StudioCamera.Projection(StudioCamera.FieldOfView / 2, size.Width, size.Height,
+            Math.Max(distance - reach, distance * 0.05f), distance + reach);
+        if (Showcase)
+        {
+            // the machine where the page leaves it room: the picture shifted across, as a lens shifts
+            var across = Matrix4x4.Identity;
+            across.M41 = (float)((Math.Clamp(FocusX, 0, 1) * 2) - 1);
+            projection *= across;
+        }
+        var colours = machine.Machine.Paint is null ? PartColours : null;
+        studio.PartColour = colours is null ? null
+            : part => part >= 0 && part < colours.Count && colours[part] is { } c ? new Vector3(c.R / 255f, c.G / 255f, c.B / 255f) : null;
+        MoveAnchors(machine.Machine.Anchors, view * projection, size);
+        studio.Opaque(shown.Mesh, shown.Textures, view, projection);
+        if (!Showcase)
+        {
+            studio.Floor(machine.Floor, view, projection);
+        }
+        studio.Translucent(shown.Mesh, shown.Textures, view, projection);
+        Burn(studio, view, projection, shot?.Boost ?? 0);
+        if (_trace is { Shown: false })
+        {
+            _trace.Shown = true;
+            LoadTrace.Note(string.Create(System.Globalization.CultureInfo.InvariantCulture,
+                $"{_trace.What}: first frame with its model {_trace.Since:F0} ms after it was asked ({_trace.Marks}; " +
+                $"on the card in {_trace.Upload:F1} ms over {_trace.Frames} frames: mesh {_trace.Mesh:F1}, {_trace.Textures} textures {_trace.Upload - _trace.Mesh:F1})"));
+        }
+    }
+
+
+    /// <summary>The turntable's turn for this frame: by itself (a flick's turn easing into the slow one), or a flick's
+    /// dying away (or a measurement's steady turn).</summary>
+    private void Turn(float seconds)
+    {
         if (GpuDebug.Turning)
         {
             _yaw += seconds;   // as a steady drag would turn it
@@ -361,33 +506,62 @@ public sealed partial class MachinePreview : GpuView
             _yaw += _spin * seconds;
             _spin *= MathF.Exp(-seconds / Glide);
         }
-        if (_studio is not { } studio || _machine is not { } machine || Show(gl, machine) is not { } shown)
+    }
+
+    /// <summary>The engines' flames over the machine: the showcase's, boosting as its shot says; a turntable's machine
+    /// (the Garage's, the left column's) burns none.</summary>
+    private void Burn(Studio studio, Matrix4x4 view, Matrix4x4 projection, float shotBoost)
+    {
+        if (Showcase)
         {
-            return;
-        }
-        var model = machine.Machine.Model;
-        var view = StudioCamera.View(model.Center, model.Radius, _yaw, _pitch, Zoom);
-        var distance = StudioCamera.Distance(model.Radius, Zoom);
-        // the floor's square reaches past the machine: room for it in front and behind
-        var reach = Math.Max(model.Radius, machine.Floor.Ring * TurntableFloor.Reach * 1.45f);
-        var projection = StudioCamera.Projection(StudioCamera.FieldOfView / 2, size.Width, size.Height,
-            Math.Max(distance - reach, distance * 0.05f), distance + reach);
-        var colours = machine.Machine.Paint is null ? PartColours : null;
-        studio.PartColour = colours is null ? null
-            : part => part >= 0 && part < colours.Count && colours[part] is { } c ? new Vector3(c.R / 255f, c.G / 255f, c.B / 255f) : null;
-        MoveAnchors(machine.Machine.Anchors, view * projection, size);
-        studio.Opaque(shown.Mesh, shown.Textures, view, projection);
-        studio.Floor(machine.Floor, view, projection);
-        studio.Translucent(shown.Mesh, shown.Textures, view, projection);
-        if (_trace is { Shown: false })
-        {
-            _trace.Shown = true;
-            LoadTrace.Note(string.Create(System.Globalization.CultureInfo.InvariantCulture,
-                $"{_trace.What}: first frame with its model {_trace.Since:F0} ms after it was asked ({_trace.Marks}; " +
-                $"on the card in {_trace.Upload:F1} ms over {_trace.Frames} frames: mesh {_trace.Mesh:F1}, {_trace.Textures} textures {_trace.Upload - _trace.Mesh:F1})"));
+            studio.Glow(EngineFlames.Sprites(_burners, _burnt, shotBoost), view, projection);
         }
     }
 
+    /// <summary>The showcase's camera now: its shot <see cref="_shown"/> seconds in, turned as far as the pointer
+    /// turned it. Held by the pointer, and a while after it is let go, it stands (a flick still turns it on); then it
+    /// goes on with its shots and eases back into them. Under Reduced motion the first shot's still.</summary>
+    private ShowcaseCamera ShowcaseStep(long now, float seconds)
+    {
+        var held = _drag is not null || now < _heldUntil;
+        if (!held && TurningNow && !Motion.Reduced)
+        {
+            _shown += seconds;
+        }
+        if (_drag is null && MathF.Abs(_spin) > Still)
+        {
+            _handYaw += _spin * seconds;   // (a flick turns it on, and dies away)
+            _spin *= MathF.Exp(-seconds / Glide);
+        }
+        if (!held)
+        {
+            // back into the shot, the short way round
+            _handYaw = MathF.IEEERemainder(_handYaw, MathF.Tau);
+            var back = MathF.Exp(-seconds / 1.2f);
+            (_handYaw, _handPitch) = (_handYaw * back, _handPitch * back);
+        }
+        var camera = Motion.Reduced ? ShowcaseShots.Still : ShowcaseShots.At(_shown);
+        _yaw = camera.Yaw + _handYaw;
+        _pitch = Math.Clamp(camera.Pitch + _handPitch, 0.02f, 0.9f);
+        var turned = MathF.Abs(_handYaw) + MathF.Abs(_handPitch) > 0.01f;
+        Opacity = Motion.Reduced || held || turned ? 1 : camera.Shown;   // the dissolve between two shots (none while held)
+        return camera;
+    }
+
+    /// <summary>The point of the machine a showcase shot looks at: <paramref name="focus"/> on its box (-1 to 1 on each
+    /// axis; z from the nose to the tail).</summary>
+    private Vector3 Aim(MachineModel model, Vector3 focus)
+    {
+        if (_box is not { } box || !ReferenceEquals(box.Model, model))
+        {
+            var positions = model.Meshes.SelectMany(m => m.Positions).ToList();
+            var (low, high) = positions.Count == 0 ? (model.Center, model.Center)
+                : (positions.Aggregate(Vector3.Min), positions.Aggregate(Vector3.Max));
+            box = (model, (low + high) / 2, (high - low) / 2);
+            _box = box;
+        }
+        return box.Center + (box.Half * focus);
+    }
 
     /// <summary>Where a custom machine's parts stand on the view, told when they have moved by half a point.</summary>
     private void MoveAnchors(IReadOnlyList<Vector3>? anchors, Matrix4x4 viewProjection, PixelSize size)

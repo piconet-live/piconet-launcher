@@ -51,6 +51,10 @@ public sealed class ServerStatusFeed : IDisposable
     /// <summary>The last ask got no answer (<see cref="Latest"/> is then the last one that did, if any).</summary>
     public bool Failed { get; private set; }
 
+    /// <summary>How long the last answered ask took, from the ask to its whole answer: the server's ping as the
+    /// launcher sees it (the redesigned interface's server choice); null: no answer yet.</summary>
+    public TimeSpan? Latency { get; private set; }
+
     /// <summary>No server is set, as of the last ask: there is nobody to ask, which is no failure.</summary>
     public bool NoServer { get; private set; }
 
@@ -100,6 +104,7 @@ public sealed class ServerStatusFeed : IDisposable
                 _asked = server;
                 Latest = null;
                 LatestAt = null;
+                Latency = null;
                 Failed = false;
                 NoServer = server is null;
             }
@@ -113,6 +118,7 @@ public sealed class ServerStatusFeed : IDisposable
             return;
         }
         ServiceStatus? answer = null;
+        var took = System.Diagnostics.Stopwatch.StartNew();
         if (StatusUri(server) is { } uri)
         {
             try
@@ -138,6 +144,7 @@ public sealed class ServerStatusFeed : IDisposable
             {
                 Latest = answer;
                 LatestAt = DateTimeOffset.UtcNow;
+                Latency = took.Elapsed;
             }
         }
         Changed?.Invoke();
@@ -157,6 +164,20 @@ public sealed class ServerStatusFeed : IDisposable
             .Where(l => l.Players.Count < l.Capacity && l.Stage is LobbyState.Forming or LobbyState.Racing)
             .OrderByDescending(l => l.Players.Count)
             .FirstOrDefault();
+    }
+
+    /// <summary>The lobby a player can be put in now without a new one being opened for them: <see cref="QuickPlayLobby"/>'s
+    /// (the fullest with room that is not starting a race) among the lobbies of the player's release line
+    /// (<paramref name="line"/>, <see cref="LauncherLine.Own"/>; a lobby of another line is not theirs to join) and not
+    /// <paramref name="except"/> (the player's own custom lobby, which a server from before lists); null: none is open
+    /// to them.</summary>
+    public static LobbyView? OpenLobby(ServiceStatus status, string? line, string? except = null)
+    {
+        ArgumentNullException.ThrowIfNull(status);
+        return QuickPlayLobby(status with
+        {
+            Lobbies = [.. status.Lobbies.Where(l => (l.Line is null || l.Line == line) && l.Id != except)],
+        });
     }
 
     public void Dispose()

@@ -10,7 +10,7 @@ the processor. What is drawn from where is worked out without a card in `Launche
 | `Gl.cs` | The OpenGL calls used, with the few entry points Avalonia leaves out |
 | `RenderTarget.cs` | Where a view draws: multisampled colour and depth, resolved into a plain texture |
 | `GpuModel.cs` | A packed model on the card: vertices and indices uploaded once |
-| `Studio.cs` | The Garage's studio: the lights and the shaders for machines |
+| `Studio.cs` | The Garage's studio: the lights and the shaders for machines; engine flames as spots of light added to the picture (`Glow`) |
 | `StillPainter.cs` | The still pictures of machines, drawn once and read back |
 | `MapPainter.cs` | The track map: the course's model in flat shades, the racers as discs over it; a venue's sky behind it |
 | `CourseStillPainter.cs` | The Practice page's course stills, drawn once per course and disc, kept as PNGs in the data folder |

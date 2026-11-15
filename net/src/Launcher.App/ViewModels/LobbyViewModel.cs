@@ -55,6 +55,7 @@ public sealed partial class LobbyViewModel : ViewModelBase
         state.Changed += () => OnUi(Attach);
         _clock.Tick += (_, _) => Tick();
         _noteClock.Tick += (_, _) => ShowChatNote(_session);
+        WatchPhase();   // (the redesigned interface's pages: LobbyViewModel.Phases.cs)
     }
 
     /// <summary>The lobby's race, shown while it runs.</summary>
@@ -256,7 +257,11 @@ public sealed partial class LobbyViewModel : ViewModelBase
     private Task WatchAsync() => _session?.WatchAsync(!_session.Watching) ?? Task.CompletedTask;
 
     [RelayCommand]
-    private Task VoteStartAsync() => _session?.VoteStartAsync(true) ?? Task.CompletedTask;
+    private Task VoteStartAsync()
+    {
+        YouWantToStart = _session is not null;   // (the redesigned interface's tile says so: LobbyViewModel.Phases)
+        return _session?.VoteStartAsync(true) ?? Task.CompletedTask;
+    }
 
     [RelayCommand]
     private Task VoteCpuAsync(string yes) => _session?.VoteCpuFillAsync(yes == "yes") ?? Task.CompletedTask;
@@ -345,6 +350,7 @@ public sealed partial class LobbyViewModel : ViewModelBase
         ShowRaceLine(_session, lobby);
         ShowChatLines(_session, lobby);
         ShowChatNote(_session);
+        ShowPhase();
     }
 
     /// <summary>The chat brought to the lines that are to show, line by line: the lines that stay are not taken off

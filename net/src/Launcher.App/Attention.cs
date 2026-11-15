@@ -14,19 +14,24 @@ namespace Launcher.App;
 /// flashing until the window is. The draw's blips and
 /// the navigation's cursor and back sound through here too (<see cref="Sound(LauncherSound, LauncherSettings)"/>),
 /// without a flash. Windows only: elsewhere (the tests' Linux) nothing sounds and nothing flashes, and
-/// <see cref="Played"/> and <see cref="Sounded"/> still say what would have. One sound plays at a time (the system's
-/// PlaySound): a sound cuts the one before it short.
+/// <see cref="Played"/> and <see cref="Sounded"/> still say what would have. One sound plays at a time, on one stream
+/// of the system kept running while sounds come (<see cref="SoundLine"/> on <see cref="WaveOutStream"/>): a sound cuts
+/// the one before it short, however many come in a row.
 /// </summary>
 public static partial class Attention
 {
-    private const uint Async = 0x0001;
-    private const uint NoDefault = 0x0002;
-    private const uint Memory = 0x0004;
     private const uint FlashTray = 0x0002;
     private const uint FlashUntilInFront = 0x000C;
 
     private static readonly Lock Gate = new();
-    private static IntPtr _playing;   // the wave the system is playing from: kept until the next one, or the end
+
+    /// <summary>The launcher's one stream of sounds, made with its first sound (on Windows only).</summary>
+    private static readonly Lazy<SoundLine> Line = new(() => new SoundLine(new WaveOutStream()));
+
+    /// <summary>Each sound's wave at each volume, made once and kept (a few kilobytes each): a sound plays at once,
+    /// not after its wave is made again (a navigation sound came late, or seemed not to come, when it was).</summary>
+    private static readonly Dictionary<(LauncherSound, int), byte[]> Made = [];
+    private static GameSounds? _madeFor;
 
     private static GameSounds? _game;
 
@@ -51,12 +56,13 @@ public static partial class Attention
     public static void Sound(LobbyMoment moment, LauncherSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
-        if (!LobbyTones.Heard(settings))
+        var sound = LauncherSounds.Of(moment);
+        if (!LauncherSounds.Heard(sound, settings))
         {
             return;
         }
-        Played?.Invoke(moment, settings.SoundVolume);
-        Sound(LauncherSounds.Of(moment), settings);
+        Played?.Invoke(moment, LauncherSounds.Volume(sound, settings));
+        Sound(sound, settings);
     }
 
     /// <summary>The sound at the settings' volume: the game's when the disc gave it, else a moment's own tone, else
@@ -69,24 +75,30 @@ public static partial class Attention
         {
             return;
         }
-        Sounded?.Invoke(sound, settings.SoundVolume);
-        if (!OperatingSystem.IsWindows() || LauncherSounds.Wave(sound, settings.SoundVolume, Game) is not { } wave)
+        var volume = LauncherSounds.Volume(sound, settings);   // (the launcher's volume times its kind's)
+        Sounded?.Invoke(sound, volume);
+        if (!OperatingSystem.IsWindows())
         {
             return;
         }
         lock (Gate)
         {
-            // (the system plays from this memory after the call returns: it is freed when the next sound replaces it)
-            var memory = Marshal.AllocHGlobal(wave.Length);
-            Marshal.Copy(wave, 0, memory, wave.Length);
-            _ = PlaySoundW(IntPtr.Zero, IntPtr.Zero, 0);   // ends the sound before, so that its memory can go
-            var before = _playing;
-            _playing = memory;
-            if (before != IntPtr.Zero)
+            if (!ReferenceEquals(_madeFor, Game))
             {
-                Marshal.FreeHGlobal(before);
+                Made.Clear();   // (another disc's sounds)
+                _madeFor = Game;
             }
-            _ = PlaySoundW(memory, IntPtr.Zero, Async | NoDefault | Memory);
+            var key = (sound, volume);
+            if (!Made.TryGetValue(key, out var wave))
+            {
+                if (LauncherSounds.Wave(sound, volume, Game) is not { } made)
+                {
+                    return;
+                }
+                wave = made;
+                Made[key] = wave;
+            }
+            _ = Line.Value.Play(wave);   // (a sound playing gives way to it)
         }
     }
 
@@ -112,10 +124,6 @@ public static partial class Attention
         public uint Count;
         public uint Timeout;
     }
-
-    [LibraryImport("winmm.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool PlaySoundW(IntPtr sound, IntPtr module, uint flags);
 
     [LibraryImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]

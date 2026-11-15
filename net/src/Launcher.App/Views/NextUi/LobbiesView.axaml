@@ -1,0 +1,101 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:nxv="using:Launcher.App.Views.NextUi"
+             xmlns:nx="using:Launcher.App.ViewModels.NextUi"
+             xmlns:c="using:Launcher.App.Controls"
+             x:Class="Launcher.App.Views.NextUi.LobbiesView"
+             x:DataType="vm:HomeViewModel">
+  <!-- The redesigned interface's Quick Play page out of a lobby: the lobbies people are in on the server, a row
+       each (its name, its rules, what it is doing and how full it is), a press joins that one; and the page's main
+       action, RACE, which joins the fullest open lobby (none open: "No race found", JoinCheck.NoRace), and Host a lobby (a
+       Quick Play lobby: Quick Play's queue). What RACE says and does, and why it cannot, is the classic
+       launcher's play control (PlayControlViewModel: the disc first, then a server, then the game). The last
+       races are on the Replays page. -->
+  <Grid Margin="14,8,0,8" RowDefinitions="Auto,*,Auto">
+    <Grid ColumnDefinitions="*,24,Auto">
+      <StackPanel Spacing="4">
+        <StackPanel Orientation="Horizontal" Spacing="8"
+                    DataContext="{Binding $parent[nxv:NextShell].((vm:MainViewModel)DataContext).Shell.Servers}" x:DataType="nx:ServersViewModel">
+          <TextBlock Classes="eyebrow" FontSize="14" Text="QUICK PLAY" />
+          <TextBlock Name="ServerName" Classes="eyebrow" FontSize="14" IsVisible="{Binding CurrentName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                     Text="{Binding CurrentName, Converter={x:Static v:UpperText.Instance}, StringFormat='· {0}'}" />
+        </StackPanel>
+        <TextBlock Name="Title" Classes="heading" FontSize="52" LineHeight="56" Margin="0,0,0,8" RenderTransform="skewX(-10deg)"
+                   RenderTransformOrigin="0%,100%" Text="LOBBIES" />
+        <TextBlock Classes="lead" Text="Pick one, or press Race and we pick for you." />
+      </StackPanel>
+      <!-- RACE and, under it, what it would join or why it cannot: two lines' room, whether it has one or two -->
+      <StackPanel Grid.Column="2" Width="300" VerticalAlignment="Top" Spacing="8"
+                  DataContext="{Binding $parent[nxv:NextShell].((vm:MainViewModel)DataContext).Control}" x:DataType="vm:PlayControlViewModel">
+        <Button Name="Race" Classes="main" ToolTip.Tip="Join a race: Quick Play puts you in the fullest open lobby (Start)" Margin="6,6,6,0" HorizontalAlignment="Stretch" Content="{Binding GoText}" Command="{Binding GoCommand}"
+                c:PadNav.Main="True" AutomationProperties.Name="{Binding GoText}" />
+        <StackPanel Height="44" Margin="6,0">
+          <TextBlock Name="RaceLine1" FontSize="15" TextTrimming="CharacterEllipsis" Text="{Binding Line1}" Classes.warns="{Binding Line1Warns}" />
+          <TextBlock Classes="quiet" FontSize="15" TextTrimming="CharacterEllipsis" Text="{Binding Line2}" />
+        </StackPanel>
+        <Button Name="HostQuickPlay" Classes="soft" Height="44" Margin="6,0" HorizontalAlignment="Stretch" Content="Host a lobby"
+                ToolTip.Tip="A new Quick Play lobby on this server: the next racers who join a race come to you"
+                Command="{Binding HostQuickPlayCommand}" AutomationProperties.Name="Host a lobby" />
+        <Button Name="ChangeServer" Classes="soft" Height="44" Margin="6,0" HorizontalAlignment="Stretch" Content="Change server"
+                Command="{Binding $parent[nxv:NextShell].((vm:MainViewModel)DataContext).Shell.ChangeServerCommand}"
+                AutomationProperties.Name="Change server" />
+      </StackPanel>
+    </Grid>
+
+    <ScrollViewer Grid.Row="1" Margin="0,8,0,0" MaxWidth="900" HorizontalAlignment="Left" VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled">
+      <ItemsControl Name="Rows" c:PadNav.Home="True" ItemsSource="{Binding Lobbies}" Margin="6,6,12,6" ClipToBounds="False">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Spacing="8" ClipToBounds="False" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:LobbyRow">
+            <Button Classes="line" Height="64" Width="860" HorizontalAlignment="Left"
+                    Command="{Binding $parent[UserControl].((vm:HomeViewModel)DataContext).OpenRowCommand}" CommandParameter="{Binding}"
+                    AutomationProperties.Name="{Binding Name}">
+              <Grid ColumnDefinitions="170,*,Auto,Auto">
+                <TextBlock FontSize="19" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{Binding Name}" />
+                <TextBlock Grid.Column="1" Classes="quiet" FontSize="16" VerticalAlignment="Center" Margin="12,0" TextTrimming="CharacterEllipsis"
+                           Text="{Binding Rules}" />
+                <TextBlock Grid.Column="2" FontSize="16" VerticalAlignment="Center" FontFeatures="tnum" Margin="0,0,16,0">
+                  <Run Text="{Binding Now}" /><Run Text="  ·  " Foreground="{StaticResource NextDimBrush}" /><Run Text="{Binding Racers}" />
+                </TextBlock>
+                <Panel Grid.Column="3" Width="96">
+                  <Border Classes="flag" HorizontalAlignment="Right" VerticalAlignment="Center" IsVisible="{Binding Mine}">
+                    <TextBlock Text="YOUR LOBBY" />
+                  </Border>
+                  <Viewbox Width="16" Height="16" HorizontalAlignment="Right" VerticalAlignment="Center" IsVisible="{Binding Joins}">
+                    <Canvas Width="24" Height="24">
+                      <Path Classes="stroke" Data="M9 5L16 12L9 19" StrokeThickness="2.4" />
+                    </Canvas>
+                  </Viewbox>
+                </Panel>
+              </Grid>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+
+    <!-- under the list: what the list cannot say itself (no lobby yet, the server's answer is old, a notice) -->
+    <StackPanel Grid.Row="2" Height="52" Margin="6,6,0,0">
+      <TextBlock Name="Foot" FontSize="15" TextTrimming="CharacterEllipsis" Text="{Binding LobbiesFoot}" Classes.warns="{Binding LobbiesFootWarns}" />
+      <TextBlock Classes="quiet" FontSize="15" TextTrimming="CharacterEllipsis" IsVisible="{Binding Stale}">
+        <Run Text="{Binding StaleText}" /><Run Text="  " /><Run Text="{Binding StaleAsOf}" />
+      </TextBlock>
+      <TextBlock FontSize="15" Foreground="{StaticResource NextDevBrush}" TextTrimming="CharacterEllipsis" Text="{Binding Notice}" />
+    </StackPanel>
+  </Grid>
+  <UserControl.Styles>
+    <Style Selector="TextBlock#Foot">
+      <Setter Property="Foreground" Value="{StaticResource NextDimBrush}" />
+    </Style>
+    <Style Selector="TextBlock.warns">
+      <Setter Property="Foreground" Value="{StaticResource NextDevBrush}" />
+    </Style>
+  </UserControl.Styles>
+</UserControl>

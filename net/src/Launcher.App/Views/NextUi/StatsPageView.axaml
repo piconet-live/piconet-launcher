@@ -1,0 +1,144 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="using:Launcher.App.Controls"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:nxv="using:Launcher.App.Views.NextUi"
+             xmlns:n="using:Launcher.App.Controls.NextUi"
+             x:Class="Launcher.App.Views.NextUi.StatsPageView"
+             x:DataType="vm:StatsViewModel">
+  <!-- More › Stats (the classic page's view model: StatsViewModel), of the online races only: three large figures
+       (Races, Wins, Podiums), "More numbers" for the others (the average place, the knock-outs), the last races' places,
+       the courses raced most; on the right the best times by course or by machine. Every figure of the classic page is
+       here. -->
+  <Grid Margin="14,8,0,8" ColumnDefinitions="*,32,*" RowDefinitions="Auto,*">
+    <StackPanel Grid.ColumnSpan="3" Spacing="4" Margin="0,0,0,14">
+      <TextBlock Classes="eyebrow" FontSize="14" Text="MORE" />
+      <TextBlock Name="Title" Classes="heading" FontSize="52" LineHeight="56" RenderTransform="skewX(-10deg)" RenderTransformOrigin="0%,100%"
+                 Text="STATS" />
+      <TextBlock Classes="lead">
+        <Run Text="From your replays on this PC: " /><Run Text="{Binding RaceCount}" /><Run Text=" online races." />
+      </TextBlock>
+    </StackPanel>
+
+    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Spacing="14" Margin="2,2,12,12">
+        <TextBlock Name="Reading" Classes="quiet" Text="Reading replays…" IsVisible="{Binding Reading}" />
+        <TextBlock Name="Empty" Classes="quiet" TextWrapping="Wrap" Text="No online races yet. Your figures come from the replays of your races."
+                   IsVisible="{Binding Empty}" />
+        <!-- the three large figures, then the others under More numbers -->
+        <ItemsControl Name="Highlights" ItemsSource="{Binding Highlights}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <UniformGrid Rows="1" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:StatTile">
+              <n:Chamfer Classes="plate" Margin="0,0,12,0">
+                <StackPanel Margin="18,14">
+                  <TextBlock Classes="figure" Classes.won="{Binding Label, Converter={x:Static v:Equal.Instance}, ConverterParameter=Wins}"
+                             Classes.podium="{Binding Label, Converter={x:Static v:Equal.Instance}, ConverterParameter=Podiums}" Text="{Binding Value}" />
+                  <TextBlock Classes="quiet" FontSize="15" Text="{Binding Label}" />
+                </StackPanel>
+              </n:Chamfer>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <Button Name="MoreNumbers" Classes="line" Click="OnMoreNumbers" AutomationProperties.Name="More numbers">
+          <Grid ColumnDefinitions="*,Auto">
+            <StackPanel VerticalAlignment="Center">
+              <TextBlock Name="MoreWords" Text="More numbers" />
+              <TextBlock Name="MoreLine" Classes="quiet" FontSize="14" Text="The average place and the knock-outs" />
+            </StackPanel>
+          </Grid>
+        </Button>
+        <ItemsControl Name="MoreFigures" IsVisible="False" ItemsSource="{Binding OtherTiles}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <UniformGrid Rows="1" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:StatTile">
+              <n:Chamfer Classes="plate" Margin="0,0,12,0">
+                <StackPanel Margin="18,14">
+                  <TextBlock Classes="figure" Text="{Binding Value}" />
+                  <TextBlock Classes="quiet" FontSize="15" Text="{Binding Label}" />
+                </StackPanel>
+              </n:Chamfer>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <!-- the last races' places: a win gold, a knock-out red -->
+        <StackPanel Spacing="8" IsVisible="{Binding HasForm}">
+          <TextBlock Classes="eyebrow" Text="YOUR LAST RACES · PLACE" />
+          <ItemsControl Name="Form" ItemsSource="{Binding Form}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:FormMark">
+                <Border Classes="formmark" Classes.won="{Binding Win}" Classes.out="{Binding Out}" ToolTip.Tip="{Binding Of}">
+                  <TextBlock Text="{Binding Place}" />
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+        <StackPanel Spacing="6">
+          <TextBlock Classes="eyebrow" Text="RACED MOST" IsVisible="{Binding HasTimes}" />
+          <ItemsControl Name="MostRaced" ItemsSource="{Binding MostRaced}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:CourseLine">
+                <Border Classes="fact">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
+                      <Run FontWeight="SemiBold" Text="{Binding Track}" /><Run Text="  " /><Run Foreground="{StaticResource NextDimBrush}" Text="{Binding Venue}" />
+                    </TextBlock>
+                    <TextBlock Grid.Column="1" VerticalAlignment="Center" FontFeatures="tnum" Text="{Binding Count, StringFormat='{}{0} races'}" />
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </StackPanel>
+    </ScrollViewer>
+
+    <!-- the best times, by course or by machine -->
+    <Grid Grid.Row="1" Grid.Column="2" RowDefinitions="Auto,*">
+      <StackPanel Name="ByTabs" Orientation="Horizontal" Spacing="10" Margin="0,0,0,10" c:PadNav.Tabs="True">
+        <Button Name="ByCourse" Classes="pill" Classes.go="{Binding !ByMachine}" Height="36" Padding="16,0" Content="Best by course"
+                Command="{Binding ShowByCommand}" CommandParameter="course" AutomationProperties.Name="Best by course" />
+        <Button Name="ByMachine" Classes="pill" Classes.go="{Binding ByMachine}" Height="36" Padding="16,0" Content="Best by machine"
+                Command="{Binding ShowByCommand}" CommandParameter="machine" AutomationProperties.Name="Best by machine" />
+      </StackPanel>
+      <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="2,2,16,12">
+          <TextBlock Classes="quiet" Text="No best times yet." IsVisible="{Binding !HasTimes}" />
+          <ItemsControl Name="Best" ItemsSource="{Binding Best}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:BestTimeLine">
+                <Border Classes="optionrow" Margin="0,0,0,8" Height="62">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel VerticalAlignment="Center" Spacing="2">
+                      <TextBlock FontSize="16" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Text="{Binding Track}" />
+                      <TextBlock Classes="quiet" FontSize="13" TextTrimming="CharacterEllipsis">
+                        <Run Text="{Binding Under}" /><Run Text="  ·  " /><Run Text="{Binding Machine}" /><Run Text="  ·  " /><Run Text="{Binding Raced}" /><Run Text=" races  ·  " /><Run Text="{Binding When}" />
+                      </TextBlock>
+                    </StackPanel>
+                    <TextBlock Grid.Column="1" FontSize="18" FontWeight="Bold" FontFeatures="tnum" VerticalAlignment="Center" Margin="16,0,0,0"
+                               Text="{Binding Time}" />
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
+  </Grid>
+</UserControl>

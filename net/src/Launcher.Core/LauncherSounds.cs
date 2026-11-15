@@ -18,6 +18,15 @@ public enum LauncherSound
     Confirm,
 }
 
+/// <summary>The launcher's sounds by kind, each with its own volume in the settings: the menu's (the cursor, back,
+/// confirm), the notifications (the lobby's moments, an urgent notice), and the others (the course draw's).</summary>
+public enum SoundKind
+{
+    Menu,
+    Notice,
+    Other,
+}
+
 /// <summary>Which sound the launcher plays, and whether: the draw's own, made in code (<see cref="DrawSounds"/>,
 /// with or without a disc); the game's when the disc gave it (<see cref="GameSounds"/>: the vote, the machines, the
 /// start, the navigation); else the launcher's own tone for a lobby moment or an urgent notice
@@ -43,13 +52,38 @@ public static class LauncherSounds
         _ => null,
     };
 
-    /// <summary>Whether the sound is heard with these settings: not muted, louder than nothing, and for the
-    /// navigation's two only while the pad works the pages (<see cref="LauncherSettings.PadNavigation"/>, off by
-    /// default: minimal sounds).</summary>
+    /// <summary>Whether the sound is heard with these settings: not muted, louder than nothing (its kind's volume
+    /// too: <see cref="Volume"/>), and for the navigation's two only while the pad works the pages
+    /// (<see cref="LauncherSettings.PadNavigation"/>, off by default: minimal sounds).</summary>
     public static bool Heard(LauncherSound sound, LauncherSettings settings)
     {
         ArgumentNullException.ThrowIfNull(settings);
-        return LobbyTones.Heard(settings) && (sound is not (LauncherSound.Cursor or LauncherSound.Back) || settings.PadNavigation);
+        return Volume(sound, settings) > 0 && (sound is not (LauncherSound.Cursor or LauncherSound.Back) || settings.PadNavigation);
+    }
+
+    /// <summary>The kind a sound is of: the menu's, a notification, or another.</summary>
+    public static SoundKind KindOf(LauncherSound sound) => sound switch
+    {
+        LauncherSound.Cursor or LauncherSound.Back or LauncherSound.Confirm => SoundKind.Menu,
+        LauncherSound.DrawHop or LauncherSound.CourseDrawn => SoundKind.Other,
+        _ => SoundKind.Notice,
+    };
+
+    /// <summary>How loud the sound plays, 0 to 100: the launcher's volume times its kind's share; 0 when muted.</summary>
+    public static int Volume(LauncherSound sound, LauncherSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        if (!LobbyTones.Heard(settings))
+        {
+            return 0;
+        }
+        var share = KindOf(sound) switch
+        {
+            SoundKind.Menu => settings.MenuSoundVolume,
+            SoundKind.Notice => settings.NoticeSoundVolume,
+            _ => settings.OtherSoundVolume,
+        };
+        return (int)Math.Round(settings.SoundVolume * Math.Clamp(share, 0, 100) / 100.0);
     }
 
     /// <summary>The wave file to play at a volume of 0 to 100: the draw's own sound, else the game's, else the

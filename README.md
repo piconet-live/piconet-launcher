@@ -56,6 +56,7 @@ A copy unzipped from a zip (the builds before 0.5.0) keeps its data in its own `
 | `net/src/Launcher.Core/` | The launcher's logic, with no UI type |
 | `net/tests/Launcher.Tests/` | Its tests (xunit.v3 on Microsoft.Testing.Platform; the window's tests run headless) |
 | `net/tools/DiscPinsWriter/` | The developer's tool that writes `Launcher.Core/DiscPins.json` from a disc image |
+| `docs/experimental-ui/` | The experimental UI, area by area, with its pictures and videos |
 | `external/protocol` | [piconet-protocol](https://github.com/piconet-live/piconet-protocol), a submodule: `Online.Protocol`, the generated launch, replay and status-board code, the shipped stat packs |
 | `external/tools` | [piconet-tools](https://github.com/piconet-live/piconet-tools), a submodule: `Fzgx.GameCube`, built from source |
 
@@ -111,6 +112,12 @@ disc, game or server is needed for that; the pictures from the disc show only wi
 the dev launcher's settings and replays apart from yours (your settings file keeps your own server either way). The
 switch is never on without being typed: no player's start, update or shortcut uses it, and it turns off Discord's
 status and the automatic updates for that run.
+
+### Experimental UI
+
+A redesigned interface, made for the pad first, is behind Settings, Launcher, "Experimental UI" (off by default; the
+classic launcher stays as it is). With the dev mode above, put `"experimentalUi": true` in the dev data folder's
+`settings.json`. Every area, with pictures and short videos: [docs/experimental-ui](docs/experimental-ui/README.md).
 
 ## Contributing
 

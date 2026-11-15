@@ -1,0 +1,145 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:nxv="using:Launcher.App.Views.NextUi"
+             xmlns:c="using:Launcher.App.Controls"
+             xmlns:n="using:Launcher.App.Controls.NextUi"
+             x:Class="Launcher.App.Views.NextUi.RaceView"
+             x:DataType="vm:LobbyViewModel">
+  <!-- The redesigned interface's race, as it runs and once it is over. Running: that it is live (or watched) and
+       where; the player's place in large with the lap and how far the race is; a watcher sees who leads. Over: the
+       place, the best lap, and what to do next. On the right the first three, and the ways to the whole course and
+       to every racer (the race's panel: the classic launcher's standings, with a mode's lines). A racer whose game
+       left the race has Rejoin, or Watch where the mode has no rejoin, as the page's main action. Every part keeps
+       its place from the race to its result. -->
+  <Grid Margin="14,8,0,20">
+    <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Left" VerticalAlignment="Top">
+      <Border Name="Live" Classes="flag live" Height="26" Classes.quietflag="{Binding !Race.HasYou}"
+              IsVisible="{Binding Phase, Converter={x:Static v:Equal.Instance}, ConverterParameter=Race}">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <Ellipse Width="7" Height="7" VerticalAlignment="Center" Fill="{StaticResource NextTextBrush}" />
+          <TextBlock Text="{Binding Race.Stage, Converter={x:Static v:UpperText.Instance}}" />
+        </StackPanel>
+      </Border>
+      <Border Classes="flag quietflag" Height="26" IsVisible="{Binding Phase, Converter={x:Static v:Equal.Instance}, ConverterParameter=Results}">
+        <TextBlock Text="RACE OVER" />
+      </Border>
+      <TextBlock Name="Course" Classes="quiet" FontSize="16" VerticalAlignment="Center" Text="{Binding Race.Course}" />
+    </StackPanel>
+
+    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Bottom" Spacing="4">
+      <!-- the player's own place; a watcher: who leads -->
+      <StackPanel IsVisible="{Binding Race.HasYou}">
+        <TextBlock Classes="eyebrow" FontSize="14" Text="YOUR PLACE" />
+        <StackPanel Orientation="Horizontal" Spacing="14">
+          <TextBlock Name="Place" Classes="heading place" FontSize="160" LineHeight="150" RenderTransform="skewX(-10deg)"
+                     RenderTransformOrigin="0%,100%" Classes.first="{Binding Race.YouPosition, Converter={x:Static v:Equal.Instance}, ConverterParameter=1st}"
+                     Classes.out="{Binding Race.YouOut}" Text="{Binding Race.YouPosition, Converter={x:Static v:UpperText.Instance}}" />
+          <TextBlock Classes="quiet" FontSize="22" VerticalAlignment="Bottom" Margin="0,0,0,22" Text="{Binding Race.YouOf}" />
+        </StackPanel>
+      </StackPanel>
+      <StackPanel IsVisible="{Binding !Race.HasYou}">
+        <Panel>
+          <TextBlock Classes="eyebrow" FontSize="14" Text="LEADING" IsVisible="{Binding Phase, Converter={x:Static v:Equal.Instance}, ConverterParameter=Race}" />
+          <TextBlock Classes="eyebrow" FontSize="14" Text="WINNER" IsVisible="{Binding Phase, Converter={x:Static v:Equal.Instance}, ConverterParameter=Results}" />
+        </Panel>
+        <TextBlock Name="Watched" Classes="heading" FontSize="80" LineHeight="84" RenderTransform="skewX(-10deg)" RenderTransformOrigin="0%,100%"
+                   TextTrimming="CharacterEllipsis" MaxWidth="760" Text="{Binding LeaderName, Converter={x:Static v:UpperText.Instance}}" />
+        <TextBlock Classes="quiet" FontSize="18" Text="{Binding StepNote}" />
+      </StackPanel>
+      <TextBlock Name="Lap" FontSize="22" FontWeight="SemiBold" Margin="0,6,0,0" FontFeatures="tnum" Text="{Binding LapWords}" />
+      <Border Classes="meter" Width="380" HorizontalAlignment="Left" Margin="0,6,0,0">
+        <Border RenderTransform="{Binding LapShare, Converter={x:Static v:ShareToScale.Instance}}" />
+      </Border>
+      <!-- once it is over: the best lap (its line's room is kept while the race runs) -->
+      <Panel Height="28" Margin="0,8,0,0">
+        <StackPanel Name="Over" IsVisible="{Binding Phase, Converter={x:Static v:Equal.Instance}, ConverterParameter=Results}">
+          <TextBlock Classes="lead" FontSize="20" FontFeatures="tnum" IsVisible="{Binding Race.HasYou}">
+            <Run Text="Best lap " /><Run Text="{Binding Race.YouBestLap}" />
+          </TextBlock>
+        </StackPanel>
+      </Panel>
+      <!-- one row of actions, its room kept in every state: once the race is over, its results and the replays;
+           while it runs and the player's game has left it, back into it (or watch it, where the mode has no rejoin) -->
+      <Panel Name="Actions" Height="54" Margin="4,16,0,0" HorizontalAlignment="Left">
+        <StackPanel Orientation="Horizontal" Spacing="14" IsVisible="{Binding Phase, Converter={x:Static v:Equal.Instance}, ConverterParameter=Results}">
+          <Button Name="AllResults" Classes="main" Height="54" Content="ALL RESULTS" c:PadNav.Main="True"
+                  Command="{Binding $parent[nxv:NextShell].((vm:MainViewModel)DataContext).Shell.OpenRacersSheetCommand}"
+                  AutomationProperties.Name="All results" />
+          <Button Name="Replays" Classes="soft" Height="54" Padding="24,0" Content="Replays"
+                  Command="{Binding $parent[nxv:NextShell].((vm:MainViewModel)DataContext).Shell.ShowReplaysCommand}"
+                  AutomationProperties.Name="Replays" />
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" Spacing="14" IsVisible="{Binding Phase, Converter={x:Static v:Equal.Instance}, ConverterParameter=Race}">
+          <Button Name="Rejoin" Classes="main" Height="54" Content="REJOIN" Command="{Binding RejoinCommand}" IsVisible="{Binding CanRejoin}"
+                  c:PadNav.Main="True" AutomationProperties.Name="Rejoin" />
+          <Button Name="WatchLeft" Classes="main" Height="54" Content="WATCH" Command="{Binding WatchLeftRaceCommand}"
+                  IsVisible="{Binding CanWatchLeftRace}" c:PadNav.Main="True" AutomationProperties.Name="Watch" />
+        </StackPanel>
+      </Panel>
+    </StackPanel>
+
+    <!-- on the right, from the bottom up: the first three, and over them the whole course with every racer on it,
+         when asked for (it takes no room from anything: the card under it stays where it is) -->
+    <StackPanel Width="330" HorizontalAlignment="Right" VerticalAlignment="Bottom" Spacing="14">
+    <n:Chamfer Name="Map" Classes="plate" Cut="14" Height="210" IsVisible="{Binding MapShown}">
+      <c:Unscaled Margin="16">
+        <c:CourseMap Model="{Binding Race.Map}" Racers="{Binding Race.MapRacers}" Followed="{Binding Race.Followed}"
+                     AutomationProperties.Name="The whole course with every racer on it" />
+      </c:Unscaled>
+    </n:Chamfer>
+    <n:Chamfer Classes="plate">
+      <StackPanel Margin="22,20" Spacing="10">
+        <Panel>
+          <TextBlock Classes="eyebrow" Text="LEADERS" IsVisible="{Binding Phase, Converter={x:Static v:Equal.Instance}, ConverterParameter=Race}" />
+          <TextBlock Classes="eyebrow" Text="PODIUM" IsVisible="{Binding Phase, Converter={x:Static v:Equal.Instance}, ConverterParameter=Results}" />
+        </Panel>
+        <!-- (three rows' room, whether three racers are in it or fewer) -->
+        <ItemsControl Name="Leaders" ItemsSource="{Binding Leaders}" Height="122">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:StandingRow">
+              <Grid ColumnDefinitions="30,26,*,Auto" Height="34" Margin="0,0,0,10">
+                <TextBlock Classes="heading rank" FontSize="26" LineHeight="30" VerticalAlignment="Center" RenderTransform="skewX(-10deg)"
+                           Classes.first="{Binding Rank, Converter={x:Static v:Equal.Instance}, ConverterParameter=1}" Text="{Binding Rank}" />
+                <Border Grid.Column="1" Width="14" Height="14" HorizontalAlignment="Left" VerticalAlignment="Center" RenderTransform="skewX(-14deg)"
+                        Background="{Binding ColorHex, Converter={x:Static v:HexToBrush.Instance}}" />
+                <TextBlock Grid.Column="2" FontSize="18" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{Binding Name}"
+                           Classes.you="{Binding You}" />
+                <TextBlock Grid.Column="3" Classes="quiet" FontSize="15" VerticalAlignment="Center" FontFeatures="tnum" Margin="8,0,0,0"
+                           Text="{Binding Detail}" Classes.out="{Binding Out}" />
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <Grid ColumnDefinitions="*,10,*">
+          <Button Name="MapToggle" Classes="line" MinHeight="44" Padding="0" Background="{StaticResource NextRaisedBrush}"
+                  HorizontalContentAlignment="Center" Command="{Binding ToggleMapCommand}" AutomationProperties.Name="Whole course">
+            <Panel>
+              <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="Whole course" IsVisible="{Binding !MapShown}" />
+              <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="Hide map" IsVisible="{Binding MapShown}" />
+            </Panel>
+          </Button>
+          <Button Grid.Column="2" Name="AllRacers" Classes="line" MinHeight="44" Padding="0" Background="{StaticResource NextRaisedBrush}"
+                  HorizontalContentAlignment="Center"
+                  Command="{Binding $parent[nxv:NextShell].((vm:MainViewModel)DataContext).Shell.OpenRacersSheetCommand}"
+                  AutomationProperties.Name="All racers">
+            <TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" Text="All racers" />
+          </Button>
+        </Grid>
+      </StackPanel>
+    </n:Chamfer>
+    </StackPanel>
+  </Grid>
+  <UserControl.Styles>
+    <Style Selector="TextBlock.place.first, TextBlock.rank.first">
+      <Setter Property="Foreground" Value="{StaticResource NextGoldBrush}" />
+    </Style>
+    <Style Selector="TextBlock.place.out, TextBlock.out">
+      <Setter Property="Foreground" Value="{StaticResource NextDangerBrush}" />
+    </Style>
+    <Style Selector="TextBlock.you">
+      <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+  </UserControl.Styles>
+</UserControl>

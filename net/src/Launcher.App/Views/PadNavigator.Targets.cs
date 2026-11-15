@@ -97,7 +97,7 @@ public sealed partial class PadNavigator
     /// <summary>The first control of the page showing (its top left), else the first in the place searched.</summary>
     private Control? First(Visual scope)
     {
-        var page = scope == _window && _page is { } host ? TargetsIn(host) : [];
+        var page = scope == _window && Page is { } host ? TargetsIn(host) : [];
         var targets = page.Count > 0 ? page : TargetsIn(scope);
         return FocusMap.First([.. targets.Select(t => BoxOf(t, _window))]) is { } i ? targets[i] : null;
     }
@@ -111,7 +111,7 @@ public sealed partial class PadNavigator
         {
             return null;
         }
-        var page = _page is { } host ? all.Where(host.IsVisualAncestorOf).ToList() : [];
+        var page = Page is { } host ? all.Where(host.IsVisualAncestorOf).ToList() : [];
         var choices = page.Count > 0 ? page : all;
         if (focus is not null)
         {

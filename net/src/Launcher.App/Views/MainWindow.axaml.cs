@@ -24,10 +24,20 @@ public sealed partial class MainWindow : AppWindow
     private readonly ScrollViewer? _column;
     private readonly StackPanel? _parts;
 
+    /// <summary>The place of the interface that shows, at the interface scale, and the classic one as the window's
+    /// markup wrote it (<see cref="ShowShell"/>).</summary>
+    private readonly Controls.ScaledRoot? _root;
+    private readonly Control? _classic;
+
+    /// <summary>The redesigned interface, while it shows.</summary>
+    private NextUi.NextShell? _next;
+
     public MainWindow()
     {
         AvaloniaXamlLoader.Load(this);
         Height -= _overlap;
+        _root = this.FindControl<Controls.ScaledRoot>("ScaleRoot");
+        _classic = this.FindControl<Control>("ClassicShell");
         _machine = this.FindControl<Border>("MachineWell");
         _column = this.FindControl<ScrollViewer>("ColumnScroll");
         _parts = this.FindControl<StackPanel>("ColumnParts");
@@ -47,16 +57,65 @@ public sealed partial class MainWindow : AppWindow
         AddHandler(PointerPressedEvent, OnPressOutside, RoutingStrategies.Tunnel);
     }
 
-    /// <summary>Escape closes what is open over the page: the question before ray tracing (cancel), the question before
-    /// leaving a lobby (stay), else the bell's list, else an unpinned chat sidebar. A text box or a menu that takes Escape
-    /// for itself keeps it.</summary>
-    private void OnEscape(object? sender, KeyEventArgs e)
+    /// <summary>The interface the settings name, under the interface scale: the classic one (the window's own markup),
+    /// or with "Experimental UI" on the redesigned one (<see cref="NextUi.NextShell"/>), made when it first shows and
+    /// let go when the classic one is back. The one not showing is out of the window: it draws nothing, and its pages
+    /// are not made.</summary>
+    private void ShowShell()
     {
-        if (e.Key != Key.Escape || e.Handled || _heard is not { } main)
+        if (_root is null || _classic is null)
         {
             return;
         }
-        if (main.Graphics.Asking)
+        var experimental = _heard?.ExperimentalUi == true;
+        Control wanted = experimental ? _next ??= new NextUi.NextShell() : _classic;
+        if (!ReferenceEquals(_root.Child, wanted))
+        {
+            _root.Child = wanted;
+        }
+        if (!experimental)
+        {
+            _next = null;
+        }
+        // the pad's first stop on a page is in the page's place of the interface that shows; the redesigned
+        // interface draws the focus itself (its theme's ring), so the pad's own mark is not drawn over it
+        if (Pad is { } pad)
+        {
+            pad.Page = experimental ? _next?.PageHost : this.FindControl<ContentControl>("PageHost");
+        }
+        if (this.FindControl<Controls.PadMark>("PadMark") is { } mark)
+        {
+            mark.Opacity = experimental ? 0 : 1;
+        }
+        Rescaled();
+        ChatRoom();
+    }
+
+    /// <summary>Escape closes what is open over the page: the question before the experimental UI (not now), the question
+    /// before ray tracing (cancel), the question before leaving a lobby (stay), else the bell's list, else an unpinned
+    /// chat sidebar. A text box or a menu that takes Escape for itself keeps it. In the redesigned interface the
+    /// keys are the shell's (Escape goes back as the pad's B does, and there are more: NextShell.Shortcut).</summary>
+    private void OnEscape(object? sender, KeyEventArgs e)
+    {
+        if (e.Handled || _heard is not { } main)
+        {
+            return;
+        }
+        if (main.ExperimentalUi)
+        {
+            e.Handled = _next?.Shortcut(e) == true;
+            return;
+        }
+        if (e.Key != Key.Escape)
+        {
+            return;
+        }
+        if (main.Settings.AskingExperimental)
+        {
+            main.Settings.KeepClassicCommand.Execute(null);
+            e.Handled = true;
+        }
+        else if (main.Graphics.Asking)
         {
             main.Graphics.CancelCommand.Execute(null);
             e.Handled = true;
@@ -86,25 +145,29 @@ public sealed partial class MainWindow : AppWindow
         {
             return;
         }
-        if (main.Notices.ListOpen && !Within(pressed, this.FindControl<Control>("Notices"))
-            && !Within(pressed, this.FindControl<Control>("NoticeBell")))
+        // (the list and the sidebar by what they are, their buttons by what they do: in either interface)
+        var round = pressed.GetSelfAndVisualAncestors().OfType<Control>().ToList();
+        if (main.Notices.ListOpen && !round.Any(c => c is NoticesList || Does(c, main.Notices.ToggleListCommand)))
         {
             main.Notices.ListOpen = false;
         }
-        if (main.Chat.Overlay && !Within(pressed, this.FindControl<Control>("ChatSidebar"))
-            && !Within(pressed, this.FindControl<Control>("ChatToggle")))
+        if (main.Chat.Overlay && !round.Any(c => c is ChatSidebar || Does(c, main.Chat.ToggleCommand)))
         {
             main.Chat.Open = false;
         }
     }
 
-    private static bool Within(Visual pressed, Control? control) =>
-        control is not null && (pressed == control || control.IsVisualAncestorOf(pressed));
+    /// <summary>Whether a control is a button of this command.</summary>
+    private static bool Does(Control control, System.Windows.Input.ICommand command) =>
+        control is Button button && ReferenceEquals(button.Command, command);
 
     /// <summary>The window's least size at 100% (1280 x 720), and its
     /// title bar's height. Its size at the first start is the least (MainWindow.axaml): it fits a 1366 x 768 screen
     /// with the taskbar.</summary>
     private const double LeastWidth = 1280, LeastHeight = 720, TitleBar = 32;
+
+    /// <summary>The redesigned interface's top bar, which is the part the window is dragged by there.</summary>
+    private const double NextTopBar = 76;
 
     /// <summary>The interface scale the window is drawn at (1: 100%).</summary>
     private double Scale => _heard?.Scale is > 0 and var scale ? scale : 1;
@@ -139,7 +202,7 @@ public sealed partial class MainWindow : AppWindow
         var room = Screens?.ScreenFromWindow(this) is { } screen ? screen.WorkingArea.Size.ToSize(screen.Scaling) : (Size?)null;
         MinWidth = Math.Min(LeastWidth * scale, room?.Width ?? double.MaxValue);
         MinHeight = Math.Min(LeastHeight * scale, room?.Height ?? double.MaxValue) - _overlap;
-        ExtendClientAreaTitleBarHeightHint = TitleBar * scale;
+        ExtendClientAreaTitleBarHeightHint = (_heard?.ExperimentalUi == true ? NextTopBar : TitleBar) * scale;
         Fold();
     }
 
@@ -154,6 +217,10 @@ public sealed partial class MainWindow : AppWindow
             Rescaled();
             ChatRoom();
         }
+        if (e.PropertyName == nameof(ViewModels.MainViewModel.ExperimentalUi))
+        {
+            ShowShell();
+        }
     }
 
     /// <summary>The room a pinned chat sidebar has beside the page: the window's width at 100% less the left column and
@@ -162,7 +229,8 @@ public sealed partial class MainWindow : AppWindow
     {
         if (_heard is { } main && this.TryFindResource("ColumnWidth", out var found) && found is double columnWidth)
         {
-            main.Chat.Room = (ClientSize.Width / Scale) - columnWidth - ViewModels.ChatSidebarViewModel.PageLeast;
+            // (the redesigned interface has no left column)
+            main.Chat.Room = (ClientSize.Width / Scale) - (main.ExperimentalUi ? 0 : columnWidth) - ViewModels.ChatSidebarViewModel.PageLeast;
         }
     }
 
@@ -201,7 +269,7 @@ public sealed partial class MainWindow : AppWindow
             _place = Place(_heard);
             Controls.Motion.OpenListWindow();
         }
-        Rescaled();
+        ShowShell();
     }
 
     /// <summary>How far a new page slides in, in the direction of travel.</summary>
@@ -267,10 +335,11 @@ public sealed partial class MainWindow : AppWindow
     /// <summary>A machine confirmed in the Garage (USE THIS MACHINE, Save, READY): the game's confirm, no flash.</summary>
     private void OnConfirmed() => OnLobbySound(global::Launcher.Core.LauncherSound.Confirm);
 
-    /// <summary>The draw's blip on a hop and its chime on the course drawn: a sound, no flash.</summary>
+    /// <summary>The draw's blip on a hop and its chime on the course drawn: a sound, no flash; only while the window
+    /// is in front, where the draw is seen (behind the game, a run of blips with nothing to see is only noise).</summary>
     private void OnLobbySound(global::Launcher.Core.LauncherSound sound)
     {
-        if (_heard is { } main)
+        if (_heard is { } main && (IsActive || sound is not (global::Launcher.Core.LauncherSound.DrawHop or global::Launcher.Core.LauncherSound.CourseDrawn)))
         {
             Attention.Sound(sound, main.SoundSettings);
         }

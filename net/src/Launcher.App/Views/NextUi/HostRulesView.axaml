@@ -1,0 +1,10 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:nxv="using:Launcher.App.Views.NextUi"
+             x:Class="Launcher.App.Views.NextUi.HostRulesView"
+             x:DataType="vm:LobbyViewModel">
+  <!-- The host's own lobby's rules while it waits (the room's Edit rules): the option page (RulesPageView) on the
+       shell's HostRules; SAVE RULES sends them, Back keeps the lobby as it was. -->
+  <nxv:RulesPageView Name="Rules" DataContext="{Binding $parent[nxv:NextShell].((vm:MainViewModel)DataContext).Shell.HostRules}" />
+</UserControl>

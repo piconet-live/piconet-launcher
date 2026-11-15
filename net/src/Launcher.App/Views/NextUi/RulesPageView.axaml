@@ -1,0 +1,70 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:nx="using:Launcher.App.ViewModels.NextUi"
+             xmlns:nxv="using:Launcher.App.Views.NextUi"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:c="using:Launcher.App.Controls"
+             xmlns:n="using:Launcher.App.Controls.NextUi"
+             x:Class="Launcher.App.Views.NextUi.RulesPageView"
+             x:DataType="nx:RulesPageViewModel">
+  <!-- A custom lobby's rules as an option page (a new lobby's, or the host's own) in steps, a few rows a screen: the
+       lobby (name, password, racers), the race (mode, course, the mode's own settings), and on request More rules; the
+       trail over the rows says where the player is. On the right what the row the focus is on does (a mode or a stats
+       file from a file, a fixed course's picker), the step's main action (NEXT, then CREATE LOBBY or SAVE RULES),
+       "More rules" on the race's step, and Back (a step back). A fixed course is chosen in a panel over the page. -->
+  <Panel>
+    <Grid Margin="14,8,0,8" ColumnDefinitions="*,32,380" RowDefinitions="Auto,*">
+      <StackPanel Spacing="4">
+        <TextBlock Classes="eyebrow" FontSize="14" Text="{Binding Eyebrow}" />
+        <TextBlock Name="Title" Classes="heading" FontSize="52" LineHeight="56" Margin="0,0,0,10" RenderTransform="skewX(-10deg)"
+                   RenderTransformOrigin="0%,100%" Text="{Binding Title, Converter={x:Static v:UpperText.Instance}}" />
+        <n:StepTrail Name="Trail" Steps="{Binding StepNames}" At="{Binding Step}" Margin="0,0,0,6" />
+      </StackPanel>
+      <ScrollViewer Grid.Row="1" Name="RulesScroll" Margin="0,4,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <nxv:OptionList Name="StepRows" Margin="6,6,16,16" Groups="{Binding Shown}" Focused="{Binding Focused}" />
+      </ScrollViewer>
+
+      <!-- what the row does, and the page's action -->
+      <StackPanel Grid.Column="2" Grid.RowSpan="2" VerticalAlignment="Bottom" Spacing="14">
+        <n:Chamfer Name="Help" Classes="plate" MinHeight="200">
+          <StackPanel Margin="24,22" Spacing="8">
+            <!-- the row the focus is on, named once (its group is the step's or the page's own), and what it does -->
+            <TextBlock Name="HelpTitle" Classes="eyebrow" Text="{Binding Focused.Label, Converter={x:Static v:UpperText.Instance}, FallbackValue=''}" />
+            <TextBlock Name="HelpText" Classes="lead" FontSize="16" TextWrapping="Wrap" Text="{Binding Focused.Help, FallbackValue='Pick a row to see what it does.'}" />
+            <Button Name="FromFile" Classes="soft" Height="44" Padding="18,0" HorizontalAlignment="Left" Margin="0,6,0,0"
+                    Content="From a file…" Click="OnFromFile" IsVisible="{Binding Focused.TakesFile, FallbackValue=False}"
+                    AutomationProperties.Name="From a file" />
+            <Button Name="ChooseCourse" Classes="soft" Height="44" Padding="18,0" HorizontalAlignment="Left" Margin="0,6,0,0"
+                    Content="Choose the course" Click="OnChooseCourse" IsVisible="{Binding Focused.PicksCourse, FallbackValue=False}"
+                    AutomationProperties.Name="Choose the course" />
+          </StackPanel>
+        </n:Chamfer>
+        <Button Name="Act" Classes="main" Margin="6,0" HorizontalAlignment="Stretch" Content="{Binding MainText}" Command="{Binding MainCommand}"
+                c:PadNav.Main="True" AutomationProperties.Name="{Binding MainText}" />
+        <Button Name="MoreRules" Classes="soft" Height="46" Margin="6,0" HorizontalAlignment="Stretch" Content="More rules"
+                Command="{Binding ShowMoreCommand}" IsVisible="{Binding MoreShown}"
+                ToolTip.Tip="The vote's and the machine choice's times, the voting minimum, the connection" AutomationProperties.Name="More rules" />
+        <Button Name="Back" Classes="soft" Height="46" Margin="6,0" HorizontalAlignment="Stretch" Content="Back" Command="{Binding BackStepCommand}"
+                AutomationProperties.Name="Back" />
+        <TextBlock Name="Notice" Height="40" Margin="6,0" TextWrapping="Wrap" Foreground="{StaticResource NextDevBrush}" Text="{Binding Notice}" />
+      </StackPanel>
+    </Grid>
+
+    <!-- a fixed course: chosen in a panel over the page; a course pressed is the lobby's -->
+    <Panel Name="CoursePanel" IsVisible="{Binding Picking}" c:PadNav.Scope="True">
+      <Border Classes="dim" />
+      <n:Chamfer Classes="dialog" Width="1060" MaxWidth="1100" Margin="0,8">
+        <Grid Margin="32,28" RowDefinitions="Auto,*">
+          <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,14">
+            <TextBlock Classes="asks" Text="CHOOSE THE COURSE" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Name="DonePicking" Classes="soft" Height="44" Padding="20,0" Content="Done"
+                    Command="{Binding ClosePickerCommand}" AutomationProperties.Name="Done" />
+          </Grid>
+          <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <c:CoursePicker DataContext="{Binding Picker}" />
+          </ScrollViewer>
+        </Grid>
+      </n:Chamfer>
+    </Panel>
+  </Panel>
+</UserControl>

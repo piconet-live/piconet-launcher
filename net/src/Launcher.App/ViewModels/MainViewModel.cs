@@ -33,7 +33,8 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         _state = state;
         // nobody is asked while the first screen shows (ServerChoice.AskedUnprompted): the feed and the connection
         // dot run from the start, with nobody to ask until the disc is accepted
-        _feed = new ServerStatusFeed(() => ServerChoice.AskedUnprompted(state.Settings, Navigation), statusHandler ?? state.ServiceAnswers());
+        StatusAnswers = statusHandler ?? state.ServiceAnswers();
+        _feed = new ServerStatusFeed(() => ServerChoice.AskedUnprompted(state.Settings, Navigation), StatusAnswers);
         Garage = new GarageViewModel(state);
         Lobby = new LobbyViewModel(state, () => Current = Home!, Garage);
         Home = new HomeViewModel(state, _feed, Lobby, () => Current = Lobby, () => Current = Replays!, () => ShowSettings(SettingsTab.Launcher));
@@ -72,6 +73,13 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         _feed.Watching = true;
         _feed.Start();
     }
+
+    /// <summary>How a server's status is asked (the stand-in's answers in dev mode, a test's own; null: the network):
+    /// the redesigned interface's server choice asks its servers the same way.</summary>
+    internal HttpMessageHandler? StatusAnswers { get; }
+
+    /// <summary>What the server set says of itself (the Play page's, the hub's).</summary>
+    internal ServerStatusFeed Feed => _feed;
 
     /// <summary>Play's Practice page, on the Garage's machine.</summary>
     private PracticeViewModel PracticePage(AppState state) =>
@@ -493,6 +501,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
         Practice.Block(_state.PipelinesBlock);
         Replays.Block(_state.PipelinesBlock);
         Scale = _state.Settings.ShownInterfaceScale / 100.0;
+        RefreshShell();   // (MainViewModel.Shell.cs)
         RefreshSections();
         RefreshMachine();
     }
@@ -500,6 +509,7 @@ public sealed partial class MainViewModel : ViewModelBase, IDisposable
     public void Dispose()
     {
         _feed.Dispose();
+        _shell?.Dispose();       // (the server choice's own asks)
         Disc.Dispose();          // a preparation at work is stopped
         Controller.Hidden();
         _state.ReleasePads();         // the launcher's helper lets the adapter go with its window

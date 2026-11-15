@@ -1,0 +1,198 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:nx="using:Launcher.App.ViewModels.NextUi"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:nxv="using:Launcher.App.Views.NextUi"
+             xmlns:c="using:Launcher.App.Controls"
+             xmlns:n="using:Launcher.App.Controls.NextUi"
+             x:Class="Launcher.App.Views.NextUi.SettingsPageView"
+             x:DataType="vm:SettingsViewModel">
+  <!-- The redesigned Settings (SettingsPageViewModel), in steps: first the groups, each with what is in it; a group
+       pressed shows its option rows. The list takes the left half of the page and scrolls; the right half is a window
+       on the group or the row the focus is on, the pointer's or the pad's alike (SettingInfo: its drawing, what it does,
+       its value now, how it is changed, what is in a group: the owner, 2026-11-15). Left and right change a value, A
+       opens or switches; B (and Back) goes back to the groups. Every change holds at once. -->
+  <Grid Name="PagePanel" Margin="14,8,0,8" ColumnDefinitions="*,40,*" RowDefinitions="Auto,*"
+        x:DataType="nx:SettingsPageViewModel" DataContext="{Binding $parent[nxv:SettingsPageView].Page}">
+    <StackPanel Spacing="4">
+      <TextBlock Classes="eyebrow" FontSize="14" Text="{Binding IsOpen, Converter={x:Static nxv:SettingsEyebrow.Instance}}" />
+      <TextBlock Name="Title" Classes="heading" FontSize="52" LineHeight="56" Margin="0,0,0,10" RenderTransform="skewX(-10deg)"
+                 RenderTransformOrigin="0%,100%" Text="{Binding Title, Converter={x:Static v:UpperText.Instance}}" />
+    </StackPanel>
+
+    <!-- the first step: the groups, one under another -->
+    <ScrollViewer Grid.Row="1" Name="CategoryScroll" Margin="0,4,0,0" VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled" IsVisible="{Binding !IsOpen}">
+      <ItemsControl Name="Categories" ItemsSource="{Binding Categories}" Margin="6,6,16,16" VerticalAlignment="Top" ClipToBounds="False"
+                    c:PadNav.Home="True">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <UniformGrid Columns="1" VerticalAlignment="Top" ClipToBounds="False" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="nx:SettingsCategory">
+            <Button Classes="line confirms" Height="78" Margin="0,0,0,12" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" GotFocus="OnCategoryFocus"
+                    Command="{Binding $parent[nxv:SettingsPageView].Page.OpenCategoryCommand, FallbackValue={x:Null}}" CommandParameter="{Binding}"
+                    AutomationProperties.Name="{Binding Title}">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel VerticalAlignment="Center" Spacing="3">
+                  <TextBlock FontSize="19" FontWeight="SemiBold" Text="{Binding Title}" />
+                  <TextBlock Classes="quiet" FontSize="14" TextTrimming="CharacterEllipsis" Text="{Binding Line}" />
+                </StackPanel>
+                <Viewbox Grid.Column="1" Width="16" Height="16" Margin="12,0,0,0" VerticalAlignment="Center">
+                  <Canvas Width="24" Height="24">
+                    <Path Classes="stroke" Data="M9 5L16 12L9 19" StrokeThickness="2.4" />
+                  </Canvas>
+                </Viewbox>
+              </Grid>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+
+    <!-- the second step: the rows of the group open -->
+    <ScrollViewer Grid.Row="1" Name="SettingsScroll" Margin="0,4,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                  IsVisible="{Binding IsOpen}">
+      <nxv:OptionList Name="Rows" Margin="6,6,16,16" Groups="{Binding OpenGroups}" Focused="{Binding Focused}" c:PadNav.Home="True" />
+    </ScrollViewer>
+
+    <!-- the window on the right: the group or the row the focus is on. Behind the words its group's drawing, large and
+         faint; then its name, what it does, its value now and its note, every choice it has (the one chosen green) or
+         a number's meter, when a change takes effect and what it applies to, something good to know, and for a group
+         every row in it with its value; how it is changed at its foot -->
+    <n:Chamfer Grid.Column="2" Grid.RowSpan="2" Name="Help" Classes="plate" Margin="0,4,24,8" ClipToBounds="True">
+      <Panel>
+        <Viewbox Name="HelpArt" Width="260" Height="260" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-36,-36"
+                 Opacity="0.08" IsHitTestVisible="False">
+          <Canvas Width="24" Height="24">
+            <Path Stroke="{StaticResource NextFocusBrush}" StrokeThickness="1.1" StrokeLineCap="Round" StrokeJoin="Round"
+                  Data="{Binding Info.Icon, Converter={x:Static nxv:PathData.Instance}}" />
+          </Canvas>
+        </Viewbox>
+        <Grid RowDefinitions="*,Auto" Margin="28,26,20,22">
+          <ScrollViewer Name="HelpScroll" Padding="0,0,8,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Spacing="10">
+              <StackPanel Orientation="Horizontal" Spacing="14">
+                <Viewbox Width="44" Height="44" VerticalAlignment="Center">
+                  <Canvas Width="24" Height="24">
+                    <Path Name="HelpIcon" Stroke="{StaticResource NextFocusBrush}" StrokeThickness="1.6" StrokeLineCap="Round" StrokeJoin="Round"
+                          Data="{Binding Info.Icon, Converter={x:Static nxv:PathData.Instance}}" />
+                  </Canvas>
+                </Viewbox>
+                <TextBlock Classes="eyebrow" VerticalAlignment="Center" Text="{Binding Info.Group, Converter={x:Static v:UpperText.Instance}}" />
+              </StackPanel>
+              <!-- the row or the group, named once, and what it does -->
+              <TextBlock Name="HelpTitle" Classes="heading" FontSize="30" LineHeight="34" TextWrapping="Wrap" RenderTransform="skewX(-10deg)"
+                         RenderTransformOrigin="0%,100%" Text="{Binding Info.Title, Converter={x:Static v:UpperText.Instance}}" />
+              <TextBlock Name="HelpText" Classes="lead" FontSize="17" TextWrapping="Wrap" Text="{Binding Info.Text}" />
+              <!-- a row's value now (it changes as the row does), and its note -->
+              <Border Classes="fact" IsVisible="{Binding Info.HasItem}" Margin="0,6,0,0">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Classes="quiet" FontSize="15" VerticalAlignment="Center" Text="Now" />
+                  <TextBlock Name="HelpValue" Grid.Column="1" FontSize="17" FontWeight="SemiBold" VerticalAlignment="Center"
+                             Text="{Binding Info.Item.ValueText, FallbackValue=''}" />
+                </Grid>
+              </Border>
+              <TextBlock Classes="quiet" FontSize="15" TextWrapping="Wrap" Text="{Binding Info.Item.Note, FallbackValue=''}"
+                         IsVisible="{Binding Info.Item.Note, Converter={x:Static StringConverters.IsNotNullOrEmpty}, FallbackValue=False}" />
+              <!-- every choice, the one chosen green -->
+              <ItemsControl Name="HelpChoices" ItemsSource="{Binding Info.Choices}" IsVisible="{Binding Info.HasChoices}" Margin="0,4,0,0">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <WrapPanel />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="nx:InfoChoice">
+                    <Border Classes="choice" Classes.on="{Binding On}" Margin="0,0,8,8">
+                      <TextBlock Text="{Binding Text}" />
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <!-- a number: where it stands between its ends -->
+              <StackPanel Name="HelpMeter" Spacing="6" Margin="0,4,0,4" IsVisible="{Binding Info.HasMeter}" HorizontalAlignment="Left">
+                <Panel Width="{x:Static nx:SettingInfo.MeterWidth}" Height="10" HorizontalAlignment="Left">
+                  <Border Background="{StaticResource NextTrackBrush}" RenderTransform="skewX(-24deg)" />
+                  <Border Name="HelpMeterFill" HorizontalAlignment="Left" Width="{Binding Info.MeterFill}" Background="{StaticResource NextAccentBrush}"
+                          RenderTransform="skewX(-24deg)" />
+                </Panel>
+                <Grid Width="{x:Static nx:SettingInfo.MeterWidth}" ColumnDefinitions="*,*">
+                  <TextBlock Classes="quiet" FontSize="14" Text="{Binding Info.Low}" />
+                  <TextBlock Grid.Column="1" Classes="quiet" FontSize="14" HorizontalAlignment="Right" Text="{Binding Info.High}" />
+                </Grid>
+              </StackPanel>
+              <!-- when a change takes effect, what it applies to, a number's range; a group's count -->
+              <ItemsControl Name="HelpFacts" ItemsSource="{Binding Info.Facts}" IsVisible="{Binding Info.HasFacts}">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="nx:InfoFact">
+                    <Border Classes="fact">
+                      <Grid ColumnDefinitions="Auto,16,*">
+                        <TextBlock Classes="quiet" FontSize="15" VerticalAlignment="Center" Text="{Binding Label}" />
+                        <TextBlock Grid.Column="2" FontSize="16" FontWeight="SemiBold" TextAlignment="Right" TextWrapping="Wrap"
+                                   VerticalAlignment="Center" Text="{Binding Value}" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <!-- something good to know -->
+              <Border Name="HelpTip" Classes="tip" IsVisible="{Binding Info.HasTip}" Margin="0,6,0,0">
+                <StackPanel Spacing="4">
+                  <TextBlock Classes="eyebrow" FontSize="12" Foreground="{StaticResource NextGoldBrush}" Text="GOOD TO KNOW" />
+                  <TextBlock Name="HelpTipText" FontSize="15" TextWrapping="Wrap" Text="{Binding Info.Tip}" />
+                </StackPanel>
+              </Border>
+              <!-- a group's settings, each with its value now -->
+              <ItemsControl Name="HelpRows" ItemsSource="{Binding Info.Rows}" IsVisible="{Binding Info.HasRows}" Margin="0,6,0,0">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate x:DataType="nx:InfoRow">
+                    <Border Classes="fact">
+                      <Grid ColumnDefinitions="Auto,*,Auto">
+                        <Border Width="6" Height="6" Margin="0,0,10,0" VerticalAlignment="Center" RenderTransform="skewX(-14deg)" Background="{StaticResource NextFocusBrush}" />
+                        <TextBlock Grid.Column="1" FontSize="16" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{Binding Label}" />
+                        <TextBlock Grid.Column="2" Classes="quiet" FontSize="15" Margin="12,0,0,0" MaxWidth="200" VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis" Text="{Binding Value}" />
+                      </Grid>
+                    </Border>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+            </StackPanel>
+          </ScrollViewer>
+          <!-- how it is changed -->
+          <TextBlock Grid.Row="1" Name="HelpHow" Classes="quiet" FontSize="15" TextWrapping="Wrap" Margin="0,14,0,0" Text="{Binding Info.HowTo}" />
+        </Grid>
+      </Panel>
+    </n:Chamfer>
+  </Grid>
+  <UserControl.Styles>
+    <!-- a choice of a row: on a small plate; the one chosen green -->
+    <Style Selector="Border.choice">
+      <Setter Property="Background" Value="{StaticResource NextRaisedBrush}" />
+      <Setter Property="CornerRadius" Value="3" />
+      <Setter Property="Padding" Value="12,5" />
+    </Style>
+    <Style Selector="Border.choice TextBlock">
+      <Setter Property="FontSize" Value="15" />
+      <Setter Property="Foreground" Value="{StaticResource NextDimBrush}" />
+    </Style>
+    <Style Selector="Border.choice.on">
+      <Setter Property="Background" Value="{StaticResource NextAccentBrush}" />
+    </Style>
+    <Style Selector="Border.choice.on TextBlock">
+      <Setter Property="Foreground" Value="{StaticResource NextOnAccentBrush}" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <!-- something good to know: a gold edge at its left -->
+    <Style Selector="Border.tip">
+      <Setter Property="Background" Value="{StaticResource NextRaisedBrush}" />
+      <Setter Property="BorderBrush" Value="{StaticResource NextGoldBrush}" />
+      <Setter Property="BorderThickness" Value="3,0,0,0" />
+      <Setter Property="Padding" Value="14,10" />
+    </Style>
+  </UserControl.Styles>
+</UserControl>

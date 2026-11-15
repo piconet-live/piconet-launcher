@@ -1,0 +1,81 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:nx="using:Launcher.App.ViewModels.NextUi"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:nxv="using:Launcher.App.Views.NextUi"
+             xmlns:c="using:Launcher.App.Controls"
+             xmlns:n="using:Launcher.App.Controls.NextUi"
+             x:Class="Launcher.App.Views.NextUi.BuilderPageView"
+             x:DataType="nx:BuilderPageViewModel">
+  <!-- The redesigned Garage's builder as an option page (BuilderPageViewModel) in two steps: on the left the parts and
+       the pilot, then on the next step each part's colour and the trail's, as option rows (left and right change them;
+       A on a colour: every colour), the trail over them saying where the player is; on the right the machine in 3D
+       under the name the game makes from its parts, its grades, what the row the focus is on does, NEXT (then "Save
+       machine") and Back (a step back). -->
+  <Grid Margin="14,8,0,8" ColumnDefinitions="*,32,420" RowDefinitions="Auto,*">
+    <StackPanel Spacing="4">
+      <TextBlock Classes="eyebrow" FontSize="14" Text="GARAGE" />
+      <TextBlock Name="Title" Classes="heading" FontSize="52" LineHeight="56" Margin="0,0,0,10" RenderTransform="skewX(-10deg)"
+                 RenderTransformOrigin="0%,100%" Text="{Binding Title, Converter={x:Static v:UpperText.Instance}}" />
+      <n:StepTrail Steps="Parts,Colours" At="{Binding Step}" Margin="0,0,0,6" />
+    </StackPanel>
+    <ScrollViewer Grid.Row="1" Name="BuilderScroll" Margin="0,4,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <nxv:OptionList Name="BuilderRows" Margin="6,6,16,16" Groups="{Binding Shown}" Focused="{Binding Focused}" />
+    </ScrollViewer>
+
+    <!-- the machine, and the page's action -->
+    <StackPanel Grid.Column="2" Grid.RowSpan="2" VerticalAlignment="Bottom" Spacing="14">
+      <n:Chamfer Name="Machine" Classes="plate">
+        <StackPanel Margin="24,20" Spacing="10">
+          <Viewbox Height="36" Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Left">
+            <TextBlock Name="BuildName" Classes="heading" FontSize="34" LineHeight="36" RenderTransform="skewX(-10deg)"
+                       RenderTransformOrigin="0%,100%" Text="{Binding Name, Converter={x:Static v:UpperText.Instance}}" />
+          </Viewbox>
+          <Panel Height="170">
+            <Panel IsVisible="{DynamicResource HasDiscArt}">
+              <c:Unscaled>
+                <c:MachinePreview Name="BuildPreview" Custom="{Binding Builder.Build}" PartColours="{Binding Builder.PreviewColours}"
+                                  Machine="{Binding Garage.MachineIndex}" Turns="{Binding Garage.Turning}"
+                                  AutomationProperties.Name="The machine in 3D: drag to turn it" />
+              </c:Unscaled>
+            </Panel>
+            <TextBlock Classes="quiet" HorizontalAlignment="Center" VerticalAlignment="Center" Text="No disc image"
+                       IsVisible="{DynamicResource NoDiscArt}" />
+          </Panel>
+          <ItemsControl Name="BuildGrades" ItemsSource="{Binding Grades}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:StatFigure">
+                <Grid ColumnDefinitions="64,*,26" Height="24">
+                  <TextBlock Classes="quiet" FontSize="15" VerticalAlignment="Center" Text="{Binding Label}" />
+                  <ItemsControl Grid.Column="1" VerticalAlignment="Center" ItemsSource="{Binding Value, Converter={x:Static nxv:GradeParts.Instance}}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <UniformGrid Rows="1" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="x:Boolean">
+                        <Border Classes="part" Classes.lit="{Binding}" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <TextBlock Grid.Column="2" FontFamily="{StaticResource DisplayFont}" FontWeight="ExtraBold" FontSize="19"
+                             HorizontalAlignment="Right" VerticalAlignment="Center" Text="{Binding Value}" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock Name="RowHelp" Classes="lead" FontSize="15" TextWrapping="Wrap" MinHeight="40"
+                     Text="{Binding Focused.Help, FallbackValue=''}" />
+        </StackPanel>
+      </n:Chamfer>
+      <Button Name="Save" Classes="main" Margin="6,0" HorizontalAlignment="Stretch" Content="{Binding MainText}" Command="{Binding MainCommand}"
+              c:PadNav.Main="True" AutomationProperties.Name="{Binding MainText}" />
+      <Button Name="Back" Classes="soft" Height="46" Margin="6,0" HorizontalAlignment="Stretch" Content="Back" Command="{Binding BackCommand}"
+              AutomationProperties.Name="Back" />
+      <TextBlock Name="Notice" Margin="6,0" TextWrapping="Wrap" Foreground="{StaticResource NextDevBrush}" Text="{Binding Notice}"
+                 IsVisible="{Binding Notice, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+    </StackPanel>
+  </Grid>
+</UserControl>

@@ -133,7 +133,35 @@ public sealed partial class PlayControlViewModel : ViewModelBase
     /// under the button).</summary>
     private bool _noGame;
 
-    private bool CanGo() => !_noGame;
+    private bool CanGo() => !_noGame || MayJoin is not null;
+
+    /// <summary>The redesigned interface's check before a race is joined (RACE, a server, a lobby): false when it may
+    /// not, once it has shown the player why and the way (the panel that prepares the game's files, the question
+    /// before a custom lobby is left, or the reason); it is given the join again, for after such a question.
+    /// The shell sets it while that interface shows; null: the classic launcher's ways (RACE off with the reason
+    /// under it, PREPARE AGAIN).</summary>
+    public Func<Action, bool>? MayJoin
+    {
+        get => _mayJoin;
+        set
+        {
+            _mayJoin = value;
+            GoCommand.NotifyCanExecuteChanged();
+        }
+    }
+
+    private Func<Action, bool>? _mayJoin;
+
+    /// <summary>The redesigned interface's join of a race (RACE, a server's "Join a race"): a Quick Play lobby that is
+    /// open, never a new one (the owner, 2026-11-15: a join that finds nothing says so; a lobby is made only by "Host a
+    /// lobby", <see cref="HostAsync"/>). The server is asked which lobbies are open first, and the one joined is named
+    /// to it (the fullest open lobby of the player's line, <see cref="ServerStatusFeed.OpenLobby"/>), so that the queue
+    /// cannot open a new one; with none open, or no answer (false), this is called and nothing is joined. The shell
+    /// sets it while that interface shows; null: the classic launcher's RACE, whose queue opens a new lobby when none
+    /// has room.</summary>
+    public Action<bool>? NoOpenLobby { get; set; }
+
+    private bool _looking;   // the server is being asked for an open lobby (a second press waits for the first)
 
     /// <summary>Back to the first screen, where the game is prepared from the disc (the window sets it). While the
     /// launcher is open and the game's files have to be prepared (a preparation failed for a reason that was not the
@@ -150,11 +178,27 @@ public sealed partial class PlayControlViewModel : ViewModelBase
     /// <summary>A lobby of the Play page's list pressed: Quick Play in that lobby, by RACE's rules and with its
     /// notices; from another Quick Play lobby the player moves over (the server takes them out of the first when the
     /// second takes them).</summary>
-    public Task JoinLobbyAsync(string lobbyId) => _noGame ? Task.CompletedTask : RaceAsync(lobbyId);
+    public Task JoinLobbyAsync(string lobbyId) => _noGame && MayJoin is null ? Task.CompletedTask : RaceAsync(lobbyId);
+
+    /// <summary>The redesigned interface's "Host a lobby" on Quick Play: a Quick Play lobby, never a custom one (the
+    /// owner, 2026-11-15: the two are kept apart, as the classic launcher keeps RACE and the custom lobbies). Quick
+    /// Play's queue, by RACE's rules, which opens a new Quick Play lobby when none has room: the protocol makes Quick
+    /// Play lobbies only so (<c>createLobby</c> makes custom ones), and while one has room the server puts the player
+    /// in it.</summary>
+    public Task HostAsync() => RaceAsync(null, host: true);
+
+    /// <summary>The lobbies page's "Host a lobby" (<see cref="HostAsync"/>).</summary>
+    [RelayCommand]
+    private Task HostQuickPlayAsync() => HostAsync();
 
     /// <param name="lobby">The lobby the player chose; null: the queue picks one.</param>
-    private async Task RaceAsync(string? lobby)
+    /// <param name="host">"Host a lobby": the queue, whether a lobby is open or not.</param>
+    private async Task RaceAsync(string? lobby, bool host = false)
     {
+        if (MayJoin is { } may && !may(() => _ = RaceAsync(lobby, host)))
+        {
+            return;   // (shown why; the join goes on by itself once a question was answered so)
+        }
         if (_prepare)
         {
             ShowFirstScreen?.Invoke();
@@ -175,6 +219,20 @@ public sealed partial class PlayControlViewModel : ViewModelBase
             _gameProblem = _raceRefused || why.Length == 0 ? _gameProblem : why;
             ShowNotice();
             return;
+        }
+        if (lobby is null && !host && NoOpenLobby is { } none)
+        {
+            if (_looking)
+            {
+                return;   // (the first press is still asking)
+            }
+            var (open, answered) = await OpenLobbyAsync().ConfigureAwait(true);
+            if (open is null)
+            {
+                none(answered);
+                return;
+            }
+            lobby = open;
         }
         try
         {
@@ -201,6 +259,27 @@ public sealed partial class PlayControlViewModel : ViewModelBase
         {
             // the player left while it was connecting: nothing to say
         }
+    }
+
+    /// <summary>The open lobby a join takes (<see cref="NoOpenLobby"/>), from the server's answer asked now; null with
+    /// none open, and Answered false when the server did not answer.</summary>
+    private async Task<(string? Lobby, bool Answered)> OpenLobbyAsync()
+    {
+        _looking = true;
+        try
+        {
+            await _feed.AskAsync().ConfigureAwait(true);
+        }
+        finally
+        {
+            _looking = false;
+        }
+        if (_feed.Failed || _feed.Latest is not { } status)
+        {
+            return (null, false);
+        }
+        // (not the player's own lobby: a custom one a server from before lists, or the Quick Play one they are in)
+        return (ServerStatusFeed.OpenLobby(status, LauncherLine.Own, _state.Session?.Lobby?.LobbyId)?.Id, true);
     }
 
     /// <summary>Under the notice: the folder it speaks of, in the system's file browser.</summary>
@@ -372,7 +451,9 @@ public sealed partial class PlayControlViewModel : ViewModelBase
             (Line1, Line2) = ("", "");
             return;
         }
-        if (ServerStatusFeed.QuickPlayLobby(status) is { } lobby)
+        // (the redesigned interface's RACE joins an open lobby of the player's line alone: NoOpenLobby)
+        var open = NoOpenLobby is null ? ServerStatusFeed.QuickPlayLobby(status) : ServerStatusFeed.OpenLobby(status, LauncherLine.Own);
+        if (open is { } lobby)
         {
             // the lobby RACE would join, as the lobby lists name it: "Lobby 2", "Gathering · 14/30"
             Line1 = StatusText.LobbyName(status, lobby.Id);
@@ -380,9 +461,12 @@ public sealed partial class PlayControlViewModel : ViewModelBase
         }
         else
         {
-            (Line1, Line2) = ("New lobby", "");
+            (Line1, Line2) = NoOpenLobby is null ? ("New lobby", "") : (NoOpenLobbyText, "");
         }
     }
+
+    /// <summary>Under the redesigned interface's RACE while the server has no lobby open to join.</summary>
+    public const string NoOpenLobbyText = "No race to join right now";
 
     /// <summary>In Quick Play: what the lobby is doing.</summary>
     private void ShowLobby(QuickPlaySession session)

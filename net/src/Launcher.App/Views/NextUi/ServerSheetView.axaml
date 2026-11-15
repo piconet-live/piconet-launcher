@@ -1,0 +1,58 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:nx="using:Launcher.App.ViewModels.NextUi"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:nxv="using:Launcher.App.Views.NextUi"
+             x:Class="Launcher.App.Views.NextUi.ServerSheetView"
+             x:DataType="nx:ServerSheetViewModel">
+  <!-- A server pressed: its name and state, and the three ways onto it as three like cards, each its title alone,
+       centred, in the display face (the owner, 2026-11-15: no lines under them): JOIN A RACE (Quick Play: a lobby open
+       there, else "No race found") first, where the focus lands, HOST A LOBBY (a Quick Play lobby, never a custom one:
+       those are the hub's Custom lobby), SEE ITS LOBBIES (the lobbies people are in there); what each does in its tip.
+       Close at the bottom. -->
+  <Grid Margin="32,28,28,24" RowDefinitions="Auto,Auto,*,Auto">
+    <StackPanel Spacing="2">
+      <TextBlock Classes="eyebrow" Text="SERVER" />
+      <TextBlock Name="Title" Classes="heading" FontSize="40" LineHeight="44" TextTrimming="CharacterEllipsis" RenderTransform="skewX(-10deg)"
+                 RenderTransformOrigin="0%,100%" Text="{Binding Row.Name, Converter={x:Static v:UpperText.Instance}}" />
+      <TextBlock Classes="lead" FontSize="16" Margin="0,8,0,0" TextWrapping="Wrap" Text="{Binding Row.Line}" />
+    </StackPanel>
+
+    <StackPanel Grid.Row="1" Spacing="14" Margin="0,26,0,0">
+      <Button Name="Join" Classes="card c18 way" Command="{Binding JoinCommand}" AutomationProperties.Name="Join a race"
+              ToolTip.Tip="Quick Play puts you in an open lobby on this server">
+        <TextBlock Classes="heading" Text="JOIN A RACE" />
+      </Button>
+      <Button Name="Host" Classes="card c18 way" Command="{Binding HostCommand}" AutomationProperties.Name="Host a lobby"
+              ToolTip.Tip="A new Quick Play lobby on this server: the next racers who join a race come to you">
+        <TextBlock Classes="heading" Text="HOST A LOBBY" />
+      </Button>
+      <Button Name="Lobbies" Classes="card c18 way" Command="{Binding LobbiesCommand}" AutomationProperties.Name="See its lobbies"
+              ToolTip.Tip="The lobbies people are in on this server: join one from the list">
+        <TextBlock Classes="heading" Text="SEE ITS LOBBIES" />
+      </Button>
+    </StackPanel>
+
+    <Button Grid.Row="3" Name="Close" Classes="soft" Margin="4,16,8,0" HorizontalAlignment="Stretch" Content="Close"
+            Command="{Binding $parent[nxv:NextShell].((vm:MainViewModel)DataContext).Shell.CloseSheetCommand}" AutomationProperties.Name="Close" />
+  </Grid>
+  <UserControl.Styles>
+    <!-- a way onto the server: a card of its own, its title alone, centred and leaning in the display face -->
+    <Style Selector="Button.way">
+      <Setter Property="Height" Value="84" />
+      <Setter Property="Padding" Value="22,0" />
+      <Setter Property="HorizontalContentAlignment" Value="Center" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.way TextBlock.heading">
+      <Setter Property="FontSize" Value="30" />
+      <Setter Property="LineHeight" Value="34" />
+      <Setter Property="LetterSpacing" Value="1.2" />
+      <Setter Property="HorizontalAlignment" Value="Center" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="RenderTransform" Value="skewX(-10deg)" />
+      <Setter Property="RenderTransformOrigin" Value="50%,50%" />
+    </Style>
+  </UserControl.Styles>
+</UserControl>

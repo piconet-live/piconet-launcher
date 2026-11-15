@@ -94,8 +94,41 @@ public class BoostTrailTests
         Assert.Equal([new Rgb(153, 153, 204), new Rgb(153, 204, 153), new Rgb(204, 153, 153)], BurnerColours.Read(fmi));
         Assert.Empty(BurnerColours.Read(null));
         Assert.Empty(BurnerColours.Read(fmi[..0x60]));   // a burner past the end
+        // where each burner is, how large, its colours (Wild Goose's lower left burner: -0.213, 0.281, 2.363, size 8)
+        Put(0x40 + 0x04, -0.213f, 0.281f, 2.363f);
+        System.Buffers.Binary.BinaryPrimitives.WriteSingleBigEndian(fmi.AsSpan(0x40 + 0x18), 8);
+        var burners = BurnerColours.Burners(fmi);
+        Assert.Equal(2, burners.Count);
+        Assert.Equal(new Burner(new System.Numerics.Vector3(-0.213f, 0.281f, 2.363f), 8, new Rgb(153, 153, 204), new Rgb(153, 204, 153)), burners[0]);
+        Assert.Equal(new Rgb(204, 153, 153), burners[1].Boosting);
+        Assert.Empty(BurnerColours.Burners(null));
+        Assert.Empty(BurnerColours.Burners(fmi[..0x60]));
         Put(0x40 + 0x20, float.NaN, 0, 0);
         Assert.Empty(BurnerColours.Read(fmi));
+        Assert.Empty(BurnerColours.Burners(fmi));
+    }
+
+    /// <summary>The hub's showcase's engine flames (<see cref="EngineFlames"/>): from each burner a plume going back
+    /// towards the tail, white-hot at the burner, narrowing and fading; longer and of the boosting colour as it
+    /// boosts; flickering, the same at the same moment.</summary>
+    [Fact]
+    public void AnEnginesFlameGoesBackFromItsBurner()
+    {
+        var burner = new Burner(new System.Numerics.Vector3(0.2f, 0.3f, 2.4f), 8, new Rgb(204, 153, 204), new Rgb(153, 204, 204));
+        var flame = EngineFlames.Sprites([burner], 1.5f);
+        Assert.Equal(EngineFlames.Along + 1, flame.Count);   // the halo and the plume
+        var plume = flame.Skip(1).ToList();
+        Assert.All(plume, s => Assert.True(s.At.Z > burner.At.Z && s.At.X == burner.At.X && s.At.Y == burner.At.Y));
+        Assert.True(plume[0].Heat > 0.9f && plume[^1].Heat < 0.01f);
+        Assert.True(plume[0].Radius > plume[^1].Radius && plume[0].Bright > plume[^1].Bright);
+        Assert.Equal(1, plume[0].Colour.X, 3);   // the burner's colour at full strength: (204,153,204) lilac
+        Assert.True(plume[0].Colour.Y < 0.7f);
+        var boosting = EngineFlames.Sprites([burner], 1.5f, boost: 1).Skip(1).ToList();
+        Assert.True(boosting[^1].At.Z > plume[^1].At.Z);
+        Assert.Equal(1, boosting[0].Colour.Y, 3);   // (153,204,204): cyan
+        Assert.Equal(flame, EngineFlames.Sprites([burner], 1.5f));
+        Assert.NotEqual(flame, EngineFlames.Sprites([burner], 1.6f));
+        Assert.Empty(EngineFlames.Sprites([burner with { Size = 0 }], 1));
     }
 
     [Fact]

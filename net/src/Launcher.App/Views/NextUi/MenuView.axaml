@@ -1,0 +1,38 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:nx="using:Launcher.App.ViewModels.NextUi"
+             x:Class="Launcher.App.Views.NextUi.MenuView"
+             x:DataType="nx:MenuViewModel">
+  <!-- A page of the redesigned interface that is a short list of places to go into (More; Settings' four pages until
+       it has its one page): the area's name, and a card a place with its name and one line. -->
+  <StackPanel Margin="14,8,0,8" Spacing="10">
+    <TextBlock Name="Title" Classes="heading" FontSize="52" LineHeight="56" Margin="0,0,0,10" RenderTransform="skewX(-10deg)"
+               RenderTransformOrigin="0%,100%" Text="{Binding Title, Converter={x:Static v:UpperText.Instance}}" />
+    <ItemsControl Name="Rows" ItemsSource="{Binding Rows}">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <StackPanel Spacing="10" />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="nx:MenuRow">
+          <Button Classes="card confirms" Height="80" MaxWidth="720" Padding="24,0" HorizontalAlignment="Left" Width="720"
+                  Click="OnRow" AutomationProperties.Name="{Binding Label}">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel VerticalAlignment="Center" Spacing="2">
+                <TextBlock FontSize="22" FontWeight="Bold" Text="{Binding Label}" />
+                <TextBlock Classes="quiet" FontSize="16" Text="{Binding Line}" TextTrimming="CharacterEllipsis" />
+              </StackPanel>
+              <Viewbox Grid.Column="1" Width="18" Height="18" VerticalAlignment="Center">
+                <Canvas Width="24" Height="24">
+                  <Path Data="M9 5L16 12L9 19" Stroke="{StaticResource NextDimBrush}" StrokeThickness="2.4" />
+                </Canvas>
+              </Viewbox>
+            </Grid>
+          </Button>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+  </StackPanel>
+</UserControl>

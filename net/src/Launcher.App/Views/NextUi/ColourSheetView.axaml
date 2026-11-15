@@ -1,0 +1,99 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:nx="using:Launcher.App.ViewModels.NextUi"
+             xmlns:nxv="using:Launcher.App.Views.NextUi"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:c="using:Launcher.App.Controls"
+             x:Class="Launcher.App.Views.NextUi.ColourSheetView"
+             x:DataType="nx:ColourSheetViewModel">
+  <!-- The Garage's colours panel in two steps. The palette: what is coloured (the machine or a part, the trail), its
+       own colours, twelve to paint it with, "Mix your own colour", "Back to the original"; Done at its foot. The mix: the
+       colour on the wheel (for the mouse) and as hex, "Use this colour" (B too: back to the palette). -->
+  <DockPanel Margin="32,28,28,24">
+    <StackPanel DockPanel.Dock="Top" Spacing="2">
+      <TextBlock Classes="eyebrow" Text="{Binding MachineName, Converter={x:Static v:UpperText.Instance}}" />
+      <TextBlock Name="Title" Classes="heading" FontSize="40" LineHeight="44" RenderTransform="skewX(-10deg)" RenderTransformOrigin="0%,100%"
+                 Text="COLOURS" />
+    </StackPanel>
+    <Panel DockPanel.Dock="Bottom" Margin="4,16,8,0">
+      <Button Name="Done" Classes="main" HorizontalAlignment="Stretch" Content="DONE" IsVisible="{Binding !Mixing}"
+              Command="{Binding $parent[nxv:NextShell].((vm:MainViewModel)DataContext).Shell.CloseSheetCommand}" AutomationProperties.Name="Done" />
+      <Button Name="UseMixed" Classes="main" HorizontalAlignment="Stretch" Content="USE THIS COLOUR" IsVisible="{Binding Mixing}"
+              Command="{Binding MixedCommand}" AutomationProperties.Name="Use this colour" />
+    </Panel>
+    <ScrollViewer Margin="0,16,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Spacing="12" Margin="2,2,12,2">
+        <StackPanel Name="Palette" Spacing="12" IsVisible="{Binding !Mixing}">
+        <ItemsControl Name="Targets" c:PadNav.Tabs="True" ItemsSource="{Binding Targets}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="nx:ColourTarget">
+              <Button Classes="pill" Classes.go="{Binding On}" Height="34" Padding="14,0" Margin="0,0,8,8" Content="{Binding Label}"
+                      Command="{Binding $parent[UserControl].((nx:ColourSheetViewModel)DataContext).ChooseCommand}" CommandParameter="{Binding}"
+                      AutomationProperties.Name="{Binding Label}" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <!-- its own colours -->
+        <ItemsControl Name="Own" ItemsSource="{Binding Swatches}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <StackPanel Orientation="Horizontal" Spacing="8" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:StockSwatch">
+              <Button Classes="swatch" Classes.on="{Binding Selected}" IsEnabled="{Binding Known}"
+                      Background="{Binding Hex, Converter={x:Static v:HexToBrush.Instance}}"
+                      Command="{Binding $parent[UserControl].((nx:ColourSheetViewModel)DataContext).PickSwatchCommand}" CommandParameter="{Binding}"
+                      AutomationProperties.Name="{Binding Converter={x:Static nxv:SwatchWords.Instance}}" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <!-- twelve to paint it with -->
+        <ItemsControl Name="Hues" ItemsSource="{x:Static nx:ColourSheetViewModel.Hues}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <UniformGrid Columns="6" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="x:String">
+              <Button Classes="swatch" Margin="0,0,8,8" Background="{Binding Converter={x:Static v:HexToBrush.Instance}}"
+                      Command="{Binding $parent[UserControl].((nx:ColourSheetViewModel)DataContext).PaintHueCommand}" CommandParameter="{Binding}"
+                      AutomationProperties.Name="{Binding StringFormat='Paint it {0}'}" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Classes="quiet" FontSize="14" TextWrapping="Wrap" Text="Everyone in the race sees it. Very dark colours are brightened." />
+        <Button Name="Mix" Classes="line" Height="48" Command="{Binding MixCommand}" ToolTip.Tip="Any colour: on the wheel, or typed as hex"
+                AutomationProperties.Name="Mix your own colour">
+          <TextBlock VerticalAlignment="Center" Text="Mix your own colour" />
+        </Button>
+        <Button Name="Original" Classes="line" Height="48" Command="{Binding OriginalCommand}" AutomationProperties.Name="Back to the original">
+          <TextBlock VerticalAlignment="Center" Text="Back to the original" />
+        </Button>
+        </StackPanel>
+
+        <!-- the second step: the colour on the wheel, and typed -->
+        <StackPanel Name="MixStep" Spacing="14" IsVisible="{Binding Mixing}">
+          <TextBlock Classes="asks" FontSize="20" Text="MIX YOUR OWN" />
+          <c:ColorWheelPicker Name="Wheel" Color="{Binding Hex}" Height="200" HorizontalAlignment="Left"
+                              AutomationProperties.Name="Colour wheel: hue and richness, and a brightness bar" />
+          <StackPanel Spacing="6">
+            <TextBlock Classes="quiet" FontSize="14" Text="Colour as hex" />
+            <TextBox Name="HexBox" FontSize="15" MaxLength="7" Width="160" HorizontalAlignment="Left" Text="{Binding Hex}"
+                     AutomationProperties.Name="Colour as hex, such as #E8432E" />
+            <TextBlock Classes="quiet" FontSize="13" Foreground="{StaticResource NextDevBrush}" Text="#RRGGBB" IsVisible="{Binding !HexValid}" />
+          </StackPanel>
+          <TextBlock Classes="quiet" FontSize="14" TextWrapping="Wrap" Text="Everyone in the race sees it. Very dark colours are brightened." />
+        </StackPanel>
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

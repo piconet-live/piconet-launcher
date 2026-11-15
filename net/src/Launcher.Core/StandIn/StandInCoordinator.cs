@@ -139,7 +139,19 @@ public sealed class StandInCoordinator : ICoordinatorConnection
 
     public Task CreateLobbyAsync(CreateLobby request, CancellationToken cancel = default) => Done(() => _rooms.Create(request, _name));
 
-    public Task JoinLobbyAsync(JoinLobby request, CancellationToken cancel = default) => Done(() => _rooms.Join(request));
+    /// <summary>A lobby joined by its id: a custom one, or the stand-in's Quick Play lobby (the one its status lists,
+    /// which a launcher names to join it rather than queue: the redesigned interface's RACE).</summary>
+    public Task JoinLobbyAsync(JoinLobby request, CancellationToken cancel = default) => Done(() =>
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        if (request.LobbyId != StandInLobby.LobbyId)
+        {
+            _rooms.Join(request);
+            return;
+        }
+        _rooms.LeaveCurrent();
+        _quick.Queue(request.Machine, request.Color, request.StockColor);
+    });
 
     public Task SetLobbyRulesAsync(SetLobbyRules request, CancellationToken cancel = default) => Done(() => _rooms.SetRules(request));
 

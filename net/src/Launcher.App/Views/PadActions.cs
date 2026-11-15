@@ -32,6 +32,8 @@ public static class PadActions
                 return count > 0;
             case Slider or Stepper:
                 return false;
+            case TextBox box:
+                return PadNav.Typing?.Invoke(box) == true;   // (the keyboard on the screen types into it)
             default:
                 break;
         }
@@ -52,8 +54,13 @@ public static class PadActions
     /// <summary>Left or right on a value: one step that way. True: the step was taken, or the value is at its end
     /// and the move is a repeat (a held direction never leaves the control it is changing); false: no value here,
     /// or a fresh press at its end, which moves the focus on.</summary>
-    public static bool Step(Control control, PadMove move, bool repeat)
+    public static bool Step(Control control, PadMove move, bool repeat) => Step(control, move, repeat, out _);
+
+    /// <summary>As <see cref="Step(Control, PadMove, bool)"/>; <paramref name="changed"/>: the value did change (a held
+    /// direction at its end is taken, and changes nothing).</summary>
+    public static bool Step(Control control, PadMove move, bool repeat, out bool changed)
     {
+        changed = false;
         ArgumentNullException.ThrowIfNull(control);
         if (move is not (PadMove.Left or PadMove.Right) || !PadNav.IsValue(control) || !control.IsEffectivelyEnabled)
         {
@@ -62,12 +69,14 @@ public static class PadActions
         var by = move == PadMove.Right ? 1 : -1;
         var moved = control switch
         {
+            IPadValue value => value.StepBy(by),
             Slider slider => StepSlider(slider, by),
             Stepper stepper => StepStepper(stepper, by),
             ToggleSwitch toggle => Set(toggle, by > 0),
             SelectingItemsControl choices => StepChoice(choices, by),
             _ => false,
         };
+        changed = moved;
         return moved || repeat;
     }
 

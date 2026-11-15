@@ -1,0 +1,342 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:nx="using:Launcher.App.ViewModels.NextUi"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:nxv="using:Launcher.App.Views.NextUi"
+             xmlns:c="using:Launcher.App.Controls"
+             xmlns:n="using:Launcher.App.Controls.NextUi"
+             x:Class="Launcher.App.Views.NextUi.GaragePageView"
+             x:DataType="vm:GarageViewModel">
+  <!-- The redesigned Garage (the Garage area's page, and a lobby's whole Garage; GaragePageViewModel), in two steps.
+       The machines: at the top the shelves as chips with their counts, the search, the stats' lens and Sort & filter
+       (a dot: something is left out); at the left the shelf's machines as a grid that scrolls up and down (New machine
+       last on Custom); beside it the machine under the focus large, with "In use" when it is the one raced, and its
+       grades. A tile pressed opens the machine's own page: the machine large, and a card with its grades and every
+       value, its setting between acceleration and top speed (left and right), its colours and "+" for every colour,
+       "Use this machine" and the star (a custom machine's: Edit parts, Remove); only "Use this machine" (or Start)
+       makes it the one raced, and B goes back to the machines. The builder shows in the Garage's place. -->
+  <Panel Name="PagePanel" x:DataType="nx:GaragePageViewModel" DataContext="{Binding $parent[nxv:GaragePageView].Page}">
+    <!-- the first step: the machines -->
+    <Grid Name="Browse" Margin="14,2,0,6" RowDefinitions="Auto,*" IsVisible="{Binding Choosing}">
+      <!-- the shelves; the search, the lens, Sort & filter -->
+      <DockPanel Height="44" Margin="0,0,0,12">
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <Border Name="SearchBox" Classes="search" Width="200" Height="36">
+            <Grid ColumnDefinitions="Auto,*">
+              <Viewbox Width="15" Height="15" Margin="12,0,0,0" VerticalAlignment="Center">
+                <Canvas Width="24" Height="24">
+                  <Path Classes="stroke" Data="M10.5 4A6.5 6.5 0 1 1 10.5 17A6.5 6.5 0 1 1 10.5 4ZM15.5 15.5L21 21" StrokeThickness="2.4" />
+                </Canvas>
+              </Viewbox>
+              <TextBox Grid.Column="1" Name="Search" ToolTip.Tip="Search the machines by their name" Classes="bare" FontSize="15" VerticalAlignment="Center" PlaceholderText="Search"
+                       Text="{Binding Garage.Query}" AutomationProperties.Name="Search machines" />
+            </Grid>
+          </Border>
+          <Button Name="Lens" Classes="pill" Height="36" Padding="16,0" Content="{Binding Garage.LensText}" Command="{Binding NextLensCommand}"
+                  IsEnabled="{Binding Garage.LensSteps}" ToolTip.Tip="{Binding Garage.LensTip}" ToolTip.ShowOnDisabled="True" AutomationProperties.Name="{Binding Garage.LensText}" />
+          <Button Name="SortFilter" ToolTip.Tip="Sort the machines, and leave out those without the grades you choose (Y)" Classes="pill" Height="36" Padding="16,0" Command="{Binding OpenSortCommand}" AutomationProperties.Name="Sort and filter">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock VerticalAlignment="Center" Text="Sort &amp; filter" />
+              <Ellipse Name="FilterDot" Width="7" Height="7" VerticalAlignment="Center" Fill="{StaticResource NextAccentBrush}"
+                       IsVisible="{Binding Garage.Filtered}" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
+        <StackPanel Name="Shelves" c:PadNav.Tabs="True" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <Button Name="ShelfFavourites" Classes="pill" c:PadNav.Next="Tiles" Classes.go="{Binding Garage.ShelfTabs[0].On}" Height="36" Padding="16,0"
+                  Command="{Binding ShowShelfCommand}" CommandParameter="{Binding Garage.ShelfTabs[0]}" AutomationProperties.Name="Favourites">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock VerticalAlignment="Center" Text="{Binding Garage.ShelfTabs[0].Label}" />
+              <TextBlock Classes="count" VerticalAlignment="Center" Text="{Binding Garage.ShelfTabs[0].Count}" />
+            </StackPanel>
+          </Button>
+          <Button Name="ShelfStock" Classes="pill" c:PadNav.Next="Tiles" Classes.go="{Binding Garage.ShelfTabs[1].On}" Height="36" Padding="16,0"
+                  Command="{Binding ShowShelfCommand}" CommandParameter="{Binding Garage.ShelfTabs[1]}" AutomationProperties.Name="Stock">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock VerticalAlignment="Center" Text="{Binding Garage.ShelfTabs[1].Label}" />
+              <TextBlock Classes="count" VerticalAlignment="Center" Text="{Binding Garage.ShelfTabs[1].Count}" />
+            </StackPanel>
+          </Button>
+          <Button Name="ShelfCustom" Classes="pill" c:PadNav.Next="Tiles" Classes.go="{Binding Garage.ShelfTabs[2].On}" Height="36" Padding="16,0"
+                  Command="{Binding ShowShelfCommand}" CommandParameter="{Binding Garage.ShelfTabs[2]}" IsEnabled="{Binding !Garage.CustomsOff}"
+                  ToolTip.Tip="{Binding Garage.CustomsOffText}" AutomationProperties.Name="Custom">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock VerticalAlignment="Center" Text="{Binding Garage.ShelfTabs[2].Label}" />
+              <TextBlock Classes="count" VerticalAlignment="Center" Text="{Binding Garage.ShelfTabs[2].Count}" />
+            </StackPanel>
+          </Button>
+        </StackPanel>
+      </DockPanel>
+
+      <Grid Grid.Row="1" ColumnDefinitions="516,28,*">
+        <!-- the shelf's machines as a grid: the wheel, the scroll bar and the focus scroll it; New machine last on
+             Custom; under them what to do about a shelf that holds none -->
+        <ScrollViewer Name="Strip" Margin="-10,-10,0,0" Padding="10,10,14,10" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+          <StackPanel VerticalAlignment="Top" ClipToBounds="False">
+            <ItemsControl Name="Tiles" c:PadNav.Home="True" ItemsSource="{Binding Garage.Roster}" VerticalAlignment="Top" ClipToBounds="False">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <UniformGrid Columns="4" VerticalAlignment="Top" ClipToBounds="False" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.DataTemplates>
+                <DataTemplate x:DataType="vm:GarageCard">
+                  <Button Classes="card c10 machine grid" Classes.off="{Binding !Offered}" Classes.picked="{Binding Selected}" c:PadNav.Next="Use"
+                          ToolTip.Tip="This machine's page: its setting, its colours, Use this machine"
+                          Command="{Binding $parent[nxv:GaragePageView].Page.PickCommand, FallbackValue={x:Null}}" CommandParameter="{Binding}"
+                          AutomationProperties.Name="{Binding Id, Converter={x:Static v:MachineNameText.Instance}}">
+                    <Grid RowDefinitions="*,Auto">
+                      <c:MachineStill Machine="{Binding Id}" StockColor="{Binding StockColor}" PaintColor="{Binding PaintColor}" />
+                      <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
+                        <TextBlock Classes="machinename" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                                   Text="{Binding Id, Converter={x:Static v:MachineNameText.Instance}}" />
+                        <Viewbox Grid.Column="1" Width="13" Height="13" Margin="6,0,0,0" IsVisible="{Binding Favourite}">
+                          <Canvas Width="24" Height="24">
+                            <Path Classes="starmark" Data="M12 2.5L14.7 8.7L21.5 9.3L16.3 13.7L17.9 20.3L12 16.8L6.1 20.3L7.7 13.7L2.5 9.3L9.3 8.7Z" />
+                          </Canvas>
+                        </Viewbox>
+                      </Grid>
+                      <Border Grid.RowSpan="2" Height="3" Margin="-10,0,-10,-6" VerticalAlignment="Bottom"
+                              Background="{StaticResource NextAccentBrush}" IsVisible="{Binding Selected}" />
+                    </Grid>
+                  </Button>
+                </DataTemplate>
+                <DataTemplate x:DataType="vm:CustomCard">
+                  <Button Classes="card c10 machine grid" Classes.picked="{Binding Raced}" c:PadNav.Next="Use"
+                          ToolTip.Tip="This machine's page: its setting, its colours, Use this machine"
+                          Command="{Binding $parent[nxv:GaragePageView].Page.PickCommand, FallbackValue={x:Null}}" CommandParameter="{Binding}"
+                          AutomationProperties.Name="{Binding Name}">
+                    <Grid RowDefinitions="*,Auto">
+                      <c:MachineStill Custom="{Binding Build}" PartColours="{Binding Colours}" />
+                      <Grid Grid.Row="1" ColumnDefinitions="*,Auto">
+                        <TextBlock Classes="machinename" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Text="{Binding Name}" />
+                        <Viewbox Grid.Column="1" Width="13" Height="13" Margin="6,0,0,0" IsVisible="{Binding Favourite}">
+                          <Canvas Width="24" Height="24">
+                            <Path Classes="starmark" Data="M12 2.5L14.7 8.7L21.5 9.3L16.3 13.7L17.9 20.3L12 16.8L6.1 20.3L7.7 13.7L2.5 9.3L9.3 8.7Z" />
+                          </Canvas>
+                        </Viewbox>
+                      </Grid>
+                      <Border Grid.RowSpan="2" Height="3" Margin="-10,0,-10,-6" VerticalAlignment="Bottom"
+                              Background="{StaticResource NextAccentBrush}" IsVisible="{Binding Raced}" />
+                    </Grid>
+                  </Button>
+                </DataTemplate>
+                <DataTemplate x:DataType="vm:NewMachineTile">
+                  <Button Name="NewMachine" Classes="card c10 machine grid" ToolTip.Tip="Build a machine of your own from parts"
+                          Command="{Binding $parent[nxv:GaragePageView].Page.PickCommand, FallbackValue={x:Null}}" CommandParameter="{Binding}"
+                          AutomationProperties.Name="New machine">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6">
+                      <Viewbox Width="26" Height="26" HorizontalAlignment="Center">
+                        <Canvas Width="24" Height="24">
+                          <Path Classes="stroke" Data="M12 4V20M4 12H20" StrokeThickness="2.6" />
+                        </Canvas>
+                      </Viewbox>
+                      <TextBlock FontSize="13" FontWeight="SemiBold" Text="New machine" />
+                    </StackPanel>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.DataTemplates>
+            </ItemsControl>
+            <TextBlock Name="Empty" Classes="quiet" FontSize="16" Margin="2,6,0,0" TextWrapping="Wrap" Text="{Binding EmptyText}"
+                       IsVisible="{Binding Empty}" />
+          </StackPanel>
+        </ScrollViewer>
+
+        <!-- the machine under the focus: where the player is, its name large and "In use", the machine in 3D and its
+             grades -->
+        <Grid Grid.Column="2" RowDefinitions="Auto,Auto,*,Auto">
+          <n:StepTrail Steps="Machine,Set up" At="0" Margin="0,4,0,14" />
+          <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="18">
+            <TextBlock Name="ChooseName" Classes="heading" FontSize="46" LineHeight="52" MaxWidth="560" TextTrimming="CharacterEllipsis"
+                       RenderTransform="skewX(-10deg)" RenderTransformOrigin="0%,100%"
+                       Text="{Binding Garage.StagedName, Converter={x:Static v:UpperText.Instance}}" />
+            <Border Classes="flag" VerticalAlignment="Center" IsVisible="{Binding Garage.StagedInUse}">
+              <TextBlock Text="IN USE" />
+            </Border>
+          </StackPanel>
+          <Panel Grid.Row="2">
+            <Panel IsVisible="{DynamicResource HasDiscArt}">
+              <c:Unscaled>
+                <c:MachinePreview Name="ChoosePreview" Machine="{Binding Garage.MachineIndex}" StockColor="{Binding Garage.StockColor}"
+                                  PaintColor="{Binding Garage.ColorHex}" Custom="{Binding Garage.StagedBuild}"
+                                  PartColours="{Binding Builder.PreviewColours}" Turns="{Binding Garage.Turning}"
+                                  AutomationProperties.Name="The machine in 3D: drag to turn it" />
+              </c:Unscaled>
+            </Panel>
+            <TextBlock Classes="quiet" HorizontalAlignment="Center" VerticalAlignment="Center" Text="No disc image"
+                       IsVisible="{DynamicResource NoDiscArt}" />
+          </Panel>
+          <ItemsControl Grid.Row="3" Name="ChooseGrades" Width="360" HorizontalAlignment="Left" Margin="0,0,0,8" ItemsSource="{Binding Grades}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:StatFigure">
+                <Grid ColumnDefinitions="64,*,26" Height="26">
+                  <TextBlock Classes="quiet" FontSize="16" VerticalAlignment="Center" Text="{Binding Label}" />
+                  <ItemsControl Grid.Column="1" VerticalAlignment="Center" ItemsSource="{Binding Value, Converter={x:Static nxv:GradeParts.Instance}}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <UniformGrid Rows="1" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="x:Boolean">
+                        <Border Classes="part" Classes.lit="{Binding}" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <TextBlock Grid.Column="2" FontFamily="{StaticResource DisplayFont}" FontWeight="ExtraBold" FontSize="20"
+                             HorizontalAlignment="Right" VerticalAlignment="Center" Text="{Binding Value}" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </Grid>
+      </Grid>
+    </Grid>
+
+    <!-- the second step: the machine's own page, with what is done with it -->
+    <Grid Name="MachinePage" Margin="14,2,0,6" RowDefinitions="Auto,Auto,*" IsVisible="{Binding Detail}">
+      <n:StepTrail Steps="Machine,Set up" At="1" Margin="0,4,0,14" />
+      <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="18">
+        <TextBlock Name="MachineName" Classes="heading" FontSize="52" LineHeight="58" MaxWidth="760" TextTrimming="CharacterEllipsis"
+                   RenderTransform="skewX(-10deg)" RenderTransformOrigin="0%,100%"
+                   Text="{Binding Garage.StagedName, Converter={x:Static v:UpperText.Instance}}" />
+      </StackPanel>
+      <Grid Grid.Row="2" ColumnDefinitions="*,20,400">
+        <!-- the machine large -->
+        <Panel>
+          <Panel IsVisible="{DynamicResource HasDiscArt}">
+            <c:Unscaled>
+              <c:MachinePreview Name="Preview" Machine="{Binding Garage.MachineIndex}" StockColor="{Binding Garage.StockColor}"
+                                PaintColor="{Binding Garage.ColorHex}" Custom="{Binding Garage.StagedBuild}"
+                                PartColours="{Binding Builder.PreviewColours}" Turns="{Binding Garage.Turning}"
+                                AutomationProperties.Name="The machine in 3D: drag to turn it" />
+            </c:Unscaled>
+          </Panel>
+          <TextBlock Classes="quiet" HorizontalAlignment="Center" VerticalAlignment="Center" Text="No disc image"
+                     IsVisible="{DynamicResource NoDiscArt}" />
+        </Panel>
+
+            <!-- the card: grades, setting, colours, the main action and the star -->
+            <n:Chamfer Grid.Column="2" Name="Card" Classes="plate" VerticalAlignment="Center">
+              <StackPanel Margin="22,18" Spacing="12">
+                <ItemsControl Name="Grades" ItemsSource="{Binding Grades}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:StatFigure">
+                      <Grid ColumnDefinitions="64,*,26" Height="26">
+                        <TextBlock Classes="quiet" FontSize="16" VerticalAlignment="Center" Text="{Binding Label}" />
+                        <ItemsControl Grid.Column="1" VerticalAlignment="Center" ItemsSource="{Binding Value, Converter={x:Static nxv:GradeParts.Instance}}">
+                          <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                              <UniformGrid Rows="1" />
+                            </ItemsPanelTemplate>
+                          </ItemsControl.ItemsPanel>
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="x:Boolean">
+                              <Border Classes="part" Classes.lit="{Binding}" />
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Grid.Column="2" FontFamily="{StaticResource DisplayFont}" FontWeight="ExtraBold" FontSize="20"
+                                   HorizontalAlignment="Right" VerticalAlignment="Center" Text="{Binding Value}" />
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <!-- the weight (and the stat sorted by), and every value -->
+                <Grid ColumnDefinitions="*,Auto">
+                  <ItemsControl Name="Figures" ItemsSource="{Binding Figures}" VerticalAlignment="Center">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <WrapPanel />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:StatFigure">
+                        <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,14,0">
+                          <TextBlock Classes="quiet" FontSize="14" VerticalAlignment="Center" Text="{Binding Label}" />
+                          <TextBlock FontSize="14" FontWeight="SemiBold" FontFeatures="tnum" VerticalAlignment="Center" Text="{Binding Value}" />
+                        </StackPanel>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <Button Grid.Column="1" Name="AllStats" ToolTip.Tip="Every value of this machine" Classes="soft" Height="34" Padding="14,0" Content="All stats"
+                          Command="{Binding OpenStatsCommand}" AutomationProperties.Name="All stats" />
+                </Grid>
+                <!-- the setting: left and right step it -->
+                <n:StepButton Name="Setting" ToolTip.Tip="From acceleration to top speed: left and right change it" Classes="line" Height="62" Padding="14,6" HorizontalContentAlignment="Stretch"
+                              StepCommand="{Binding StepSettingCommand}" IsEnabled="{Binding Garage.SettingFree}"
+                              AutomationProperties.Name="Machine setting, from acceleration to top speed: left and right change it">
+                  <StackPanel Spacing="8">
+                    <Grid ColumnDefinitions="*,Auto,*">
+                      <TextBlock Classes="quiet" FontSize="14" Text="Acceleration" />
+                      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                        <TextBlock Name="SettingValue" FontWeight="Bold" FontSize="15" FontFeatures="tnum" Text="{Binding SettingText}" />
+                        <TextBlock Classes="quiet" FontSize="13" VerticalAlignment="Center" Text="{Binding SettingNote}"
+                                   IsVisible="{Binding SettingNote, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                      </StackPanel>
+                      <TextBlock Grid.Column="2" Classes="quiet" FontSize="14" HorizontalAlignment="Right" Text="Max speed" />
+                    </Grid>
+                    <Canvas Width="{x:Static nx:GaragePageViewModel.SettingTrack}" Height="14" HorizontalAlignment="Center">
+                      <Border Canvas.Top="4" Width="{x:Static nx:GaragePageViewModel.SettingTrack}" Height="6" Background="#29FFFFFF"
+                              RenderTransform="skewX(-24deg)" />
+                      <Border Canvas.Left="{Binding SettingOffset}" Width="6" Height="14" Margin="-3,0,0,0" Background="{StaticResource NextAccentBrush}" />
+                    </Canvas>
+                  </StackPanel>
+                </n:StepButton>
+                <!-- its colours, and every colour -->
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <ItemsControl Name="Swatches" ItemsSource="{Binding Swatches}">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" Spacing="8" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:StockSwatch">
+                        <Button Classes="swatch" Classes.on="{Binding Selected}" IsEnabled="{Binding Known}"
+                                Background="{Binding Hex, Converter={x:Static v:HexToBrush.Instance}}"
+                                Command="{Binding $parent[nxv:GaragePageView].Page.PickSwatchCommand, FallbackValue={x:Null}}" CommandParameter="{Binding}"
+                                AutomationProperties.Name="{Binding Converter={x:Static nxv:SwatchWords.Instance}}" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <Button Name="Colours" ToolTip.Tip="Every colour of this machine, and its trail" Classes="swatch more" Command="{Binding OpenColoursCommand}" AutomationProperties.Name="Every colour, and the trail">
+                    <Viewbox Width="14" Height="14">
+                      <Canvas Width="24" Height="24">
+                        <Path Classes="stroke" Data="M12 5V19M5 12H19" StrokeThickness="2.6" />
+                      </Canvas>
+                    </Viewbox>
+                  </Button>
+                </StackPanel>
+                <!-- the main action, and the star -->
+                <Grid ColumnDefinitions="*,Auto" Margin="4,4,0,0">
+                  <Button Name="Use" ToolTip.Tip="Race this machine (Start)" Classes="main" c:PadNav.Next="Tiles" HorizontalAlignment="Stretch" Content="{Binding UseText}" Command="{Binding UseCommand}"
+                          c:PadNav.Main="True" AutomationProperties.Name="Use this machine" />
+                  <Button Grid.Column="1" Name="Star" ToolTip.Tip="Favourite: the machine shows on the Favourites shelf" Classes="soft star" Classes.on="{Binding Garage.StagedFavourite}" Width="56" Height="56" Margin="12,0,0,0"
+                          Command="{Binding ToggleFavouriteCommand}" IsEnabled="{Binding Garage.StagedMarkable}" AutomationProperties.Name="Favourite">
+                    <Viewbox Width="22" Height="22">
+                      <Canvas Width="24" Height="24">
+                        <Path Name="StarShape" Classes="star" Data="M12 2.5L14.7 8.7L21.5 9.3L16.3 13.7L17.9 20.3L12 16.8L6.1 20.3L7.7 13.7L2.5 9.3L9.3 8.7Z" />
+                      </Canvas>
+                    </Viewbox>
+                  </Button>
+                </Grid>
+                <!-- a custom machine's own -->
+                <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding Garage.StagedSaved}">
+                  <Button Name="EditParts" ToolTip.Tip="Change this machine's parts" Classes="soft" Height="40" Padding="18,0" Content="Edit parts" Command="{Binding EditPartsCommand}"
+                          AutomationProperties.Name="Edit parts" />
+                  <Button Name="Remove" ToolTip.Tip="Remove this machine from your garage (it asks first)" Classes="soft danger" Height="40" Padding="18,0" Content="Remove" Command="{Binding AskRemoveCommand}"
+                          AutomationProperties.Name="Remove this machine" />
+                </StackPanel>
+              </StackPanel>
+            </n:Chamfer>
+      </Grid>
+    </Grid>
+
+    <!-- the builder, in the Garage's place -->
+    <Panel IsVisible="{Binding Building}">
+      <nxv:BuilderPageView Name="Builder" DataContext="{Binding BuilderPage}" />
+    </Panel>
+  </Panel>
+</UserControl>

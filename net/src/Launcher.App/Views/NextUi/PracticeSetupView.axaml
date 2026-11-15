@@ -1,0 +1,99 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:nxv="using:Launcher.App.Views.NextUi"
+             xmlns:c="using:Launcher.App.Controls"
+             xmlns:n="using:Launcher.App.Controls.NextUi"
+             x:Class="Launcher.App.Views.NextUi.PracticeSetupView"
+             x:DataType="vm:PracticeViewModel">
+  <!-- The redesigned interface's Practice (the classic page's view model: PracticeViewModel) in two steps. The course:
+       the cups as chips and the courses as cards, each its picture from the disc under its name, the one picked marked;
+       a card pressed is the course, and the next step. The set-up: the course chosen large, and a card with the
+       practice's rows (the machine, the mode's own parameters and the race's rules, as the classic panel has them:
+       left and right change them) and the page's main action, Start practice; B goes back to the courses. While the
+       player waits in a lobby, a line says their seat is kept. -->
+  <Panel>
+    <!-- the first step: the course -->
+    <Grid Name="CourseStep" Margin="14,8,0,12" RowDefinitions="Auto,Auto,*" IsVisible="{Binding !SettingUp}">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Spacing="4">
+          <TextBlock Classes="eyebrow" FontSize="14" Text="PLAY" />
+          <TextBlock Name="Title" Classes="heading" FontSize="52" LineHeight="56" Margin="0,0,0,8" RenderTransform="skewX(-10deg)"
+                     RenderTransformOrigin="0%,100%" Text="PRACTICE" />
+          <TextBlock Classes="lead" Text="Drive alone on any course. No pressure. Pick a course." />
+        </StackPanel>
+        <n:StepTrail Grid.Column="1" Steps="Course,Set up" At="0" VerticalAlignment="Top" Margin="0,6,24,0" />
+      </Grid>
+      <ItemsControl Grid.Row="1" Name="Cups" c:PadNav.Tabs="True" Margin="4,18,0,10" ItemsSource="{Binding Courses.Chips}" ClipToBounds="False">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <WrapPanel ClipToBounds="False" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:CupChip">
+            <Button Classes="pill" Classes.go="{Binding On}" Height="36" Padding="16,0" Margin="0,0,8,8" c:PadNav.Next="Courses" Content="{Binding Label}"
+                    Command="{Binding $parent[UserControl].((vm:PracticeViewModel)DataContext).Courses.ShowCupCommand}" CommandParameter="{Binding}"
+                    AutomationProperties.Name="{Binding Label}" />
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <ScrollViewer Grid.Row="2" Margin="-4,-6,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <ItemsControl Name="Courses" c:PadNav.Home="True" ItemsSource="{Binding Courses.Shown}" Margin="8,10,8,8" VerticalAlignment="Top" ClipToBounds="False">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <UniformGrid Columns="5" VerticalAlignment="Top" ClipToBounds="False" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:CourseCard">
+              <Button Classes="card c10" Classes.picked="{Binding Picked}" c:PadNav.Next="Start" Height="120" Margin="0,0,12,12"
+                      Command="{Binding $parent[UserControl].((vm:PracticeViewModel)DataContext).ChooseCommand}" CommandParameter="{Binding}"
+                      ToolTip.Tip="Practise on this course: its set-up next" AutomationProperties.Name="{Binding Full}">
+                <Panel ClipToBounds="True">
+                  <c:CourseStill Course="{Binding Course}" Opacity="0.8" />
+                  <Border Background="{StaticResource NextPlateBrush}" VerticalAlignment="Bottom" Padding="12,6">
+                    <StackPanel>
+                      <TextBlock Classes="quiet" FontSize="12" TextTrimming="CharacterEllipsis" Text="{Binding Venue}" />
+                      <TextBlock FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Text="{Binding Track}" />
+                    </StackPanel>
+                  </Border>
+                  <Border Name="PickedBar" Height="3" VerticalAlignment="Top" Background="{StaticResource NextAccentBrush}" IsVisible="{Binding Picked}" />
+                </Panel>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </Grid>
+
+    <!-- the second step: the course chosen, its set-up and START PRACTICE -->
+    <Grid Name="SetUpStep" Margin="14,8,0,12" ColumnDefinitions="*,32,440" RowDefinitions="Auto,*" IsVisible="{Binding SettingUp}">
+      <StackPanel Spacing="4" DataContext="{Binding Courses.PickedCard}" x:DataType="vm:CourseCard">
+        <n:StepTrail Steps="Course,Set up" At="1" Margin="0,6,0,14" />
+        <TextBlock Classes="eyebrow" FontSize="14" Text="{Binding Venue, Converter={x:Static v:UpperText.Instance}, FallbackValue=''}" />
+        <TextBlock Name="Track" Classes="heading" FontSize="52" LineHeight="56" TextWrapping="Wrap" RenderTransform="skewX(-10deg)"
+                   RenderTransformOrigin="0%,100%" Text="{Binding Track, Converter={x:Static v:UpperText.Instance}, FallbackValue=''}" />
+      </StackPanel>
+      <n:Chamfer Grid.Row="1" Classes="plate" Margin="0,18,0,0" ClipToBounds="True">
+        <c:CourseStill Course="{Binding Courses.Picked}" Opacity="0.9" />
+      </n:Chamfer>
+
+      <n:Chamfer Grid.Column="2" Grid.RowSpan="2" Classes="plate" VerticalAlignment="Bottom">
+        <StackPanel Margin="26" Spacing="12">
+          <ScrollViewer MaxHeight="420" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+            <nxv:OptionList Name="Rows" Margin="0,4,8,4" Groups="{Binding Groups, Converter={x:Static nxv:ToOptions.Instance}, ConverterParameter=Practice}" />
+          </ScrollViewer>
+          <Button Name="Start" Classes="main" ToolTip.Tip="Start the practice on this course (Start)" Height="56" Margin="4,4,4,0" HorizontalAlignment="Stretch" Content="START PRACTICE"
+                  Command="{Binding StartCommand}" c:PadNav.Main="True" AutomationProperties.Name="Start practice" />
+          <TextBlock Name="SeatKept" Classes="quiet" FontSize="14" TextWrapping="Wrap"
+                     Text="Your seat in the lobby is kept. The lobby calls you back when it moves on."
+                     IsVisible="{Binding $parent[nxv:NextShell].((vm:MainViewModel)DataContext).Control.InQuickPlay, FallbackValue=False}" />
+          <TextBlock Name="Notice" FontSize="15" TextWrapping="Wrap" Foreground="{StaticResource NextDevBrush}" Text="{Binding Notice}"
+                     IsVisible="{Binding Notice, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        </StackPanel>
+      </n:Chamfer>
+    </Grid>
+  </Panel>
+</UserControl>

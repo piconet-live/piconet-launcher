@@ -1,0 +1,107 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:nx="using:Launcher.App.ViewModels.NextUi"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:nxv="using:Launcher.App.Views.NextUi"
+             xmlns:c="using:Launcher.App.Controls"
+             x:Class="Launcher.App.Views.NextUi.LobbySheetView"
+             x:DataType="nx:LobbySheetViewModel">
+  <!-- The lobby's panel (the pad's Y on a lobby's page): the rules in short; who races, a tick for who has voted
+       or is ready, each with their ping; who watches; watching instead of racing where the server takes
+       spectators; the game on its own instead (it asks first); and at its foot Close and Leave lobby. -->
+  <DockPanel Margin="32,28,28,24">
+    <StackPanel DockPanel.Dock="Top" Spacing="2">
+      <TextBlock Classes="eyebrow" Text="QUICK PLAY" />
+      <TextBlock Name="Title" Classes="heading" FontSize="40" LineHeight="44" RenderTransform="skewX(-10deg)" RenderTransformOrigin="0%,100%"
+                 Text="LOBBY" />
+    </StackPanel>
+    <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,12,*" Margin="4,16,8,0">
+      <Button Name="Close" Classes="soft" HorizontalAlignment="Stretch" Content="Close" Command="{Binding Shell.CloseSheetCommand}"
+              AutomationProperties.Name="Close" />
+      <Button Grid.Column="2" Name="LeaveLobby" Classes="soft danger" HorizontalAlignment="Stretch" Content="Leave lobby"
+              Command="{Binding Shell.LeaveFromSheetCommand}" AutomationProperties.Name="Leave lobby" />
+    </Grid>
+    <StackPanel DockPanel.Dock="Bottom" Spacing="8" Margin="0,12,4,0">
+      <Button Name="Watch" Classes="line" MinHeight="46" Background="{StaticResource NextRaisedBrush}" Command="{Binding Lobby.WatchCommand}"
+              IsVisible="{Binding Lobby.CanWatch}" AutomationProperties.Name="{Binding Lobby.WatchText}">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock VerticalAlignment="Center" Text="Watch the races instead" IsVisible="{Binding !Lobby.Watching}" />
+          <TextBlock VerticalAlignment="Center" Text="Race instead of watching" IsVisible="{Binding Lobby.Watching}" />
+        </Grid>
+      </Button>
+      <Button Name="PlayGame" Classes="line" MinHeight="46" Background="{StaticResource NextRaisedBrush}"
+              Command="{Binding Shell.PlayGameFromSheetCommand}" IsEnabled="{Binding Main.Control.GameEnabled}"
+              AutomationProperties.Name="Start F-Zero GX instead">
+        <TextBlock VerticalAlignment="Center" Text="Start F-Zero GX instead" />
+      </Button>
+    </StackPanel>
+
+    <ScrollViewer Margin="0,14,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Spacing="0" Margin="0,0,12,0">
+        <!-- the rules in short: what the server races, the stats, the race that is next once it is known -->
+        <Border Classes="fact" IsVisible="{Binding Lobby.RulesText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+          <Grid ColumnDefinitions="Auto,*">
+            <TextBlock Classes="quiet" VerticalAlignment="Center" Text="Rules" />
+            <TextBlock Grid.Column="1" Name="Rules" FontWeight="SemiBold" TextAlignment="Right" TextWrapping="Wrap" Margin="16,6,0,6"
+                       VerticalAlignment="Center" Text="{Binding Lobby.RulesText}" />
+          </Grid>
+        </Border>
+        <Border Classes="fact">
+          <Grid ColumnDefinitions="Auto,*">
+            <TextBlock Classes="quiet" VerticalAlignment="Center" Text="Stats" />
+            <TextBlock Grid.Column="1" FontWeight="SemiBold" TextAlignment="Right" TextTrimming="CharacterEllipsis" Margin="16,0,0,0"
+                       VerticalAlignment="Center" Text="{Binding Lobby.BandPackText}" ToolTip.Tip="{Binding Lobby.BandPackTip}" />
+          </Grid>
+        </Border>
+        <Border Classes="fact" IsVisible="{Binding Lobby.ModeLineShown}">
+          <Grid ColumnDefinitions="Auto,*">
+            <TextBlock Classes="quiet" VerticalAlignment="Center" Text="Next race" />
+            <TextBlock Grid.Column="1" FontWeight="SemiBold" TextAlignment="Right" TextWrapping="Wrap" Margin="16,6,0,6"
+                       VerticalAlignment="Center" Text="{Binding Lobby.ModeLine.Text, FallbackValue=''}" ToolTip.Tip="{Binding Lobby.ModeLine.Tip, FallbackValue={x:Null}}" />
+          </Grid>
+        </Border>
+
+        <TextBlock Name="RacersHead" Classes="eyebrow" Margin="0,20,0,8" Text="{Binding Lobby.RosterTitle, Converter={x:Static v:UpperText.Instance}}" />
+        <ItemsControl Name="Racers" ItemsSource="{Binding Lobby.People}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:SeatRow">
+              <Grid ColumnDefinitions="34,*,Auto,26" Height="36">
+                <Border Width="22" Height="18" HorizontalAlignment="Left" VerticalAlignment="Center" RenderTransform="skewX(-14deg)"
+                        Background="{Binding ColorHex, Converter={x:Static v:HexToBrush.Instance}}">
+                  <TextBlock FontSize="12" FontWeight="Bold" Foreground="{StaticResource NextOnAccentBrush}" HorizontalAlignment="Center"
+                             VerticalAlignment="Center" Text="{Binding Name, Converter={x:Static nxv:Initial.Instance}}" />
+                </Border>
+                <c:NameTagText Grid.Column="1" FontSize="17" PlayerName="{Binding Name}" PlayerTag="{Binding Tag}" VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis" Classes.you="{Binding You}" />
+                <TextBlock Grid.Column="2" Classes="quiet" FontSize="14" FontFeatures="tnum" VerticalAlignment="Center" Text="{Binding Ping}" />
+                <TextBlock Grid.Column="3" FontSize="17" FontWeight="Bold" Foreground="{StaticResource NextAccentBrush}" HorizontalAlignment="Right"
+                           VerticalAlignment="Center" Text="✓" IsVisible="{Binding Ticked}" />
+              </Grid>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <StackPanel IsVisible="{Binding Lobby.WatchingShown}">
+          <TextBlock Classes="eyebrow" Margin="0,16,0,8" Text="WATCHING" />
+          <ItemsControl Name="Watchers" ItemsSource="{Binding Lobby.WatchingRows}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:SeatRow">
+                <Grid ColumnDefinitions="34,*" Height="36">
+                  <Border Width="22" Height="18" HorizontalAlignment="Left" VerticalAlignment="Center" RenderTransform="skewX(-14deg)"
+                          Background="{Binding ColorHex, Converter={x:Static v:HexToBrush.Instance}}" />
+                  <c:NameTagText Grid.Column="1" FontSize="17" PlayerName="{Binding Name}" PlayerTag="{Binding Tag}" VerticalAlignment="Center"
+                                 TextTrimming="CharacterEllipsis" Classes.you="{Binding You}" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+  <UserControl.Styles>
+    <Style Selector="c|NameTagText.you">
+      <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+  </UserControl.Styles>
+</UserControl>

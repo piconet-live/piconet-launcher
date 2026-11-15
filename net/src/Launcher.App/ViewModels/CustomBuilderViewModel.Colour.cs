@@ -68,19 +68,44 @@ public sealed partial class CustomBuilderViewModel
         }
     }
 
-    /// <summary>The swatches, the wheel and the 3D view's colours for the build as it stands.</summary>
-    private void ShowColour()
+    /// <summary>A part's four stock colours and, when it has one, its paint (0 body, 1 cockpit, 2 booster).</summary>
+    public IReadOnlyList<StockSwatch> SwatchesOf(int partTab)
     {
-        var part = Build.PartOf(PartTab);
-        var colour = Build.ColourOf(PartTab);
-        var stock = _colours.StockColours(part);
+        var colour = Build.ColourOf(partTab);
+        var stock = _colours.StockColours(Build.PartOf(partTab));
         var swatches = Enumerable.Range(0, 4).Select(k => new StockSwatch(k, stock is null ? Unknown : Rgb.Hex(stock[k]),
             $"{k + 1}", colour.Stock == k, stock is not null || k == 0)).ToList();
         if (colour.Paint is { } paint)
         {
             swatches.Add(new StockSwatch(-1, Rgb.Hex(paint), "Paint", colour.Stock is null, true));
         }
-        Swatches = swatches;
+        return swatches;
+    }
+
+    /// <summary>A part's swatch picked (0-3 a stock colour, -1 its paint), whichever part is beside the wheel.</summary>
+    public void PickSwatchOf(int partTab, int k)
+    {
+        var now = Build.ColourOf(partTab);
+        if (k >= 0)
+        {
+            Build = Build.WithColour(partTab, now with { Stock = k });
+        }
+        else if (now.Paint is not null)
+        {
+            Build = Build.WithColour(partTab, now with { Stock = null });
+        }
+    }
+
+    /// <summary>A part painted (the redesigned Garage's colours panel: a colour pressed, or typed).</summary>
+    public void PaintPart(int partTab, Rgb colour) => Build = Build.WithColour(partTab, new PartColour(null, colour));
+
+    /// <summary>The swatches, the wheel and the 3D view's colours for the build as it stands.</summary>
+    private void ShowColour()
+    {
+        var part = Build.PartOf(PartTab);
+        var colour = Build.ColourOf(PartTab);
+        var stock = _colours.StockColours(part);
+        Swatches = SwatchesOf(PartTab);
         _showing = true;
         ColorHex = colour.Stock is null && colour.Paint is { } p ? Rgb.Hex(p)
             : stock is not null && colour.Stock is { } s ? Rgb.Hex(stock[s]) : ColorHex;

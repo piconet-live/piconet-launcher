@@ -61,6 +61,9 @@
          for what is left to it (a list's highlight). -->
     <husk:HuskuiTheme Accent="Green" Gray="Slate" Corner="Normal" />
     <StyleInclude Source="avares://Launcher.App/Theme/Theme.axaml" />
+    <!-- The redesigned interface's look (Settings, Launcher, "Experimental UI"): resources of its own names, and
+         styles that reach only what is under its root's class "nextui" (Theme/NextUi/Theme.axaml). -->
+    <StyleInclude Source="avares://Launcher.App/Theme/NextUi/Theme.axaml" />
     <!-- Menus, flyouts and tooltips are windows of their own: each takes the interface scale (Controls/ScaledRoot)
          from the control it opens at. -->
     <Style Selector="Popup">

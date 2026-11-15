@@ -1,0 +1,31 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:nx="using:Launcher.App.ViewModels.NextUi"
+             xmlns:nxv="using:Launcher.App.Views.NextUi"
+             x:Class="Launcher.App.Views.NextUi.LicencesSheetView"
+             x:DataType="nx:LicencesSheetViewModel">
+  <!-- More › About › Licences: each part's name, its licence, and its text as it ships inside the launcher. -->
+  <DockPanel Margin="32,28,28,24">
+    <StackPanel DockPanel.Dock="Top" Spacing="2">
+      <TextBlock Classes="eyebrow" Text="ABOUT" />
+      <TextBlock Name="Title" Classes="heading" FontSize="40" LineHeight="44" RenderTransform="skewX(-10deg)" RenderTransformOrigin="0%,100%"
+                 Text="LICENCES" />
+    </StackPanel>
+    <Button DockPanel.Dock="Bottom" Name="Close" Classes="soft" Margin="4,16,8,0" HorizontalAlignment="Stretch" Content="Close"
+            Command="{Binding $parent[nxv:NextShell].((vm:MainViewModel)DataContext).Shell.CloseSheetCommand}" AutomationProperties.Name="Close" />
+    <ScrollViewer Margin="0,16,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <ItemsControl Name="Entries" ItemsSource="{Binding Entries}" Margin="2,2,12,2">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="nx:LicenceEntry">
+            <StackPanel Spacing="4" Margin="0,0,0,18">
+              <TextBlock FontSize="18" FontWeight="Bold" Text="{Binding Title}" />
+              <TextBlock Classes="quiet" FontSize="14" TextWrapping="Wrap" Text="{Binding Line}" />
+              <SelectableTextBlock FontSize="12" TextWrapping="Wrap" Margin="0,6,0,0" Text="{Binding Text}" />
+            </StackPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

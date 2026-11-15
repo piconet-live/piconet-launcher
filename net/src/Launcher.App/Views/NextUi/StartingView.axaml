@@ -1,0 +1,31 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:nxv="using:Launcher.App.Views.NextUi"
+             x:Class="Launcher.App.Views.NextUi.StartingView"
+             x:DataType="vm:LobbyViewModel">
+  <!-- The redesigned interface's lobby while a race is being started (its race server, then the games), and for a
+       player whose stage it is not (a watcher; one who came in after the stage opened): the course in large, what
+       the lobby waits for, and the way to the lobby's panel. -->
+  <StackPanel Margin="14,8,0,20" Width="640" HorizontalAlignment="Left" VerticalAlignment="Bottom" Spacing="6">
+    <StackPanel Orientation="Horizontal" Spacing="10">
+      <Border Width="22" Height="4" VerticalAlignment="Center" Background="{StaticResource NextAccentBrush}" RenderTransform="skewX(-30deg)" />
+      <TextBlock Classes="eyebrow" FontSize="14" Foreground="{StaticResource NextAccentBrush}" Text="NEXT RACE" />
+    </StackPanel>
+    <TextBlock Name="Venue" Classes="lead" Text="{Binding NextVenue}" />
+    <TextBlock Name="Course" Classes="heading" FontSize="80" LineHeight="84" Margin="0,0,0,12" RenderTransform="skewX(-10deg)" RenderTransformOrigin="0%,100%"
+               TextTrimming="CharacterEllipsis" Text="{Binding NextTrack, Converter={x:Static v:UpperText.Instance}}" />
+    <TextBlock Name="Under" Classes="lead" Text="{Binding NextLine}" />
+    <StackPanel Width="440" HorizontalAlignment="Left" Spacing="10" Margin="0,26,0,0">
+      <TextBlock Name="Line" FontSize="19" FontWeight="SemiBold" Text="{Binding StartingLine}" />
+      <Border Classes="meter running">
+        <Border />
+      </Border>
+      <TextBlock Classes="quiet" FontSize="16" Text="The game opens in its own window." />
+    </StackPanel>
+    <Button Name="OpenLobby" Classes="soft" Height="50" Padding="26,0" Margin="4,22,0,0" HorizontalAlignment="Left" Content="Lobby"
+            Command="{Binding $parent[nxv:NextShell].((vm:MainViewModel)DataContext).Shell.OpenLobbySheetCommand}"
+            AutomationProperties.Name="Lobby" />
+  </StackPanel>
+</UserControl>

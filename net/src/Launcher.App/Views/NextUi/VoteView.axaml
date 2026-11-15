@@ -1,0 +1,120 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:nxv="using:Launcher.App.Views.NextUi"
+             xmlns:n="using:Launcher.App.Controls.NextUi"
+             x:Class="Launcher.App.Views.NextUi.VoteView"
+             x:DataType="vm:LobbyViewModel">
+  <!-- The redesigned interface's course vote: over the cards what to do (then that the draw runs, then the course
+       drawn) and, while the vote is open, its clock as a ring; the courses as cards in one row, a mark a vote on
+       each (the player's own first, in green), the player's card under "Your vote"; under them who is in the lobby.
+       The draw's frame steps from card to card and stops on the course drawn, which lifts while the others step
+       back (the classic page's draw: LobbyViewModel.Stages.cs). The clock's place is kept when it goes. -->
+  <Grid Margin="14,8,0,12" RowDefinitions="Auto,*,Auto,Auto">
+    <Grid ColumnDefinitions="*,Auto">
+      <StackPanel Spacing="4">
+        <TextBlock Classes="eyebrow" FontSize="14" Text="QUICK PLAY" />
+        <TextBlock Name="Title" Classes="heading" FontSize="54" LineHeight="56" Margin="0,0,0,8" RenderTransform="skewX(-10deg)"
+                   RenderTransformOrigin="0%,100%" TextTrimming="CharacterEllipsis"
+                   Text="{Binding VoteTitle, Converter={x:Static v:UpperText.Instance}}" />
+        <TextBlock Name="Line" Classes="lead" Text="{Binding VoteLine}" />
+      </StackPanel>
+      <n:ClockRing Grid.Column="1" Name="Clock" Width="76" Height="76" VerticalAlignment="Top" Share="{Binding ClockShare}"
+                   Track="{StaticResource NextTrackBrush}" Stroke="{StaticResource NextAccentBrush}" Fill="#99070808"
+                   Classes.gone="{Binding !VoteClockShown}" AutomationProperties.Name="Time left to vote">
+        <TextBlock FontFamily="{StaticResource DisplayFont}" FontWeight="ExtraBold" FontSize="24" FontFeatures="tnum"
+                   HorizontalAlignment="Center" VerticalAlignment="Center" Text="{Binding ClockText}" />
+      </n:ClockRing>
+    </Grid>
+
+    <ItemsControl Grid.Row="2" Name="Cards" ItemsSource="{Binding CourseOptions}" ClipToBounds="False" Margin="0,0,0,16">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <UniformGrid Rows="1" ClipToBounds="False" />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate x:DataType="vm:CourseOption">
+          <Button Classes="card vote" Margin="0,10,16,0" Classes.lit="{Binding IsLit}" Classes.won="{Binding IsWon}" Classes.lost="{Binding IsLost}"
+                  Command="{Binding $parent[UserControl].((vm:LobbyViewModel)DataContext).VoteCourseCommand}" CommandParameter="{Binding}"
+                  ToolTip.Tip="{Binding About}" AutomationProperties.Name="{Binding Name}">
+            <Grid RowDefinitions="84,*">
+              <!-- the course's picture from the disc; the random course, which has none, a "?" -->
+              <Panel Background="#0DFFFFFF" ClipToBounds="True">
+                <Image Source="{Binding Course, Converter={x:Static v:GamePicture.Venue}}" Stretch="UniformToFill" IsVisible="{Binding !ShowsMark}" />
+                <TextBlock Classes="heading quiet" FontSize="30" LineHeight="34" HorizontalAlignment="Right" VerticalAlignment="Center"
+                           Margin="16,0" RenderTransform="skewX(-10deg)" TextTrimming="CharacterEllipsis" MaxWidth="150"
+                           Text="?" IsVisible="{Binding Mark, Converter={x:Static v:Equal.Instance}, ConverterParameter=?}" />
+                <StackPanel Orientation="Horizontal" Spacing="8" Margin="16,12,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
+                  <Border Classes="flag" IsVisible="{Binding IsMine}">
+                    <TextBlock Text="YOUR VOTE" />
+                  </Border>
+                  <Border Classes="flag mode" IsVisible="{Binding HasBadge}">
+                    <TextBlock Text="{Binding Badge}" />
+                  </Border>
+                </StackPanel>
+              </Panel>
+              <Grid Grid.Row="1" RowDefinitions="Auto,Auto,*" Margin="16,12,16,14">
+                <TextBlock Classes="quiet" FontSize="14" TextTrimming="CharacterEllipsis" Text="{Binding PlaceLine}" />
+                <TextBlock Grid.Row="1" Classes="heading" FontSize="26" LineHeight="28" Margin="0,2,0,0" RenderTransform="skewX(-10deg)"
+                           RenderTransformOrigin="0%,100%" TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"
+                           Text="{Binding Track, Converter={x:Static v:UpperText.Instance}}" />
+                <Grid Grid.Row="2" ColumnDefinitions="*,Auto" VerticalAlignment="Bottom">
+                  <ItemsControl ItemsSource="{Binding Pips}" Height="8" ClipToBounds="True">
+                    <ItemsControl.ItemsPanel>
+                      <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" />
+                      </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate x:DataType="vm:VotePip">
+                        <!-- (every vote alike: the player's own is said once, by YOUR VOTE over the picture) -->
+                        <Border Classes="votemark" Classes.lit="{Binding Lit}" />
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                  <!-- its chance in the draw: its share of the votes -->
+                  <TextBlock Grid.Column="1" Classes="quiet" FontSize="14" FontFeatures="tnum" Margin="8,-6,0,-4" Text="{Binding Chance}"
+                             IsVisible="{Binding Counted}" ToolTip.Tip="This course's chance in the draw: its share of the votes" />
+                </Grid>
+              </Grid>
+            </Grid>
+          </Button>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+
+    <!-- who is in the lobby: a mark and a name each, as many as the row has room for -->
+    <Grid Grid.Row="3" Height="30" ColumnDefinitions="Auto,*" ClipToBounds="True">
+      <TextBlock Classes="quiet" FontSize="15" VerticalAlignment="Center" Margin="0,0,18,0" Text="In this lobby" />
+      <ItemsControl Grid.Column="1" Name="Racers" ItemsSource="{Binding People}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Orientation="Horizontal" Spacing="18" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:SeatRow">
+            <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+              <Border Width="22" Height="18" VerticalAlignment="Center" RenderTransform="skewX(-14deg)"
+                      Background="{Binding ColorHex, Converter={x:Static v:HexToBrush.Instance}}">
+                <TextBlock FontSize="12" FontWeight="Bold" Foreground="{StaticResource NextOnAccentBrush}" HorizontalAlignment="Center"
+                           VerticalAlignment="Center" Text="{Binding Name, Converter={x:Static nxv:Initial.Instance}}" />
+              </Border>
+              <TextBlock FontSize="15" VerticalAlignment="Center" Text="{Binding Name}" Classes.you="{Binding You}" />
+            </StackPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </Grid>
+  </Grid>
+  <UserControl.Styles>
+    <Style Selector="n|ClockRing#Clock.gone">
+      <Setter Property="Opacity" Value="0" />
+    </Style>
+    <Style Selector="TextBlock.you">
+      <Setter Property="FontWeight" Value="Bold" />
+    </Style>
+  </UserControl.Styles>
+</UserControl>

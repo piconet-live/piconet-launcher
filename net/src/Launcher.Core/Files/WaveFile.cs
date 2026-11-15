@@ -32,6 +32,29 @@ public static class WaveFile
         return file;
     }
 
+    /// <summary>The samples at the rate <paramref name="to"/>, as long as they were at <paramref name="rate"/>: each
+    /// new sample on the line between the two old ones round it (the launcher's sounds are short and quiet, and
+    /// <see cref="SoundLine"/> streams them all at one rate); the same samples, copied, when the rates are equal.</summary>
+    public static short[] Resample(ReadOnlySpan<short> samples, int rate, int to)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(rate);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(to);
+        if (rate == to || samples.Length == 0)
+        {
+            return samples.ToArray();
+        }
+        var made = new short[Math.Max(1, (int)((long)samples.Length * to / rate))];
+        for (var i = 0; i < made.Length; i++)
+        {
+            var at = (double)i * rate / to;
+            var first = (int)at;
+            made[i] = first >= samples.Length - 1
+                ? samples[^1]
+                : (short)Math.Round(samples[first] + ((samples[first + 1] - samples[first]) * (at - first)));
+        }
+        return made;
+    }
+
     /// <summary>A wave file as <see cref="Make"/> writes it: its rate and samples; null for anything else (another
     /// layout, a file cut short, a rate no sound of the launcher has).</summary>
     public static (int Rate, short[] Samples)? Read(ReadOnlySpan<byte> file)

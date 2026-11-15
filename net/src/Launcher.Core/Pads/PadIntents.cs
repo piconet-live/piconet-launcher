@@ -18,6 +18,8 @@ public enum PadButton
     L,
     R,
     Z,
+    X,
+    Y,
 }
 
 /// <summary>What the player did with the pad, for the window to act on.</summary>
@@ -29,14 +31,17 @@ public sealed record PadMoved(PadMove Move, bool Repeat) : PadIntent;
 /// <summary>A button pressed (its edge: a button held does not repeat).</summary>
 public sealed record PadPressed(PadButton Button) : PadIntent;
 
-/// <summary>The C-stick held up or down: scroll by so many pixels (up is negative).</summary>
-public sealed record PadScrolled(double By) : PadIntent;
+/// <summary>The C-stick held: scroll by so many pixels, up or down (<paramref name="By"/>, up negative) and to the side
+/// (<paramref name="Across"/>, left negative).</summary>
+public sealed record PadScrolled(double By, double Across = 0) : PadIntent;
 
 /// <summary>
 /// The GameCube controller as the game reads it (<see cref="HelperPad"/>) turned into the window's intents: a
 /// direction from the D-pad or the main stick moves the focus once when pressed, and again while held, slowly at
-/// first and faster the longer it is held (<see cref="RepeatAfter"/>); a button acts once when pressed; the C-stick
-/// scrolls. The times are the caller's (a steady clock), so that the repeat is tested without waiting.
+/// first and faster the longer it is held (<see cref="RepeatAfter"/>); a button acts once when pressed, L and R also
+/// when their analog press goes deep enough (a pad's triggers: the game's standard layout puts L and R on them, and a
+/// trigger may never reach the click a GameCube's has); the C-stick scrolls, up and down and to the side. The times
+/// are the caller's (a steady clock), so that the repeat is tested without waiting.
 /// </summary>
 public sealed class PadIntents
 {
@@ -47,17 +52,21 @@ public sealed class PadIntents
     /// <summary>The C-stick scrolls beyond this much from its rest.</summary>
     public const int ScrollDeadZone = 24;
 
+    /// <summary>An analog L or R counts as pressed from this deep (of 255), and as let go below <see cref="TriggerRelease"/>.</summary>
+    public const int TriggerEngage = 170, TriggerRelease = 110;
+
     /// <summary>The C-stick at its gate scrolls this many pixels a second.</summary>
     public const double ScrollSpeed = 1400;
 
     private HelperPad? _last;
+    private IReadOnlySet<string> _pressed = new HashSet<string>(StringComparer.Ordinal);
     private PadMove? _held;
     private TimeSpan _next;
     private int _repeats;
     private TimeSpan _lastTick;
 
     /// <summary>A direction or the C-stick is held: the caller ticks (<see cref="Tick"/>) until it is let go.</summary>
-    public bool Holding => _held is not null || ScrollOf(_last) != 0;
+    public bool Holding => _held is not null || ScrollOf(_last) != (0, 0);
 
     /// <summary>How long a held direction waits before its first repeat, and then between repeats: 400 ms, then from
     /// 200 ms down by an easing curve to 55 ms (each 82% of the one before), so that a short hold steps once or twice
@@ -76,6 +85,7 @@ public sealed class PadIntents
         if (!pad.Connected)
         {
             _held = null;
+            _pressed = new HashSet<string>(StringComparer.Ordinal);
             return intents;
         }
         var direction = DirectionOf(pad, _held);
@@ -89,15 +99,17 @@ public sealed class PadIntents
                 _next = now + RepeatAfter(0);
             }
         }
+        var pressed = Pressed(pad, _pressed);
         foreach (var button in Enum.GetValues<PadButton>())
         {
             var name = button.ToString();
-            if (pad.Buttons.Contains(name) && before?.Buttons.Contains(name) != true)
+            if (pressed.Contains(name) && !_pressed.Contains(name))
             {
                 intents.Add(new PadPressed(button));
             }
         }
-        if (ScrollOf(before) == 0)
+        _pressed = pressed;
+        if (ScrollOf(before) == (0, 0))
         {
             _lastTick = now;
         }
@@ -114,10 +126,11 @@ public sealed class PadIntents
             _repeats++;
             _next += RepeatAfter(_repeats);
         }
-        var scroll = ScrollOf(_last);
-        if (scroll != 0 && now > _lastTick)
+        var (down, across) = ScrollOf(_last);
+        if ((down, across) != (0, 0) && now > _lastTick)
         {
-            intents.Add(new PadScrolled(scroll * ScrollSpeed * (now - _lastTick).TotalSeconds));
+            var seconds = (now - _lastTick).TotalSeconds;
+            intents.Add(new PadScrolled(down * ScrollSpeed * seconds, across * ScrollSpeed * seconds));
         }
         _lastTick = now;
         return intents;
@@ -127,6 +140,7 @@ public sealed class PadIntents
     public void Reset()
     {
         _last = null;
+        _pressed = new HashSet<string>(StringComparer.Ordinal);
         _held = null;
         _repeats = 0;
     }
@@ -154,14 +168,31 @@ public sealed class PadIntents
 
     private static readonly PadMove[] DPad = [PadMove.Up, PadMove.Down, PadMove.Left, PadMove.Right];
 
-    /// <summary>The C-stick's scroll, -1 (up) to 1 (down); 0 within its dead zone.</summary>
-    private static double ScrollOf(HelperPad? pad)
+    /// <summary>The buttons held: the pad's own, and L and R by their analog press as well (deep enough, or still
+    /// held above the release while they were held before).</summary>
+    public static IReadOnlySet<string> Pressed(HelperPad pad, IReadOnlySet<string>? before = null)
+    {
+        ArgumentNullException.ThrowIfNull(pad);
+        var held = new HashSet<string>(pad.Buttons, StringComparer.Ordinal);
+        foreach (var (name, analog) in new[] { ("L", pad.L), ("R", pad.R) })
+        {
+            if (analog >= TriggerEngage || (before?.Contains(name) == true && analog >= TriggerRelease))
+            {
+                held.Add(name);
+            }
+        }
+        return held;
+    }
+
+    /// <summary>The C-stick's scroll, each way -1 (up, left) to 1 (down, right); 0 within its dead zone.</summary>
+    private static (double Down, double Across) ScrollOf(HelperPad? pad)
     {
         if (pad is not { Connected: true })
         {
-            return 0;
+            return (0, 0);
         }
-        var y = pad.CStickY - 128;
-        return Math.Abs(y) < ScrollDeadZone ? 0 : -Math.Clamp(y / 100.0, -1, 1);
+        int x = pad.CStickX - 128, y = pad.CStickY - 128;
+        return (Math.Abs(y) < ScrollDeadZone ? 0 : -Math.Clamp(y / 100.0, -1, 1),
+            Math.Abs(x) < ScrollDeadZone ? 0 : Math.Clamp(x / 100.0, -1, 1));
     }
 }

@@ -1,0 +1,60 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:nx="using:Launcher.App.ViewModels.NextUi"
+             xmlns:nxv="using:Launcher.App.Views.NextUi"
+             xmlns:v="using:Launcher.App.Views"
+             x:Class="Launcher.App.Views.NextUi.DiagnosticsSheetView"
+             x:DataType="nx:DiagnosticsSheetViewModel">
+  <!-- Developer mode's Diagnostics: the facts in their groups in the developer's amber and monospace; Copy
+       diagnostics, Open the log, Open the data folder, Show the launch file; Close and Turn off at its foot. -->
+  <DockPanel Margin="32,28,28,24">
+    <StackPanel DockPanel.Dock="Top" Spacing="2">
+      <TextBlock Classes="eyebrow" Foreground="{StaticResource NextDevBrush}" Text="DEVELOPER MODE" />
+      <TextBlock Name="Title" Classes="heading" FontSize="40" LineHeight="44" RenderTransform="skewX(-10deg)" RenderTransformOrigin="0%,100%"
+                 Text="DIAGNOSTICS" />
+    </StackPanel>
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="10" Margin="4,16,8,0">
+      <Button Name="Close" Classes="soft" Width="170" Content="Close"
+              Command="{Binding $parent[nxv:NextShell].((vm:MainViewModel)DataContext).Shell.CloseSheetCommand}" AutomationProperties.Name="Close" />
+      <Button Name="TurnOff" Classes="soft" Width="170" Content="Turn off" Command="{Binding TurnOffCommand}" AutomationProperties.Name="Turn off developer mode" />
+    </StackPanel>
+    <ScrollViewer Margin="0,16,0,0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+      <StackPanel Spacing="8" Margin="2,2,12,2">
+        <ItemsControl Name="Groups" ItemsSource="{Binding Groups}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="nx:FactGroup">
+              <StackPanel Spacing="2" Margin="0,0,0,10">
+                <TextBlock Classes="eyebrow" Text="{Binding Heading, Converter={x:Static v:UpperText.Instance}}" />
+                <ItemsControl ItemsSource="{Binding Facts}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="nx:SheetFact">
+                      <Grid ColumnDefinitions="110,*" MinHeight="24">
+                        <TextBlock Classes="quiet" FontSize="13" VerticalAlignment="Center" Text="{Binding Name}" />
+                        <SelectableTextBlock Grid.Column="1" Classes="devmono" TextWrapping="Wrap" VerticalAlignment="Center" Text="{Binding Value}" />
+                      </Grid>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Name="Notice" TextWrapping="Wrap" Foreground="{StaticResource NextDevBrush}" Text="{Binding Notice}"
+                   IsVisible="{Binding Notice, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+        <Button Name="Copy" Classes="line" Click="OnCopy" AutomationProperties.Name="Copy diagnostics">
+          <TextBlock VerticalAlignment="Center" Text="Copy diagnostics" />
+        </Button>
+        <Button Name="Log" Classes="line" Command="{Binding OpenLogCommand}" AutomationProperties.Name="Open the log">
+          <TextBlock VerticalAlignment="Center" Text="Open the log" />
+        </Button>
+        <Button Name="Data" Classes="line" Command="{Binding OpenDataFolderCommand}" AutomationProperties.Name="Open the data folder">
+          <TextBlock VerticalAlignment="Center" Text="Open the data folder" />
+        </Button>
+        <Button Name="LaunchFile" Classes="line" Command="{Binding ShowLaunchFileCommand}" AutomationProperties.Name="Show the launch file">
+          <TextBlock VerticalAlignment="Center" Text="Show the launch file" />
+        </Button>
+      </StackPanel>
+    </ScrollViewer>
+  </DockPanel>
+</UserControl>

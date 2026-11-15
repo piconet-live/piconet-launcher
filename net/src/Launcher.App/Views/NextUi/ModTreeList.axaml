@@ -1,0 +1,37 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             x:Class="Launcher.App.Views.NextUi.ModTreeList"
+             x:DataType="vm:ModTreeChoice" ClipToBounds="False">
+  <!-- A mod's parts as a tree to tick (the import's question, a mod's panel): a row a folder or a text file of the mod,
+       indented by its depth; its arrow opens it (a text file: its words); its tick says all, some or none of it. -->
+  <ItemsControl Name="TreeRows" ItemsSource="{Binding Rows}">
+    <ItemsControl.ItemTemplate>
+      <DataTemplate x:DataType="vm:ModTreeRow">
+        <StackPanel Margin="{Binding Indent}">
+          <Grid ColumnDefinitions="30,*" MinHeight="34">
+            <Button Classes="soft" Width="26" Height="26" Padding="0" Command="{Binding ExpandCommand}" IsVisible="{Binding HasArrow}"
+                    VerticalAlignment="Center" AutomationProperties.Name="{Binding Name, StringFormat='{}{0}: open'}">
+              <Viewbox Width="10" Height="10">
+                <Canvas Width="24" Height="24">
+                  <Path Classes="stroke" Classes.open="{Binding Expanded}" Data="M9 5L16 12L9 19" StrokeThickness="3" />
+                </Canvas>
+              </Viewbox>
+            </Button>
+            <CheckBox Grid.Column="1" IsThreeState="True" IsChecked="{Binding Checked}" IsEnabled="{Binding CanChange}" VerticalAlignment="Center"
+                      IsVisible="{Binding HasBox}" AutomationProperties.Name="{Binding Name}">
+              <TextBlock FontWeight="SemiBold" Classes.top="{Binding IsTop}" TextTrimming="CharacterEllipsis" Text="{Binding Name}" />
+            </CheckBox>
+            <TextBlock Grid.Column="1" Classes="quiet" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{Binding Name}"
+                       IsVisible="{Binding !HasBox}" />
+          </Grid>
+          <Border Background="{StaticResource NextRaisedBrush}" CornerRadius="3" Padding="10" Margin="30,4,0,6" IsVisible="{Binding ShowsText}">
+            <ScrollViewer MaxHeight="240" HorizontalScrollBarVisibility="Disabled">
+              <SelectableTextBlock FontSize="13" TextWrapping="Wrap" Text="{Binding Words}" />
+            </ScrollViewer>
+          </Border>
+        </StackPanel>
+      </DataTemplate>
+    </ItemsControl.ItemTemplate>
+  </ItemsControl>
+</UserControl>

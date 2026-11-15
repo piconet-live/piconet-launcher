@@ -1,0 +1,102 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:nx="using:Launcher.App.ViewModels.NextUi"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:c="using:Launcher.App.Controls"
+             xmlns:n="using:Launcher.App.Controls.NextUi"
+             x:Class="Launcher.App.Views.NextUi.ProfileView"
+             x:DataType="nx:ProfileViewModel">
+  <!-- The profile (the top bar's chip): on the left the name large, how races show it, the dot and the server, Change
+       name and Server, the account (later); on the right the machine raced (to the Garage), three figures (to Stats)
+       and the last three races, each to watch. -->
+  <Grid Margin="14,8,0,8" ColumnDefinitions="*,40,440">
+    <StackPanel Spacing="10">
+      <TextBlock Classes="eyebrow" FontSize="14" Text="PROFILE" />
+      <Viewbox Height="78" Stretch="Uniform" StretchDirection="DownOnly" HorizontalAlignment="Left" MaxWidth="640">
+        <TextBlock Name="PlayerName" Classes="heading" FontSize="72" LineHeight="78" RenderTransform="skewX(-10deg)" RenderTransformOrigin="0%,100%"
+                   Margin="0,0,12,0" Text="{Binding Account.Name}" />
+      </Viewbox>
+      <TextBlock Name="InRaces" Classes="lead" Text="{Binding InRaces}" />
+      <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,6,0,0">
+        <Ellipse Classes="net" Classes.online="{Binding Connection, Converter={x:Static v:Equal.Instance}, ConverterParameter=online}"
+                 Classes.offline="{Binding Connection, Converter={x:Static v:Equal.Instance}, ConverterParameter=offline}" VerticalAlignment="Center" />
+        <TextBlock Name="Status" FontWeight="SemiBold" VerticalAlignment="Center" Text="{Binding Status}" />
+        <TextBlock Classes="quiet" VerticalAlignment="Center" Text="·" />
+        <TextBlock Name="Server" Classes="quiet" VerticalAlignment="Center" Text="{Binding ServerLine}" />
+      </StackPanel>
+      <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,12,0,0">
+        <Button Name="ChangeName" Classes="soft" Content="Change name" Command="{Binding ChangeNameCommand}" AutomationProperties.Name="Change name" />
+        <Button Name="ChooseServer" Classes="soft" Content="Server" Command="{Binding ChooseServerCommand}" AutomationProperties.Name="Server" />
+      </StackPanel>
+      <!-- the account: not yet -->
+      <Border Classes="optionrow" Margin="0,18,0,0" MaxWidth="640" HorizontalAlignment="Left">
+        <Grid ColumnDefinitions="*,Auto" Margin="0,12">
+          <StackPanel Spacing="2">
+            <TextBlock FontSize="17" Text="Account" />
+            <TextBlock Classes="quiet" FontSize="14" TextWrapping="Wrap"
+                       Text="Sign in with Discord comes later. Your tag stays on this PC until then." />
+          </StackPanel>
+          <Border Grid.Column="1" Classes="flag quietflag" VerticalAlignment="Center" Margin="16,0,0,0">
+            <TextBlock Text="LATER" />
+          </Border>
+        </Grid>
+      </Border>
+    </StackPanel>
+
+    <StackPanel Grid.Column="2" Spacing="12">
+      <!-- the machine raced: the Garage -->
+      <Button Name="Machine" Classes="card c18" Height="150" Padding="0" Command="{Binding OpenGarageCommand}" AutomationProperties.Name="Your machine: the Garage">
+        <Grid ColumnDefinitions="*,190">
+          <StackPanel Margin="22,0,0,0" VerticalAlignment="Center" Spacing="4">
+            <TextBlock Classes="eyebrow" Text="YOUR MACHINE" />
+            <TextBlock Name="MachineName" FontSize="22" FontWeight="Bold" TextWrapping="Wrap" Text="{Binding Account.Machine}" />
+          </StackPanel>
+          <Panel Grid.Column="1" IsVisible="{DynamicResource HasDiscArt}">
+            <c:MachineStill Machine="{Binding Main.ShownMachine}" StockColor="{Binding Main.ShownStockColor}" PaintColor="{Binding Main.ShownPaint}"
+                            Custom="{Binding Main.ShownCustom}" PartColours="{Binding Main.ShownPartColours}" Margin="0,10,14,10" />
+          </Panel>
+        </Grid>
+      </Button>
+      <!-- three figures: Stats -->
+      <Button Name="Figures" Classes="card c18" Height="104" Padding="0" Command="{Binding OpenStatsCommand}" AutomationProperties.Name="Your figures: Stats">
+        <ItemsControl ItemsSource="{Binding Figures}" Margin="22,0" VerticalAlignment="Center">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <UniformGrid Rows="1" />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:StatTile">
+              <StackPanel>
+                <TextBlock Classes="figure" Classes.won="{Binding Label, Converter={x:Static v:Equal.Instance}, ConverterParameter=Wins}"
+                           Classes.podium="{Binding Label, Converter={x:Static v:Equal.Instance}, ConverterParameter=Podiums}" Text="{Binding Value}" />
+                <TextBlock Classes="quiet" FontSize="14" Text="{Binding Label}" />
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </Button>
+      <TextBlock Classes="eyebrow" Margin="4,8,0,0" Text="YOUR RECENT RACES" />
+      <TextBlock Classes="quiet" Margin="4,0" Text="No races yet." IsVisible="{Binding NoRecent}" />
+      <ItemsControl Name="Recent" ItemsSource="{Binding Recent}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="nx:RecentRace">
+            <Button Classes="line" Height="58" Margin="0,0,0,8" Padding="16,0"
+                    Command="{Binding $parent[UserControl].((nx:ProfileViewModel)DataContext).WatchCommand}" CommandParameter="{Binding}"
+                    AutomationProperties.Name="{Binding Track, StringFormat='{}{0}: watch'}">
+              <Grid ColumnDefinitions="64,*,Auto">
+                <TextBlock Classes="placetext" Classes.won="{Binding Won}" Classes.out="{Binding Out}" VerticalAlignment="Center" Text="{Binding Place}" />
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                  <TextBlock FontWeight="SemiBold" TextTrimming="CharacterEllipsis" Text="{Binding Track}" />
+                  <TextBlock Classes="quiet" FontSize="13" Text="{Binding When}" />
+                </StackPanel>
+                <TextBlock Grid.Column="2" Classes="quiet" VerticalAlignment="Center" Text="Watch" />
+              </Grid>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+  </Grid>
+</UserControl>

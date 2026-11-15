@@ -272,6 +272,29 @@ public sealed class GameSoundsTests : IDisposable
         }
     }
 
+    /// <summary>The launcher's sounds by kind (the owner, 2026-11-15): the menu's (cursor, back, confirm), the
+    /// notifications (the lobby's moments, an urgent notice), the others (the draw's), each its share of the launcher's
+    /// volume; a kind at 0 is not heard, the others are; muted, none.</summary>
+    [Fact]
+    public void EachKindOfSoundHasItsOwnShareOfTheVolume()
+    {
+        Assert.Equal(SoundKind.Menu, LauncherSounds.KindOf(LauncherSound.Confirm));
+        Assert.Equal(SoundKind.Menu, LauncherSounds.KindOf(LauncherSound.Cursor));
+        Assert.Equal(SoundKind.Notice, LauncherSounds.KindOf(LauncherSound.CourseVote));
+        Assert.Equal(SoundKind.Notice, LauncherSounds.KindOf(LauncherSound.UrgentNotice));
+        Assert.Equal(SoundKind.Other, LauncherSounds.KindOf(LauncherSound.DrawHop));
+        var settings = new LauncherSettings { SoundVolume = 80, MenuSoundVolume = 50, NoticeSoundVolume = 100, OtherSoundVolume = 0, PadNavigation = true };
+        Assert.Equal(40, LauncherSounds.Volume(LauncherSound.Confirm, settings));
+        Assert.Equal(80, LauncherSounds.Volume(LauncherSound.RaceStart, settings));
+        Assert.Equal(0, LauncherSounds.Volume(LauncherSound.CourseDrawn, settings));
+        Assert.True(LauncherSounds.Heard(LauncherSound.Cursor, settings));
+        Assert.True(LauncherSounds.Heard(LauncherSound.CourseVote, settings));
+        Assert.False(LauncherSounds.Heard(LauncherSound.DrawHop, settings));
+        Assert.Equal(0, LauncherSounds.Volume(LauncherSound.RaceStart, settings with { SoundMuted = true }));
+        // (a settings file from before: every kind at the launcher's volume)
+        Assert.Equal((100, 100, 100), (new LauncherSettings().MenuSoundVolume, new LauncherSettings().NoticeSoundVolume, new LauncherSettings().OtherSoundVolume));
+    }
+
     /// <summary>The tick, the bleep and the riser on your disc: their sample counts and the first 32 hexadecimal
     /// characters of a SHA-256 over their samples (16 bit, low byte first), as a Python decoder decoded them.</summary>
     [Theory]

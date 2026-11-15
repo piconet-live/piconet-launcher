@@ -7,8 +7,9 @@ namespace Launcher.App.Gpu;
 /// The garage's studio on the graphics card, for machines: textured meshes lit per pixel by a warm key light
 /// above, a cool fill, a cyan rim from behind and a soft sky reflected in glossy paint (the look the processor's
 /// renderer had), cut-out texels left out of solid meshes, see-through meshes blended last far to near, two-sided
-/// meshes lit on whichever side shows; and the turntable's floor under a machine.
-/// Draw a scene as <see cref="Opaque"/> for each model, then <see cref="Floor"/>, then <see cref="Translucent"/>.
+/// meshes lit on whichever side shows; and the turntable's floor under a machine; and engine flames as light.
+/// Draw a scene as <see cref="Opaque"/> for each model, then <see cref="Floor"/>, then <see cref="Translucent"/>, then
+/// <see cref="Glow"/>.
 /// </summary>
 public sealed class Studio
 {
@@ -137,8 +138,60 @@ public sealed class Studio
         }
         """;
 
+    // a flame's spot of light: a square facing the camera round its middle, a little towards the camera (so that the
+    // burner's own rim does not cut it), soft to its edge, white-hot in its middle as far as its heat says
+    private const string GlowVertex = """
+        in vec3 aAt;
+        in vec2 aCorner;
+        in float aRadius;
+        in vec3 aColour;
+        in vec2 aHeat;
+        uniform mat4 uModelView;
+        uniform mat4 uProjection;
+        out vec2 vCorner;
+        out vec3 vColour;
+        out vec2 vHeat;
+        void main()
+        {
+            vec4 view = uModelView * vec4(aAt, 1.0);
+            view.xyz += normalize(-view.xyz) * (aRadius * 0.6);
+            view.xy += aCorner * aRadius;
+            vCorner = aCorner;
+            vColour = aColour;
+            vHeat = aHeat;
+            gl_Position = uProjection * view;
+        }
+        """;
+
+    private const string GlowFragment = """
+        in vec2 vCorner;
+        in vec3 vColour;
+        in vec2 vHeat;
+        out vec4 fragColor;
+        void main()
+        {
+            float d2 = dot(vCorner, vCorner);
+            if (d2 >= 1.0)
+            {
+                discard;
+            }
+            float soft = (1.0 - d2) * (1.0 - d2);
+            float core = exp(-d2 * 14.0) * vHeat.x;
+            vec3 rgb = (vColour * soft + vec3(1.0) * core) * vHeat.y;
+            fragColor = vec4(rgb, (soft * 0.2 + core * 0.45) * vHeat.y);
+        }
+        """;
+
+    private const int GlowFloats = 11;   // a corner: its spot's place (3), the corner (2), radius (1), colour (3), heat and brightness (2)
+
     private readonly Gl _gl;
     private readonly Lit _plain;
+    private readonly int _glow;
+    private readonly int _glowModelView;
+    private readonly int _glowProjection;
+    private readonly int _glowVao;
+    private readonly int _glowBuffer;
+    private float[] _glowCorners = [];
     private readonly int _floor;
     private readonly int _floorModelView;
     private readonly int _floorProjection;
@@ -163,6 +216,18 @@ public sealed class Studio
         api.BindVertexArray(_floorVao);
         _floorBuffer = gl.Buffer(Gl.ArrayBuffer, ReadOnlySpan<float>.Empty, Gl.DynamicDraw);
         gl.Attribute(0, 3, 3, 0);
+        api.BindVertexArray(0);
+        _glow = gl.Program(GlowVertex, GlowFragment, "aAt", "aCorner", "aRadius", "aColour", "aHeat");
+        _glowModelView = gl.Location(_glow, "uModelView");
+        _glowProjection = gl.Location(_glow, "uProjection");
+        _glowVao = api.GenVertexArray();
+        api.BindVertexArray(_glowVao);
+        _glowBuffer = gl.Buffer(Gl.ArrayBuffer, ReadOnlySpan<float>.Empty, Gl.DynamicDraw);
+        gl.Attribute(0, 3, GlowFloats, 0);
+        gl.Attribute(1, 2, GlowFloats, 3);
+        gl.Attribute(2, 1, GlowFloats, 5);
+        gl.Attribute(3, 3, GlowFloats, 6);
+        gl.Attribute(4, 2, GlowFloats, 9);
         api.BindVertexArray(0);
     }
 
@@ -248,6 +313,51 @@ public sealed class Studio
         api.DepthMask(1);
     }
 
+    /// <summary>Spots of light (engine flames: <see cref="EngineFlames"/>) added to what is drawn, behind what stands
+    /// in front of them, hiding nothing.</summary>
+    public void Glow(IReadOnlyList<FlameSprite> sprites, Matrix4x4 modelView, Matrix4x4 projection)
+    {
+        ArgumentNullException.ThrowIfNull(sprites);
+        if (sprites.Count == 0)
+        {
+            return;
+        }
+        var needed = sprites.Count * 6 * GlowFloats;
+        if (_glowCorners.Length < needed)
+        {
+            _glowCorners = new float[needed];
+        }
+        var at = 0;
+        ReadOnlySpan<(float X, float Y)> corners = [(-1, -1), (1, -1), (1, 1), (-1, -1), (1, 1), (-1, 1)];
+        foreach (var s in sprites)
+        {
+            foreach (var (x, y) in corners)
+            {
+                var v = _glowCorners.AsSpan(at, GlowFloats);
+                (v[0], v[1], v[2], v[3], v[4], v[5]) = (s.At.X, s.At.Y, s.At.Z, x, y, s.Radius);
+                (v[6], v[7], v[8], v[9], v[10]) = (s.Colour.X, s.Colour.Y, s.Colour.Z, s.Heat, s.Bright);
+                at += GlowFloats;
+            }
+        }
+        var api = _gl.Api;
+        api.Enable(Gl.DepthTest);
+        api.DepthFunc(Gl.Lequal);
+        api.DepthMask(0);
+        api.Disable(Gl.Culling);
+        api.Enable(Gl.Blend);
+        _gl.BlendFunc(Gl.One, Gl.One);
+        api.UseProgram(_glow);
+        _gl.Uniform(_glowModelView, modelView);
+        _gl.Uniform(_glowProjection, projection);
+        api.BindVertexArray(_glowVao);
+        api.BindBuffer(Gl.ArrayBuffer, _glowBuffer);
+        _gl.Fill(Gl.ArrayBuffer, (ReadOnlySpan<float>)_glowCorners.AsSpan(0, needed), Gl.DynamicDraw);
+        api.DrawArrays(Gl.Triangles, 0, sprites.Count * 6);
+        api.BindVertexArray(0);
+        api.DepthMask(1);
+        _gl.BlendFunc(Gl.One, Gl.OneMinusSrcAlpha);
+    }
+
     public void Delete()
     {
         var api = _gl.Api;
@@ -255,6 +365,9 @@ public sealed class Studio
         api.DeleteProgram(_floor);
         api.DeleteVertexArray(_floorVao);
         api.DeleteBuffer(_floorBuffer);
+        api.DeleteProgram(_glow);
+        api.DeleteVertexArray(_glowVao);
+        api.DeleteBuffer(_glowBuffer);
     }
 
     private Lit Use(Matrix4x4 modelView, Matrix4x4 projection)

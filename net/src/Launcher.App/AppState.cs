@@ -235,6 +235,7 @@ public sealed partial class AppState(SettingsStore store, string dataFolder)
         var session = HeardWhenDropped(Session);
         session.Changed += () =>
         {
+            HearRecall();   // a player practising while the lobby gathers: called back once it moves on
             if (session.Fault is { } fault && Interlocked.Exchange(ref _fault, fault) != fault)
             {
                 Fault?.Invoke("while a message from the server was taken in (the connection ended, the launcher goes on)", fault);
@@ -276,6 +277,8 @@ public sealed partial class AppState(SettingsStore store, string dataFolder)
         }
         Session = null;
         Problem = problem;
+        _recall?.Left();   // a practice of the lobby's wait goes on, and nobody calls the player back
+        _practiceGame = null;
         Changed?.Invoke();
         PipelinesAfterLobby();
         try

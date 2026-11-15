@@ -12,10 +12,11 @@ and does is here; the logic with no UI type is in `../Launcher.Core`. The names 
 | `InputsKeeper.cs` | "Show inputs": the Inputs window opened with each game start while the setting is on, kept open between races, closed when switched off or with the launcher's window; its place kept |
 | `AppState.Dropped.cs` | A Quick Play connection that ended without the player's doing, said in the left column |
 | `AppState.Joining.cs` | A Quick Play join on its way: it counts as being in Quick Play for a game start, and a game that is open rules a join out |
+| `AppState.Waiting.cs` | A practice started while the player is in a lobby or its queue: the lobby calls them back when it moves on (`Launcher.Core/LobbyRecall.cs`: the game told, then ended); and the game ended at the player's word (the redesigned interface's "End game") |
 | `AppState.Renamed.cs` | The player's name changed: saved, and told to the server the launcher is connected to |
-| `ViewLocator.cs` | Which view shows which view model |
+| `ViewLocator.cs` | Which view shows which view model: the classic interface's views, or (`Next`) the redesigned interface's, with the classic view of a page that has no new one yet |
 | `Branding.cs`, `BuildInfo.cs`, `NotYet.cs` | The names players see; the version and build in the corner; the parts that are built and hidden |
-| `Attention.cs` | The lobby's three moments made noticed: a tone of the launcher's own at the settings' volume, and the taskbar's button flashing while the window is not in front (Windows) |
+| `Attention.cs`, `WaveOutStream.cs` | The lobby's three moments made noticed: a tone of the launcher's own at the settings' volume, and the taskbar's button flashing while the window is not in front (Windows); every sound on one waveOut stream kept running while sounds come, its blocks going round (`Launcher.Core/SoundLine.cs`) |
 | `Updates.cs`, `Relaunch.cs` | The launcher's own updates (Velopack, from the GitHub releases: looked for at the start and, while the launcher stays open, every 2 hours or so and when a game ends or the player leaves Quick Play (30 minutes after the last look at the soonest), never while a game runs, "Update automatically" on; downloaded in the background, put in at the next start or with "Restart to update", never while a game runs); the close that starts the launcher again |
 | `ReplayOpening.cs` | A replay double-clicked in Explorer: its file type registered (Velopack's install, update and uninstall hooks; a portable copy's start), the file handed to the open window or played in this start's, on the Replays page |
 | `Taskbar.cs` | The launcher's button on the Windows taskbar: the application id it takes, and gives the games it starts |

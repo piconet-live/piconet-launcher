@@ -1,0 +1,132 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:nx="using:Launcher.App.ViewModels.NextUi"
+             xmlns:vm="using:Launcher.App.ViewModels"
+             xmlns:nxv="using:Launcher.App.Views.NextUi"
+             xmlns:v="using:Launcher.App.Views"
+             xmlns:c="using:Launcher.App.Controls"
+             xmlns:n="using:Launcher.App.Controls.NextUi"
+             x:Class="Launcher.App.Views.NextUi.OptionList"
+             x:Name="List" ClipToBounds="False">
+  <!-- The redesigned interface's option rows (a custom lobby's rules, Practice's set-up, every rule of a lobby): groups
+       under their headings, a row each, its label on the left and its value on the right between two arrows. Left and
+       right change the value, A works the row (OptionItem, OptionSteps). A text is typed in its box; a range has two
+       numbers; a row that only says a value has no arrows. The row the focus is on is the list's Focused (the page's
+       help panel says what it is). -->
+  <ItemsControl Name="GroupList" ItemsSource="{Binding #List.Groups}" ClipToBounds="False">
+    <ItemsControl.ItemsPanel>
+      <ItemsPanelTemplate>
+        <StackPanel Spacing="18" ClipToBounds="False" />
+      </ItemsPanelTemplate>
+    </ItemsControl.ItemsPanel>
+    <ItemsControl.ItemTemplate>
+      <DataTemplate x:DataType="nx:OptionGroup">
+        <StackPanel Spacing="8" ClipToBounds="False">
+          <TextBlock Classes="eyebrow" Margin="4,0,0,2" IsVisible="{Binding HasHeading}"
+                     Text="{Binding Heading, Converter={x:Static v:UpperText.Instance}}" />
+          <ItemsControl ItemsSource="{Binding Items}" ClipToBounds="False">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <StackPanel Spacing="6" ClipToBounds="False" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="nx:OptionItem">
+                <StackPanel ClipToBounds="False">
+                  <Panel ClipToBounds="False">
+                    <!-- a value to step -->
+                    <n:OptionButton Classes="line option" IsVisible="{Binding IsStep}" IsEnabled="{Binding Enabled}" AutomationProperties.Name="{Binding Label}" ToolTip.Tip="{Binding Help}">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock FontSize="17" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{Binding Label}" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" Margin="16,0,0,0">
+                          <!-- the arrows: clicked, a step that way; faint at the value's end -->
+                          <Border Classes="less" Classes.end="{Binding !CanLess}" Background="Transparent" Padding="8,10" Margin="-8,-10">
+                            <Viewbox Width="12" Height="12" VerticalAlignment="Center">
+                              <Canvas Width="24" Height="24">
+                                <Path Classes="arrow" Data="M15 5L8 12L15 19" StrokeThickness="3" />
+                              </Canvas>
+                            </Viewbox>
+                          </Border>
+                          <StackPanel Orientation="Horizontal" Spacing="8" MinWidth="140" HorizontalAlignment="Center">
+                            <!-- a colour row's colour -->
+                            <Border Name="Swatch" Width="18" Height="18" CornerRadius="2" VerticalAlignment="Center" IsVisible="{Binding HasSwatch}"
+                                    Background="{Binding SwatchHex, Converter={x:Static v:HexToBrush.Instance}, FallbackValue={x:Null}}" />
+                            <TextBlock Name="Value" Classes="optionvalue" MaxWidth="300" TextAlignment="Center"
+                                       TextTrimming="CharacterEllipsis" FontFeatures="tnum" Text="{Binding ValueText}" />
+                          </StackPanel>
+                          <Border Classes="more" Classes.end="{Binding !CanMore}" Background="Transparent" Padding="8,10" Margin="-8,-10">
+                            <Viewbox Width="12" Height="12" VerticalAlignment="Center">
+                              <Canvas Width="24" Height="24">
+                                <Path Classes="arrow" Data="M9 5L16 12L9 19" StrokeThickness="3" />
+                              </Canvas>
+                            </Viewbox>
+                          </Border>
+                        </StackPanel>
+                      </Grid>
+                    </n:OptionButton>
+                    <!-- pressed to do something: its value, and an arrow -->
+                    <n:OptionButton Classes="line option" IsVisible="{Binding IsAction}" IsEnabled="{Binding Enabled}" AutomationProperties.Name="{Binding Label}" ToolTip.Tip="{Binding Help}">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock FontSize="17" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Text="{Binding Label}" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12" VerticalAlignment="Center" Margin="16,0,0,0">
+                          <TextBlock Classes="quiet" FontSize="16" MaxWidth="360" TextTrimming="CharacterEllipsis" VerticalAlignment="Center"
+                                     Text="{Binding ValueText}" />
+                          <Viewbox Width="12" Height="12" VerticalAlignment="Center">
+                            <Canvas Width="24" Height="24">
+                              <Path Classes="arrow" Data="M9 5L16 12L9 19" StrokeThickness="3" />
+                            </Canvas>
+                          </Viewbox>
+                        </StackPanel>
+                      </Grid>
+                    </n:OptionButton>
+                    <!-- a text: typed in its box -->
+                    <Border Classes="optionrow" IsVisible="{Binding IsText}">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock FontSize="17" VerticalAlignment="Center" Text="{Binding Label}" />
+                        <TextBox Grid.Column="1" Width="260" FontSize="16" VerticalAlignment="Center" Text="{Binding Text}"
+                                 PlaceholderText="{Binding Hint}" MaxLength="{Binding Most}" PasswordChar="{Binding Mask}"
+                                 GotFocus="OnTextFocus" AutomationProperties.Name="{Binding Label}" />
+                      </Grid>
+                    </Border>
+                    <!-- a range: its lowest and highest -->
+                    <Border Classes="optionrow" IsVisible="{Binding IsRange}">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock FontSize="17" VerticalAlignment="Center" Text="{Binding Label}" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                          <c:Stepper Value="{Binding Low}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" GotFocus="OnTextFocus"
+                                     AutomationProperties.Name="Lowest" />
+                          <TextBlock Classes="quiet" VerticalAlignment="Center" Text="to" />
+                          <c:Stepper Value="{Binding High}" Minimum="{Binding Minimum}" Maximum="{Binding Maximum}" GotFocus="OnTextFocus"
+                                     AutomationProperties.Name="Highest" />
+                        </StackPanel>
+                      </Grid>
+                    </Border>
+                    <!-- a value only said -->
+                    <Border Classes="optionrow" IsVisible="{Binding IsValue}">
+                      <Grid ColumnDefinitions="Auto,*">
+                        <TextBlock Classes="quiet" FontSize="16" VerticalAlignment="Center" Text="{Binding Label}" />
+                        <TextBlock Grid.Column="1" FontSize="16" FontWeight="SemiBold" TextAlignment="Right" TextWrapping="Wrap"
+                                   VerticalAlignment="Center" Margin="24,8,0,8" Classes.marked="{Binding Marked}" Text="{Binding ValueText}" />
+                      </Grid>
+                    </Border>
+                  </Panel>
+                  <TextBlock Classes="optionnote" Margin="20,4,16,2" TextWrapping="Wrap" Text="{Binding Note}"
+                             IsVisible="{Binding Note, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                  <!-- Developer mode: the row's key (its launch file's, its rule's) -->
+                  <TextBlock Classes="devmono" Margin="20,2,16,2" Text="{Binding DevKey}">
+                    <TextBlock.IsVisible>
+                      <MultiBinding Converter="{x:Static BoolConverters.And}">
+                        <Binding Path="DevKey" Converter="{x:Static StringConverters.IsNotNullOrEmpty}" />
+                        <Binding Path="$parent[nxv:NextShell].((vm:MainViewModel)DataContext).DeveloperMode" FallbackValue="False" />
+                      </MultiBinding>
+                    </TextBlock.IsVisible>
+                  </TextBlock>
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </DataTemplate>
+    </ItemsControl.ItemTemplate>
+  </ItemsControl>
+</UserControl>

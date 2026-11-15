@@ -159,10 +159,12 @@ public sealed class SettingsTabsTests : IDisposable
         // (Updates shown since 0.5.0: NotYet; Older copy as this launcher is no portable copy: DataMoveViewModel.Offered)
         Assert.Equal(["# General", "Disc image", "Update automatically", "Older copy",
             "# Interface", "Sounds", "Mute", "Controller navigation", "Reduced motion", "Interface scale",
-            "# Replays", "Record races", "Record practice", "Folder"], Form(window));
-        // one setting a row: every on/off one a switch, no box with its own words beside a label
-        Assert.DoesNotContain(window.GetVisualDescendants().OfType<SettingsView>().Single().GetVisualDescendants().OfType<CheckBox>(),
-            c => c.IsEffectivelyVisible);
+            "# Replays", "Record races", "Record practice", "Folder",
+            "# Try something new", "Experimental UI", "Developer mode"], Form(window));
+        // one setting a row: every on/off one a switch; the only boxes with their own words beside a label are the
+        // two of "Try something new"
+        Assert.Equal(["ExperimentalUi", "DeveloperMode"], window.GetVisualDescendants().OfType<SettingsView>().Single()
+            .GetVisualDescendants().OfType<CheckBox>().Where(c => c.IsEffectivelyVisible).Select(c => c.Name));
         Assert.Equal(["Launcher"], Headings(window).Where(b => b.Classes.Contains("on")).Select(b => ((SectionLink)b.DataContext!).Label));
 
         Click(window, Heading(window, "Game"));
@@ -206,7 +208,7 @@ public sealed class SettingsTabsTests : IDisposable
         Click(window, TopTab(window, "Settings"));
         var scroll = Named<ScrollViewer>(window, "PageScroll");
         foreach (var (page, first, last) in new[] { ("Game", "# Display", "Show inputs"), ("Online", "# Connection", "Hide swear words"),
-                     ("Launcher", "# General", "Folder") })
+                     ("Launcher", "# General", "Developer mode") })
         {
             Click(window, Heading(window, page));
             scroll.Offset = default;
